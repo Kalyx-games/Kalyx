@@ -1,0 +1,13 @@
+{
+  "images": {
+    "sizes": [128, 200, 256, 384, 640],
+    "formats": ["image/webp"],
+    "minimumCacheTTL": 31536000,
+    "remotePatterns": [
+      { "protocol": "https", "hostname": "cf.geekdo-images.com" },
+      { "protocol": "https", "hostname": "philibertnet.com" },
+      { "protocol": "https", "hostname": "**.philibertnet.com" },
+      { "protocol": "https", "hostname": "**.cultura.com" }
+    ]
+  }
+}
