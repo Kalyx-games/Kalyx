@@ -9,6 +9,7 @@ const LINKS = [
   { label: 'Base de données (tableau de bord Supabase)', url: 'https://supabase.com/dashboard/project/rfzanybiwciovbzrcozb', domain: 'supabase.com' },
   { label: 'Hébergement (tableau de bord Vercel)', url: 'https://vercel.com/kalyx/kalyx', domain: 'vercel.com' },
   { label: 'Application BoardGameGeek (Kalyx)', url: 'https://boardgamegeek.com/application/7068', domain: 'boardgamegeek.com' },
+  { label: 'Code source (dépôt GitHub)', url: 'https://github.com/Kalyx-games/Kalyx', domain: 'github.com' },
 ]
 
 // Lien de l'application (à copier pour partager).
