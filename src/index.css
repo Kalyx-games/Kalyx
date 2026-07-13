@@ -206,7 +206,7 @@ body {
   color: var(--ink);
 }
 .brand img {
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 .net {
@@ -314,7 +314,7 @@ body {
   min-width: 0;
   height: 46px;
   padding: 0 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--ink);
@@ -336,7 +336,7 @@ body {
   align-items: center;
   gap: 7px;
   padding: 0 12px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--ink);
@@ -379,7 +379,7 @@ body {
   padding: 11px 12px;
   border: none;
   background: none;
-  border-radius: 9px;
+  border-radius: 10px;
   font-size: 0.92rem;
   color: var(--ink);
   cursor: pointer;
@@ -417,7 +417,7 @@ body {
 .sortdir {
   height: 46px;
   width: 46px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--primary);
@@ -447,7 +447,7 @@ body {
   gap: 6px;
   height: 46px;
   padding: 0 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--ink);
@@ -548,7 +548,7 @@ body {
   width: 100%;
   margin-top: 4px;
   padding: 11px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--input-bg);
   color: var(--muted);
@@ -1126,7 +1126,7 @@ body {
   color: #16a34a;
   background: #eaf7ee;
   padding: 2px 9px;
-  border-radius: 8px;
+  border-radius: 10px;
   white-space: nowrap;
 }
 .game-meta {
@@ -1226,7 +1226,7 @@ body {
   align-items: center;
   justify-content: center;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 10px;
   background: var(--input-bg);
   font-size: 0.9rem;
   cursor: pointer;
@@ -1376,7 +1376,7 @@ body {
   min-width: 0;
   height: 46px;
   padding: 0 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
@@ -1389,7 +1389,7 @@ body {
   flex-shrink: 0;
   padding: 0 22px;
   height: 46px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: none;
   background: #fff;
   color: #111013;
@@ -1545,11 +1545,21 @@ body {
 .modal-actions button {
   flex: 1;
   padding: 13px;
-  border-radius: 12px;
+}
+/* Boutons d'action unifiés (autonomes : marchent partout, même hors modale). */
+.btn-primary,
+.btn-ghost,
+.btn-danger {
+  padding: 12px 16px;
+  border-radius: 10px;
   border: none;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 .btn-ghost {
   background: var(--soft);
@@ -1667,7 +1677,7 @@ body {
 .owner-del {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: none;
   background: transparent;
   color: var(--muted);
@@ -1681,7 +1691,7 @@ body {
 .owner-edit {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: none;
   background: transparent;
   font-size: 0.85rem;
@@ -2162,7 +2172,7 @@ body {
   position: relative;
   overflow: hidden;
   background: var(--input-bg);
-  border-radius: 8px;
+  border-radius: 10px;
 }
 .sk::after {
   content: '';
@@ -2270,16 +2280,53 @@ body {
   align-items: center;
   gap: 2px;
 }
+.sheet-name-wrap {
+  position: relative;
+}
 .sheet-name {
-  width: 72px;
-  padding: 6px 4px;
+  width: 72px; /* surchargé en ligne (largeur dynamique selon le nom) */
+  padding: 6px 8px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--card);
   color: var(--ink);
   font-weight: 700;
   font-size: 0.85rem;
   text-align: center;
+}
+/* Suggestions de noms (auto-complétion maison, marche sur mobile). */
+.name-suggest {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0;
+  min-width: 130px;
+  z-index: 40;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 22px rgba(16, 24, 40, 0.18);
+  max-height: 220px;
+  overflow-y: auto;
+}
+.name-suggest button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.name-suggest button:hover,
+.name-suggest button:active {
+  background: var(--soft);
 }
 .sheet-del {
   flex-shrink: 0;
@@ -2294,11 +2341,12 @@ body {
   padding: 0;
 }
 .sheet-cell {
-  width: 72px;
+  width: 100%;
+  min-width: 72px;
   height: 40px;
   padding: 4px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--card);
   color: var(--ink);
   font-size: 1rem;
@@ -2336,7 +2384,7 @@ body {
 /* Gagnant : simple rectangle plein, couleur d'accentuation de l'onglet actif. */
 .sheet-winner {
   background: var(--nav-pill);
-  border-radius: 8px;
+  border-radius: 10px;
 }
 .sheet-total.sheet-winner {
   color: var(--primary);
@@ -2475,7 +2523,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 5px 9px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.92rem;
   color: var(--ink);
 }

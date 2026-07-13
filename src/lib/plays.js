@@ -50,6 +50,15 @@ export async function fetchPlayerNames() {
   return [...set].sort((a, b) => a.localeCompare(b, 'fr'))
 }
 
+// Vainqueur(s) d'une partie = tou(te)s les joueurs au score le plus élevé
+// (gère les égalités : plusieurs vainqueurs possibles).
+export function winnersOf(players) {
+  const list = players || []
+  if (!list.length) return []
+  const max = Math.max(...list.map((p) => Number(p?.total) || 0))
+  return list.filter((p) => (Number(p?.total) || 0) === max).map((p) => (p?.name || '').trim()).filter(Boolean)
+}
+
 // Statistiques d'un jeu à partir de ses parties.
 export function computePlayStats(plays) {
   const list = plays || []
@@ -63,8 +72,10 @@ export function computePlayStats(plays) {
       const t = Number(pl?.total)
       if (Number.isFinite(t)) scores.push(t)
     })
-    const w = (p.winner || '').trim()
-    if (w) wins[w] = (wins[w] || 0) + 1
+    // Égalité en tête → chaque vainqueur compte une victoire.
+    winnersOf(p.players).forEach((w) => {
+      wins[w] = (wins[w] || 0) + 1
+    })
   })
   const names = [...new Set([...Object.keys(games), ...Object.keys(wins)])]
   const byPlayer = names

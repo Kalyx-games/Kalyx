@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { computePlayStats } from '../lib/plays'
+import { computePlayStats, winnersOf } from '../lib/plays'
 
 // Historique des parties d'un jeu : stats en haut (total, victoires/parties par
 // joueur, meilleur/moyen score) puis la liste des parties. Bouton « Nouvelle partie ».
@@ -84,6 +84,7 @@ export default function GameHistory({ game, plays, online, onNewPlay, onEditShee
             <div className="hist-list">
               {plays.map((pl) => {
                 const ranked = [...(pl.players || [])].sort((a, b) => (b.total ?? 0) - (a.total ?? 0))
+                const winners = new Set(winnersOf(pl.players)) // gère l'égalité en tête
                 return (
                   <div key={pl.id} className="hist-row">
                     <div className="hist-row-head">
@@ -97,8 +98,8 @@ export default function GameHistory({ game, plays, online, onNewPlay, onEditShee
                     )}
                     <div className="hist-players">
                       {ranked.map((p, i) => (
-                        <div key={i} className={`hist-player ${pl.winner && p.name === pl.winner ? 'hist-winner' : ''}`}>
-                          <span className="hist-player-name">{pl.winner && p.name === pl.winner ? '🏆 ' : ''}{p.name}</span>
+                        <div key={i} className={`hist-player ${winners.has((p.name || '').trim()) ? 'hist-winner' : ''}`}>
+                          <span className="hist-player-name">{winners.has((p.name || '').trim()) ? '🏆 ' : ''}{p.name}</span>
                           <span className="hist-player-score">{p.total}</span>
                         </div>
                       ))}

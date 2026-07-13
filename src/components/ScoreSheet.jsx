@@ -59,7 +59,16 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
     })
     const max = Math.max(...built.map((b) => b.total))
     const top = built.filter((b) => b.total === max).map((b) => b.name)
-    onSavePlay({ players: built, winner: top.length === 1 ? top[0] : '', extensions: [...activeExts] })
+    // Égalité en tête : on stocke tous les vainqueurs.
+    onSavePlay({ players: built, winner: top.join(', '), extensions: [...activeExts] })
+  }
+
+  // Auto-complétion "maison" (le <datalist> natif ne marche pas partout sur mobile) :
+  // quand on tape un nom, on propose les noms déjà utilisés qui correspondent.
+  const [focusedPlayer, setFocusedPlayer] = useState(null)
+  const suggestionsFor = (value) => {
+    const v = (value || '').trim().toLowerCase()
+    return playerNames.filter((n) => n.toLowerCase() !== v && (v === '' || n.toLowerCase().includes(v))).slice(0, 6)
   }
 
   return (
@@ -94,22 +103,47 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
           <thead>
             <tr>
               <th className="sheet-cat-head">Catégorie</th>
-              {players.map((p, i) => (
-                <th key={p.id} className={maxTotal != null && totals[i] === maxTotal ? 'sheet-winner' : ''}>
-                  <div className="sheet-player">
-                    <input
-                      className="sheet-name"
-                      list="kalyx-player-names"
-                      value={p.name}
-                      onChange={(e) => setName(p.id, e.target.value)}
-                      placeholder={`Joueur ${i + 1}`}
-                    />
-                    {players.length > 1 && (
-                      <button type="button" className="sheet-del" onClick={() => removePlayer(p.id)} aria-label="Retirer ce joueur">×</button>
-                    )}
-                  </div>
-                </th>
-              ))}
+              {players.map((p, i) => {
+                const suggestions = focusedPlayer === p.id ? suggestionsFor(p.name) : []
+                return (
+                  <th key={p.id} className={maxTotal != null && totals[i] === maxTotal ? 'sheet-winner' : ''}>
+                    <div className="sheet-player">
+                      <div className="sheet-name-wrap">
+                        <input
+                          className="sheet-name"
+                          style={{ width: `${Math.min(160, Math.max(72, (p.name.length || 8) * 8.5 + 22))}px` }}
+                          value={p.name}
+                          onChange={(e) => setName(p.id, e.target.value)}
+                          onFocus={() => setFocusedPlayer(p.id)}
+                          onBlur={() => setTimeout(() => setFocusedPlayer((cur) => (cur === p.id ? null : cur)), 150)}
+                          placeholder={`Joueur ${i + 1}`}
+                        />
+                        {suggestions.length > 0 && (
+                          <ul className="name-suggest">
+                            {suggestions.map((n) => (
+                              <li key={n}>
+                                <button
+                                  type="button"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault()
+                                    setName(p.id, n)
+                                    setFocusedPlayer(null)
+                                  }}
+                                >
+                                  {n}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      {players.length > 1 && (
+                        <button type="button" className="sheet-del" onClick={() => removePlayer(p.id)} aria-label="Retirer ce joueur">×</button>
+                      )}
+                    </div>
+                  </th>
+                )
+              })}
               <th className="sheet-add-col">
                 {players.length < 8 && (
                   <button type="button" className="sheet-add" onClick={addPlayer} aria-label="Ajouter un joueur">＋</button>
@@ -154,13 +188,6 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
       </div>
 
       {visibleCats.length === 0 && <p className="empty" style={{ padding: 24 }}>Cette fiche n'a pas encore de catégories.</p>}
-
-      {/* Liste des noms déjà utilisés → auto-complétion (moins de fautes de frappe). */}
-      <datalist id="kalyx-player-names">
-        {playerNames.map((n) => (
-          <option key={n} value={n} />
-        ))}
-      </datalist>
 
       {onSavePlay && visibleCats.length > 0 && (
         <div className="sheet-editor-actions">
