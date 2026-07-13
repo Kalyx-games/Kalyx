@@ -2420,3 +2420,69 @@ body {
   flex: 1;
   height: 46px;
 }
+
+/* ---- Historique des parties (page par jeu) ---- */
+.hist-newplay {
+  padding: 8px 0 6px;
+}
+.hist-newplay .btn-primary {
+  width: 100%;
+  height: 48px;
+  font-size: 1rem;
+}
+.hist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hist-row {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--card);
+}
+.hist-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.hist-date {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.hist-del {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 2px;
+  opacity: 0.7;
+}
+.hist-ext {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.hist-players {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+.hist-player {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 9px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+.hist-player.hist-winner {
+  background: var(--nav-pill);
+  font-weight: 700;
+}
+.hist-player-score {
+  font-weight: 700;
+}

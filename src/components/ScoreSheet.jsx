@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react'
 let pid = 0
 const makePlayer = (name = '') => ({ id: ++pid, name, scores: {} })
 
-export default function ScoreSheet({ game, template, onEdit, onClose }) {
+export default function ScoreSheet({ game, template, playerNames = [], onSavePlay, saving, onEdit, onClose }) {
   const cats = template?.categories ?? []
   const exts = template?.extensions ?? []
 
@@ -45,6 +45,22 @@ export default function ScoreSheet({ game, template, onEdit, onClose }) {
   const totals = players.map(totalOf)
   const anyScore = players.some((p) => Object.values(p.scores).some((v) => v !== '' && v != null))
   const maxTotal = anyScore ? Math.max(...totals) : null
+
+  // Enregistre la partie : joueurs (nom + total + détail), gagnant, extensions.
+  const savePlay = () => {
+    if (!onSavePlay) return
+    const built = players.map((p, i) => {
+      const scores = {}
+      visibleCats.forEach((c) => {
+        const v = p.scores[c.label]
+        if (v !== '' && v != null && Number.isFinite(Number(v))) scores[c.label] = Number(v)
+      })
+      return { name: (p.name || '').trim() || `Joueur ${i + 1}`, total: totalOf(p), scores }
+    })
+    const max = Math.max(...built.map((b) => b.total))
+    const top = built.filter((b) => b.total === max).map((b) => b.name)
+    onSavePlay({ players: built, winner: top.length === 1 ? top[0] : '', extensions: [...activeExts] })
+  }
 
   return (
     <div className="sheet">
@@ -83,6 +99,7 @@ export default function ScoreSheet({ game, template, onEdit, onClose }) {
                   <div className="sheet-player">
                     <input
                       className="sheet-name"
+                      list="kalyx-player-names"
                       value={p.name}
                       onChange={(e) => setName(p.id, e.target.value)}
                       placeholder={`Joueur ${i + 1}`}
@@ -137,6 +154,21 @@ export default function ScoreSheet({ game, template, onEdit, onClose }) {
       </div>
 
       {visibleCats.length === 0 && <p className="empty" style={{ padding: 24 }}>Cette fiche n'a pas encore de catégories.</p>}
+
+      {/* Liste des noms déjà utilisés → auto-complétion (moins de fautes de frappe). */}
+      <datalist id="kalyx-player-names">
+        {playerNames.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
+
+      {onSavePlay && visibleCats.length > 0 && (
+        <div className="sheet-editor-actions">
+          <button type="button" className="btn-primary" onClick={savePlay} disabled={saving || !anyScore}>
+            {saving ? '…' : '💾 Enregistrer la partie'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

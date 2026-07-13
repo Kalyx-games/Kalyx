@@ -7,6 +7,7 @@ import { fetchTags, addTag, updateTag, deleteTag } from './lib/tags'
 import { downloadBackup, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
+import { fetchPlays, savePlay, deletePlay, fetchPlayerNames } from './lib/plays'
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
 import ConfirmDialog from './components/ConfirmDialog'
@@ -21,6 +22,7 @@ const Chwazi = lazy(() => import('./components/Chwazi'))
 const BarcodeScanner = lazy(() => import('./components/BarcodeScanner'))
 const ScoreSheet = lazy(() => import('./components/ScoreSheet'))
 const ScoreSheetEditor = lazy(() => import('./components/ScoreSheetEditor'))
+const GameHistory = lazy(() => import('./components/GameHistory'))
 import SkeletonCard from './components/SkeletonCard'
 import { enterFullscreen } from './lib/fullscreen'
 import NavBar from './components/NavBar'
@@ -221,8 +223,13 @@ export default function App() {
   const [ownersList, setOwnersList] = useState(null) // lignes de la table owners, ou null si absente
   const [tagsList, setTagsList] = useState(null) // lignes de la table tags, ou null si absente
   const [scoresheets, setScoresheets] = useState(null) // { game_id: template }, ou null si table absente
-  const [scoringGame, setScoringGame] = useState(null) // jeu dont la fiche de score est ouverte | null
+  const [scoringGame, setScoringGame] = useState(null) // jeu en cours de notation (nouvelle partie) | null
   const [editingSheet, setEditingSheet] = useState(null) // jeu dont on édite/crée la fiche | null
+  const [historyGame, setHistoryGame] = useState(null) // jeu dont on regarde l'historique | null
+  const [gamePlays, setGamePlays] = useState(null) // parties du jeu affiché (null = chargement)
+  const [playerNames, setPlayerNames] = useState([]) // noms déjà utilisés (auto-complétion)
+  const [savingPlay, setSavingPlay] = useState(false)
+  const [confirmingPlay, setConfirmingPlay] = useState(null) // partie à supprimer | null
 
   // Charger les listes gérées (tables owners + tags + fiches de score).
   const reloadOwners = useCallback(() => {
@@ -235,6 +242,7 @@ export default function App() {
     reloadOwners()
     reloadTags()
     fetchScoresheets().then(setScoresheets).catch(() => setScoresheets(null))
+    fetchPlayerNames().then(setPlayerNames).catch(() => {})
   }, [reloadOwners, reloadTags])
 
   // Charge les jeux : depuis Supabase si possible (et on met en cache), sinon
@@ -287,14 +295,15 @@ export default function App() {
   // se ferme jamais : on remet toujours une entrée d'historique "piège".
   const viewHistoryRef = useRef([]) // vues précédentes (pour revenir en arrière)
   const uiRef = useRef({})
-  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, scanOpen, chwaziOpen, scoringGame, editingSheet, statsOpen, settingsOpen, zoomImage }
+  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, scanOpen, chwaziOpen, editingSheet, scoringGame, historyGame, statsOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
   viewRef.current = view
 
   // Nombre de "couches" ouvertes (fenêtres/onglets superposés).
   const layerCount =
     (editing ? 1 : 0) + (confirming ? 1 : 0) + (moving ? 1 : 0) + (confirmingOwner ? 1 : 0) + (confirmingTag ? 1 : 0) +
-    (importing ? 1 : 0) + (restoring ? 1 : 0) + (scanOpen ? 1 : 0) + (chwaziOpen ? 1 : 0) + (scoringGame ? 1 : 0) + (editingSheet ? 1 : 0) + (statsOpen ? 1 : 0) + (settingsOpen ? 1 : 0) + (zoomImage ? 1 : 0)
+    (importing ? 1 : 0) + (restoring ? 1 : 0) + (confirmingPlay ? 1 : 0) + (scanOpen ? 1 : 0) + (chwaziOpen ? 1 : 0) +
+    (editingSheet ? 1 : 0) + (scoringGame ? 1 : 0) + (historyGame ? 1 : 0) + (statsOpen ? 1 : 0) + (settingsOpen ? 1 : 0) + (zoomImage ? 1 : 0)
   const layerRef = useRef(0)
 
   // Change de vue en mémorisant la vue actuelle + une entrée d'historique (pour le retour).
@@ -317,11 +326,13 @@ export default function App() {
     else if (s.confirmingTag) setConfirmingTag(null)
     else if (s.importing) setImporting(null)
     else if (s.restoring) setRestoring(null)
+    else if (s.confirmingPlay) setConfirmingPlay(null)
     else if (s.editing) setEditing(null)
     else if (s.scanOpen) setScanOpen(false)
     else if (s.chwaziOpen) setChwaziOpen(false)
     else if (s.editingSheet) setEditingSheet(null)
     else if (s.scoringGame) setScoringGame(null)
+    else if (s.historyGame) { setHistoryGame(null); setGamePlays(null) }
     else if (s.statsOpen) setStatsOpen(false)
     else if (s.settingsOpen) setSettingsOpen(false)
     else return false
@@ -660,16 +671,58 @@ export default function App() {
     }
   }
 
-  // Bouton 🧮 : ouvre la fiche pour noter si elle existe, sinon l'éditeur (création).
-  function handleScore(g) {
-    if (scoresheets && scoresheets[g.id]) setScoringGame(g)
-    else setEditingSheet(g)
+  // Clic sur une carte : ouvre l'historique des parties si le jeu a une fiche,
+  // sinon l'éditeur (pour créer la fiche d'abord).
+  function handleGameClick(g) {
+    if (scoresheets && scoresheets[g.id]) {
+      setHistoryGame(g)
+      setGamePlays(null)
+      fetchPlays(g.id).then((p) => setGamePlays(p || [])).catch(() => setGamePlays([]))
+    } else {
+      setEditingSheet(g)
+    }
+  }
+
+  // Recharge les parties du jeu affiché + la liste des noms.
+  const refreshHistory = (g) => {
+    if (g) fetchPlays(g.id).then((p) => setGamePlays(p || [])).catch(() => {})
+    fetchPlayerNames().then(setPlayerNames).catch(() => {})
   }
 
   // Enregistre une fiche (création ou modification) et met à jour l'état local.
   async function handleSaveSheet(gameId, template) {
     await saveScoresheet(gameId, template)
     setScoresheets((m) => ({ ...(m || {}), [gameId]: template }))
+  }
+
+  // Enregistre une partie (depuis la fiche de score) → retour à l'historique.
+  async function handleSavePlay(play) {
+    if (!scoringGame) return
+    setSavingPlay(true)
+    setError(null)
+    try {
+      await savePlay(scoringGame.id, play)
+      const g = scoringGame
+      setScoringGame(null)
+      refreshHistory(historyGame || g)
+      setNotice('Partie enregistrée.')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSavingPlay(false)
+    }
+  }
+
+  async function handleConfirmDeletePlay() {
+    if (!confirmingPlay) return
+    setError(null)
+    try {
+      await deletePlay(confirmingPlay.id)
+      setConfirmingPlay(null)
+      refreshHistory(historyGame)
+    } catch (e) {
+      setError(e.message)
+    }
   }
 
   async function handleConfirmRestore() {
@@ -881,7 +934,7 @@ export default function App() {
               onCardClick={
                 view === 'wishlist'
                   ? () => window.open(philibertSearchUrl(g.name), '_blank', 'noopener')
-                  : () => handleScore(g)
+                  : () => handleGameClick(g)
               }
               onImageClick={(url) => setZoomImage(url)}
               ownerMap={ownerMap}
@@ -1019,6 +1072,16 @@ export default function App() {
         />
       )}
 
+      {confirmingPlay && (
+        <ConfirmDialog
+          title="Supprimer cette partie ?"
+          message={<>Cette partie sera retirée de l'historique et des statistiques.</>}
+          confirmLabel="Supprimer"
+          onConfirm={handleConfirmDeletePlay}
+          onCancel={() => setConfirmingPlay(null)}
+        />
+      )}
+
       <NavBar
         view={statsOpen ? 'stats' : settingsOpen ? null : view}
         onChange={(v) => {
@@ -1045,11 +1108,31 @@ export default function App() {
         </Suspense>
       )}
 
+      {historyGame && (
+        <Suspense fallback={null}>
+          <GameHistory
+            game={historyGame}
+            plays={gamePlays}
+            online={online}
+            onNewPlay={() => setScoringGame(historyGame)}
+            onEditSheet={() => setEditingSheet(historyGame)}
+            onDeletePlay={(pl) => setConfirmingPlay(pl)}
+            onClose={() => {
+              setHistoryGame(null)
+              setGamePlays(null)
+            }}
+          />
+        </Suspense>
+      )}
+
       {scoringGame && scoresheets && scoresheets[scoringGame.id] && (
         <Suspense fallback={null}>
           <ScoreSheet
             game={scoringGame}
             template={scoresheets[scoringGame.id]}
+            playerNames={playerNames}
+            saving={savingPlay}
+            onSavePlay={handleSavePlay}
             onEdit={() => setEditingSheet(scoringGame)}
             onClose={() => setScoringGame(null)}
           />
