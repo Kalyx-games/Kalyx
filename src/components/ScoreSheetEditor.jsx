@@ -1,35 +1,41 @@
 import { useState } from 'react'
+import { parseExtensions } from '../lib/games'
 
 // Éditeur d'une fiche de score : on définit les catégories (nom + explication +
-// éventuelle extension qui les apporte) et la liste des extensions qui modifient
-// le score. Sert à corriger une fiche générée OU à en créer une à la main.
+// éventuelle extension qui les apporte) et, si le jeu a des extensions enregistrées,
+// lesquelles modifient le score. Sert à corriger une fiche générée OU à en créer une.
 
 let cid = 0
 const mkCat = (c = {}) => ({ id: ++cid, label: c.label || '', hint: c.hint || '', ext: c.ext || '' })
 
 export default function ScoreSheetEditor({ game, template, online, onSave, onClose }) {
   const isNew = !template
+  // Extensions ENREGISTRÉES pour ce jeu (choix possibles).
+  const availableExts = parseExtensions(game?.extensions).map((e) => e.name).filter(Boolean)
+
   const [cats, setCats] = useState(() => (template?.categories || []).map(mkCat))
-  const [exts, setExts] = useState(() => [...(template?.extensions || [])])
+  // Extensions qui modifient le score (sous-ensemble des extensions enregistrées).
+  const [exts, setExts] = useState(() =>
+    (template?.extensions || []).filter((n) => availableExts.includes(n))
+  )
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
-  const extNames = exts.map((s) => s.trim()).filter(Boolean)
+  const extNames = exts
+  const remaining = availableExts.filter((n) => !exts.includes(n))
 
   const addCat = () => setCats((c) => [...c, mkCat()])
   const updCat = (id, field, val) => setCats((c) => c.map((x) => (x.id === id ? { ...x, [field]: val } : x)))
   const delCat = (id) => setCats((c) => c.filter((x) => x.id !== id))
 
-  const addExt = () => setExts((e) => [...e, ''])
-  const updExt = (i, val) => setExts((e) => e.map((x, j) => (j === i ? val : x)))
-  const delExt = (i) => {
-    const name = (exts[i] || '').trim()
+  const addExtName = (name) => setExts((e) => (name && !e.includes(name) ? [...e, name] : e))
+  const removeExt = (name) => {
     setCats((c) => c.map((x) => (x.ext === name ? { ...x, ext: '' } : x))) // détache les catégories liées
-    setExts((e) => e.filter((_, j) => j !== i))
+    setExts((e) => e.filter((x) => x !== name))
   }
 
   const save = async () => {
-    const extList = exts.map((s) => s.trim()).filter(Boolean)
+    const extList = [...exts]
     const categories = cats
       .map((c) => ({
         label: c.label.trim(),
@@ -60,19 +66,38 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         <h2 className="sheet-title">✏️ {isNew ? 'Nouvelle fiche' : 'Modifier'} — {game?.name}</h2>
       </div>
 
-      <section className="settings-card">
-        <h3>Extensions qui modifient le score</h3>
-        <p className="field-hint" style={{ marginBottom: 8 }}>
-          Elles apparaîtront en cases à cocher avant de noter. Laisse vide si aucune.
-        </p>
-        {exts.map((name, i) => (
-          <div key={i} className="ext-row">
-            <input value={name} onChange={(e) => updExt(i, e.target.value)} placeholder="Nom de l'extension" />
-            <button type="button" className="ext-row-x" onClick={() => delExt(i)} aria-label="Retirer l'extension">×</button>
-          </div>
-        ))}
-        <button type="button" className="btn-ghost" onClick={addExt}>➕ Ajouter une extension</button>
-      </section>
+      {availableExts.length > 0 && (
+        <section className="settings-card">
+          <h3>Extensions qui modifient le score</h3>
+          {exts.length === 0 && (
+            <p className="field-hint" style={{ marginBottom: 8 }}>Aucune pour l'instant.</p>
+          )}
+          {exts.map((name) => (
+            <div key={name} className="ext-chip-row">
+              <span className="ext-chip-name">🧩 {name}</span>
+              <button type="button" className="ext-row-x" onClick={() => removeExt(name)} aria-label="Retirer l'extension">×</button>
+            </div>
+          ))}
+          {remaining.length === 1 ? (
+            <button type="button" className="btn-ghost" onClick={() => addExtName(remaining[0])}>
+              ➕ Ajouter « {remaining[0]} »
+            </button>
+          ) : remaining.length > 1 ? (
+            <select
+              className="cat-edit-ext"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) addExtName(e.target.value)
+              }}
+            >
+              <option value="">➕ Ajouter une extension…</option>
+              {remaining.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          ) : null}
+        </section>
+      )}
 
       <section className="settings-card">
         <h3>Catégories de score</h3>
