@@ -58,7 +58,6 @@ export default function ScoreSheet({ game, template, onEdit, onClose }) {
 
       {exts.length > 0 && (
         <section className="settings-card">
-          <h3>Extensions utilisées</h3>
           <div className="chips">
             {exts.map((name) => (
               <button

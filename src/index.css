@@ -2,9 +2,9 @@
   --bg: #eef1f6;
   --card: #ffffff;
   --soft: #eef1f6; /* surface neutre discrète (bannières, code, hovers) */
-  --input-bg: var(--input-bg);
+  --input-bg: #f7f8fb;
   --input-focus: #ffffff;
-  --accent-soft: var(--accent-soft); /* fond teinté primaire (boutons doux) */
+  --accent-soft: #eef0ff; /* fond teinté primaire (boutons doux) */
   --ink: #1f2733;
   --muted: #7a8699;
   --line: #e5e9f0;
@@ -2268,7 +2268,7 @@ body {
   padding: 6px 4px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--input-bg);
+  background: var(--card);
   color: var(--ink);
   font-weight: 700;
   font-size: 0.85rem;
@@ -2292,7 +2292,7 @@ body {
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--input-bg);
+  background: var(--card);
   color: var(--ink);
   font-size: 1rem;
   text-align: center;
@@ -2330,6 +2330,9 @@ body {
   background: var(--accent-soft);
   border-radius: 8px;
 }
+.sheet-total.sheet-winner {
+  color: var(--primary);
+}
 
 .sheet-edit-btn {
   margin-left: auto;
@@ -2351,6 +2354,7 @@ body {
   border-radius: 12px;
   padding: 10px;
   margin-bottom: 10px;
+  background: var(--card);
   display: flex;
   flex-direction: column;
   gap: 8px;
