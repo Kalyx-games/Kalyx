@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { effectivePlayersSet } from '../lib/games'
 
 // Fiche de score d'un jeu : une colonne par joueur, une ligne par catégorie,
 // total calculé automatiquement + vainqueur mis en avant. Si le jeu a des
@@ -12,8 +13,23 @@ export default function ScoreSheet({ game, template, onClose }) {
   const cats = template?.categories ?? []
   const exts = template?.extensions ?? []
 
+  // Nombres de joueurs supportés par le jeu (base ∪ extensions). Si le jeu se joue à
+  // plusieurs nombres, on propose un sélecteur au-dessus du tableau.
+  const playerCounts = useMemo(() => [...effectivePlayersSet(game)].sort((a, b) => a - b), [game])
+  const canPickCount = playerCounts.length > 1
+
   const [activeExts, setActiveExts] = useState(() => new Set())
-  const [players, setPlayers] = useState(() => [makePlayer(), makePlayer()])
+  const [players, setPlayers] = useState(() =>
+    Array.from({ length: playerCounts[0] || 2 }, () => makePlayer())
+  )
+
+  // Ajuste le nombre de joueurs (en gardant les noms/scores déjà saisis).
+  const setCount = (n) =>
+    setPlayers((ps) => {
+      if (n === ps.length) return ps
+      if (n < ps.length) return ps.slice(0, n)
+      return [...ps, ...Array.from({ length: n - ps.length }, () => makePlayer())]
+    })
 
   // Catégories visibles = base + celles des extensions cochées.
   const visibleCats = useMemo(
@@ -53,10 +69,27 @@ export default function ScoreSheet({ game, template, onClose }) {
         <h2 className="sheet-title">🧮 {game?.name}</h2>
       </div>
 
+      {canPickCount && (
+        <section className="settings-card">
+          <h3>Nombre de joueurs</h3>
+          <div className="chips">
+            {playerCounts.map((n) => (
+              <button
+                key={n}
+                type="button"
+                className={`fchip ${players.length === n ? 'on' : ''}`}
+                onClick={() => setCount(n)}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       {exts.length > 0 && (
         <section className="settings-card">
           <h3>Extensions utilisées</h3>
-          <p className="field-hint" style={{ marginBottom: 8 }}>Coche celles présentes dans cette partie (elles ajoutent des catégories).</p>
           <div className="chips">
             {exts.map((name) => (
               <button
