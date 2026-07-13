@@ -54,11 +54,16 @@ export default function Chwazi({ onClose }) {
   const count = ids.length
   const controlsVisible = count === 0 && !result
 
+  // Seuil de doigts pour lancer le décompte :
+  //  - mode Gagnant : (nombre de gagnants) + 1  → au moins un doigt de plus que de gagnants
+  //  - mode Équipes : (nombre d'équipes)         → au moins un doigt par équipe
+  const minFingers = mode === 'winner' ? winnerCount + 1 : teamCount
+
   // Le tirage lui-même.
   function runPick() {
     const list = Object.keys(pointersRef.current)
-    if (list.length < 2) return
     const { mode: m, winnerCount: w, teamCount: t } = cfgRef.current
+    if (list.length < (m === 'winner' ? w + 1 : t)) return
     if (m === 'winner') {
       const ids = shuffle(list).slice(0, Math.min(w, list.length))
       setResult({ type: 'winner', ids })
@@ -78,7 +83,7 @@ export default function Chwazi({ onClose }) {
   // doigt est ajouté ou retiré. Le chiffre n'est plus affiché ; seul l'uplifter et la
   // vibration marquent l'attente.
   useEffect(() => {
-    if (result || count < 2) return
+    if (result || count < minFingers) return
     let n = COUNTDOWN_START
     startRiser(COUNTDOWN_START) // uplifter continu qui culmine à la fin du décompte
     const iv = setInterval(() => {
@@ -95,7 +100,7 @@ export default function Chwazi({ onClose }) {
       stopRiser()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [count, result])
+  }, [count, result, minFingers])
 
   // Quand tous les doigts sont levés, on efface le résultat pour repartir propre.
   useEffect(() => {
