@@ -918,6 +918,16 @@ body {
   height: 44px;
 }
 
+/* Fréquence de sauvegarde : libellé + menu déroulant sur une ligne */
+.backup-freq-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.backup-freq-row .field-label {
+  margin: 0;
+}
+
 /* Liste des sauvegardes automatiques (Réglages) */
 .backup-list {
   list-style: none;

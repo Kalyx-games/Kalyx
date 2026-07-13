@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 // Menu de tri "maison" : un bouton propre qui ouvre une petite liste d'options
 // (le menu déroulant natif <select> était peu esthétique).
-export default function SortMenu({ value, options, onChange }) {
+export default function SortMenu({ value, options, onChange, arrows = true }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const current = options.find((o) => o.value === value) ?? options[0]
@@ -27,7 +27,7 @@ export default function SortMenu({ value, options, onChange }) {
   return (
     <div className="sortmenu" ref={ref}>
       <button type="button" className="sortmenu-btn" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
-        <span className="sortmenu-arrows">↕</span>
+        {arrows && <span className="sortmenu-arrows">↕</span>}
         <span>{current.label}</span>
         <span className={`sortmenu-chev ${open ? 'up' : ''}`}>▾</span>
       </button>

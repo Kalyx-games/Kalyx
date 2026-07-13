@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { Fragment, useRef, useState } from 'react'
 import { getTheme, applyTheme } from '../lib/theme'
 import BubbleListManager from './BubbleListManager'
+import SortMenu from './SortMenu'
 
 // Écran Réglages : propriétaires + tags (même format bulle), sauvegarde, apparence, liens.
 
@@ -16,11 +17,11 @@ const LINKS = [
 const APP_URL = 'https://kalyx-sepia.vercel.app'
 
 const FREQ_OPTIONS = [
-  ['always', 'À chaque ouverture'],
-  ['daily', 'Chaque jour'],
-  ['weekly', 'Chaque semaine'],
-  ['monthly', 'Chaque mois'],
-  ['manual', 'Manuel'],
+  { value: 'always', label: 'À chaque ouverture' },
+  { value: 'daily', label: 'Chaque jour' },
+  { value: 'weekly', label: 'Chaque semaine' },
+  { value: 'monthly', label: 'Chaque mois' },
+  { value: 'manual', label: 'Manuel' },
 ]
 
 // Date lisible d'une sauvegarde, ex. "14 juil. à 21:30".
@@ -119,7 +120,7 @@ export default function Settings({
       <section className="settings-card">
         <h3>Sauvegarde</h3>
         <p className="muted save-intro">
-          Télécharge un fichier contenant toute ta collection (jeux + propriétaires + tags). Tu pourras le réimporter pour restaurer ou transférer tes données.
+          Télécharge un fichier contenant toute ta collection (jeux + propriétaires + tags).
         </p>
         <div className="save-actions">
           <button type="button" className="btn-ghost" onClick={onExport}>⬇️ Exporter</button>
@@ -148,23 +149,10 @@ export default function Settings({
 
       <section className="settings-card">
         <h3>Sauvegarde automatique</h3>
-        <p className="muted save-intro">
-          Kalyx enregistre régulièrement une copie de ta collection dans la base (à l'ouverture de l'app).
-          On garde les 3 dernières : tu peux revenir à l'une d'elles en cas de pépin.
-        </p>
 
-        <span className="field-label">Fréquence</span>
-        <div className="chips">
-          {FREQ_OPTIONS.map(([v, label]) => (
-            <button
-              key={v}
-              type="button"
-              className={`fchip ${backupFreq === v ? 'on' : ''}`}
-              onClick={() => onSetBackupFreq(v)}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="backup-freq-row">
+          <span className="field-label">Fréquence</span>
+          <SortMenu value={backupFreq} options={FREQ_OPTIONS} onChange={onSetBackupFreq} arrows={false} />
         </div>
 
         <div className="save-actions" style={{ marginTop: 14 }}>
@@ -173,12 +161,10 @@ export default function Settings({
           </button>
         </div>
 
-        {backups === null ? (
-          <p className="field-hint" style={{ marginTop: 12 }}>
-            Pour activer les sauvegardes automatiques, lance la requête <code>migration_backups.sql</code> dans Supabase.
-          </p>
-        ) : backups.length === 0 ? (
-          <p className="field-hint" style={{ marginTop: 12 }}>Aucune sauvegarde pour l'instant.</p>
+        {backups === null || backups.length === 0 ? (
+          backups && backups.length === 0 ? (
+            <p className="field-hint" style={{ marginTop: 12 }}>Aucune sauvegarde pour l'instant.</p>
+          ) : null
         ) : (
           <ul className="backup-list">
             {backups.map((b) => (
@@ -208,28 +194,33 @@ export default function Settings({
       <section className="settings-card">
         <h3>Liens utiles</h3>
         <div className="links">
-          {LINKS.map((l) => (
-            <a key={l.url} className="link-row" href={l.url} target="_blank" rel="noreferrer">
-              <img
-                className="link-fav"
-                src={`https://www.google.com/s2/favicons?domain=${l.domain}&sz=64`}
-                alt=""
-                width="20"
-                height="20"
-                loading="lazy"
-                onError={(e) => {
-                  e.currentTarget.style.visibility = 'hidden'
-                }}
-              />
-              <span className="link-label">{l.label}</span>
-              <span className="link-arrow">↗</span>
-            </a>
+          {LINKS.map((l, i) => (
+            <Fragment key={l.url}>
+              <a className="link-row" href={l.url} target="_blank" rel="noreferrer">
+                <img
+                  className="link-fav"
+                  src={`https://www.google.com/s2/favicons?domain=${l.domain}&sz=64`}
+                  alt=""
+                  width="20"
+                  height="20"
+                  loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.style.visibility = 'hidden'
+                  }}
+                />
+                <span className="link-label">{l.label}</span>
+                <span className="link-arrow">↗</span>
+              </a>
+              {/* Bouton "Copier le lien" placé juste sous le premier lien (Melodice). */}
+              {i === 0 && (
+                <button type="button" className={`link-row link-copy ${copied ? 'copied' : ''}`} onClick={copyAppLink}>
+                  <span className="link-copy-icon" aria-hidden="true">🔗</span>
+                  <span className="link-label">{copied ? 'Lien copié ✓' : "Copier le lien de l'application"}</span>
+                  <span className="link-arrow">⧉</span>
+                </button>
+              )}
+            </Fragment>
           ))}
-          <button type="button" className={`link-row link-copy ${copied ? 'copied' : ''}`} onClick={copyAppLink}>
-            <span className="link-copy-icon" aria-hidden="true">🔗</span>
-            <span className="link-label">{copied ? 'Lien copié ✓' : "Copier le lien de l'application"}</span>
-            <span className="link-arrow">⧉</span>
-          </button>
         </div>
       </section>
     </div>
