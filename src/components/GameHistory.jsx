@@ -66,7 +66,7 @@ export default function GameHistory({ game, plays, online, onNewPlay, onEditShee
         <p className="field-hint" style={{ padding: 16 }}>Chargement…</p>
       ) : stats.total === 0 ? (
         <p className="empty" style={{ padding: 24 }}>
-          Aucune partie enregistrée pour l'instant. Lance une « Nouvelle partie » pour commencer l'historique.
+          Aucune partie enregistrée pour l'instant.
         </p>
       ) : (
         <>
