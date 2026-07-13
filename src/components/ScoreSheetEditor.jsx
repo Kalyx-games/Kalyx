@@ -13,6 +13,8 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   // Extensions ENREGISTRÉES pour ce jeu (choix possibles).
   const availableExts = parseExtensions(game?.extensions).map((e) => e.name).filter(Boolean)
 
+  const [mode, setMode] = useState(template?.mode === 'coop' ? 'coop' : 'competitive')
+  const isCoop = mode === 'coop'
   const [cats, setCats] = useState(() => (template?.categories || []).map(mkCat))
   // Extensions qui modifient le score (sous-ensemble des extensions enregistrées).
   const [exts, setExts] = useState(() =>
@@ -36,6 +38,8 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
 
   const save = async () => {
     const extList = [...exts]
+    // On garde les catégories même en coopératif (elles ne servent pas mais on ne
+    // les perd pas si on rebascule en compétitif).
     const categories = cats
       .map((c) => ({
         label: c.label.trim(),
@@ -43,14 +47,14 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         ext: c.ext && extList.includes(c.ext) ? c.ext : null,
       }))
       .filter((c) => c.label)
-    if (!categories.length) {
+    if (!isCoop && !categories.length) {
       setErr('Ajoute au moins une catégorie avec un nom.')
       return
     }
     setBusy(true)
     setErr('')
     try {
-      await onSave(game.id, { categories, extensions: extList })
+      await onSave(game.id, { mode, categories, extensions: extList })
       onClose()
     } catch (e) {
       setErr(e.message)
@@ -65,6 +69,23 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">←</button>
         <h2 className="sheet-title">✏️ {isNew ? 'Nouvelle fiche' : 'Modifier'} — {game?.name}</h2>
       </div>
+
+      <section className="settings-card">
+        <h3>Type de jeu</h3>
+        <div className="chips">
+          <button type="button" className={`fchip ${!isCoop ? 'on' : ''}`} onClick={() => setMode('competitive')}>
+            🏅 Compétitif
+          </button>
+          <button type="button" className={`fchip ${isCoop ? 'on' : ''}`} onClick={() => setMode('coop')}>
+            🤝 Coopératif
+          </button>
+        </div>
+        <p className="field-hint" style={{ marginTop: 8 }}>
+          {isCoop
+            ? 'Tout le groupe gagne ou perd ensemble. À chaque partie : Gagné/Perdu, un score de groupe et un scénario (facultatifs).'
+            : 'Chacun marque ses points, le meilleur score gagne.'}
+        </p>
+      </section>
 
       {availableExts.length > 0 && (
         <section className="settings-card">
@@ -99,6 +120,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         </section>
       )}
 
+      {!isCoop && (
       <section className="settings-card">
         <h3>Catégories de score</h3>
         {cats.length === 0 && <p className="field-hint" style={{ marginBottom: 8 }}>Aucune catégorie. Ajoute-en une ci-dessous.</p>}
@@ -131,6 +153,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         ))}
         <button type="button" className="btn-ghost" onClick={addCat}>➕ Ajouter une catégorie</button>
       </section>
+      )}
 
       {err && <p className="banner banner-err" style={{ margin: '4px 0 12px' }}>{err}</p>}
 

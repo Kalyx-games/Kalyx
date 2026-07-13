@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { computePlayStats, winnersOf } from '../lib/plays'
+import { computePlayStats, playWinners } from '../lib/plays'
 
 // Historique des parties d'un jeu : stats en haut (total, victoires/parties par
 // joueur, meilleur/moyen score) puis la liste des parties. Bouton « Nouvelle partie ».
@@ -42,9 +42,10 @@ function BarBlock({ title, rows, valueKey, color }) {
   )
 }
 
-export default function GameHistory({ game, plays, online, onNewPlay, onEditSheet, onDeletePlay, onClose }) {
+export default function GameHistory({ game, plays, mode, online, onNewPlay, onEditSheet, onDeletePlay, onClose }) {
   const stats = useMemo(() => computePlayStats(plays || []), [plays])
   const loading = plays == null
+  const isCoop = mode === 'coop'
 
   return (
     <div className="sheet">
@@ -72,8 +73,17 @@ export default function GameHistory({ game, plays, online, onNewPlay, onEditShee
         <>
           <div className="stat-tiles">
             <Tile value={stats.total} label={stats.total > 1 ? 'parties jouées' : 'partie jouée'} />
-            <Tile value={stats.maxScore} label="meilleur score" />
-            <Tile value={stats.avgScore ?? '—'} label="score moyen" />
+            {isCoop ? (
+              <>
+                <Tile value={stats.winRate != null ? `${stats.winRate} %` : '—'} label="taux de victoire" />
+                <Tile value={stats.scores.length ? stats.maxScore : '—'} label="meilleur score" />
+              </>
+            ) : (
+              <>
+                <Tile value={stats.maxScore} label="meilleur score" />
+                <Tile value={stats.avgScore ?? '—'} label="score moyen" />
+              </>
+            )}
           </div>
 
           <BarBlock title="🏆 Victoires par joueur" rows={stats.byPlayer.filter((p) => p.wins > 0)} valueKey="wins" color="#eab308" />
@@ -83,27 +93,52 @@ export default function GameHistory({ game, plays, online, onNewPlay, onEditShee
             <h3 className="stat-block-title">🗓️ Parties</h3>
             <div className="hist-list">
               {plays.map((pl) => {
+                const coop = !!pl.outcome
                 const ranked = [...(pl.players || [])].sort((a, b) => (b.total ?? 0) - (a.total ?? 0))
-                const winners = new Set(winnersOf(pl.players)) // gère l'égalité en tête
+                const winners = new Set(playWinners(pl)) // gère l'égalité en tête et le coop
                 return (
                   <div key={pl.id} className="hist-row">
                     <div className="hist-row-head">
                       <span className="hist-date">{playDate(pl.played_at)}</span>
+                      {coop && (
+                        <span className={`coop-badge ${pl.outcome === 'win' ? 'win' : 'loss'}`}>
+                          {pl.outcome === 'win' ? '🏆 Gagné' : '💀 Perdu'}
+                        </span>
+                      )}
                       {onDeletePlay && (
                         <button type="button" className="hist-del" onClick={() => onDeletePlay(pl)} aria-label="Supprimer cette partie">🗑️</button>
                       )}
                     </div>
-                    {pl.extensions && pl.extensions.length > 0 && (
-                      <div className="hist-ext">🧩 {pl.extensions.join(', ')}</div>
-                    )}
-                    <div className="hist-players">
-                      {ranked.map((p, i) => (
-                        <div key={i} className={`hist-player ${winners.has((p.name || '').trim()) ? 'hist-winner' : ''}`}>
-                          <span className="hist-player-name">{winners.has((p.name || '').trim()) ? '🏆 ' : ''}{p.name}</span>
-                          <span className="hist-player-score">{p.total}</span>
+                    {coop ? (
+                      <>
+                        {(pl.scenario || pl.score != null) && (
+                          <div className="hist-coop-meta">
+                            {pl.scenario ? <span>🎯 {pl.scenario}</span> : null}
+                            {pl.score != null ? <span>🔢 {pl.score} pts</span> : null}
+                          </div>
+                        )}
+                        {pl.extensions && pl.extensions.length > 0 && (
+                          <div className="hist-ext">🧩 {pl.extensions.join(', ')}</div>
+                        )}
+                        <div className="hist-coop-players">
+                          👥 {(pl.players || []).map((p) => p.name).join(', ')}
                         </div>
-                      ))}
-                    </div>
+                      </>
+                    ) : (
+                      <>
+                        {pl.extensions && pl.extensions.length > 0 && (
+                          <div className="hist-ext">🧩 {pl.extensions.join(', ')}</div>
+                        )}
+                        <div className="hist-players">
+                          {ranked.map((p, i) => (
+                            <div key={i} className={`hist-player ${winners.has((p.name || '').trim()) ? 'hist-winner' : ''}`}>
+                              <span className="hist-player-name">{winners.has((p.name || '').trim()) ? '🏆 ' : ''}{p.name}</span>
+                              <span className="hist-player-score">{p.total}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )
               })}

@@ -5,13 +5,16 @@ import { supabase } from './supabase'
 
 const tableMissing = (error) => /does not exist|schema cache|relation/i.test(error?.message || '')
 
+// Colonnes ajoutées pour les jeux coopératifs (migration `migration_plays_coop.sql`).
+// Si elles manquent encore, on retombe sur les colonnes de base.
+const missingCol = (error) => /column .* does not exist|schema cache|could not find/i.test(error?.message || '')
+
 // Parties d'un jeu, plus récente d'abord. null si la table n'existe pas encore.
 export async function fetchPlays(gameId) {
-  const { data, error } = await supabase
-    .from('plays')
-    .select('id, played_at, players, winner, extensions')
-    .eq('game_id', gameId)
-    .order('played_at', { ascending: false })
+  const run = (cols) =>
+    supabase.from('plays').select(cols).eq('game_id', gameId).order('played_at', { ascending: false })
+  let { data, error } = await run('id, played_at, players, winner, extensions, outcome, scenario, score')
+  if (error && missingCol(error)) ({ data, error } = await run('id, played_at, players, winner, extensions'))
   if (error) {
     if (tableMissing(error)) return null
     throw error
@@ -19,10 +22,14 @@ export async function fetchPlays(gameId) {
   return data ?? []
 }
 
-// Enregistre une partie. play = { players:[{name,total,scores}], winner, extensions }
+// Enregistre une partie.
+//  Compétitif : play = { players:[{name,total,scores}], winner, extensions }
+//  Coopératif : play = { players:[{name}], outcome:'win'|'loss', scenario, score, extensions }
 export async function savePlay(gameId, play) {
-  const row = { game_id: gameId, players: play.players, winner: play.winner || null, extensions: play.extensions || [] }
-  const { data, error } = await supabase.from('plays').insert(row).select('id').single()
+  const base = { game_id: gameId, players: play.players, winner: play.winner || null, extensions: play.extensions || [] }
+  const full = { ...base, outcome: play.outcome || null, scenario: play.scenario || null, score: play.score ?? null }
+  let { data, error } = await supabase.from('plays').insert(full).select('id').single()
+  if (error && missingCol(error)) ({ data, error } = await supabase.from('plays').insert(base).select('id').single())
   if (error) throw error
   return data
 }
@@ -50,8 +57,8 @@ export async function fetchPlayerNames() {
   return [...set].sort((a, b) => a.localeCompare(b, 'fr'))
 }
 
-// Vainqueur(s) d'une partie = tou(te)s les joueurs au score le plus élevé
-// (gère les égalités : plusieurs vainqueurs possibles).
+// Vainqueur(s) d'une partie COMPÉTITIVE = tou(te)s les joueurs au score le plus
+// élevé (gère les égalités : plusieurs vainqueurs possibles).
 export function winnersOf(players) {
   const list = players || []
   if (!list.length) return []
@@ -59,21 +66,43 @@ export function winnersOf(players) {
   return list.filter((p) => (Number(p?.total) || 0) === max).map((p) => (p?.name || '').trim()).filter(Boolean)
 }
 
+// Vainqueur(s) d'une partie, tous modes confondus. En coopératif, tout le groupe
+// gagne (ou personne) selon le résultat ; sinon on retombe sur le score le plus haut.
+export function playWinners(play) {
+  if (play?.outcome) {
+    return play.outcome === 'win'
+      ? (play.players || []).map((p) => (p?.name || '').trim()).filter(Boolean)
+      : []
+  }
+  return winnersOf(play?.players)
+}
+
 // Statistiques d'un jeu à partir de ses parties.
 export function computePlayStats(plays) {
   const list = plays || []
   const games = {} // nom → nb de parties jouées
   const wins = {} // nom → nb de victoires
-  const scores = [] // toutes les valeurs de score total
+  const scores = [] // valeurs de score (par joueur en compétitif, du groupe en coop)
+  let coopWins = 0
+  let coopTotal = 0
   list.forEach((p) => {
+    const coop = !!p.outcome
+    if (coop) {
+      coopTotal += 1
+      if (p.outcome === 'win') coopWins += 1
+      const s = Number(p.score)
+      if (Number.isFinite(s)) scores.push(s)
+    }
     ;(p.players || []).forEach((pl) => {
       const n = (pl?.name || '').trim() || '—'
       games[n] = (games[n] || 0) + 1
-      const t = Number(pl?.total)
-      if (Number.isFinite(t)) scores.push(t)
+      if (!coop) {
+        const t = Number(pl?.total)
+        if (Number.isFinite(t)) scores.push(t)
+      }
     })
-    // Égalité en tête → chaque vainqueur compte une victoire.
-    winnersOf(p.players).forEach((w) => {
+    // Vainqueur(s) → chacun compte une victoire (gère l'égalité et le coop).
+    playWinners(p).forEach((w) => {
       wins[w] = (wins[w] || 0) + 1
     })
   })
@@ -85,6 +114,9 @@ export function computePlayStats(plays) {
     total: list.length,
     byPlayer,
     scores,
+    coopWins,
+    coopTotal,
+    winRate: coopTotal ? Math.round((coopWins / coopTotal) * 100) : null,
     maxScore: scores.length ? Math.max(...scores) : 0,
     avgScore: scores.length ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length) : null,
   }
