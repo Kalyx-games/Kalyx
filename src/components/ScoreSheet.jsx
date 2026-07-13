@@ -1,17 +1,18 @@
 import { useMemo, useState } from 'react'
 
-// Fiche de saisie d'une partie.
-//  • Compétitif : une colonne par joueur, une ligne par catégorie, total auto +
-//    vainqueur mis en avant.
-//  • Coopératif : tout le groupe gagne/perd ensemble → résultat Gagné/Perdu,
-//    score de groupe et scénario facultatifs, liste des joueurs présents.
-// Si le jeu a des extensions qui modifient le score, on coche celles utilisées.
+// Fiche de saisie d'une partie. Le type de partie vient du template :
+//  • win     : 'competitive' | 'coop'
+//  • scoring : 'high' | 'low' | 'none'  (plus haut / plus petit / pas de points)
+//  • scenario: booléen → demande un scénario / niveau de difficulté
+// En compétitif on note par joueur (table + total), le vainqueur = meilleur score
+// (ou le(s) joueur(s) coché(s) si « pas de points »). En coopératif, tout le groupe
+// gagne/perd ensemble (+ score de groupe facultatif).
 
 let pid = 0
 const makePlayer = (name = '') => ({ id: ++pid, name, scores: {} })
 
 // Champ « nom de joueur » avec auto-complétion maison (le <datalist> natif ne
-// marche pas partout sur mobile). Partagé par les deux modes.
+// marche pas partout sur mobile). Partagé par tous les modes.
 function NameField({ id, value, onChange, onPick, placeholder, playerNames, focused, setFocused, className, style }) {
   const v = (value || '').trim().toLowerCase()
   const suggestions =
@@ -52,24 +53,26 @@ function NameField({ id, value, onChange, onPick, placeholder, playerNames, focu
 }
 
 export default function ScoreSheet({ game, template, playerNames = [], onSavePlay, saving, onEdit, onClose }) {
-  const isCoop = template?.mode === 'coop'
+  const win = template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive')
+  const scoring = template?.scoring || 'high'
+  const wantScenario = !!template?.scenario
+  const isCoop = win === 'coop'
+  const noPoints = scoring === 'none'
   const cats = template?.categories ?? []
   const exts = template?.extensions ?? []
 
   const [activeExts, setActiveExts] = useState(() => new Set())
   const [players, setPlayers] = useState(() => [makePlayer(), makePlayer()])
   const [focusedPlayer, setFocusedPlayer] = useState(null)
+  const [scenario, setScenario] = useState('')
 
   // Coopératif
   const [outcome, setOutcome] = useState(null) // 'win' | 'loss'
-  const [scenario, setScenario] = useState('')
   const [groupScore, setGroupScore] = useState('')
+  // Compétitif « pas de points » : id des vainqueurs cochés
+  const [winnerIds, setWinnerIds] = useState(() => new Set())
 
-  // Catégories visibles = base + celles des extensions cochées.
-  const visibleCats = useMemo(
-    () => cats.filter((c) => !c.ext || activeExts.has(c.ext)),
-    [cats, activeExts]
-  )
+  const visibleCats = useMemo(() => cats.filter((c) => !c.ext || activeExts.has(c.ext)), [cats, activeExts])
 
   const toggleExt = (name) =>
     setActiveExts((s) => {
@@ -84,7 +87,21 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
   const setName = (playerId, name) =>
     setPlayers((ps) => ps.map((p) => (p.id === playerId ? { ...p, name } : p)))
   const addPlayer = () => setPlayers((ps) => (ps.length < 8 ? [...ps, makePlayer()] : ps))
-  const removePlayer = (playerId) => setPlayers((ps) => (ps.length > 1 ? ps.filter((p) => p.id !== playerId) : ps))
+  const removePlayer = (playerId) => {
+    setWinnerIds((s) => {
+      const n = new Set(s)
+      n.delete(playerId)
+      return n
+    })
+    setPlayers((ps) => (ps.length > 1 ? ps.filter((p) => p.id !== playerId) : ps))
+  }
+  const toggleWinner = (playerId) =>
+    setWinnerIds((s) => {
+      const n = new Set(s)
+      if (n.has(playerId)) n.delete(playerId)
+      else n.add(playerId)
+      return n
+    })
 
   const totalOf = (p) =>
     visibleCats.reduce((sum, c) => {
@@ -94,39 +111,53 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
 
   const totals = players.map(totalOf)
   const anyScore = players.some((p) => Object.values(p.scores).some((v) => v !== '' && v != null))
-  const maxTotal = anyScore ? Math.max(...totals) : null
+  // Meilleur score selon le sens (plus haut / plus petit).
+  const best = anyScore ? (scoring === 'low' ? Math.min(...totals) : Math.max(...totals)) : null
 
-  const namesOf = () => players.map((p, i) => (p.name || '').trim() || `Joueur ${i + 1}`)
+  const nameOf = (p, i) => (p.name || '').trim() || `Joueur ${i + 1}`
+  const namesOf = () => players.map(nameOf)
+  const scenarioVal = () => (wantScenario ? scenario.trim() || null : null)
 
-  // Enregistre une partie COMPÉTITIVE.
-  const savePlayCompetitive = () => {
+  // ----- Enregistrement selon le type -----
+  const saveCoop = () => {
+    if (!outcome) return
+    const built = namesOf().map((name) => ({ name }))
+    const s = Number(groupScore)
+    onSavePlay({
+      win: 'coop',
+      players: built,
+      outcome,
+      scenario: scenarioVal(),
+      score: !noPoints && groupScore.trim() !== '' && Number.isFinite(s) ? s : null,
+      winner: outcome === 'win' ? built.map((b) => b.name).join(', ') : '',
+      extensions: [...activeExts],
+    })
+  }
+
+  const saveNoPoints = () => {
+    if (!winnerIds.size) return
+    const built = players.map((p, i) => ({ name: nameOf(p, i), winner: winnerIds.has(p.id) }))
+    const winnerNames = built.filter((b) => b.winner).map((b) => b.name)
+    onSavePlay({
+      players: built.map((b) => ({ name: b.name })),
+      winner: winnerNames.join(', '),
+      scenario: scenarioVal(),
+      extensions: [...activeExts],
+    })
+  }
+
+  const saveScored = () => {
     const built = players.map((p, i) => {
       const scores = {}
       visibleCats.forEach((c) => {
         const v = p.scores[c.label]
         if (v !== '' && v != null && Number.isFinite(Number(v))) scores[c.label] = Number(v)
       })
-      return { name: (p.name || '').trim() || `Joueur ${i + 1}`, total: totalOf(p), scores }
+      return { name: nameOf(p, i), total: totalOf(p), scores }
     })
-    const max = Math.max(...built.map((b) => b.total))
-    const top = built.filter((b) => b.total === max).map((b) => b.name)
-    onSavePlay({ players: built, winner: top.join(', '), extensions: [...activeExts] })
-  }
-
-  // Enregistre une partie COOPÉRATIVE.
-  const savePlayCoop = () => {
-    if (!outcome) return
-    const built = namesOf().map((name) => ({ name }))
-    const s = Number(groupScore)
-    onSavePlay({
-      mode: 'coop',
-      players: built,
-      outcome,
-      scenario: scenario.trim() || null,
-      score: groupScore.trim() !== '' && Number.isFinite(s) ? s : null,
-      winner: outcome === 'win' ? built.map((b) => b.name).join(', ') : '',
-      extensions: [...activeExts],
-    })
+    const extreme = scoring === 'low' ? Math.min(...built.map((b) => b.total)) : Math.max(...built.map((b) => b.total))
+    const winners = built.filter((b) => b.total === extreme).map((b) => b.name)
+    onSavePlay({ players: built, winner: winners.join(', '), scenario: scenarioVal(), extensions: [...activeExts] })
   }
 
   const head = (
@@ -143,12 +174,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
         <section className="settings-card">
           <div className="chips">
             {exts.map((name) => (
-              <button
-                key={name}
-                type="button"
-                className={`fchip ${activeExts.has(name) ? 'on' : ''}`}
-                onClick={() => toggleExt(name)}
-              >
+              <button key={name} type="button" className={`fchip ${activeExts.has(name) ? 'on' : ''}`} onClick={() => toggleExt(name)}>
                 {name}
               </button>
             ))}
@@ -158,78 +184,79 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
     </>
   )
 
-  // ----- Mode COOPÉRATIF -----
+  const scenarioField = wantScenario && (
+    <div className="field">
+      <label className="field-label">🎯 Scénario / niveau <span className="field-opt">(facultatif)</span></label>
+      <input className="input" value={scenario} onChange={(e) => setScenario(e.target.value)} placeholder="ex. Scénario 3, difficile…" />
+    </div>
+  )
+
+  // Liste de noms de joueurs (utilisée en coop et en « pas de points »).
+  const playerList = (withWinnerToggle) => (
+    <div className="coop-players">
+      {players.map((p, i) => (
+        <div key={p.id} className="coop-player-row">
+          {withWinnerToggle && (
+            <button
+              type="button"
+              className={`win-toggle ${winnerIds.has(p.id) ? 'on' : ''}`}
+              onClick={() => toggleWinner(p.id)}
+              aria-label="Désigner vainqueur"
+              title="Vainqueur"
+            >
+              🏆
+            </button>
+          )}
+          <NameField
+            id={p.id}
+            className="input"
+            value={p.name}
+            onChange={(v) => setName(p.id, v)}
+            onPick={(n) => setName(p.id, n)}
+            placeholder={`Joueur ${i + 1}`}
+            playerNames={playerNames}
+            focused={focusedPlayer}
+            setFocused={setFocusedPlayer}
+          />
+          {players.length > 1 && (
+            <button type="button" className="sheet-del" onClick={() => removePlayer(p.id)} aria-label="Retirer ce joueur">×</button>
+          )}
+        </div>
+      ))}
+      {players.length < 8 && (
+        <button type="button" className="btn-ghost coop-add" onClick={addPlayer}>➕ Ajouter un joueur</button>
+      )}
+    </div>
+  )
+
+  // ---------- COOPÉRATIF ----------
   if (isCoop) {
     return (
       <div className="sheet">
         {head}
-
         <div className="coop-form">
           <div className="field">
             <label className="field-label">Résultat</label>
             <div className="chips">
-              <button type="button" className={`fchip coop-win ${outcome === 'win' ? 'on' : ''}`} onClick={() => setOutcome('win')}>
-                🏆 Gagné
-              </button>
-              <button type="button" className={`fchip coop-loss ${outcome === 'loss' ? 'on' : ''}`} onClick={() => setOutcome('loss')}>
-                💀 Perdu
-              </button>
+              <button type="button" className={`fchip coop-win ${outcome === 'win' ? 'on' : ''}`} onClick={() => setOutcome('win')}>🏆 Gagné</button>
+              <button type="button" className={`fchip coop-loss ${outcome === 'loss' ? 'on' : ''}`} onClick={() => setOutcome('loss')}>💀 Perdu</button>
             </div>
           </div>
-
-          <div className="field">
-            <label className="field-label">🎯 Scénario / niveau <span className="field-opt">(facultatif)</span></label>
-            <input
-              className="input"
-              value={scenario}
-              onChange={(e) => setScenario(e.target.value)}
-              placeholder="ex. Scénario 3, difficile…"
-            />
-          </div>
-
-          <div className="field">
-            <label className="field-label">🔢 Score du groupe <span className="field-opt">(facultatif)</span></label>
-            <input
-              className="input"
-              type="number"
-              inputMode="numeric"
-              value={groupScore}
-              onChange={(e) => setGroupScore(e.target.value)}
-              placeholder="ex. 42"
-            />
-          </div>
-
+          {scenarioField}
+          {!noPoints && (
+            <div className="field">
+              <label className="field-label">🔢 Score du groupe <span className="field-opt">(facultatif)</span></label>
+              <input className="input" type="number" inputMode="numeric" value={groupScore} onChange={(e) => setGroupScore(e.target.value)} placeholder="ex. 42" />
+            </div>
+          )}
           <div className="field">
             <label className="field-label">👥 Joueurs présents</label>
-            <div className="coop-players">
-              {players.map((p, i) => (
-                <div key={p.id} className="coop-player-row">
-                  <NameField
-                    id={p.id}
-                    className="input"
-                    value={p.name}
-                    onChange={(v) => setName(p.id, v)}
-                    onPick={(n) => setName(p.id, n)}
-                    placeholder={`Joueur ${i + 1}`}
-                    playerNames={playerNames}
-                    focused={focusedPlayer}
-                    setFocused={setFocusedPlayer}
-                  />
-                  {players.length > 1 && (
-                    <button type="button" className="sheet-del" onClick={() => removePlayer(p.id)} aria-label="Retirer ce joueur">×</button>
-                  )}
-                </div>
-              ))}
-              {players.length < 8 && (
-                <button type="button" className="btn-ghost coop-add" onClick={addPlayer}>➕ Ajouter un joueur</button>
-              )}
-            </div>
+            {playerList(false)}
           </div>
         </div>
-
         {onSavePlay && (
           <div className="sheet-editor-actions">
-            <button type="button" className="btn-primary" onClick={savePlayCoop} disabled={saving || !outcome}>
+            <button type="button" className="btn-primary" onClick={saveCoop} disabled={saving || !outcome}>
               {saving ? '…' : '💾 Enregistrer la partie'}
             </button>
           </div>
@@ -238,10 +265,34 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
     )
   }
 
-  // ----- Mode COMPÉTITIF -----
+  // ---------- COMPÉTITIF, PAS DE POINTS ----------
+  if (noPoints) {
+    return (
+      <div className="sheet">
+        {head}
+        <div className="coop-form">
+          {scenarioField}
+          <div className="field">
+            <label className="field-label">Joueurs — coche le(s) vainqueur(s) 🏆</label>
+            {playerList(true)}
+          </div>
+        </div>
+        {onSavePlay && (
+          <div className="sheet-editor-actions">
+            <button type="button" className="btn-primary" onClick={saveNoPoints} disabled={saving || !winnerIds.size}>
+              {saving ? '…' : '💾 Enregistrer la partie'}
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ---------- COMPÉTITIF AVEC POINTS ----------
   return (
     <div className="sheet">
       {head}
+      {scenarioField && <div className="coop-form">{scenarioField}</div>}
 
       <div className="sheet-scroll">
         <table className="sheet-table">
@@ -249,7 +300,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
             <tr>
               <th className="sheet-cat-head">Catégorie</th>
               {players.map((p, i) => (
-                <th key={p.id} className={maxTotal != null && totals[i] === maxTotal ? 'sheet-winner' : ''}>
+                <th key={p.id} className={best != null && totals[i] === best ? 'sheet-winner' : ''}>
                   <div className="sheet-player">
                     <NameField
                       id={p.id}
@@ -301,8 +352,8 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
             <tr className="sheet-total-row">
               <th className="sheet-cat" scope="row">Total</th>
               {players.map((p, i) => (
-                <td key={p.id} className={`sheet-total ${maxTotal != null && totals[i] === maxTotal ? 'sheet-winner' : ''}`}>
-                  {maxTotal != null && totals[i] === maxTotal ? '🏆 ' : ''}
+                <td key={p.id} className={`sheet-total ${best != null && totals[i] === best ? 'sheet-winner' : ''}`}>
+                  {best != null && totals[i] === best ? '🏆 ' : ''}
                   {totals[i]}
                 </td>
               ))}
@@ -316,7 +367,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
 
       {onSavePlay && visibleCats.length > 0 && (
         <div className="sheet-editor-actions">
-          <button type="button" className="btn-primary" onClick={savePlayCompetitive} disabled={saving || !anyScore}>
+          <button type="button" className="btn-primary" onClick={saveScored} disabled={saving || !anyScore}>
             {saving ? '…' : '💾 Enregistrer la partie'}
           </button>
         </div>

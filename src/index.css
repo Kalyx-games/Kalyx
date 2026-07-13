@@ -2598,6 +2598,28 @@ body {
   align-self: flex-start;
   margin-top: 2px;
 }
+/* Bouton « désigner vainqueur » (compétitif sans points) */
+.win-toggle {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--input-bg);
+  cursor: pointer;
+  font-size: 1.15rem;
+  filter: grayscale(1);
+  opacity: 0.4;
+}
+.win-toggle.on {
+  background: var(--nav-pill);
+  border-color: var(--primary);
+  filter: none;
+  opacity: 1;
+}
+.win-toggle:active {
+  transform: scale(0.94);
+}
 .coop-badge {
   font-size: 0.78rem;
   font-weight: 700;

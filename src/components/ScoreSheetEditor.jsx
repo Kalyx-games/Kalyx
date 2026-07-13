@@ -13,8 +13,13 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   // Extensions ENREGISTRÉES pour ce jeu (choix possibles).
   const availableExts = parseExtensions(game?.extensions).map((e) => e.name).filter(Boolean)
 
-  const [mode, setMode] = useState(template?.mode === 'coop' ? 'coop' : 'competitive')
-  const isCoop = mode === 'coop'
+  // Type de partie (options composables).
+  const [win, setWin] = useState(() => template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive'))
+  const [scoring, setScoring] = useState(() => template?.scoring || 'high')
+  const [scenario, setScenario] = useState(() => !!template?.scenario)
+  const isCoop = win === 'coop'
+  // Les catégories de score (détail par joueur) ne servent qu'en compétitif avec points.
+  const catsRelevant = !isCoop && scoring !== 'none'
   const [cats, setCats] = useState(() => (template?.categories || []).map(mkCat))
   // Extensions qui modifient le score (sous-ensemble des extensions enregistrées).
   const [exts, setExts] = useState(() =>
@@ -47,14 +52,14 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         ext: c.ext && extList.includes(c.ext) ? c.ext : null,
       }))
       .filter((c) => c.label)
-    if (!isCoop && !categories.length) {
+    if (catsRelevant && !categories.length) {
       setErr('Ajoute au moins une catégorie avec un nom.')
       return
     }
     setBusy(true)
     setErr('')
     try {
-      await onSave(game.id, { mode, categories, extensions: extList })
+      await onSave(game.id, { win, scoring, scenario, categories, extensions: extList })
       onClose()
     } catch (e) {
       setErr(e.message)
@@ -71,19 +76,42 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
       </div>
 
       <section className="settings-card">
-        <h3>Type de jeu</h3>
+        <h3>Type de partie</h3>
+
+        <label className="field-label">Qui gagne</label>
         <div className="chips">
-          <button type="button" className={`fchip ${!isCoop ? 'on' : ''}`} onClick={() => setMode('competitive')}>
+          <button type="button" className={`fchip ${!isCoop ? 'on' : ''}`} onClick={() => setWin('competitive')}>
             🏅 Compétitif
           </button>
-          <button type="button" className={`fchip ${isCoop ? 'on' : ''}`} onClick={() => setMode('coop')}>
+          <button type="button" className={`fchip ${isCoop ? 'on' : ''}`} onClick={() => setWin('coop')}>
             🤝 Coopératif
           </button>
         </div>
-        <p className="field-hint" style={{ marginTop: 8 }}>
+
+        <label className="field-label" style={{ marginTop: 14 }}>Comment on départage</label>
+        <div className="chips">
+          <button type="button" className={`fchip ${scoring === 'high' ? 'on' : ''}`} onClick={() => setScoring('high')}>
+            ⬆️ Plus haut score
+          </button>
+          <button type="button" className={`fchip ${scoring === 'low' ? 'on' : ''}`} onClick={() => setScoring('low')}>
+            ⬇️ Plus petit score
+          </button>
+          <button type="button" className={`fchip ${scoring === 'none' ? 'on' : ''}`} onClick={() => setScoring('none')}>
+            🏁 Pas de points
+          </button>
+        </div>
+
+        <label className="filter-check" style={{ marginTop: 14 }}>
+          <input type="checkbox" checked={scenario} onChange={(e) => setScenario(e.target.checked)} />
+          <span>🎯 Demander un scénario / niveau de difficulté</span>
+        </label>
+
+        <p className="field-hint" style={{ marginTop: 10 }}>
           {isCoop
-            ? 'Tout le groupe gagne ou perd ensemble. À chaque partie : Gagné/Perdu, un score de groupe et un scénario (facultatifs).'
-            : 'Chacun marque ses points, le meilleur score gagne.'}
+            ? 'Tout le groupe gagne ou perd ensemble.'
+            : scoring === 'none'
+              ? 'Pas de points : on désigne simplement le(s) vainqueur(s).'
+              : 'Chacun marque ses points.'}
         </p>
       </section>
 
@@ -120,7 +148,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         </section>
       )}
 
-      {!isCoop && (
+      {catsRelevant && (
       <section className="settings-card">
         <h3>Catégories de score</h3>
         {cats.length === 0 && <p className="field-hint" style={{ marginBottom: 8 }}>Aucune catégorie. Ajoute-en une ci-dessous.</p>}

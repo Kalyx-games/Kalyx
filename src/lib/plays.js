@@ -57,8 +57,7 @@ export async function fetchPlayerNames() {
   return [...set].sort((a, b) => a.localeCompare(b, 'fr'))
 }
 
-// Vainqueur(s) d'une partie COMPÉTITIVE = tou(te)s les joueurs au score le plus
-// élevé (gère les égalités : plusieurs vainqueurs possibles).
+// Vainqueur(s) d'une partie au score le plus élevé (gère les égalités).
 export function winnersOf(players) {
   const list = players || []
   if (!list.length) return []
@@ -66,19 +65,26 @@ export function winnersOf(players) {
   return list.filter((p) => (Number(p?.total) || 0) === max).map((p) => (p?.name || '').trim()).filter(Boolean)
 }
 
-// Vainqueur(s) d'une partie, tous modes confondus. En coopératif, tout le groupe
-// gagne (ou personne) selon le résultat ; sinon on retombe sur le score le plus haut.
+// Vainqueur(s) d'une partie, tous modes confondus.
+//  • Coopératif : tout le groupe gagne (ou personne) selon le résultat.
+//  • Sinon : on lit le(s) vainqueur(s) décidé(s) et enregistré(s) au moment de la
+//    partie (champ `winner`, séparé par des virgules) ; à défaut, repli sur le
+//    score le plus élevé (anciennes parties).
 export function playWinners(play) {
   if (play?.outcome) {
     return play.outcome === 'win'
       ? (play.players || []).map((p) => (p?.name || '').trim()).filter(Boolean)
       : []
   }
+  if (typeof play?.winner === 'string' && play.winner.trim()) {
+    return play.winner.split(',').map((s) => s.trim()).filter(Boolean)
+  }
   return winnersOf(play?.players)
 }
 
-// Statistiques d'un jeu à partir de ses parties.
-export function computePlayStats(plays) {
+// Statistiques d'un jeu à partir de ses parties. `scoring` = 'high' | 'low' | 'none'
+// pilote le « meilleur score » (max ou min).
+export function computePlayStats(plays, scoring = 'high') {
   const list = plays || []
   const games = {} // nom → nb de parties jouées
   const wins = {} // nom → nb de victoires
@@ -98,7 +104,7 @@ export function computePlayStats(plays) {
       games[n] = (games[n] || 0) + 1
       if (!coop) {
         const t = Number(pl?.total)
-        if (Number.isFinite(t)) scores.push(t)
+        if (Number.isFinite(t) && (pl?.total !== undefined && pl?.total !== null)) scores.push(t)
       }
     })
     // Vainqueur(s) → chacun compte une victoire (gère l'égalité et le coop).
@@ -110,6 +116,7 @@ export function computePlayStats(plays) {
   const byPlayer = names
     .map((name) => ({ name, games: games[name] || 0, wins: wins[name] || 0 }))
     .sort((a, b) => b.wins - a.wins || b.games - a.games || a.name.localeCompare(b.name, 'fr'))
+  const bestScore = scores.length ? (scoring === 'low' ? Math.min(...scores) : Math.max(...scores)) : 0
   return {
     total: list.length,
     byPlayer,
@@ -117,7 +124,7 @@ export function computePlayStats(plays) {
     coopWins,
     coopTotal,
     winRate: coopTotal ? Math.round((coopWins / coopTotal) * 100) : null,
-    maxScore: scores.length ? Math.max(...scores) : 0,
+    maxScore: bestScore,
     avgScore: scores.length ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length) : null,
   }
 }

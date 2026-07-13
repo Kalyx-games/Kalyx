@@ -1113,7 +1113,7 @@ export default function App() {
           <GameHistory
             game={historyGame}
             plays={gamePlays}
-            mode={scoresheets?.[historyGame.id]?.mode}
+            template={scoresheets?.[historyGame.id]}
             online={online}
             onNewPlay={() => setScoringGame(historyGame)}
             onEditSheet={() => setEditingSheet(historyGame)}

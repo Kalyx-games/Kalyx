@@ -42,10 +42,13 @@ function BarBlock({ title, rows, valueKey, color }) {
   )
 }
 
-export default function GameHistory({ game, plays, mode, online, onNewPlay, onEditSheet, onDeletePlay, onClose }) {
-  const stats = useMemo(() => computePlayStats(plays || []), [plays])
+export default function GameHistory({ game, plays, template, online, onNewPlay, onEditSheet, onDeletePlay, onClose }) {
+  const win = template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive')
+  const scoring = template?.scoring || 'high'
+  const isCoop = win === 'coop'
+  const noPoints = scoring === 'none'
+  const stats = useMemo(() => computePlayStats(plays || [], scoring), [plays, scoring])
   const loading = plays == null
-  const isCoop = mode === 'coop'
 
   return (
     <div className="sheet">
@@ -73,15 +76,13 @@ export default function GameHistory({ game, plays, mode, online, onNewPlay, onEd
         <>
           <div className="stat-tiles">
             <Tile value={stats.total} label={stats.total > 1 ? 'parties jouées' : 'partie jouée'} />
-            {isCoop ? (
-              <>
-                <Tile value={stats.winRate != null ? `${stats.winRate} %` : '—'} label="taux de victoire" />
-                <Tile value={stats.scores.length ? stats.maxScore : '—'} label="meilleur score" />
-              </>
-            ) : (
+            {isCoop && (
+              <Tile value={stats.winRate != null ? `${stats.winRate} %` : '—'} label="taux de victoire" />
+            )}
+            {!noPoints && stats.scores.length > 0 && (
               <>
                 <Tile value={stats.maxScore} label="meilleur score" />
-                <Tile value={stats.avgScore ?? '—'} label="score moyen" />
+                {!isCoop && <Tile value={stats.avgScore ?? '—'} label="score moyen" />}
               </>
             )}
           </div>
@@ -94,8 +95,10 @@ export default function GameHistory({ game, plays, mode, online, onNewPlay, onEd
             <div className="hist-list">
               {plays.map((pl) => {
                 const coop = !!pl.outcome
-                const ranked = [...(pl.players || [])].sort((a, b) => (b.total ?? 0) - (a.total ?? 0))
-                const winners = new Set(playWinners(pl)) // gère l'égalité en tête et le coop
+                const ranked = [...(pl.players || [])].sort((a, b) =>
+                  scoring === 'low' ? (a.total ?? 0) - (b.total ?? 0) : (b.total ?? 0) - (a.total ?? 0)
+                )
+                const winners = new Set(playWinners(pl)) // gère l'égalité, le coop, « pas de points »
                 return (
                   <div key={pl.id} className="hist-row">
                     <div className="hist-row-head">
@@ -126,6 +129,7 @@ export default function GameHistory({ game, plays, mode, online, onNewPlay, onEd
                       </>
                     ) : (
                       <>
+                        {pl.scenario && <div className="hist-coop-meta"><span>🎯 {pl.scenario}</span></div>}
                         {pl.extensions && pl.extensions.length > 0 && (
                           <div className="hist-ext">🧩 {pl.extensions.join(', ')}</div>
                         )}
@@ -133,7 +137,7 @@ export default function GameHistory({ game, plays, mode, online, onNewPlay, onEd
                           {ranked.map((p, i) => (
                             <div key={i} className={`hist-player ${winners.has((p.name || '').trim()) ? 'hist-winner' : ''}`}>
                               <span className="hist-player-name">{winners.has((p.name || '').trim()) ? '🏆 ' : ''}{p.name}</span>
-                              <span className="hist-player-score">{p.total}</span>
+                              {!noPoints && <span className="hist-player-score">{p.total}</span>}
                             </div>
                           ))}
                         </div>
