@@ -6,7 +6,7 @@ import { fetchOwners, addOwner, updateOwner, deleteOwner } from './lib/owners'
 import { fetchTags, addTag, updateTag, deleteTag } from './lib/tags'
 import { downloadBackup, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
-import { fetchScoresheets } from './lib/scoresheets'
+import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
 import ConfirmDialog from './components/ConfirmDialog'
@@ -20,6 +20,7 @@ const Stats = lazy(() => import('./components/Stats'))
 const Chwazi = lazy(() => import('./components/Chwazi'))
 const BarcodeScanner = lazy(() => import('./components/BarcodeScanner'))
 const ScoreSheet = lazy(() => import('./components/ScoreSheet'))
+const ScoreSheetEditor = lazy(() => import('./components/ScoreSheetEditor'))
 import SkeletonCard from './components/SkeletonCard'
 import { enterFullscreen } from './lib/fullscreen'
 import NavBar from './components/NavBar'
@@ -221,6 +222,7 @@ export default function App() {
   const [tagsList, setTagsList] = useState(null) // lignes de la table tags, ou null si absente
   const [scoresheets, setScoresheets] = useState(null) // { game_id: template }, ou null si table absente
   const [scoringGame, setScoringGame] = useState(null) // jeu dont la fiche de score est ouverte | null
+  const [editingSheet, setEditingSheet] = useState(null) // jeu dont on édite/crée la fiche | null
 
   // Charger les listes gérées (tables owners + tags + fiches de score).
   const reloadOwners = useCallback(() => {
@@ -285,14 +287,14 @@ export default function App() {
   // se ferme jamais : on remet toujours une entrée d'historique "piège".
   const viewHistoryRef = useRef([]) // vues précédentes (pour revenir en arrière)
   const uiRef = useRef({})
-  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, scanOpen, chwaziOpen, scoringGame, statsOpen, settingsOpen, zoomImage }
+  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, scanOpen, chwaziOpen, scoringGame, editingSheet, statsOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
   viewRef.current = view
 
   // Nombre de "couches" ouvertes (fenêtres/onglets superposés).
   const layerCount =
     (editing ? 1 : 0) + (confirming ? 1 : 0) + (moving ? 1 : 0) + (confirmingOwner ? 1 : 0) + (confirmingTag ? 1 : 0) +
-    (importing ? 1 : 0) + (restoring ? 1 : 0) + (scanOpen ? 1 : 0) + (chwaziOpen ? 1 : 0) + (scoringGame ? 1 : 0) + (statsOpen ? 1 : 0) + (settingsOpen ? 1 : 0) + (zoomImage ? 1 : 0)
+    (importing ? 1 : 0) + (restoring ? 1 : 0) + (scanOpen ? 1 : 0) + (chwaziOpen ? 1 : 0) + (scoringGame ? 1 : 0) + (editingSheet ? 1 : 0) + (statsOpen ? 1 : 0) + (settingsOpen ? 1 : 0) + (zoomImage ? 1 : 0)
   const layerRef = useRef(0)
 
   // Change de vue en mémorisant la vue actuelle + une entrée d'historique (pour le retour).
@@ -318,6 +320,7 @@ export default function App() {
     else if (s.editing) setEditing(null)
     else if (s.scanOpen) setScanOpen(false)
     else if (s.chwaziOpen) setChwaziOpen(false)
+    else if (s.editingSheet) setEditingSheet(null)
     else if (s.scoringGame) setScoringGame(null)
     else if (s.statsOpen) setStatsOpen(false)
     else if (s.settingsOpen) setSettingsOpen(false)
@@ -657,10 +660,16 @@ export default function App() {
     }
   }
 
-  // Ouvre la fiche de score d'un jeu (si elle existe).
+  // Bouton 🧮 : ouvre la fiche pour noter si elle existe, sinon l'éditeur (création).
   function handleScore(g) {
     if (scoresheets && scoresheets[g.id]) setScoringGame(g)
-    else setNotice("Pas encore de fiche de score pour ce jeu — elle arrive bientôt.")
+    else setEditingSheet(g)
+  }
+
+  // Enregistre une fiche (création ou modification) et met à jour l'état local.
+  async function handleSaveSheet(gameId, template) {
+    await saveScoresheet(gameId, template)
+    setScoresheets((m) => ({ ...(m || {}), [gameId]: template }))
   }
 
   async function handleConfirmRestore() {
@@ -1041,7 +1050,24 @@ export default function App() {
 
       {scoringGame && scoresheets && scoresheets[scoringGame.id] && (
         <Suspense fallback={null}>
-          <ScoreSheet game={scoringGame} template={scoresheets[scoringGame.id]} onClose={() => setScoringGame(null)} />
+          <ScoreSheet
+            game={scoringGame}
+            template={scoresheets[scoringGame.id]}
+            onEdit={() => setEditingSheet(scoringGame)}
+            onClose={() => setScoringGame(null)}
+          />
+        </Suspense>
+      )}
+
+      {editingSheet && (
+        <Suspense fallback={null}>
+          <ScoreSheetEditor
+            game={editingSheet}
+            template={scoresheets ? scoresheets[editingSheet.id] : null}
+            online={online}
+            onSave={handleSaveSheet}
+            onClose={() => setEditingSheet(null)}
+          />
         </Suspense>
       )}
 

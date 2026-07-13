@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react'
 let pid = 0
 const makePlayer = (name = '') => ({ id: ++pid, name, scores: {} })
 
-export default function ScoreSheet({ game, template, onClose }) {
+export default function ScoreSheet({ game, template, onEdit, onClose }) {
   const cats = template?.categories ?? []
   const exts = template?.extensions ?? []
 
@@ -51,6 +51,9 @@ export default function ScoreSheet({ game, template, onClose }) {
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">←</button>
         <h2 className="sheet-title">🧮 {game?.name}</h2>
+        {onEdit && (
+          <button type="button" className="back-btn sheet-edit-btn" onClick={onEdit} title="Modifier la fiche" aria-label="Modifier la fiche">✏️</button>
+        )}
       </div>
 
       {exts.length > 0 && (

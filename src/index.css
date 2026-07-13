@@ -2330,3 +2330,63 @@ body {
   background: var(--accent-soft);
   border-radius: 8px;
 }
+
+.sheet-edit-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 1.05rem;
+}
+
+/* ---- Éditeur de fiche de score ---- */
+.sheet .ext-row input {
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+.cat-edit {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cat-edit-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.cat-edit-label,
+.cat-edit-hint,
+.cat-edit-ext {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+.cat-edit-label {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+.cat-edit-hint {
+  font-size: 0.85rem;
+}
+.sheet-editor-actions {
+  display: flex;
+  gap: 10px;
+  padding-bottom: 24px;
+  margin-top: 4px;
+}
+.sheet-editor-actions .btn-ghost,
+.sheet-editor-actions .btn-primary {
+  flex: 1;
+  height: 46px;
+}

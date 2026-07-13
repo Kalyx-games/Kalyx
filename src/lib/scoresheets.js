@@ -21,3 +21,17 @@ export async function fetchScoresheets() {
   })
   return map
 }
+
+// Enregistre (crée ou met à jour) la fiche d'un jeu. Renvoie le template sauvegardé.
+export async function saveScoresheet(gameId, template) {
+  const row = { game_id: gameId, template, updated_at: new Date().toISOString() }
+  const { error } = await supabase.from('scoresheets').upsert(row, { onConflict: 'game_id' })
+  if (error) throw error
+  return template
+}
+
+// Supprime la fiche d'un jeu.
+export async function deleteScoresheet(gameId) {
+  const { error } = await supabase.from('scoresheets').delete().eq('game_id', gameId)
+  if (error) throw error
+}
