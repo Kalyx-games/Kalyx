@@ -170,10 +170,12 @@ function GameCard({ game, online, onEdit, onMove, onScore, hasSheet, onCardClick
       </div>
 
       <div className="game-actions" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onEdit} disabled={!online} title="Modifier" aria-label="Modifier">✏️</button>
-        {onScore && hasSheet && (
-          <button onClick={onScore} title="Compter les points" aria-label="Compter les points">🧮</button>
-        )}
+        <div className="game-btns">
+          <button onClick={onEdit} disabled={!online} title="Modifier" aria-label="Modifier">✏️</button>
+          {onScore && hasSheet && (
+            <button onClick={onScore} title="Compter les points" aria-label="Compter les points">🧮</button>
+          )}
+        </div>
         {onMove && (
           <button onClick={onMove} disabled={!online} title="Déplacer vers la collection" aria-label="Déplacer vers la collection">
             <CollectionIcon size={16} />
