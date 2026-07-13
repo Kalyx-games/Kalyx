@@ -25,7 +25,7 @@ function durationLabel(g) {
   return d ? `${d} min` : '—'
 }
 
-function GameCard({ game, online, onEdit, onMove, onScore, hasSheet, onCardClick, onImageClick, ownerMap, tagMap, index = 0 }) {
+function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageClick, ownerMap, tagMap, index = 0 }) {
   const complexity = game.complexity ? Number(game.complexity) : null
   // Complexité sur 3 barres : plafonnée à 3, arrondie au demi près (remplissage partiel possible).
   const cx = complexity ? Math.min(3, complexity) : 0
@@ -172,8 +172,10 @@ function GameCard({ game, online, onEdit, onMove, onScore, hasSheet, onCardClick
       <div className="game-actions" onClick={(e) => e.stopPropagation()}>
         <div className="game-btns">
           <button onClick={onEdit} disabled={!online} title="Modifier" aria-label="Modifier">✏️</button>
-          {onScore && (
-            <button onClick={onScore} title={hasSheet ? 'Compter les points' : 'Créer une fiche de score'} aria-label="Fiche de score">🧮</button>
+          {onBgg && (
+            <button onClick={onBgg} title="Voir sur BoardGameGeek" aria-label="Voir sur BoardGameGeek">
+              <img className="bgg-logo" src="https://www.google.com/s2/favicons?domain=boardgamegeek.com&sz=64" alt="" width="18" height="18" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+            </button>
           )}
         </div>
         {onMove && (
@@ -214,7 +216,6 @@ export default memo(
   (prev, next) =>
     prev.game === next.game &&
     prev.online === next.online &&
-    prev.hasSheet === next.hasSheet &&
     prev.ownerMap === next.ownerMap &&
     prev.tagMap === next.tagMap
 )

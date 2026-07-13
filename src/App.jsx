@@ -877,14 +877,11 @@ export default function App() {
               online={online}
               onEdit={() => setEditing(g)}
               onMove={view === 'wishlist' ? () => setMoving(g) : undefined}
-              onScore={view !== 'wishlist' ? () => handleScore(g) : undefined}
-              hasSheet={!!(scoresheets && scoresheets[g.id])}
+              onBgg={view !== 'wishlist' && g.bgg_id ? () => window.open(`https://boardgamegeek.com/boardgame/${g.bgg_id}`, '_blank', 'noopener') : undefined}
               onCardClick={
                 view === 'wishlist'
                   ? () => window.open(philibertSearchUrl(g.name), '_blank', 'noopener')
-                  : g.bgg_id
-                  ? () => window.open(`https://boardgamegeek.com/boardgame/${g.bgg_id}`, '_blank', 'noopener')
-                  : undefined
+                  : () => handleScore(g)
               }
               onImageClick={(url) => setZoomImage(url)}
               ownerMap={ownerMap}

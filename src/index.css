@@ -1222,11 +1222,18 @@ body {
 .game-actions button {
   width: 38px;
   height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--line);
   border-radius: 9px;
   background: var(--input-bg);
   font-size: 0.9rem;
   cursor: pointer;
+}
+.bgg-logo {
+  flex-shrink: 0;
+  border-radius: 3px;
 }
 .game-actions button:active {
   transform: scale(0.94);
