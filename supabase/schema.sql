@@ -109,3 +109,26 @@ create policy "Insertion ouverte tags"    on public.tags for insert with check (
 create policy "Modification ouverte tags" on public.tags for update using (true) with check (true);
 create policy "Suppression ouverte tags"  on public.tags for delete using (true);
 grant all on public.tags to anon, authenticated;
+
+
+-- ============================================================
+--  4) Table des SAUVEGARDES automatiques (rotation des N plus récentes)
+-- ============================================================
+create table if not exists public.backups (
+  id           uuid        primary key default gen_random_uuid(),
+  created_at   timestamptz not null default now(),
+  data         jsonb       not null,                 -- snapshot complet { games, owners, tags }
+  games_count  integer,
+  owners_count integer,
+  tags_count   integer,
+  kind         text        default 'auto'            -- 'auto' ou 'manual'
+);
+
+alter table public.backups enable row level security;
+drop policy if exists "backups lecture"     on public.backups;
+drop policy if exists "backups insertion"   on public.backups;
+drop policy if exists "backups suppression" on public.backups;
+create policy "backups lecture"     on public.backups for select using (true);
+create policy "backups insertion"   on public.backups for insert with check (true);
+create policy "backups suppression" on public.backups for delete using (true);
+grant all on public.backups to anon, authenticated;

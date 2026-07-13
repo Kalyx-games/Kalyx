@@ -15,10 +15,31 @@ const LINKS = [
 // Lien de l'application (à copier pour partager).
 const APP_URL = 'https://kalyx-sepia.vercel.app'
 
+const FREQ_OPTIONS = [
+  ['always', 'À chaque ouverture'],
+  ['daily', 'Chaque jour'],
+  ['weekly', 'Chaque semaine'],
+  ['monthly', 'Chaque mois'],
+  ['manual', 'Manuel'],
+]
+
+// Date lisible d'une sauvegarde, ex. "14 juil. à 21:30".
+function backupDate(iso) {
+  try {
+    return new Date(iso).toLocaleString('fr-FR', {
+      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+    })
+  } catch {
+    return iso
+  }
+}
+
 export default function Settings({
   owners, onAddOwner, onUpdateOwner, onDeleteOwner,
   tags, onAddTag, onUpdateTag, onDeleteTag,
-  onExport, onImportFile, online, onClose,
+  onExport, onImportFile,
+  backupFreq, onSetBackupFreq, backups, backupBusy, onBackupNow, onRestore,
+  online, onClose,
 }) {
   const fileRef = useRef(null)
   const [theme, setThemeState] = useState(getTheme())
@@ -123,6 +144,65 @@ export default function Settings({
             }}
           />
         </div>
+      </section>
+
+      <section className="settings-card">
+        <h3>Sauvegarde automatique</h3>
+        <p className="muted save-intro">
+          Kalyx enregistre régulièrement une copie de ta collection dans la base (à l'ouverture de l'app).
+          On garde les 3 dernières : tu peux revenir à l'une d'elles en cas de pépin.
+        </p>
+
+        <span className="field-label">Fréquence</span>
+        <div className="chips">
+          {FREQ_OPTIONS.map(([v, label]) => (
+            <button
+              key={v}
+              type="button"
+              className={`fchip ${backupFreq === v ? 'on' : ''}`}
+              onClick={() => onSetBackupFreq(v)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="save-actions" style={{ marginTop: 14 }}>
+          <button type="button" className="btn-ghost" onClick={onBackupNow} disabled={!online || backupBusy}>
+            {backupBusy ? '…' : '💾 Sauvegarder maintenant'}
+          </button>
+        </div>
+
+        {backups === null ? (
+          <p className="field-hint" style={{ marginTop: 12 }}>
+            Pour activer les sauvegardes automatiques, lance la requête <code>migration_backups.sql</code> dans Supabase.
+          </p>
+        ) : backups.length === 0 ? (
+          <p className="field-hint" style={{ marginTop: 12 }}>Aucune sauvegarde pour l'instant.</p>
+        ) : (
+          <ul className="backup-list">
+            {backups.map((b) => (
+              <li key={b.id} className="backup-row">
+                <div className="backup-info">
+                  <span className="backup-when">{backupDate(b.created_at)}</span>
+                  <span className="backup-meta">
+                    {b.games_count} jeu{b.games_count > 1 ? 'x' : ''}
+                    {b.kind === 'manual' ? ' · manuelle' : ''}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-ghost backup-restore"
+                  onClick={() => onRestore(b)}
+                  disabled={!online}
+                  title={online ? 'Restaurer cette sauvegarde' : 'Indisponible hors ligne'}
+                >
+                  ↩ Restaurer
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="settings-card">

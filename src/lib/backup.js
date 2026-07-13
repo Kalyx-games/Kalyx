@@ -105,3 +105,107 @@ export async function importBackup({ games, owners, tags }) {
 
   return { games: rows.length, owners: (owners && owners.length) || 0, tags: (tags && tags.length) || 0 }
 }
+
+// ============================================================
+//  Sauvegardes automatiques stockées dans Supabase (table `backups`)
+//  → rechargeables depuis n'importe quel appareil, rotation des N plus récentes.
+// ============================================================
+
+const BACKUP_KEEP = 3 // nombre de sauvegardes conservées (rotation)
+
+// Délai minimal entre 2 sauvegardes AUTO, selon la fréquence choisie.
+const FREQ_MS = {
+  always: 2 * 60 * 1000, // à chaque ouverture (min 2 min pour éviter les doublons d'une même session)
+  daily: 24 * 60 * 60 * 1000,
+  weekly: 7 * 24 * 60 * 60 * 1000,
+  monthly: 30 * 24 * 60 * 60 * 1000,
+}
+
+const tableMissing = (error) => /does not exist|schema cache|relation/i.test(error?.message || '')
+
+// Liste des sauvegardes (SANS les données lourdes), plus récente d'abord.
+// Renvoie null si la table n'existe pas encore (migration non lancée).
+export async function fetchBackups() {
+  const { data, error } = await supabase
+    .from('backups')
+    .select('id, created_at, games_count, owners_count, tags_count, kind')
+    .order('created_at', { ascending: false })
+  if (error) {
+    if (tableMissing(error)) return null
+    throw error
+  }
+  return data ?? []
+}
+
+// Crée une sauvegarde (snapshot complet) puis ne garde que les BACKUP_KEEP plus récentes.
+// kind = 'auto' | 'manual'. Renvoie true, ou null si la table n'existe pas encore.
+export async function createBackup(games, owners, tags, kind = 'auto') {
+  const snapshot = buildBackup(games, owners, tags, new Date().toISOString())
+  const row = {
+    data: snapshot,
+    games_count: snapshot.games.length,
+    owners_count: snapshot.owners.length,
+    tags_count: snapshot.tags.length,
+    kind,
+  }
+  const { error } = await supabase.from('backups').insert(row)
+  if (error) {
+    if (tableMissing(error)) return null
+    throw error
+  }
+  // Rotation : supprime les sauvegardes au-delà des BACKUP_KEEP plus récentes.
+  const { data: all } = await supabase.from('backups').select('id').order('created_at', { ascending: false })
+  if (all && all.length > BACKUP_KEEP) {
+    const toDelete = all.slice(BACKUP_KEEP).map((b) => b.id)
+    await supabase.from('backups').delete().in('id', toDelete)
+  }
+  return true
+}
+
+// Sauvegarde AUTO si le délai lié à la fréquence est écoulé depuis la dernière.
+// Renvoie true si une sauvegarde a été créée.
+export async function maybeAutoBackup(frequency, games, owners, tags) {
+  if (!frequency || frequency === 'manual') return false
+  if (!games || !games.length) return false // ne jamais sauvegarder un état vide
+  const interval = FREQ_MS[frequency]
+  if (!interval) return false
+  const list = await fetchBackups()
+  if (list === null) return false // table absente → rien à faire
+  const newest = list[0]
+  if (newest && Date.now() - new Date(newest.created_at).getTime() < interval) return false // trop récent
+  await createBackup(games, owners, tags, 'auto')
+  return true
+}
+
+// Supprime dans `table` les lignes dont la clé (keyCol) n'est pas dans `keep` (Set).
+async function deleteExtra(table, keyCol, keep) {
+  const { data, error } = await supabase.from(table).select(keyCol)
+  if (error) {
+    if (tableMissing(error)) return
+    throw error
+  }
+  const toDelete = (data ?? []).map((r) => r[keyCol]).filter((v) => v != null && !keep.has(v))
+  if (toDelete.length) {
+    const { error: delErr } = await supabase.from(table).delete().in(keyCol, toDelete)
+    if (delErr) throw delErr
+  }
+}
+
+// Restaure une sauvegarde : remet EXACTEMENT son état (ré-insère/écrase + supprime le surplus).
+export async function restoreBackup(backupId) {
+  const { data: row, error } = await supabase.from('backups').select('data').eq('id', backupId).single()
+  if (error) throw error
+  const snap = row?.data || {}
+  const games = Array.isArray(snap.games) ? snap.games : []
+  const owners = Array.isArray(snap.owners) ? snap.owners : []
+  const tags = Array.isArray(snap.tags) ? snap.tags : []
+
+  // 1) ré-insère / met à jour tout ce qui est dans la sauvegarde
+  await importBackup({ games, owners, tags })
+  // 2) supprime ce qui n'existe PAS dans la sauvegarde (vrai retour arrière)
+  await deleteExtra('games', 'id', new Set(games.map((g) => g.id).filter(Boolean)))
+  await deleteExtra('owners', 'name', new Set(owners.map((o) => o.name)))
+  await deleteExtra('tags', 'name', new Set(tags.map((t) => t.name)))
+
+  return { games: games.length, owners: owners.length, tags: tags.length }
+}

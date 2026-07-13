@@ -4,7 +4,7 @@ import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwner
 import { saveGamesCache, loadGamesCache } from './lib/cache'
 import { fetchOwners, addOwner, updateOwner, deleteOwner } from './lib/owners'
 import { fetchTags, addTag, updateTag, deleteTag } from './lib/tags'
-import { downloadBackup, parseBackup, importBackup } from './lib/backup'
+import { downloadBackup, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
@@ -71,6 +71,23 @@ function saveView(v) {
     if (v === 'collection' || v === 'wishlist' || v === 'stats') localStorage.setItem(VIEW_KEY, v)
   } catch {
     /* stockage indispo : tant pis */
+  }
+}
+
+// Fréquence de la sauvegarde automatique (mémorisée dans le navigateur).
+const BACKUP_FREQ_KEY = 'kalyx-backup-freq'
+function loadBackupFreq() {
+  try {
+    return localStorage.getItem(BACKUP_FREQ_KEY) || 'daily'
+  } catch {
+    return 'daily'
+  }
+}
+function saveBackupFreq(v) {
+  try {
+    localStorage.setItem(BACKUP_FREQ_KEY, v)
+  } catch {
+    /* ignore */
   }
 }
 
@@ -187,6 +204,13 @@ export default function App() {
   const [importing, setImporting] = useState(null) // sauvegarde à confirmer | null
   const [importBusy, setImportBusy] = useState(false)
   const [notice, setNotice] = useState('') // message de confirmation (vert)
+  // Sauvegardes automatiques (table `backups` Supabase)
+  const [backupFreq, setBackupFreq] = useState(loadBackupFreq)
+  const [backupsList, setBackupsList] = useState(null) // liste des sauvegardes, ou null si table absente
+  const [restoring, setRestoring] = useState(null) // sauvegarde à restaurer (confirmation) | null
+  const [restoreBusy, setRestoreBusy] = useState(false)
+  const [backupBusy, setBackupBusy] = useState(false)
+  const autoBackupRef = useRef(false) // pour ne lancer la sauvegarde auto qu'une fois par chargement
   const [scanOpen, setScanOpen] = useState(false) // scanner de code-barres
   const [scanBusy, setScanBusy] = useState(false)
   const [scanPrefill, setScanPrefill] = useState(null) // champs pré-remplis après un scan
@@ -256,14 +280,14 @@ export default function App() {
   // se ferme jamais : on remet toujours une entrée d'historique "piège".
   const viewHistoryRef = useRef([]) // vues précédentes (pour revenir en arrière)
   const uiRef = useRef({})
-  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, scanOpen, chwaziOpen, statsOpen, settingsOpen, zoomImage }
+  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, scanOpen, chwaziOpen, statsOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
   viewRef.current = view
 
   // Nombre de "couches" ouvertes (fenêtres/onglets superposés).
   const layerCount =
     (editing ? 1 : 0) + (confirming ? 1 : 0) + (moving ? 1 : 0) + (confirmingOwner ? 1 : 0) + (confirmingTag ? 1 : 0) +
-    (importing ? 1 : 0) + (scanOpen ? 1 : 0) + (chwaziOpen ? 1 : 0) + (statsOpen ? 1 : 0) + (settingsOpen ? 1 : 0) + (zoomImage ? 1 : 0)
+    (importing ? 1 : 0) + (restoring ? 1 : 0) + (scanOpen ? 1 : 0) + (chwaziOpen ? 1 : 0) + (statsOpen ? 1 : 0) + (settingsOpen ? 1 : 0) + (zoomImage ? 1 : 0)
   const layerRef = useRef(0)
 
   // Change de vue en mémorisant la vue actuelle + une entrée d'historique (pour le retour).
@@ -285,6 +309,7 @@ export default function App() {
     else if (s.confirmingOwner) setConfirmingOwner(null)
     else if (s.confirmingTag) setConfirmingTag(null)
     else if (s.importing) setImporting(null)
+    else if (s.restoring) setRestoring(null)
     else if (s.editing) setEditing(null)
     else if (s.scanOpen) setScanOpen(false)
     else if (s.chwaziOpen) setChwaziOpen(false)
@@ -579,6 +604,71 @@ export default function App() {
     }
   }
 
+  // --- Sauvegardes automatiques (Supabase) ---
+  const reloadBackups = useCallback(async () => {
+    try {
+      const list = await fetchBackups() // null si table absente
+      setBackupsList(list)
+    } catch {
+      /* silencieux : la sauvegarde ne doit jamais casser l'app */
+    }
+  }, [])
+
+  // Sauvegarde automatique au chargement (une fois), si le délai de la fréquence est écoulé.
+  useEffect(() => {
+    if (autoBackupRef.current) return
+    if (!online || games === null || ownersList === null || tagsList === null) return
+    autoBackupRef.current = true
+    ;(async () => {
+      try {
+        await maybeAutoBackup(backupFreq, games, ownersList, tagsList)
+      } catch {
+        /* silencieux */
+      }
+      reloadBackups()
+    })()
+  }, [online, games, ownersList, tagsList, backupFreq, reloadBackups])
+
+  const handleSetBackupFreq = (v) => {
+    setBackupFreq(v)
+    saveBackupFreq(v)
+  }
+
+  async function handleBackupNow() {
+    setBackupBusy(true)
+    setError(null)
+    try {
+      const ok = await createBackup(games ?? [], ownersList ?? [], tagsList ?? [], 'manual')
+      if (ok === null) setError("Lance d'abord la migration des sauvegardes (voir README).")
+      else {
+        await reloadBackups()
+        setNotice('Sauvegarde enregistrée.')
+      }
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBackupBusy(false)
+    }
+  }
+
+  async function handleConfirmRestore() {
+    if (!restoring) return
+    setRestoreBusy(true)
+    setError(null)
+    try {
+      const res = await restoreBackup(restoring.id)
+      await loadGames()
+      reloadOwners()
+      reloadTags()
+      setRestoring(null)
+      setNotice(`Sauvegarde restaurée : ${res.games} jeu${res.games > 1 ? 'x' : ''}.`)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setRestoreBusy(false)
+    }
+  }
+
   async function handleConfirmMove() {
     if (!moving) return
     setMovingBusy(true)
@@ -651,6 +741,12 @@ export default function App() {
             onDeleteTag={(tag) => setConfirmingTag(tag)}
             onExport={handleExport}
             onImportFile={handleImportFile}
+            backupFreq={backupFreq}
+            onSetBackupFreq={handleSetBackupFreq}
+            backups={backupsList}
+            backupBusy={backupBusy}
+            onBackupNow={handleBackupNow}
+            onRestore={(b) => setRestoring(b)}
             online={online}
             onClose={() => setSettingsOpen(false)}
           />
@@ -884,6 +980,22 @@ export default function App() {
           busy={importBusy}
           onConfirm={handleConfirmImport}
           onCancel={() => setImporting(null)}
+        />
+      )}
+
+      {restoring && (
+        <ConfirmDialog
+          title="Restaurer cette sauvegarde ?"
+          message={
+            <>
+              L'état de cette sauvegarde (<strong>{restoring.games_count}</strong> jeu{restoring.games_count > 1 ? 'x' : ''})
+              va <strong>remplacer</strong> ta collection actuelle. Les jeux ajoutés depuis seront supprimés.
+            </>
+          }
+          confirmLabel="Restaurer"
+          busy={restoreBusy}
+          onConfirm={handleConfirmRestore}
+          onCancel={() => setRestoring(null)}
         />
       )}
 
