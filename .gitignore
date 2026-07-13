@@ -10,3 +10,4 @@ dev-dist
 .vercel
 .env*
 deploy_url.txt
+.claude/settings.local.json
