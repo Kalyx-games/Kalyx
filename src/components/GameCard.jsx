@@ -25,7 +25,7 @@ function durationLabel(g) {
   return d ? `${d} min` : '—'
 }
 
-function GameCard({ game, online, onEdit, onMove, onCardClick, onImageClick, ownerMap, tagMap, index = 0 }) {
+function GameCard({ game, online, onEdit, onMove, onScore, hasSheet, onCardClick, onImageClick, ownerMap, tagMap, index = 0 }) {
   const complexity = game.complexity ? Number(game.complexity) : null
   // Complexité sur 3 barres : plafonnée à 3, arrondie au demi près (remplissage partiel possible).
   const cx = complexity ? Math.min(3, complexity) : 0
@@ -171,6 +171,9 @@ function GameCard({ game, online, onEdit, onMove, onCardClick, onImageClick, own
 
       <div className="game-actions" onClick={(e) => e.stopPropagation()}>
         <button onClick={onEdit} disabled={!online} title="Modifier" aria-label="Modifier">✏️</button>
+        {onScore && hasSheet && (
+          <button onClick={onScore} title="Compter les points" aria-label="Compter les points">🧮</button>
+        )}
         {onMove && (
           <button onClick={onMove} disabled={!online} title="Déplacer vers la collection" aria-label="Déplacer vers la collection">
             <CollectionIcon size={16} />
@@ -209,6 +212,7 @@ export default memo(
   (prev, next) =>
     prev.game === next.game &&
     prev.online === next.online &&
+    prev.hasSheet === next.hasSheet &&
     prev.ownerMap === next.ownerMap &&
     prev.tagMap === next.tagMap
 )
