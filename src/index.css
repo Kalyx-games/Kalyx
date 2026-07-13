@@ -2326,17 +2326,12 @@ body {
   font-size: 1.05rem;
   color: var(--ink);
 }
+/* Gagnant : simple rectangle plein, couleur d'accentuation de l'onglet actif. */
 .sheet-winner {
-  background: var(--accent-soft);
+  background: var(--nav-pill);
   border-radius: 8px;
-  box-shadow: inset 0 0 0 2px var(--primary);
 }
 .sheet-total.sheet-winner {
-  color: var(--primary);
-}
-/* Nom du joueur gagnant mis en avant. */
-th.sheet-winner .sheet-name {
-  border-color: var(--primary);
   color: var(--primary);
 }
 
