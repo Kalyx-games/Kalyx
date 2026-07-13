@@ -155,3 +155,28 @@ create policy "scoresheets insertion"    on public.scoresheets for insert with c
 create policy "scoresheets modification" on public.scoresheets for update using (true) with check (true);
 create policy "scoresheets suppression"  on public.scoresheets for delete using (true);
 grant all on public.scoresheets to anon, authenticated;
+
+
+-- ============================================================
+--  6) Parties jouées (historique des scores)
+--     players jsonb = [{ name, total, scores: { catégorie: valeur } }]
+-- ============================================================
+create table if not exists public.plays (
+  id         uuid        primary key default gen_random_uuid(),
+  game_id    uuid        references public.games(id) on delete cascade,
+  played_at  timestamptz not null default now(),
+  players    jsonb       not null,
+  winner     text,
+  extensions jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists plays_game_id_idx on public.plays (game_id);
+
+alter table public.plays enable row level security;
+drop policy if exists "plays lecture"     on public.plays;
+drop policy if exists "plays insertion"   on public.plays;
+drop policy if exists "plays suppression" on public.plays;
+create policy "plays lecture"     on public.plays for select using (true);
+create policy "plays insertion"   on public.plays for insert with check (true);
+create policy "plays suppression" on public.plays for delete using (true);
+grant all on public.plays to anon, authenticated;
