@@ -7,7 +7,7 @@ import { fetchTags, addTag, updateTag, deleteTag } from './lib/tags'
 import { downloadBackup, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
-import { fetchPlays, savePlay, deletePlay, fetchPlayerNames } from './lib/plays'
+import { fetchPlays, savePlay, deletePlay, fetchPlayerNames, fetchPlayCounts } from './lib/plays'
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
 import ConfirmDialog from './components/ConfirmDialog'
@@ -228,6 +228,7 @@ export default function App() {
   const [historyGame, setHistoryGame] = useState(null) // jeu dont on regarde l'historique | null
   const [gamePlays, setGamePlays] = useState(null) // parties du jeu affiché (null = chargement)
   const [playerNames, setPlayerNames] = useState([]) // noms déjà utilisés (auto-complétion)
+  const [playCounts, setPlayCounts] = useState({}) // { game_id: nb de parties } (tri)
   const [savingPlay, setSavingPlay] = useState(false)
   const [confirmingPlay, setConfirmingPlay] = useState(null) // partie à supprimer | null
 
@@ -243,6 +244,7 @@ export default function App() {
     reloadTags()
     fetchScoresheets().then(setScoresheets).catch(() => setScoresheets(null))
     fetchPlayerNames().then(setPlayerNames).catch(() => {})
+    fetchPlayCounts().then(setPlayCounts).catch(() => {})
   }, [reloadOwners, reloadTags])
 
   // Charge les jeux : depuis Supabase si possible (et on met en cache), sinon
@@ -412,7 +414,10 @@ export default function App() {
   // Statut affiché selon l'onglet (Collection ou Wishlist).
   const listStatus = view === 'wishlist' ? 'wishlist' : 'collection'
   // Le tri par prix n'a de sens que dans la Wishlist.
-  const sortOptions = view === 'wishlist' ? [...SORT_OPTIONS, { value: 'price', label: 'Prix' }] : SORT_OPTIONS
+  const sortOptions =
+    view === 'wishlist'
+      ? [...SORT_OPTIONS, { value: 'price', label: 'Prix' }]
+      : [...SORT_OPTIONS, { value: 'plays', label: 'Parties jouées' }]
 
   // Jeux de la vue courante, filtrés (recherche + filtres) puis triés.
   const visible = useMemo(() => {
@@ -428,9 +433,16 @@ export default function App() {
     else if (sort === 'complexity') list = [...list].sort((a, b) => (a.complexity ?? 99) - (b.complexity ?? 99))
     else if (sort === 'duration') list = [...list].sort((a, b) => (a.duration_max ?? a.duration_min ?? 9999) - (b.duration_max ?? b.duration_min ?? 9999))
     else if (sort === 'price') list = [...list].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity))
+    else if (sort === 'plays') list = [...list].sort((a, b) => (playCounts[a.id] || 0) - (playCounts[b.id] || 0) || a.name.localeCompare(b.name, 'fr'))
     if (sortDir === 'desc') list.reverse()
     return list
-  }, [games, search, sort, sortDir, shuffleSeed, filters, listStatus, view])
+  }, [games, search, sort, sortDir, shuffleSeed, filters, listStatus, view, playCounts])
+
+  // Scénarios déjà utilisés pour ce jeu (auto-complétion du champ scénario).
+  const scenarioNames = useMemo(
+    () => [...new Set((gamePlays || []).map((p) => (p.scenario || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr')),
+    [gamePlays]
+  )
 
   // Jeux (tous statuts) filtrés par la recherche + les mêmes filtres, pour les Stats.
   // computeStats sépare ensuite collection / wishlist. Le prix est ignoré ici.
@@ -687,6 +699,7 @@ export default function App() {
   const refreshHistory = (g) => {
     if (g) fetchPlays(g.id).then((p) => setGamePlays(p || [])).catch(() => {})
     fetchPlayerNames().then(setPlayerNames).catch(() => {})
+    fetchPlayCounts().then(setPlayCounts).catch(() => {})
   }
 
   // Enregistre une fiche (création ou modification) et met à jour l'état local.
@@ -1139,6 +1152,7 @@ export default function App() {
             game={scoringGame}
             template={scoresheets[scoringGame.id]}
             playerNames={playerNames}
+            scenarioNames={scenarioNames}
             saving={savingPlay}
             onSavePlay={handleSavePlay}
             onEdit={() => setEditingSheet(scoringGame)}

@@ -39,6 +39,21 @@ export async function deletePlay(id) {
   if (error) throw error
 }
 
+// Nombre de parties enregistrées par jeu → { game_id: nb }. {} si table absente.
+// Sert au tri « par nombre de parties jouées ».
+export async function fetchPlayCounts() {
+  const { data, error } = await supabase.from('plays').select('game_id')
+  if (error) {
+    if (tableMissing(error)) return {}
+    throw error
+  }
+  const counts = {}
+  ;(data ?? []).forEach((row) => {
+    if (row.game_id) counts[row.game_id] = (counts[row.game_id] || 0) + 1
+  })
+  return counts
+}
+
 // Tous les noms de joueurs déjà utilisés (toutes parties confondues), triés,
 // pour l'auto-complétion. [] si table absente.
 export async function fetchPlayerNames() {

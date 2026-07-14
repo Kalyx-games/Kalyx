@@ -59,7 +59,7 @@ const makeTeamRow = (t = {}) => {
   return { id: ++tid, name: t.name || '', size, players: Array.from({ length: n }, () => makePlayer()), score: '', win: false }
 }
 
-export default function ScoreSheet({ game, template, playerNames = [], onSavePlay, saving, onEdit, onClose }) {
+export default function ScoreSheet({ game, template, playerNames = [], scenarioNames = [], onSavePlay, saving, onEdit, onClose }) {
   const win = template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive')
   const scoring = template?.scoring || 'high'
   const wantScenario = !!template?.scenario
@@ -261,7 +261,17 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
   const scenarioField = wantScenario && (
     <div className="field">
       <label className="field-label">🎯 Scénario / niveau <span className="field-opt">(facultatif)</span></label>
-      <input className="input" value={scenario} onChange={(e) => setScenario(e.target.value)} placeholder="ex. Scénario 3, difficile…" />
+      <NameField
+        id="scenario"
+        className="input"
+        value={scenario}
+        onChange={setScenario}
+        onPick={setScenario}
+        placeholder="ex. Scénario 3, difficile…"
+        playerNames={scenarioNames}
+        focused={focusedPlayer}
+        setFocused={setFocusedPlayer}
+      />
     </div>
   )
 
@@ -322,7 +332,6 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
       <div className="sheet">
         {head}
         <div className="coop-form">
-          {notesField}
           <div className="field">
             <label className="field-label">Résultat</label>
             <div className="chips">
@@ -341,6 +350,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
             <label className="field-label">👥 Joueurs présents</label>
             {playerList(false)}
           </div>
+          {notesField}
         </div>
         {onSavePlay && (
           <div className="sheet-editor-actions">
@@ -359,7 +369,6 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
       <div className="sheet">
         {head}
         <div className="coop-form">
-          {notesField}
           {scenarioField}
           {teams.map((t, ti) => (
             <div key={t.id} className="team-block">
@@ -425,6 +434,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
           {!predefined && teams.length < 8 && (
             <button type="button" className="btn-ghost team-add" onClick={addTeam}>➕ Ajouter une équipe</button>
           )}
+          {notesField}
         </div>
         {onSavePlay && (
           <div className="sheet-editor-actions">
@@ -443,12 +453,12 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
       <div className="sheet">
         {head}
         <div className="coop-form">
-          {notesField}
           {scenarioField}
           <div className="field">
             <label className="field-label">Joueurs — coche le(s) vainqueur(s) 🏆</label>
             {playerList(true)}
           </div>
+          {notesField}
         </div>
         {onSavePlay && (
           <div className="sheet-editor-actions">
@@ -465,7 +475,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
   return (
     <div className="sheet">
       {head}
-      <div className="coop-form">{notesField}{scenarioField}</div>
+      {scenarioField && <div className="coop-form">{scenarioField}</div>}
 
       <div className="sheet-scroll">
         <table className="sheet-table">
@@ -537,6 +547,8 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
       </div>
 
       {visibleCats.length === 0 && <p className="empty" style={{ padding: 24 }}>Cette fiche n'a pas encore de catégories.</p>}
+
+      <div className="coop-form">{notesField}</div>
 
       {onSavePlay && visibleCats.length > 0 && (
         <div className="sheet-editor-actions">
