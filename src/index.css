@@ -983,7 +983,7 @@ body {
   display: grid;
   grid-template-columns: 66px 1fr auto;
   gap: 13px;
-  align-items: center;
+  align-items: start; /* tout le contenu aligné en haut (image, infos, boutons) */
   padding: 11px;
   background: var(--card);
   border: 1px solid var(--line);

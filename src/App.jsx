@@ -950,7 +950,7 @@ export default function App() {
               online={online}
               onEdit={() => setEditing(g)}
               onMove={view === 'wishlist' ? () => setMoving(g) : undefined}
-              onBgg={view !== 'wishlist' && g.bgg_id ? () => window.open(`https://boardgamegeek.com/boardgame/${g.bgg_id}`, '_blank', 'noopener') : undefined}
+              onBgg={g.bgg_id ? () => window.open(`https://boardgamegeek.com/boardgame/${g.bgg_id}`, '_blank', 'noopener') : undefined}
               onCardClick={
                 view === 'wishlist'
                   ? () => window.open(philibertSearchUrl(g.name), '_blank', 'noopener')
