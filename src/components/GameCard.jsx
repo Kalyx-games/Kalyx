@@ -107,11 +107,78 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
   // Apparition en cascade : petit décalage selon la position (plafonné pour rester vif).
   const delay = `${Math.min(index, 12) * 28}ms`
 
+  // --- Glisser-pour-éditer : l'édition n'est plus un bouton ; on glisse la carte vers
+  // la gauche pour révéler « Éditer ». touch-action: pan-y → le défilement vertical
+  // marche normalement, seul l'horizontal nous revient. ---
+  const EDIT_W = 78
+  const [swipeX, setSwipeX] = useState(0)
+  const dragRef = useRef({ startX: 0, base: 0, active: false, moved: false })
+
+  const onPointerDownCard = (e) => {
+    if (!onEdit || (e.pointerType === 'mouse' && e.button !== 0)) return
+    // Capture : tous les événements restent routés vers la carte même quand elle
+    // coulisse sous le doigt (sinon onPointerMove cesse dès qu'elle bouge).
+    try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ignore */ }
+    dragRef.current = { startX: e.clientX, base: swipeX, active: true, moved: false }
+  }
+  const onPointerMoveCard = (e) => {
+    const d = dragRef.current
+    if (!d.active) return
+    const dx = e.clientX - d.startX
+    if (Math.abs(dx) > 4) d.moved = true
+    setSwipeX(Math.max(-EDIT_W, Math.min(0, d.base + dx)))
+  }
+  const endDrag = () => {
+    const d = dragRef.current
+    if (!d.active) return
+    d.active = false
+    setSwipeX((x) => (x < -EDIT_W / 2 ? -EDIT_W : 0))
+  }
+  const onCardTap = (e) => {
+    // Après un glissé, ou si la carte est ouverte → on ne déclenche pas le clic (on ferme).
+    if (dragRef.current.moved) { e.stopPropagation(); return }
+    if (swipeX !== 0) { e.stopPropagation(); setSwipeX(0); return }
+    if (onCardClick) onCardClick()
+  }
+
+  // Indice au tout premier lancement : la 1re carte s'entrouvre une fois pour montrer
+  // qu'on peut glisser (puis se referme). Mémorisé pour ne le faire qu'une seule fois.
+  useEffect(() => {
+    if (index !== 0 || !onEdit) return
+    let ok = false
+    try {
+      if (!localStorage.getItem('kalyx-swipe-hint')) { localStorage.setItem('kalyx-swipe-hint', '1'); ok = true }
+    } catch { ok = false }
+    if (!ok) return
+    const t1 = setTimeout(() => setSwipeX(-EDIT_W * 0.72), 700)
+    const t2 = setTimeout(() => setSwipeX(0), 1600)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
+    <div className="swipe-row">
+      {onEdit && (
+        <button
+          type="button"
+          className="swipe-edit"
+          style={{ width: EDIT_W }}
+          onClick={() => { setSwipeX(0); onEdit() }}
+          disabled={!online}
+          aria-label="Modifier"
+        >
+          <span className="swipe-edit-ico">✏️</span>
+          <span>Éditer</span>
+        </button>
+      )}
     <article
       className={`game ${onCardClick ? 'clickable' : ''}`}
-      onClick={onCardClick}
-      style={{ animationDelay: delay }}
+      onClick={onCardTap}
+      onPointerDown={onPointerDownCard}
+      onPointerMove={onPointerMoveCard}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      style={{ animationDelay: delay, transform: `translateX(${swipeX}px)`, transition: dragRef.current.active ? 'none' : 'transform 0.22s ease', touchAction: 'pan-y' }}
     >
       <div className="game-thumb-col">
         <div className="game-thumb">
@@ -131,7 +198,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
                   setImgBroken(true)
                 }
               }}
-              onClick={onImageClick ? (e) => { e.stopPropagation(); onImageClick(fullImg) } : undefined}
+              onClick={onImageClick ? (e) => { e.stopPropagation(); if (dragRef.current.moved) return; onImageClick(fullImg) } : undefined}
             />
           ) : (
             <span className="game-thumb-fallback">🎲</span>
@@ -190,7 +257,6 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
               <CollectionIcon size={16} />
             </button>
           )}
-          <button onClick={onEdit} disabled={!online} title="Modifier" aria-label="Modifier">✏️</button>
           {onBgg && (
             <button onClick={onBgg} title="Voir sur BoardGameGeek" aria-label="Voir sur BoardGameGeek">
               <img className="bgg-logo" src="https://www.google.com/s2/favicons?domain=boardgamegeek.com&sz=64" alt="" width="18" height="18" onError={(e) => { e.currentTarget.style.display = 'none' }} />
@@ -219,6 +285,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
         )}
       </div>
     </article>
+    </div>
   )
 }
 

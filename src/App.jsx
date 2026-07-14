@@ -798,8 +798,25 @@ export default function App() {
 
   const countLabel = `${visible.length} jeu${visible.length > 1 ? 'x' : ''}`
 
+  // Barre du haut + FAB qui s'effacent en descendant, réapparaissent en remontant
+  // (plus de place sur petit écran ; les FAB ne recouvrent plus les cartes du bas).
+  const [hideBars, setHideBars] = useState(false)
+  useEffect(() => {
+    let lastY = window.scrollY
+    const onScroll = () => {
+      const y = window.scrollY
+      if (y < 48) { setHideBars(false); lastY = y; return } // tout en haut → toujours visible
+      const dy = y - lastY
+      if (dy > 6) setHideBars(true)
+      else if (dy < -6) setHideBars(false)
+      lastY = y
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   return (
-    <div className="app">
+    <div className={`app ${hideBars ? 'bars-hidden' : ''}`}>
       <header className="topbar">
         <div className="brand">
           <img src="/logo.png" alt="" width="32" height="32" />
