@@ -150,20 +150,23 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
         <div className="game-meta">
           <span className="m-players" title={playersTitle}>👥 {playersDisplay}</span>
           {idealDisplay ? <span className="m-ideal" title="Joueurs idéal">⭐ {idealDisplay}</span> : null}
-          <span className="cx" title={complexity ? `Complexité ${complexity.toFixed(1)} / 5` : 'Complexité inconnue'}>
-            🧠
-            <span className="cx-bars">
-              {[0, 1, 2].map((i) => {
-                const frac = Math.max(0, Math.min(1, cxRounded - i))
-                return (
-                  <span key={i} className="cx-bar">
-                    <span className="cx-fill" style={{ width: `${frac * 100}%` }} />
-                  </span>
-                )
-              })}
+          {/* Complexité + durée restent ensemble et passent à la ligne en bloc. */}
+          <span className="m-cd">
+            <span className="cx" title={complexity ? `Complexité ${complexity.toFixed(1)} / 5` : 'Complexité inconnue'}>
+              🧠
+              <span className="cx-bars">
+                {[0, 1, 2].map((i) => {
+                  const frac = Math.max(0, Math.min(1, cxRounded - i))
+                  return (
+                    <span key={i} className="cx-bar">
+                      <span className="cx-fill" style={{ width: `${frac * 100}%` }} />
+                    </span>
+                  )
+                })}
+              </span>
             </span>
+            <span className="m-time" title="Durée">🕑 {durationLabel(game)}</span>
           </span>
-          <span className="m-time" title="Durée">🕑 {durationLabel(game)}</span>
         </div>
 
         {extensions.length > 0 && (

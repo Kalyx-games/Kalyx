@@ -1161,6 +1161,10 @@ body {
   align-items: center;
   gap: 4px;
 }
+/* Complexité + durée = un seul bloc (elles passent à la ligne ensemble). */
+.game-meta > .m-cd {
+  gap: 11px;
+}
 .m-players {
   color: var(--players);
   font-weight: 600;
