@@ -996,26 +996,30 @@ body {
   overflow: hidden;
   border-radius: 16px;
 }
-.swipe-edit {
+/* Menu derrière la carte (révélé au glissé) : une ou plusieurs actions côte à côte. */
+.swipe-menu {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 88px;
+  display: flex;
+}
+.swipe-act {
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   border: none;
-  background: var(--primary);
   color: #fff;
   font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
 }
-.swipe-edit-ico {
+.swipe-act-ico {
   font-size: 1.3rem;
+  display: inline-flex;
 }
 /* Chevron discret au bord droit de la carte (indice de glissé + raccourci édition). */
 .swipe-hint {
@@ -1050,9 +1054,12 @@ body {
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
   position: relative;
   z-index: 1;
-  will-change: transform;
+  transition: transform 0.2s ease;
   user-select: none;
   -webkit-user-select: none;
+}
+.game.swiping {
+  transition: none; /* pendant le glissé, la carte suit le doigt sans lissage */
 }
 .game.clickable {
   cursor: pointer;

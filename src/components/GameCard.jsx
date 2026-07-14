@@ -111,12 +111,20 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
   // toujours visible au bord droit (affordance + zone cliquable de secours). On glisse
   // la carte vers la gauche pour la révéler entièrement. Écouteurs tactiles NATIFS non
   // passifs (les seuls capables de preventDefault sur iOS pour capter le geste). ---
-  const EDIT_W = 88 // largeur de l'action ouverte
-  const OPEN = -EDIT_W // la carte coulisse entièrement pour révéler l'action
+  // Menu au dos de la carte, révélé en glissant vers la gauche (ou en tapant le chevron) :
+  // Éditer, + « Déplacer vers la collection » en wishlist.
+  const ACTION_W = 76
+  const actions = []
+  if (onEdit) actions.push({ key: 'edit', label: 'Éditer', ico: '✏️', bg: 'var(--primary)', run: onEdit })
+  if (onMove) actions.push({ key: 'move', label: 'Collection', node: <CollectionIcon size={18} />, bg: '#16a34a', run: onMove })
+  const menuW = actions.length * ACTION_W
+  const OPEN = -menuW
   const [offset, setOffset] = useState(0)
   const [dragging, setDragging] = useState(false)
   const offsetRef = useRef(0)
   offsetRef.current = offset
+  const openRef = useRef(OPEN)
+  openRef.current = OPEN
   const cardRef = useRef(null)
   const gRef = useRef({ startX: 0, startY: 0, base: 0, dir: null, moved: false, justSwiped: false })
 
@@ -139,13 +147,13 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
       if (g.dir === 'h') {
         e.preventDefault() // on prend le geste (pas de scroll)
         g.moved = true
-        setOffset(Math.max(OPEN, Math.min(0, g.base + dx)))
+        setOffset(Math.max(openRef.current, Math.min(0, g.base + dx)))
       }
     }
     const onEnd = () => {
       if (g.dir === 'h') {
         setDragging(false)
-        setOffset((o) => (o < OPEN / 2 ? OPEN : 0)) // aimante ouvert/fermé
+        setOffset((o) => (o < openRef.current / 2 ? openRef.current : 0)) // aimante ouvert/fermé
         g.justSwiped = true
         setTimeout(() => { g.justSwiped = false }, 130)
       }
@@ -172,17 +180,29 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
 
   return (
     <div className="swipe-row" style={{ animationDelay: delay }}>
-      {onEdit && (
-        <button type="button" className="swipe-edit" onClick={onEdit} disabled={!online} aria-label="Modifier">
-          <span className="swipe-edit-ico">✏️</span>
-          <span className="swipe-edit-label">Éditer</span>
-        </button>
+      {actions.length > 0 && (
+        <div className="swipe-menu" style={{ width: menuW }}>
+          {actions.map((a) => (
+            <button
+              key={a.key}
+              type="button"
+              className="swipe-act"
+              style={{ width: ACTION_W, background: a.bg }}
+              onClick={() => { setOffset(0); a.run() }}
+              disabled={!online}
+              aria-label={a.label}
+            >
+              <span className="swipe-act-ico">{a.node || a.ico}</span>
+              <span>{a.label}</span>
+            </button>
+          ))}
+        </div>
       )}
     <article
       ref={cardRef}
-      className={`game ${onCardClick ? 'clickable' : ''}`}
+      className={`game ${onCardClick ? 'clickable' : ''} ${dragging ? 'swiping' : ''}`}
       onClick={onCardTap}
-      style={{ transform: `translateX(${offset}px)`, transition: dragging ? 'none' : 'transform 0.2s ease' }}
+      style={{ transform: `translateX(${offset}px)` }}
     >
       <div className="game-thumb-col">
         <div className="game-thumb">
@@ -208,9 +228,6 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
             <span className="game-thumb-fallback">🎲</span>
           )}
         </div>
-        {game.status === 'wishlist' && game.price != null && (
-          <span className="game-price game-price-below">{formatPrice(game.price)}</span>
-        )}
       </div>
 
       <div className="game-body">
@@ -256,10 +273,8 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
 
       <div className="game-actions" onClick={(e) => e.stopPropagation()}>
         <div className="game-btns">
-          {onMove && (
-            <button onClick={onMove} disabled={!online} title="Déplacer vers la collection" aria-label="Déplacer vers la collection">
-              <CollectionIcon size={16} />
-            </button>
+          {game.status === 'wishlist' && game.price != null && (
+            <span className="game-price">{formatPrice(game.price)}</span>
           )}
           {onBgg && (
             <button onClick={onBgg} title="Voir sur BoardGameGeek" aria-label="Voir sur BoardGameGeek">
@@ -289,16 +304,15 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
         )}
       </div>
 
-      {/* Chevron discret au bord droit : indique qu'on peut glisser la carte, et sert
-          de raccourci d'édition en le tapant (secours si le glissé ne prend pas). */}
-      {onEdit && (
+      {/* Chevron discret au bord droit : indique qu'on peut glisser la carte ; le taper
+          ouvre (ou referme) le menu derrière la carte. */}
+      {actions.length > 0 && (
         <button
           type="button"
           className="swipe-hint"
-          onClick={(e) => { e.stopPropagation(); onEdit() }}
-          disabled={!online}
-          aria-label="Modifier"
-          title="Glisser ou toucher pour éditer"
+          onClick={(e) => { e.stopPropagation(); setOffset(offsetRef.current === 0 ? OPEN : 0) }}
+          aria-label="Ouvrir le menu"
+          title="Glisser ou toucher pour ouvrir le menu"
         >
           <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
             <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
