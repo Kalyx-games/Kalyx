@@ -32,11 +32,18 @@ function ensure() {
   if (!C) return null
   ctx = new C()
 
+  // Compresseur réglé en limiteur : on peut pousser le volume sans que ça sature
+  // (les pics sont rattrapés au lieu de « clipper »).
   const comp = ctx.createDynamicsCompressor()
+  comp.threshold.value = -10
+  comp.knee.value = 6
+  comp.ratio.value = 14
+  comp.attack.value = 0.003
+  comp.release.value = 0.18
   comp.connect(ctx.destination)
 
   master = ctx.createGain()
-  master.gain.value = 0.85
+  master.gain.value = 1.6 // plus fort (0.85 avant) ; le limiteur ci-dessus évite la saturation
   master.connect(comp)
 
   const conv = ctx.createConvolver()

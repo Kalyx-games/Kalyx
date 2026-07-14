@@ -7,13 +7,27 @@ import { playFinger, startRiser, stopRiser, playReveal } from '../lib/sound'
 // 100 % tactile, fonctionne hors ligne (aucun réseau).
 // Dès qu'un doigt touche l'écran, toute l'interface disparaît (plein écran).
 
-// Couleurs distinctes attribuées aux doigts (mode Gagnant).
-const FINGER_COLORS = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6',
-  '#2f6df6', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16',
+// Deux palettes de 12 couleurs TRÈS différenciées, choisies au hasard.
+// Une couleur lisible sur fond noir ne l'est pas forcément sur fond blanc → on a
+// une palette « vive » (pour le thème sombre) et une palette « profonde » (thème clair).
+const PALETTE_DARK = [
+  '#ff6b6b', '#ff922b', '#ffd43b', '#94d82d', '#51cf66', '#20c997',
+  '#4dabf7', '#748ffc', '#9775fa', '#da77f2', '#f783ac', '#ced4da',
 ]
-// Couleurs des équipes (mode Équipes), une par équipe.
-const TEAM_COLORS = ['#2f6df6', '#f97316', '#22c55e', '#ec4899', '#eab308', '#8b5cf6', '#06b6d4', '#ef4444']
+const PALETTE_LIGHT = [
+  '#e03131', '#e8590c', '#f08c00', '#66a80f', '#2f9e44', '#099268',
+  '#1971c2', '#3b5bdb', '#6741d9', '#9c36b5', '#c2255c', '#495057',
+]
+
+// Le thème effectif (l'app pose data-theme='dark'|'light' sur <html>, ou rien en
+// mode « auto » → on suit alors la préférence système).
+function isDarkTheme() {
+  const t = document.documentElement.getAttribute('data-theme')
+  if (t === 'dark') return true
+  if (t === 'light') return false
+  return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+}
+const currentPalette = () => (isDarkTheme() ? PALETTE_DARK : PALETTE_LIGHT)
 
 const COUNTDOWN_START = 3 // secondes avant le tirage
 const WINNER_MIN = 1
@@ -51,7 +65,7 @@ export default function Chwazi({ onClose }) {
   cfgRef.current = { mode, winnerCount, teamCount }
   // Palette des doigts mélangée : l'ordre des couleurs change à chaque manche
   // (variété visuelle + on retient mieux qui a été désigné). Reste distinct.
-  const paletteRef = useRef(shuffle(FINGER_COLORS))
+  const paletteRef = useRef(shuffle(currentPalette()))
 
   const ids = Object.keys(pointers)
   const count = ids.length
@@ -77,7 +91,7 @@ export default function Chwazi({ onClose }) {
         assign[id] = i % t
       })
       // Couleurs d'équipes mélangées (pas toujours bleu puis orange), mais distinctes.
-      setResult({ type: 'teams', assign, colors: shuffle(TEAM_COLORS) })
+      setResult({ type: 'teams', assign, colors: shuffle(currentPalette()) })
     }
     vibrate([0, 90, 60, 90])
     playReveal()
@@ -133,7 +147,7 @@ export default function Chwazi({ onClose }) {
     setMenuOpen(false)
     if (result) return // pendant l'affichage du résultat, on n'ajoute plus
     // Nouveau round (écran vide) → on re-mélange l'ordre des couleurs.
-    if (Object.keys(pointersRef.current).length === 0) paletteRef.current = shuffle(FINGER_COLORS)
+    if (Object.keys(pointersRef.current).length === 0) paletteRef.current = shuffle(currentPalette())
     playFinger(Object.keys(pointersRef.current).length)
     setPointers((prev) => {
       const color = paletteRef.current[Object.keys(prev).length % paletteRef.current.length]
@@ -224,7 +238,7 @@ export default function Chwazi({ onClose }) {
         if (result?.type === 'winner') {
           cls += result.ids.includes(id) ? ' chosen' : ' dim'
         } else if (result?.type === 'teams') {
-          const pal = result.colors || TEAM_COLORS
+          const pal = result.colors || currentPalette()
           color = pal[result.assign[id] % pal.length]
           cls += ' picked'
         }
