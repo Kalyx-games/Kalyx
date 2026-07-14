@@ -31,6 +31,10 @@ function durationLabel(g) {
   return m === 0 ? `${h} h` : `${h}h${String(m).padStart(2, '0')}`
 }
 
+// Une seule carte « swipée » ouverte à la fois : on garde une référence vers la
+// dernière ouverte pour la refermer quand une autre s'ouvre.
+let openCard = null // { close: () => void }
+
 function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageClick, ownerMap, tagMap, index = 0 }) {
   const complexity = game.complexity ? Number(game.complexity) : null
   // Complexité sur 3 barres : plafonnée à 3, arrondie au demi près (remplissage partiel possible).
@@ -127,6 +131,19 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
   openRef.current = OPEN
   const cardRef = useRef(null)
   const gRef = useRef({ startX: 0, startY: 0, base: 0, dir: null, moved: false, justSwiped: false })
+
+  // Une seule carte ouverte à la fois : à l'ouverture, on referme la précédente.
+  const meRef = useRef(null)
+  if (!meRef.current) meRef.current = { close: () => {} }
+  meRef.current.close = () => setOffset(0)
+  useEffect(() => {
+    if (offset !== 0) {
+      if (openCard && openCard !== meRef.current) openCard.close()
+      openCard = meRef.current
+    } else if (openCard === meRef.current) {
+      openCard = null
+    }
+  }, [offset])
 
   useEffect(() => {
     const el = cardRef.current
