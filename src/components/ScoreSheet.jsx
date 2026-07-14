@@ -238,7 +238,7 @@ export default function ScoreSheet({ game, template, playerNames = [], scenarioN
     <>
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">←</button>
-        <h2 className="sheet-title">🧮 {game?.name}</h2>
+        <h2 className="sheet-title">📚 {game?.name}</h2>
         {onEdit && (
           <button type="button" className="back-btn sheet-edit-btn" onClick={onEdit} title="Modifier la fiche" aria-label="Modifier la fiche">✏️</button>
         )}
