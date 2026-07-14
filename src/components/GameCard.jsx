@@ -107,11 +107,83 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
   // Apparition en cascade : petit décalage selon la position (plafonné pour rester vif).
   const delay = `${Math.min(index, 12) * 28}ms`
 
+  // --- Glisser-pour-éditer, avec « peek » : un liseré de l'action « Éditer » reste
+  // toujours visible au bord droit (affordance + zone cliquable de secours). On glisse
+  // la carte vers la gauche pour la révéler entièrement. Écouteurs tactiles NATIFS non
+  // passifs (les seuls capables de preventDefault sur iOS pour capter le geste). ---
+  const EDIT_W = 88 // largeur de l'action ouverte
+  const PEEK = 30 // liseré visible au repos
+  const OPEN = -(EDIT_W - PEEK) // décalage de la carte quand l'action est ouverte
+  const [offset, setOffset] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const offsetRef = useRef(0)
+  offsetRef.current = offset
+  const cardRef = useRef(null)
+  const gRef = useRef({ startX: 0, startY: 0, base: 0, dir: null, moved: false, justSwiped: false })
+
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el || !onEdit) return
+    const g = gRef.current
+    const onStart = (e) => {
+      const t = e.touches[0]
+      g.startX = t.clientX; g.startY = t.clientY; g.base = offsetRef.current; g.dir = null; g.moved = false
+    }
+    const onMove = (e) => {
+      const t = e.touches[0]
+      const dx = t.clientX - g.startX
+      const dy = t.clientY - g.startY
+      if (!g.dir) {
+        if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) + 2) { g.dir = 'h'; setDragging(true) }
+        else if (Math.abs(dy) > 8) g.dir = 'v' // vertical → on laisse défiler la liste
+      }
+      if (g.dir === 'h') {
+        e.preventDefault() // on prend le geste (pas de scroll)
+        g.moved = true
+        setOffset(Math.max(OPEN, Math.min(0, g.base + dx)))
+      }
+    }
+    const onEnd = () => {
+      if (g.dir === 'h') {
+        setDragging(false)
+        setOffset((o) => (o < OPEN / 2 ? OPEN : 0)) // aimante ouvert/fermé
+        g.justSwiped = true
+        setTimeout(() => { g.justSwiped = false }, 130)
+      }
+      g.dir = null
+    }
+    el.addEventListener('touchstart', onStart, { passive: true })
+    el.addEventListener('touchmove', onMove, { passive: false })
+    el.addEventListener('touchend', onEnd, { passive: true })
+    el.addEventListener('touchcancel', onEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchmove', onMove)
+      el.removeEventListener('touchend', onEnd)
+      el.removeEventListener('touchcancel', onEnd)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onEdit])
+
+  const onCardTap = () => {
+    if (gRef.current.justSwiped) return // on vient de glisser → pas de navigation
+    if (offset !== 0) { setOffset(0); return } // ouverte → on referme
+    if (onCardClick) onCardClick()
+  }
+
   return (
+    <div className="swipe-row" style={{ animationDelay: delay }}>
+      {onEdit && (
+        <button type="button" className="swipe-edit" onClick={onEdit} disabled={!online} aria-label="Modifier">
+          <span className="swipe-edit-label">Éditer</span>
+          <span className="swipe-edit-ico">✏️</span>
+        </button>
+      )}
     <article
+      ref={cardRef}
       className={`game ${onCardClick ? 'clickable' : ''}`}
-      onClick={onCardClick}
-      style={{ animationDelay: delay }}
+      onClick={onCardTap}
+      style={{ transform: `translateX(${offset}px)`, transition: dragging ? 'none' : 'transform 0.2s ease' }}
     >
       <div className="game-thumb-col">
         <div className="game-thumb">
@@ -131,7 +203,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
                   setImgBroken(true)
                 }
               }}
-              onClick={onImageClick ? (e) => { e.stopPropagation(); onImageClick(fullImg) } : undefined}
+              onClick={onImageClick ? (e) => { e.stopPropagation(); if (gRef.current.justSwiped) return; onImageClick(fullImg) } : undefined}
             />
           ) : (
             <span className="game-thumb-fallback">🎲</span>
@@ -190,7 +262,6 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
               <CollectionIcon size={16} />
             </button>
           )}
-          <button onClick={onEdit} disabled={!online} title="Modifier" aria-label="Modifier">✏️</button>
           {onBgg && (
             <button onClick={onBgg} title="Voir sur BoardGameGeek" aria-label="Voir sur BoardGameGeek">
               <img className="bgg-logo" src="https://www.google.com/s2/favicons?domain=boardgamegeek.com&sz=64" alt="" width="18" height="18" onError={(e) => { e.currentTarget.style.display = 'none' }} />
@@ -219,6 +290,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
         )}
       </div>
     </article>
+    </div>
   )
 }
 

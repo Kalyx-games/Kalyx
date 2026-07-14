@@ -989,6 +989,34 @@ body {
   padding: 10px 16px 16px;
 }
 
+/* Glisser-pour-éditer avec « peek » : l'action « Éditer » est derrière la carte ;
+   un liseré reste toujours visible à droite (affordance + zone cliquable). */
+.swipe-row {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+}
+.swipe-edit {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 0 9px;
+  border: none;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.swipe-edit-ico {
+  font-size: 1.15rem;
+}
 .game {
   display: grid;
   grid-template-columns: 66px 1fr auto;
@@ -997,8 +1025,16 @@ body {
   padding: 11px;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  /* Bord droit plat : la carte s'aboute au liseré « Éditer » (le coin arrondi vient
+     du .swipe-row). Marge droite = liseré visible au repos. */
+  border-radius: 16px 0 0 16px;
+  margin-right: 30px;
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+  position: relative;
+  z-index: 1;
+  will-change: transform;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .game.clickable {
   cursor: pointer;
@@ -2194,7 +2230,9 @@ body {
 }
 
 /* Cartes de jeux : apparition en fondu/glissé (cascade via un délai en ligne). */
-.game {
+/* L'apparition est portée par la ligne entière (carte + action « Éditer ») pour que
+   l'action ne transparaisse pas derrière la carte pendant le fondu. */
+.swipe-row {
   animation: kx-card-in 0.34s ease both;
 }
 
