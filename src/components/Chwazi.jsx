@@ -49,6 +49,9 @@ export default function Chwazi({ onClose }) {
   pointersRef.current = pointers
   const cfgRef = useRef({})
   cfgRef.current = { mode, winnerCount, teamCount }
+  // Palette des doigts mélangée : l'ordre des couleurs change à chaque manche
+  // (variété visuelle + on retient mieux qui a été désigné). Reste distinct.
+  const paletteRef = useRef(shuffle(FINGER_COLORS))
 
   const ids = Object.keys(pointers)
   const count = ids.length
@@ -73,7 +76,8 @@ export default function Chwazi({ onClose }) {
       shuffled.forEach((id, i) => {
         assign[id] = i % t
       })
-      setResult({ type: 'teams', assign })
+      // Couleurs d'équipes mélangées (pas toujours bleu puis orange), mais distinctes.
+      setResult({ type: 'teams', assign, colors: shuffle(TEAM_COLORS) })
     }
     vibrate([0, 90, 60, 90])
     playReveal()
@@ -128,9 +132,11 @@ export default function Chwazi({ onClose }) {
     enterFullscreen() // 1er doigt (geste utilisateur) → masque la barre système
     setMenuOpen(false)
     if (result) return // pendant l'affichage du résultat, on n'ajoute plus
+    // Nouveau round (écran vide) → on re-mélange l'ordre des couleurs.
+    if (Object.keys(pointersRef.current).length === 0) paletteRef.current = shuffle(FINGER_COLORS)
     playFinger(Object.keys(pointersRef.current).length)
     setPointers((prev) => {
-      const color = FINGER_COLORS[Object.keys(prev).length % FINGER_COLORS.length]
+      const color = paletteRef.current[Object.keys(prev).length % paletteRef.current.length]
       return { ...prev, [e.pointerId]: { x: e.clientX, y: e.clientY, color } }
     })
   }
@@ -218,7 +224,8 @@ export default function Chwazi({ onClose }) {
         if (result?.type === 'winner') {
           cls += result.ids.includes(id) ? ' chosen' : ' dim'
         } else if (result?.type === 'teams') {
-          color = TEAM_COLORS[result.assign[id] % TEAM_COLORS.length]
+          const pal = result.colors || TEAM_COLORS
+          color = pal[result.assign[id] % pal.length]
           cls += ' picked'
         }
         return <div key={id} className={cls} style={{ left: p.x, top: p.y, background: color }} />

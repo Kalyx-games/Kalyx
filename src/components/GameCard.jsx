@@ -107,27 +107,32 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
       onClick={onCardClick}
       style={{ animationDelay: delay }}
     >
-      <div className="game-thumb">
-        {showImg ? (
-          <img
-            ref={imgRef}
-            src={cardImg}
-            alt=""
-            loading="lazy"
-            className={`game-img ${imgLoaded ? 'loaded' : ''} ${onImageClick ? 'zoomable' : ''}`}
-            onLoad={() => setImgLoaded(true)}
-            onError={(e) => {
-              // Si l'optimiseur échoue (domaine non géré…), on tente l'image brute avant le dé.
-              if (fullImg && e.currentTarget.src !== fullImg) {
-                e.currentTarget.src = fullImg
-              } else {
-                setImgBroken(true)
-              }
-            }}
-            onClick={onImageClick ? (e) => { e.stopPropagation(); onImageClick(fullImg) } : undefined}
-          />
-        ) : (
-          <span className="game-thumb-fallback">🎲</span>
+      <div className="game-thumb-col">
+        <div className="game-thumb">
+          {showImg ? (
+            <img
+              ref={imgRef}
+              src={cardImg}
+              alt=""
+              loading="lazy"
+              className={`game-img ${imgLoaded ? 'loaded' : ''} ${onImageClick ? 'zoomable' : ''}`}
+              onLoad={() => setImgLoaded(true)}
+              onError={(e) => {
+                // Si l'optimiseur échoue (domaine non géré…), on tente l'image brute avant le dé.
+                if (fullImg && e.currentTarget.src !== fullImg) {
+                  e.currentTarget.src = fullImg
+                } else {
+                  setImgBroken(true)
+                }
+              }}
+              onClick={onImageClick ? (e) => { e.stopPropagation(); onImageClick(fullImg) } : undefined}
+            />
+          ) : (
+            <span className="game-thumb-fallback">🎲</span>
+          )}
+        </div>
+        {game.status === 'wishlist' && game.price != null && (
+          <span className="game-price game-price-below">{formatPrice(game.price)}</span>
         )}
       </div>
 
@@ -140,7 +145,6 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
           >
             {scroll ? <span className="game-name-inner">{game.name}</span> : game.name}
           </h3>
-          {game.status === 'wishlist' && game.price != null && <span className="game-price">{formatPrice(game.price)}</span>}
         </div>
 
         <div className="game-meta">

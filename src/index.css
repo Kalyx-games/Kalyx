@@ -1129,6 +1129,17 @@ body {
   border-radius: 10px;
   white-space: nowrap;
 }
+/* Première colonne : image + (en wishlist) prix juste en dessous. */
+.game-thumb-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.game-price-below {
+  font-size: 0.82rem;
+  padding: 2px 7px;
+}
 .game-meta {
   display: flex;
   flex-wrap: wrap;
