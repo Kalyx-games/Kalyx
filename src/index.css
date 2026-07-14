@@ -1141,9 +1141,9 @@ body {
   padding: 2px 7px;
 }
 .game-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px 11px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
   align-items: center;
   font-size: 0.83rem;
   color: var(--muted);
@@ -1154,16 +1154,17 @@ body {
   font-size: 0.8rem;
   color: var(--muted);
 }
-/* Chaque info reste d'un seul tenant (ne se coupe pas en plein milieu). */
+/* Chaque cellule de la grille : icône + valeur, d'un seul tenant. min-width:0 +
+   ellipsis = si une valeur est anormalement longue, elle se coupe proprement au
+   lieu de décaler les colonnes (les positions restent fixes). */
 .game-meta > span {
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-}
-/* Complexité + durée = un seul bloc (elles passent à la ligne ensemble). */
-.game-meta > .m-cd {
-  gap: 11px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .m-players {
   color: var(--players);
