@@ -414,10 +414,10 @@ export default function App() {
   // Statut affiché selon l'onglet (Collection ou Wishlist).
   const listStatus = view === 'wishlist' ? 'wishlist' : 'collection'
   // Le tri par prix n'a de sens que dans la Wishlist.
-  const sortOptions =
-    view === 'wishlist'
-      ? [...SORT_OPTIONS, { value: 'price', label: 'Prix' }]
-      : [...SORT_OPTIONS, { value: 'plays', label: 'Parties jouées' }]
+  const sortOptions = [
+    ...SORT_OPTIONS,
+    view === 'wishlist' ? { value: 'price', label: 'Prix' } : { value: 'plays', label: 'Parties jouées' },
+  ].sort((a, b) => a.label.localeCompare(b.label, 'fr'))
 
   // Jeux de la vue courante, filtrés (recherche + filtres) puis triés.
   const visible = useMemo(() => {

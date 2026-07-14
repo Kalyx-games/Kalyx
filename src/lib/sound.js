@@ -32,18 +32,18 @@ function ensure() {
   if (!C) return null
   ctx = new C()
 
-  // Compresseur réglé en limiteur : on peut pousser le volume sans que ça sature
-  // (les pics sont rattrapés au lieu de « clipper »).
+  // Limiteur : on pousse le volume fort et il rattrape les pics près du plafond
+  // (0 dBFS) → beaucoup plus fort, mais sans « clipper »/saturer.
   const comp = ctx.createDynamicsCompressor()
-  comp.threshold.value = -10
-  comp.knee.value = 6
-  comp.ratio.value = 14
-  comp.attack.value = 0.003
-  comp.release.value = 0.18
+  comp.threshold.value = -6
+  comp.knee.value = 4
+  comp.ratio.value = 20
+  comp.attack.value = 0.002
+  comp.release.value = 0.14
   comp.connect(ctx.destination)
 
   master = ctx.createGain()
-  master.gain.value = 1.6 // plus fort (0.85 avant) ; le limiteur ci-dessus évite la saturation
+  master.gain.value = 3.0 // fort (0.85 → 1.6 → 3.0) ; le limiteur ci-dessus tient le plafond
   master.connect(comp)
 
   const conv = ctx.createConvolver()
@@ -121,7 +121,7 @@ export function playFinger(index) {
     if (!ensure()) return
     const octave = Math.floor(index / PENTA.length)
     const semi = PENTA[index % PENTA.length] + 12 * octave - 12 // une octave SOUS le Do4 → grave
-    voice(midi(semi), { dur: 1.0, level: 0.55, bright: 1400, sub: 0.4, oct: 0.06 })
+    voice(midi(semi), { dur: 1.0, level: 0.95, bright: 1400, sub: 0.4, oct: 0.06 })
   } catch {
     /* pas de son : tant pis */
   }
