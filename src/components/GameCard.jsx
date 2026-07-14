@@ -20,9 +20,15 @@ function thumbSrc(url, w = 256) {
 }
 
 // Une seule durée par jeu : on affiche le maximum (les jeux ont min = max).
+// < 60 min → « 45 min » ; ≥ 60 min → format heures compact (« 1 h », « 1h30 », « 2 h »)
+// — plus lisible pour les gros jeux et plus court (tient dans la colonne étroite).
 function durationLabel(g) {
   const d = g.duration_max ?? g.duration_min
-  return d ? `${d} min` : '—'
+  if (!d) return '—'
+  if (d < 60) return `${d} min`
+  const h = Math.floor(d / 60)
+  const m = d % 60
+  return m === 0 ? `${h} h` : `${h}h${String(m).padStart(2, '0')}`
 }
 
 function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageClick, ownerMap, tagMap, index = 0 }) {
@@ -147,11 +153,13 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
           </h3>
         </div>
 
-        {/* Grille 2×2 à positions fixes : joueurs (h-g) · idéal (h-d) · complexité
-            (b-g) · durée (b-d). Chaque info toujours au même endroit → comparaison
-            au coup d'œil en faisant défiler la liste. */}
+        {/* Grille 2×2 à positions fixes, groupée par thème : colonne GAUCHE = joueurs
+            (👥 puis ⭐), colonne DROITE = poids du jeu (🕑 puis 🧠). Chaque info toujours
+            au même endroit → comparaison au coup d'œil en faisant défiler la liste.
+            Ordre DOM = joueurs, durée, idéal, complexité (remplissage ligne par ligne). */}
         <div className="game-meta">
           <span className="m-players" title={playersTitle}>👥 {playersDisplay}</span>
+          <span className="m-time" title="Durée">🕑 {durationLabel(game)}</span>
           <span className="m-ideal" title="Joueurs idéal">{idealDisplay ? `⭐ ${idealDisplay}` : ''}</span>
           <span className="cx" title={complexity ? `Complexité ${complexity.toFixed(1)} / 5` : 'Complexité inconnue'}>
             🧠
@@ -166,7 +174,6 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
               })}
             </span>
           </span>
-          <span className="m-time" title="Durée">🕑 {durationLabel(game)}</span>
         </div>
 
         {extensions.length > 0 && (

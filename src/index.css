@@ -1142,8 +1142,10 @@ body {
 }
 .game-meta {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px 10px;
+  /* Gauche (joueurs/idéal) flexible = un max de place ; droite (durée/complexité)
+     largeur fixe juste suffisante pour ses valeurs courtes. */
+  grid-template-columns: minmax(0, 1fr) 64px;
+  gap: 4px 8px;
   align-items: center;
   font-size: 0.83rem;
   color: var(--muted);
@@ -1154,17 +1156,19 @@ body {
   font-size: 0.8rem;
   color: var(--muted);
 }
-/* Chaque cellule de la grille : icône + valeur, d'un seul tenant. min-width:0 +
-   ellipsis = si une valeur est anormalement longue, elle se coupe proprement au
-   lieu de décaler les colonnes (les positions restent fixes). */
+/* Cellules de la grille. min-width:0 = elles ne débordent pas de leur colonne. */
 .game-meta > span {
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+/* Joueurs & idéal : texte simple → si la valeur est trop longue, elle passe à la
+   ligne DANS la colonne (aucune info perdue, colonnes toujours alignées). */
+.m-players,
+.m-ideal {
+  white-space: normal;
+  line-height: 1.25;
+}
+.m-time {
+  white-space: nowrap;
 }
 .m-players {
   color: var(--players);
