@@ -22,6 +22,7 @@
   --ok-border: #a7f3d0;
   --ok-ink: #047857;
   --nav-pill: rgba(79, 70, 229, 0.14);
+  --app-w: 640px; /* largeur max de l'app (élargie en grille sur tablette/desktop) */
   color-scheme: light;
 }
 
@@ -96,7 +97,7 @@ body {
 }
 
 .app {
-  max-width: 640px;
+  max-width: var(--app-w);
   margin: 0 auto;
   min-height: 100dvh;
   padding-bottom: calc(82px + env(safe-area-inset-bottom));
@@ -109,7 +110,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 640px;
+  max-width: var(--app-w);
   display: flex;
   background: var(--card);
   backdrop-filter: blur(12px);
@@ -989,6 +990,20 @@ body {
   padding: 10px 16px 16px;
 }
 
+/* ---- Tablette / desktop : l'app s'élargit et la liste passe en GRILLE de cartes ---- */
+@media (min-width: 760px) {
+  :root {
+    --app-w: min(1320px, 96vw);
+  }
+  .list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 12px;
+    align-content: start;
+    align-items: start; /* chaque carte garde sa hauteur (sinon le menu de swipe dépasse) */
+  }
+}
+
 /* Glisser-pour-éditer avec « peek » : l'action « Éditer » est derrière la carte ;
    un liseré reste toujours visible à droite (affordance + zone cliquable). */
 .swipe-row {
@@ -1361,7 +1376,7 @@ body {
 /* ---- Bouton flottant + ---- */
 .fab {
   position: fixed;
-  right: max(18px, calc((100vw - 640px) / 2 + 18px));
+  right: max(18px, calc((100vw - var(--app-w)) / 2 + 18px));
   bottom: calc(74px + env(safe-area-inset-bottom));
   width: 60px;
   height: 60px;
