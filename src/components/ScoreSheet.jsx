@@ -52,12 +52,22 @@ function NameField({ id, value, onChange, onPick, placeholder, playerNames, focu
   )
 }
 
+let tid = 0
+const makeTeamRow = (t = {}) => {
+  const size = t.size != null ? t.size : null
+  const n = size && size > 0 ? size : 1
+  return { id: ++tid, name: t.name || '', size, players: Array.from({ length: n }, () => makePlayer()), score: '', win: false }
+}
+
 export default function ScoreSheet({ game, template, playerNames = [], onSavePlay, saving, onEdit, onClose }) {
   const win = template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive')
   const scoring = template?.scoring || 'high'
   const wantScenario = !!template?.scenario
   const isCoop = win === 'coop'
   const noPoints = scoring === 'none'
+  const teamsCfg = template?.teams
+  const isTeams = !isCoop && !!teamsCfg?.on
+  const predefined = (teamsCfg?.list || []).length > 0
   const cats = template?.categories ?? []
   const exts = template?.extensions ?? []
 
@@ -71,6 +81,31 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
   const [groupScore, setGroupScore] = useState('')
   // Compétitif « pas de points » : id des vainqueurs cochés
   const [winnerIds, setWinnerIds] = useState(() => new Set())
+  // En équipes
+  const [teams, setTeams] = useState(() => {
+    const list = teamsCfg?.list || []
+    return (list.length ? list : [{}, {}]).map((t) => makeTeamRow(t))
+  })
+  const setTeamField = (id, field, val) => setTeams((ts) => ts.map((t) => (t.id === id ? { ...t, [field]: val } : t)))
+  const toggleTeamWin = (id) => setTeams((ts) => ts.map((t) => (t.id === id ? { ...t, win: !t.win } : t)))
+  const addTeam = () => setTeams((ts) => (ts.length < 8 ? [...ts, makeTeamRow()] : ts))
+  const removeTeam = (id) => setTeams((ts) => (ts.length > 1 ? ts.filter((t) => t.id !== id) : ts))
+  const addMember = (teamId) =>
+    setTeams((ts) =>
+      ts.map((t) => {
+        if (t.id !== teamId) return t
+        const cap = t.size && t.size > 0 ? t.size : 8
+        return t.players.length < cap ? { ...t, players: [...t.players, makePlayer()] } : t
+      })
+    )
+  const removeMember = (teamId, pid) =>
+    setTeams((ts) =>
+      ts.map((t) => (t.id === teamId && t.players.length > 1 ? { ...t, players: t.players.filter((p) => p.id !== pid) } : t))
+    )
+  const setMemberName = (teamId, pid, name) =>
+    setTeams((ts) =>
+      ts.map((t) => (t.id === teamId ? { ...t, players: t.players.map((p) => (p.id === pid ? { ...p, name } : p)) } : t))
+    )
 
   const visibleCats = useMemo(() => cats.filter((c) => !c.ext || activeExts.has(c.ext)), [cats, activeExts])
 
@@ -159,6 +194,40 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
     const winners = built.filter((b) => b.total === extreme).map((b) => b.name)
     onSavePlay({ players: built, winner: winners.join(', '), scenario: scenarioVal(), extensions: [...activeExts] })
   }
+
+  // Enregistre une partie EN ÉQUIPES. Le score d'équipe est copié sur chaque membre
+  // (champ total), et les membres sont taggés avec le nom de leur équipe.
+  const saveTeams = () => {
+    const data = teams.map((t, ti) => {
+      const tn = t.name.trim() || `Équipe ${ti + 1}`
+      const s = Number(t.score)
+      const scoreNum = !noPoints && t.score.trim() !== '' && Number.isFinite(s) ? s : null
+      const members = t.players.map((p, i) => (p.name || '').trim() || `${tn} ${i + 1}`)
+      return { tn, scoreNum, members, win: t.win }
+    })
+    let winnerTeams = []
+    if (noPoints) {
+      winnerTeams = data.filter((t) => t.win)
+    } else {
+      const scored = data.filter((t) => t.scoreNum != null)
+      if (scored.length) {
+        const extreme = scoring === 'low' ? Math.min(...scored.map((t) => t.scoreNum)) : Math.max(...scored.map((t) => t.scoreNum))
+        winnerTeams = scored.filter((t) => t.scoreNum === extreme)
+      }
+    }
+    const winnerSet = new Set(winnerTeams.map((t) => t.tn))
+    const built = []
+    data.forEach((t) => {
+      t.members.forEach((name) => {
+        const rec = { name, team: t.tn }
+        if (!noPoints && t.scoreNum != null) rec.total = t.scoreNum
+        built.push(rec)
+      })
+    })
+    const winnerNames = built.filter((p) => winnerSet.has(p.team)).map((p) => p.name)
+    onSavePlay({ players: built, winner: winnerNames.join(', '), scenario: scenarioVal(), extensions: [...activeExts] })
+  }
+  const canSaveTeams = noPoints ? teams.some((t) => t.win) : teams.some((t) => t.score.trim() !== '')
 
   const head = (
     <>
@@ -257,6 +326,89 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
         {onSavePlay && (
           <div className="sheet-editor-actions">
             <button type="button" className="btn-primary" onClick={saveCoop} disabled={saving || !outcome}>
+              {saving ? '…' : '💾 Enregistrer la partie'}
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ---------- EN ÉQUIPES ----------
+  if (isTeams) {
+    return (
+      <div className="sheet">
+        {head}
+        <div className="coop-form">
+          {scenarioField}
+          {teams.map((t, ti) => (
+            <div key={t.id} className="team-block">
+              <div className="team-block-head">
+                {noPoints && (
+                  <button
+                    type="button"
+                    className={`win-toggle ${t.win ? 'on' : ''}`}
+                    onClick={() => toggleTeamWin(t.id)}
+                    aria-label="Équipe gagnante"
+                    title="Équipe gagnante"
+                  >🏆</button>
+                )}
+                {predefined ? (
+                  <span className="team-name-fixed">{t.name || `Équipe ${ti + 1}`}</span>
+                ) : (
+                  <input
+                    className="input team-name-input"
+                    value={t.name}
+                    onChange={(e) => setTeamField(t.id, 'name', e.target.value)}
+                    placeholder={`Équipe ${ti + 1}`}
+                  />
+                )}
+                {!noPoints && (
+                  <input
+                    className="input team-score-input"
+                    type="number"
+                    inputMode="numeric"
+                    value={t.score}
+                    onChange={(e) => setTeamField(t.id, 'score', e.target.value)}
+                    placeholder="score"
+                  />
+                )}
+                {!predefined && teams.length > 1 && (
+                  <button type="button" className="sheet-del" onClick={() => removeTeam(t.id)} aria-label="Retirer l'équipe">×</button>
+                )}
+              </div>
+              <div className="team-members">
+                {t.players.map((p, i) => (
+                  <div key={p.id} className="coop-player-row">
+                    <NameField
+                      id={p.id}
+                      className="input"
+                      value={p.name}
+                      onChange={(v) => setMemberName(t.id, p.id, v)}
+                      onPick={(n) => setMemberName(t.id, p.id, n)}
+                      placeholder={`Joueur ${i + 1}`}
+                      playerNames={playerNames}
+                      focused={focusedPlayer}
+                      setFocused={setFocusedPlayer}
+                    />
+                    {t.players.length > 1 && (
+                      <button type="button" className="sheet-del" onClick={() => removeMember(t.id, p.id)} aria-label="Retirer ce joueur">×</button>
+                    )}
+                  </div>
+                ))}
+                {(!t.size || t.players.length < t.size) && t.players.length < 8 && (
+                  <button type="button" className="btn-ghost coop-add" onClick={() => addMember(t.id)}>➕ Ajouter un joueur</button>
+                )}
+              </div>
+            </div>
+          ))}
+          {!predefined && teams.length < 8 && (
+            <button type="button" className="btn-ghost team-add" onClick={addTeam}>➕ Ajouter une équipe</button>
+          )}
+        </div>
+        {onSavePlay && (
+          <div className="sheet-editor-actions">
+            <button type="button" className="btn-primary" onClick={saveTeams} disabled={saving || !canSaveTeams}>
               {saving ? '…' : '💾 Enregistrer la partie'}
             </button>
           </div>

@@ -7,6 +7,8 @@ import { parseExtensions } from '../lib/games'
 
 let cid = 0
 const mkCat = (c = {}) => ({ id: ++cid, label: c.label || '', hint: c.hint || '', ext: c.ext || '' })
+let teid = 0
+const mkTeam = (t = {}) => ({ id: ++teid, name: t.name || '', size: t.size != null ? String(t.size) : '' })
 
 export default function ScoreSheetEditor({ game, template, online, onSave, onClose }) {
   const isNew = !template
@@ -17,10 +19,17 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   const [win, setWin] = useState(() => template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive'))
   const [scoring, setScoring] = useState(() => template?.scoring || 'high')
   const [scenario, setScenario] = useState(() => !!template?.scenario)
+  const [teamsOn, setTeamsOn] = useState(() => !!template?.teams?.on)
+  const [teamList, setTeamList] = useState(() => (template?.teams?.list || []).map(mkTeam))
   const isCoop = win === 'coop'
-  // Les catégories de score (détail par joueur) ne servent qu'en compétitif avec points.
-  const catsRelevant = !isCoop && scoring !== 'none'
+  // Les catégories de score (détail par joueur) ne servent qu'en compétitif, avec
+  // points, et hors équipes (en équipes le score est celui de l'équipe).
+  const catsRelevant = !isCoop && !teamsOn && scoring !== 'none'
   const [cats, setCats] = useState(() => (template?.categories || []).map(mkCat))
+
+  const addTeam = () => setTeamList((t) => [...t, mkTeam()])
+  const updTeam = (id, field, val) => setTeamList((t) => t.map((x) => (x.id === id ? { ...x, [field]: val } : x)))
+  const delTeam = (id) => setTeamList((t) => t.filter((x) => x.id !== id))
   // Extensions qui modifient le score (sous-ensemble des extensions enregistrées).
   const [exts, setExts] = useState(() =>
     (template?.extensions || []).filter((n) => availableExts.includes(n))
@@ -56,10 +65,16 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
       setErr('Ajoute au moins une catégorie avec un nom.')
       return
     }
+    const teams = {
+      on: teamsOn,
+      list: teamList
+        .map((t) => ({ name: t.name.trim(), size: t.size.trim() !== '' && Number(t.size) > 0 ? Number(t.size) : null }))
+        .filter((t) => t.name),
+    }
     setBusy(true)
     setErr('')
     try {
-      await onSave(game.id, { win, scoring, scenario, categories, extensions: extList })
+      await onSave(game.id, { win, scoring, scenario, teams, categories, extensions: extList })
       onClose()
     } catch (e) {
       setErr(e.message)
@@ -106,6 +121,13 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
           <span>🎯 Demander un scénario / niveau de difficulté</span>
         </label>
 
+        {!isCoop && (
+          <label className="filter-check" style={{ marginTop: 8 }}>
+            <input type="checkbox" checked={teamsOn} onChange={(e) => setTeamsOn(e.target.checked)} />
+            <span>🧑‍🤝‍🧑 En équipes</span>
+          </label>
+        )}
+
         <p className="field-hint" style={{ marginTop: 10 }}>
           {isCoop
             ? 'Tout le groupe gagne ou perd ensemble.'
@@ -114,6 +136,36 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
               : 'Chacun marque ses points.'}
         </p>
       </section>
+
+      {teamsOn && !isCoop && (
+        <section className="settings-card">
+          <h3>Équipes</h3>
+          <p className="field-hint" style={{ marginBottom: 10 }}>
+            Définis les équipes à l'avance (avec un effectif si tu veux), ou laisse vide pour les créer au moment de la partie.
+          </p>
+          {teamList.map((t) => (
+            <div key={t.id} className="team-edit">
+              <input
+                className="cat-edit-label"
+                value={t.name}
+                onChange={(e) => updTeam(t.id, 'name', e.target.value)}
+                placeholder="Nom de l'équipe"
+              />
+              <input
+                className="team-size"
+                type="number"
+                inputMode="numeric"
+                min="1"
+                value={t.size}
+                onChange={(e) => updTeam(t.id, 'size', e.target.value)}
+                placeholder="effectif"
+              />
+              <button type="button" className="ext-row-x" onClick={() => delTeam(t.id)} aria-label="Retirer l'équipe">×</button>
+            </div>
+          ))}
+          <button type="button" className="btn-ghost" onClick={addTeam}>➕ Ajouter une équipe</button>
+        </section>
+      )}
 
       {availableExts.length > 0 && (
         <section className="settings-card">

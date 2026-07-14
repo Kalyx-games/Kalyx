@@ -93,21 +93,34 @@ export function computePlayStats(plays, scoring = 'high') {
   let coopTotal = 0
   list.forEach((p) => {
     const coop = !!p.outcome
+    const isTeam = !coop && (p.players || []).some((pl) => pl && pl.team)
     if (coop) {
       coopTotal += 1
       if (p.outcome === 'win') coopWins += 1
       const s = Number(p.score)
       if (Number.isFinite(s)) scores.push(s)
+    } else if (isTeam) {
+      // En équipes : le score est celui de l'équipe (dupliqué sur chaque membre) →
+      // on ne le compte qu'une fois par équipe.
+      const seen = new Set()
+      ;(p.players || []).forEach((pl) => {
+        const t = pl?.team
+        if (t && !seen.has(t)) {
+          seen.add(t)
+          const s = Number(pl?.total)
+          if (Number.isFinite(s) && pl?.total !== undefined && pl?.total !== null) scores.push(s)
+        }
+      })
     }
     ;(p.players || []).forEach((pl) => {
       const n = (pl?.name || '').trim() || '—'
       games[n] = (games[n] || 0) + 1
-      if (!coop) {
+      if (!coop && !isTeam) {
         const t = Number(pl?.total)
-        if (Number.isFinite(t) && (pl?.total !== undefined && pl?.total !== null)) scores.push(t)
+        if (Number.isFinite(t) && pl?.total !== undefined && pl?.total !== null) scores.push(t)
       }
     })
-    // Vainqueur(s) → chacun compte une victoire (gère l'égalité et le coop).
+    // Vainqueur(s) → chacun compte une victoire (gère l'égalité, le coop, les équipes).
     playWinners(p).forEach((w) => {
       wins[w] = (wins[w] || 0) + 1
     })

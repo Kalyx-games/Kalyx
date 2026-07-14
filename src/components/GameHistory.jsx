@@ -95,10 +95,30 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
             <div className="hist-list">
               {plays.map((pl) => {
                 const coop = !!pl.outcome
+                const teamPlay = !coop && (pl.players || []).some((p) => p && p.team)
                 const ranked = [...(pl.players || [])].sort((a, b) =>
                   scoring === 'low' ? (a.total ?? 0) - (b.total ?? 0) : (b.total ?? 0) - (a.total ?? 0)
                 )
-                const winners = new Set(playWinners(pl)) // gère l'égalité, le coop, « pas de points »
+                const winners = new Set(playWinners(pl)) // gère l'égalité, le coop, les équipes, « pas de points »
+                // Regroupe les joueurs par équipe (en conservant l'ordre d'apparition).
+                const teamGroups = teamPlay
+                  ? (pl.players || []).reduce((acc, p) => {
+                      const key = p.team || '—'
+                      let g = acc.find((x) => x.name === key)
+                      if (!g) { g = { name: key, score: p.total, members: [] }; acc.push(g) }
+                      g.members.push(p.name)
+                      return acc
+                    }, [])
+                  : []
+                if (teamPlay) {
+                  teamGroups.sort((a, b) =>
+                    a.score == null || b.score == null
+                      ? 0
+                      : scoring === 'low'
+                        ? (a.score ?? 0) - (b.score ?? 0)
+                        : (b.score ?? 0) - (a.score ?? 0)
+                  )
+                }
                 return (
                   <div key={pl.id} className="hist-row">
                     <div className="hist-row-head">
@@ -125,6 +145,27 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                         )}
                         <div className="hist-coop-players">
                           👥 {(pl.players || []).map((p) => p.name).join(', ')}
+                        </div>
+                      </>
+                    ) : teamPlay ? (
+                      <>
+                        {pl.scenario && <div className="hist-coop-meta"><span>🎯 {pl.scenario}</span></div>}
+                        {pl.extensions && pl.extensions.length > 0 && (
+                          <div className="hist-ext">🧩 {pl.extensions.join(', ')}</div>
+                        )}
+                        <div className="hist-players">
+                          {teamGroups.map((g, i) => {
+                            const isWin = g.members.some((m) => winners.has((m || '').trim()))
+                            return (
+                              <div key={i} className={`hist-team ${isWin ? 'hist-winner' : ''}`}>
+                                <div className="hist-team-head">
+                                  <span className="hist-player-name">{isWin ? '🏆 ' : ''}{g.name}</span>
+                                  {!noPoints && g.score != null && <span className="hist-player-score">{g.score}</span>}
+                                </div>
+                                <div className="hist-team-members">{g.members.join(', ')}</div>
+                              </div>
+                            )
+                          })}
                         </div>
                       </>
                     ) : (
