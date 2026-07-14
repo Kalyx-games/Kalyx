@@ -984,37 +984,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  /* marge basse généreuse : le dernier jeu peut remonter au-dessus des boutons
-     flottants (scan + ajouter), qui montent jusqu'à ~200px du bas. */
-  padding: 10px 16px 132px;
+  /* Les FAB s'effacent au défilement (ils ne recouvrent plus le dernier jeu), et
+     l'espace pour la barre du bas est déjà géré par le padding de .app. */
+  padding: 10px 16px 16px;
 }
 
-/* Glisser-pour-éditer : la carte coulisse sur une action « Éditer » cachée derrière. */
-.swipe-row {
-  position: relative;
-}
-.swipe-edit {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 78px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  border: none;
-  border-radius: 0 16px 16px 0;
-  background: var(--primary);
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-.swipe-edit-ico {
-  font-size: 1.25rem;
-}
 .game {
   display: grid;
   grid-template-columns: 66px 1fr auto;
@@ -1025,11 +999,6 @@ body {
   border: 1px solid var(--line);
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
-  position: relative; /* passe au-dessus de l'action « Éditer » cachée derrière */
-  z-index: 1;
-  /* Pas de sélection de texte pendant le glissé (sinon le navigateur annule le geste). */
-  user-select: none;
-  -webkit-user-select: none;
 }
 .game.clickable {
   cursor: pointer;
