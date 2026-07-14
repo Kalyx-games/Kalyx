@@ -314,8 +314,15 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
           aria-label="Ouvrir le menu"
           title="Glisser ou toucher pour ouvrir le menu"
         >
-          <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
-            <path d="M14.5 5.5l-6.5 6.5 6.5 6.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <svg viewBox="0 0 12 20" width="9" height="16" aria-hidden="true">
+            <g fill="currentColor">
+              <circle cx="3" cy="3.5" r="1.4" />
+              <circle cx="9" cy="3.5" r="1.4" />
+              <circle cx="3" cy="10" r="1.4" />
+              <circle cx="9" cy="10" r="1.4" />
+              <circle cx="3" cy="16.5" r="1.4" />
+              <circle cx="9" cy="16.5" r="1.4" />
+            </g>
           </svg>
         </button>
       )}
