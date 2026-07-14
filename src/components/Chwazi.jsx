@@ -81,6 +81,7 @@ export default function Chwazi({ onClose }) {
   const [result, setResult] = useState(null) // null | {type:'winner', ids} | {type:'teams', assign}
   const [menuOpen, setMenuOpen] = useState(false)
 
+  const containerRef = useRef(null)
   const pointersRef = useRef(pointers)
   pointersRef.current = pointers
   const cfgRef = useRef({})
@@ -153,6 +154,24 @@ export default function Chwazi({ onClose }) {
     }
   }, [count, result])
 
+  // iOS Safari : poser un 2e doigt déclenche le pinch-zoom, qui ANNULE les pointeurs
+  // → on ne pouvait plus ajouter de doigts. On bloque le geste par défaut dès qu'il y
+  // a plusieurs doigts (écouteurs natifs non passifs, seuls capables d'appeler
+  // preventDefault sur le tactile).
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const block = (e) => {
+      if (e.touches && e.touches.length > 1) e.preventDefault()
+    }
+    el.addEventListener('touchstart', block, { passive: false })
+    el.addEventListener('touchmove', block, { passive: false })
+    return () => {
+      el.removeEventListener('touchstart', block)
+      el.removeEventListener('touchmove', block)
+    }
+  }, [])
+
   // Plein écran : masque la barre du navigateur/système dès qu'un doigt est posé.
   // Sur Android, le bouton retour SORT du plein écran (au lieu de fermer Chwazi) :
   // on détecte cette sortie et on ferme Chwazi → un seul retour suffit, et on ne
@@ -207,6 +226,7 @@ export default function Chwazi({ onClose }) {
 
   return (
     <div
+      ref={containerRef}
       className="chwazi"
       onPointerDown={addPointer}
       onPointerMove={movePointer}
