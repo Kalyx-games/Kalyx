@@ -231,5 +231,8 @@ export default memo(
     prev.game === next.game &&
     prev.online === next.online &&
     prev.ownerMap === next.ownerMap &&
-    prev.tagMap === next.tagMap
+    prev.tagMap === next.tagMap &&
+    // Sans ça, créer une fiche ne redessinait pas la carte → elle gardait l'ancien
+    // onCardClick (sans fiche) et recliquer rouvrait l'éditeur au lieu de l'historique.
+    prev.hasSheet === next.hasSheet
 )

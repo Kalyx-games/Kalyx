@@ -977,6 +977,7 @@ export default function App() {
               onImageClick={(url) => setZoomImage(url)}
               ownerMap={ownerMap}
               tagMap={tagMap}
+              hasSheet={!!(scoresheets && scoresheets[g.id])}
             />
           ))
         )}
