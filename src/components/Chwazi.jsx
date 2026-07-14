@@ -7,18 +7,6 @@ import { playFinger, startRiser, stopRiser, playReveal } from '../lib/sound'
 // 100 % tactile, fonctionne hors ligne (aucun réseau).
 // Dès qu'un doigt touche l'écran, toute l'interface disparaît (plein écran).
 
-// Deux palettes de 12 couleurs TRÈS différenciées, choisies au hasard.
-// Une couleur lisible sur fond noir ne l'est pas forcément sur fond blanc → on a
-// une palette « vive » (pour le thème sombre) et une palette « profonde » (thème clair).
-const PALETTE_DARK = [
-  '#ff6b6b', '#ff922b', '#ffd43b', '#94d82d', '#51cf66', '#20c997',
-  '#4dabf7', '#748ffc', '#9775fa', '#da77f2', '#f783ac', '#ced4da',
-]
-const PALETTE_LIGHT = [
-  '#e03131', '#e8590c', '#f08c00', '#66a80f', '#2f9e44', '#099268',
-  '#1971c2', '#3b5bdb', '#6741d9', '#9c36b5', '#c2255c', '#495057',
-]
-
 // Le thème effectif (l'app pose data-theme='dark'|'light' sur <html>, ou rien en
 // mode « auto » → on suit alors la préférence système).
 function isDarkTheme() {
@@ -27,7 +15,41 @@ function isDarkTheme() {
   if (t === 'light') return false
   return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
 }
-const currentPalette = () => (isDarkTheme() ? PALETTE_DARK : PALETTE_LIGHT)
+
+// Teinte (0–360) → couleur, avec une luminosité adaptée au fond : vive sur fond
+// sombre, profonde sur fond clair (une couleur lisible sur noir ne l'est pas
+// forcément sur blanc).
+function hslHex(h, s, l) {
+  const sn = s / 100
+  const ln = l / 100
+  const a = sn * Math.min(ln, 1 - ln)
+  const f = (n) => {
+    const k = (n + h / 30) % 12
+    const c = ln - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))
+    return Math.round(255 * c).toString(16).padStart(2, '0')
+  }
+  return `#${f(0)}${f(8)}${f(4)}`
+}
+const colorForHue = (hue) => (isDarkTheme() ? hslHex(hue, 85, 63) : hslHex(hue, 68, 42))
+
+// Prochaine teinte = milieu du plus grand arc libre sur la roue → les couleurs
+// utilisées restent réparties au maximum (toujours très différenciées). 1re au hasard.
+function nextHue(used) {
+  if (!used.length) return Math.random() * 360
+  const sorted = [...used].sort((a, b) => a - b)
+  let bestGap = -1
+  let bestMid = 0
+  for (let i = 0; i < sorted.length; i++) {
+    const a = sorted[i]
+    const b = i + 1 < sorted.length ? sorted[i + 1] : sorted[0] + 360
+    const gap = b - a
+    if (gap > bestGap) {
+      bestGap = gap
+      bestMid = (a + gap / 2) % 360
+    }
+  }
+  return bestMid
+}
 
 const COUNTDOWN_START = 3 // secondes avant le tirage
 const WINNER_MIN = 1
@@ -63,9 +85,9 @@ export default function Chwazi({ onClose }) {
   pointersRef.current = pointers
   const cfgRef = useRef({})
   cfgRef.current = { mode, winnerCount, teamCount }
-  // Palette des doigts mélangée : l'ordre des couleurs change à chaque manche
-  // (variété visuelle + on retient mieux qui a été désigné). Reste distinct.
-  const paletteRef = useRef(shuffle(currentPalette()))
+  // Teintes déjà attribuées dans la manche en cours (remises à zéro quand l'écran
+  // redevient vide) → sert à placer chaque nouvelle couleur dans le plus grand vide.
+  const usedHuesRef = useRef([])
 
   const ids = Object.keys(pointers)
   const count = ids.length
@@ -90,8 +112,10 @@ export default function Chwazi({ onClose }) {
       shuffled.forEach((id, i) => {
         assign[id] = i % t
       })
-      // Couleurs d'équipes mélangées (pas toujours bleu puis orange), mais distinctes.
-      setResult({ type: 'teams', assign, colors: shuffle(currentPalette()) })
+      // Couleurs d'équipes très éloignées les unes des autres (1re au hasard).
+      const hues = []
+      for (let i = 0; i < t; i++) hues.push(nextHue(hues))
+      setResult({ type: 'teams', assign, colors: hues.map(colorForHue) })
     }
     vibrate([0, 90, 60, 90])
     playReveal()
@@ -120,9 +144,13 @@ export default function Chwazi({ onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count, result, minFingers])
 
-  // Quand tous les doigts sont levés, on efface le résultat pour repartir propre.
+  // Quand tous les doigts sont levés : on efface le résultat ET on repart d'une
+  // sélection de couleurs vierge pour la manche suivante.
   useEffect(() => {
-    if (count === 0 && result) setResult(null)
+    if (count === 0) {
+      usedHuesRef.current = []
+      if (result) setResult(null)
+    }
   }, [count, result])
 
   // Plein écran : masque la barre du navigateur/système dès qu'un doigt est posé.
@@ -146,13 +174,12 @@ export default function Chwazi({ onClose }) {
     enterFullscreen() // 1er doigt (geste utilisateur) → masque la barre système
     setMenuOpen(false)
     if (result) return // pendant l'affichage du résultat, on n'ajoute plus
-    // Nouveau round (écran vide) → on re-mélange l'ordre des couleurs.
-    if (Object.keys(pointersRef.current).length === 0) paletteRef.current = shuffle(currentPalette())
+    // (La sélection est remise à zéro quand l'écran redevient vide, cf. useEffect.)
+    const hue = nextHue(usedHuesRef.current)
+    usedHuesRef.current = [...usedHuesRef.current, hue]
+    const color = colorForHue(hue)
     playFinger(Object.keys(pointersRef.current).length)
-    setPointers((prev) => {
-      const color = paletteRef.current[Object.keys(prev).length % paletteRef.current.length]
-      return { ...prev, [e.pointerId]: { x: e.clientX, y: e.clientY, color } }
-    })
+    setPointers((prev) => ({ ...prev, [e.pointerId]: { x: e.clientX, y: e.clientY, color } }))
   }
   const movePointer = (e) => {
     setPointers((prev) =>
@@ -238,8 +265,8 @@ export default function Chwazi({ onClose }) {
         if (result?.type === 'winner') {
           cls += result.ids.includes(id) ? ' chosen' : ' dim'
         } else if (result?.type === 'teams') {
-          const pal = result.colors || currentPalette()
-          color = pal[result.assign[id] % pal.length]
+          const pal = result.colors || []
+          color = pal[result.assign[id] % pal.length] || color
           cls += ' picked'
         }
         return <div key={id} className={cls} style={{ left: p.x, top: p.y, background: color }} />
