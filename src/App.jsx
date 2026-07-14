@@ -702,6 +702,13 @@ export default function App() {
     setError(null)
     try {
       await savePlay(scoringGame.id, play)
+      // La note éditée pendant la partie est persistée sur la fiche du jeu.
+      const tpl = scoresheets?.[scoringGame.id]
+      if (tpl && (play.notes ?? '') !== (tpl.notes ?? '')) {
+        const newTpl = { ...tpl, notes: play.notes || '' }
+        setScoresheets((m) => ({ ...(m || {}), [scoringGame.id]: newTpl }))
+        saveScoresheet(scoringGame.id, newTpl).catch(() => {})
+      }
       const g = scoringGame
       setScoringGame(null)
       refreshHistory(historyGame || g)

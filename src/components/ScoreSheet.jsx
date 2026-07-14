@@ -75,6 +75,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
   const [players, setPlayers] = useState(() => [makePlayer(), makePlayer()])
   const [focusedPlayer, setFocusedPlayer] = useState(null)
   const [scenario, setScenario] = useState('')
+  const [notes, setNotes] = useState(template?.notes || '')
 
   // Coopératif
   const [outcome, setOutcome] = useState(null) // 'win' | 'loss'
@@ -152,6 +153,8 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
   const nameOf = (p, i) => (p.name || '').trim() || `Joueur ${i + 1}`
   const namesOf = () => players.map(nameOf)
   const scenarioVal = () => (wantScenario ? scenario.trim() || null : null)
+  // La note voyage avec la partie ; App la persiste sur la fiche si elle a changé.
+  const notesVal = () => notes
 
   // ----- Enregistrement selon le type -----
   const saveCoop = () => {
@@ -166,6 +169,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
       score: !noPoints && groupScore.trim() !== '' && Number.isFinite(s) ? s : null,
       winner: outcome === 'win' ? built.map((b) => b.name).join(', ') : '',
       extensions: [...activeExts],
+      notes: notesVal(),
     })
   }
 
@@ -178,6 +182,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
       winner: winnerNames.join(', '),
       scenario: scenarioVal(),
       extensions: [...activeExts],
+      notes: notesVal(),
     })
   }
 
@@ -192,7 +197,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
     })
     const extreme = scoring === 'low' ? Math.min(...built.map((b) => b.total)) : Math.max(...built.map((b) => b.total))
     const winners = built.filter((b) => b.total === extreme).map((b) => b.name)
-    onSavePlay({ players: built, winner: winners.join(', '), scenario: scenarioVal(), extensions: [...activeExts] })
+    onSavePlay({ players: built, winner: winners.join(', '), scenario: scenarioVal(), extensions: [...activeExts], notes: notesVal() })
   }
 
   // Enregistre une partie EN ÉQUIPES. Le score d'équipe est copié sur chaque membre
@@ -225,7 +230,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
       })
     })
     const winnerNames = built.filter((p) => winnerSet.has(p.team)).map((p) => p.name)
-    onSavePlay({ players: built, winner: winnerNames.join(', '), scenario: scenarioVal(), extensions: [...activeExts] })
+    onSavePlay({ players: built, winner: winnerNames.join(', '), scenario: scenarioVal(), extensions: [...activeExts], notes: notesVal() })
   }
   const canSaveTeams = noPoints ? teams.some((t) => t.win) : teams.some((t) => t.score.trim() !== '')
 
@@ -257,6 +262,19 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
     <div className="field">
       <label className="field-label">🎯 Scénario / niveau <span className="field-opt">(facultatif)</span></label>
       <input className="input" value={scenario} onChange={(e) => setScenario(e.target.value)} placeholder="ex. Scénario 3, difficile…" />
+    </div>
+  )
+
+  const notesField = (
+    <div className="field">
+      <label className="field-label">📝 Notes</label>
+      <textarea
+        className="notes-area"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Rappels de règles, variante maison, précisions de score…"
+        rows={2}
+      />
     </div>
   )
 
@@ -304,6 +322,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
       <div className="sheet">
         {head}
         <div className="coop-form">
+          {notesField}
           <div className="field">
             <label className="field-label">Résultat</label>
             <div className="chips">
@@ -340,6 +359,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
       <div className="sheet">
         {head}
         <div className="coop-form">
+          {notesField}
           {scenarioField}
           {teams.map((t, ti) => (
             <div key={t.id} className="team-block">
@@ -423,6 +443,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
       <div className="sheet">
         {head}
         <div className="coop-form">
+          {notesField}
           {scenarioField}
           <div className="field">
             <label className="field-label">Joueurs — coche le(s) vainqueur(s) 🏆</label>
@@ -444,7 +465,7 @@ export default function ScoreSheet({ game, template, playerNames = [], onSavePla
   return (
     <div className="sheet">
       {head}
-      {scenarioField && <div className="coop-form">{scenarioField}</div>}
+      <div className="coop-form">{notesField}{scenarioField}</div>
 
       <div className="sheet-scroll">
         <table className="sheet-table">

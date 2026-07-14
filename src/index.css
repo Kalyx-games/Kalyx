@@ -2561,6 +2561,23 @@ body {
   border-color: var(--primary);
   background: var(--input-focus);
 }
+.notes-area {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-family: inherit;
+  line-height: 1.4;
+  resize: vertical;
+}
+.notes-area:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--input-focus);
+}
 .field-opt {
   font-weight: 400;
   color: var(--muted);

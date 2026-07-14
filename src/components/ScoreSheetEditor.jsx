@@ -34,6 +34,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   const [exts, setExts] = useState(() =>
     (template?.extensions || []).filter((n) => availableExts.includes(n))
   )
+  const [notes, setNotes] = useState(() => template?.notes || '')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
@@ -74,7 +75,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
     setBusy(true)
     setErr('')
     try {
-      await onSave(game.id, { win, scoring, scenario, teams, categories, extensions: extList })
+      await onSave(game.id, { win, scoring, scenario, teams, notes: notes.trim(), categories, extensions: extList })
       onClose()
     } catch (e) {
       setErr(e.message)
@@ -234,6 +235,20 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         <button type="button" className="btn-ghost" onClick={addCat}>➕ Ajouter une catégorie</button>
       </section>
       )}
+
+      <section className="settings-card">
+        <h3>📝 Notes</h3>
+        <p className="field-hint" style={{ marginBottom: 8 }}>
+          Rappels de règles, variante maison, précisions de score… Affichées (et modifiables) à chaque partie.
+        </p>
+        <textarea
+          className="notes-area"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="ex. Départage : joueur avec le plus de cartes. Variante maison : on retire les Léviathans."
+          rows={4}
+        />
+      </section>
 
       {err && <p className="banner banner-err" style={{ margin: '4px 0 12px' }}>{err}</p>}
 
