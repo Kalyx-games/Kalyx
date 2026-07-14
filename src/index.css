@@ -1021,28 +1021,26 @@ body {
   font-size: 1.3rem;
   display: inline-flex;
 }
-/* Poignée discrète au bord droit de la carte (indice de glissé + ouvre le menu).
-   Petite pastille arrondie grise translucide → ressemble à un « handle » soigné. */
+/* Chevron discret au bord droit de la carte (indice de glissé + ouvre le menu). */
 .swipe-hint {
   position: absolute;
   top: 50%;
-  right: 3px;
+  right: 2px;
   transform: translateY(-50%);
-  width: 19px;
-  height: 34px;
+  width: 20px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 9px;
-  background: rgba(130, 130, 140, 0.14);
+  background: transparent;
   color: var(--muted);
+  opacity: 0.55;
   cursor: pointer;
   z-index: 2;
-  transition: background 0.15s ease;
 }
 .swipe-hint:active {
-  background: rgba(130, 130, 140, 0.28);
+  opacity: 1;
 }
 .game {
   display: grid;
