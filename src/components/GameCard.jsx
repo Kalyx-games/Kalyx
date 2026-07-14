@@ -175,6 +175,11 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
 
       <div className="game-actions" onClick={(e) => e.stopPropagation()}>
         <div className="game-btns">
+          {onMove && (
+            <button onClick={onMove} disabled={!online} title="Déplacer vers la collection" aria-label="Déplacer vers la collection">
+              <CollectionIcon size={16} />
+            </button>
+          )}
           <button onClick={onEdit} disabled={!online} title="Modifier" aria-label="Modifier">✏️</button>
           {onBgg && (
             <button onClick={onBgg} title="Voir sur BoardGameGeek" aria-label="Voir sur BoardGameGeek">
@@ -182,11 +187,6 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
             </button>
           )}
         </div>
-        {onMove && (
-          <button onClick={onMove} disabled={!online} title="Déplacer vers la collection" aria-label="Déplacer vers la collection">
-            <CollectionIcon size={16} />
-          </button>
-        )}
         {(parseOwners(game.owner).length > 0 || parseTags(game.tags).length > 0) && (
           <div className="owner-bubbles">
             {parseOwners(game.owner).map((o) => {
