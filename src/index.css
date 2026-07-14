@@ -1142,10 +1142,12 @@ body {
 }
 .game-meta {
   display: grid;
-  /* Gauche (joueurs/idéal) flexible = un max de place ; droite (durée/complexité)
-     largeur fixe juste suffisante pour ses valeurs courtes. */
-  grid-template-columns: minmax(0, 1fr) 64px;
+  /* Gauche (joueurs/idéal) = largeur du jeu le plus large de la sélection (variable
+     --meta-left calculée en JS ; repli 1fr) → pas d'espace vide. Droite
+     (durée/complexité) = largeur fixe juste suffisante pour ses valeurs courtes. */
+  grid-template-columns: var(--meta-left, minmax(0, 1fr)) 64px;
   gap: 4px 8px;
+  justify-items: start;
   align-items: center;
   font-size: 0.83rem;
   color: var(--muted);

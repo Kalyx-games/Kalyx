@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 import { isConfigured } from './lib/supabase'
 import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwners, parseTags, effectivePlayersSet, effectiveBestSet, extensionNames } from './lib/games'
 import { saveGamesCache, loadGamesCache } from './lib/cache'
@@ -437,6 +437,24 @@ export default function App() {
     if (sortDir === 'desc') list.reverse()
     return list
   }, [games, search, sort, sortDir, shuffleSeed, filters, listStatus, view, playCounts])
+
+  // Largeur de la 1re colonne (joueurs/idéal) des cartes = largeur du jeu qui en
+  // prend le plus dans la sélection filtrée → toutes les cartes partagent cette
+  // largeur (colonnes alignées) sans laisser d'espace vide inutile.
+  const listRef = useRef(null)
+  useLayoutEffect(() => {
+    const list = listRef.current
+    if (!list) return
+    // On mesure à largeur libre (chaque cellule prend sa largeur naturelle)…
+    list.style.setProperty('--meta-left', 'max-content')
+    let max = 0
+    list.querySelectorAll('.m-players, .m-ideal').forEach((el) => {
+      const w = el.getBoundingClientRect().width
+      if (w > max) max = w
+    })
+    // …puis on fixe la colonne à ce maximum (repli 1fr si liste vide).
+    list.style.setProperty('--meta-left', max ? `${Math.ceil(max)}px` : 'minmax(0, 1fr)')
+  }, [visible])
 
   // Scénarios déjà utilisés pour ce jeu (auto-complétion du champ scénario).
   const scenarioNames = useMemo(
@@ -922,7 +940,7 @@ export default function App() {
           <Stats games={statsGames} ownerMap={ownerMap} hasCollection={hasCollection} />
         </Suspense>
       ) : (
-      <main className="list">
+      <main className="list" ref={listRef}>
         {games === null ? (
           Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
         ) : visible.length === 0 ? (
