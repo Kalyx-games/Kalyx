@@ -116,7 +116,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
   const ACTION_W = 76
   const actions = []
   if (onEdit) actions.push({ key: 'edit', label: 'Éditer', ico: '✏️', bg: 'var(--primary)', run: onEdit })
-  if (onMove) actions.push({ key: 'move', label: 'Collection', node: <CollectionIcon size={18} />, bg: '#16a34a', run: onMove })
+  if (onMove) actions.push({ key: 'move', label: 'Vers collection', node: <CollectionIcon size={20} color="#fff" />, bg: '#16a34a', run: onMove })
   const menuW = actions.length * ACTION_W
   const OPEN = -menuW
   const [offset, setOffset] = useState(0)
@@ -314,8 +314,8 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
           aria-label="Ouvrir le menu"
           title="Glisser ou toucher pour ouvrir le menu"
         >
-          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-            <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+            <path d="M14.5 5.5l-6.5 6.5 6.5 6.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
       )}

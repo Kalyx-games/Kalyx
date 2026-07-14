@@ -1,10 +1,10 @@
 // Petites icônes SVG de l'app.
 // Collection = bibliothèque verte, Wishlist = cœur rouge, Réglages = engrenage.
 
-export function CollectionIcon({ size = 20 }) {
+export function CollectionIcon({ size = 20, color = '#16a34a' }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false">
-      <g fill="#16a34a">
+      <g fill={color}>
         <rect x="4.3" y="5.5" width="3" height="14" rx="1" />
         <rect x="8.3" y="7.5" width="3" height="12" rx="1" />
         <rect x="12.3" y="4.5" width="3" height="15" rx="1" />

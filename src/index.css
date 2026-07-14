@@ -1021,26 +1021,28 @@ body {
   font-size: 1.3rem;
   display: inline-flex;
 }
-/* Chevron discret au bord droit de la carte (indice de glissé + raccourci édition). */
+/* Poignée discrète au bord droit de la carte (indice de glissé + ouvre le menu).
+   Petite pastille arrondie grise translucide → ressemble à un « handle » soigné. */
 .swipe-hint {
   position: absolute;
   top: 50%;
-  right: 2px;
+  right: 3px;
   transform: translateY(-50%);
-  width: 20px;
-  height: 38px;
+  width: 19px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
-  background: transparent;
+  border-radius: 9px;
+  background: rgba(130, 130, 140, 0.14);
   color: var(--muted);
-  opacity: 0.55;
   cursor: pointer;
   z-index: 2;
+  transition: background 0.15s ease;
 }
 .swipe-hint:active {
-  opacity: 1;
+  background: rgba(130, 130, 140, 0.28);
 }
 .game {
   display: grid;
@@ -1192,11 +1194,14 @@ body {
 }
 .game-price {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 0.95rem;
   font-weight: 800;
   color: #16a34a;
   background: #eaf7ee;
-  padding: 2px 9px;
+  padding: 3px 9px;
   border-radius: 10px;
   white-space: nowrap;
 }
@@ -1290,6 +1295,7 @@ body {
 /* Boutons d'action côte à côte (modifier + compter les points). */
 .game-btns {
   display: flex;
+  align-items: center;
   gap: 5px;
 }
 .owner-bubbles {
