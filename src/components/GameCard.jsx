@@ -112,8 +112,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
   // la carte vers la gauche pour la révéler entièrement. Écouteurs tactiles NATIFS non
   // passifs (les seuls capables de preventDefault sur iOS pour capter le geste). ---
   const EDIT_W = 88 // largeur de l'action ouverte
-  const PEEK = 30 // liseré visible au repos
-  const OPEN = -(EDIT_W - PEEK) // décalage de la carte quand l'action est ouverte
+  const OPEN = -EDIT_W // la carte coulisse entièrement pour révéler l'action
   const [offset, setOffset] = useState(0)
   const [dragging, setDragging] = useState(false)
   const offsetRef = useRef(0)
@@ -175,8 +174,8 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
     <div className="swipe-row" style={{ animationDelay: delay }}>
       {onEdit && (
         <button type="button" className="swipe-edit" onClick={onEdit} disabled={!online} aria-label="Modifier">
-          <span className="swipe-edit-label">Éditer</span>
           <span className="swipe-edit-ico">✏️</span>
+          <span className="swipe-edit-label">Éditer</span>
         </button>
       )}
     <article
@@ -289,6 +288,23 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
           </div>
         )}
       </div>
+
+      {/* Chevron discret au bord droit : indique qu'on peut glisser la carte, et sert
+          de raccourci d'édition en le tapant (secours si le glissé ne prend pas). */}
+      {onEdit && (
+        <button
+          type="button"
+          className="swipe-hint"
+          onClick={(e) => { e.stopPropagation(); onEdit() }}
+          disabled={!online}
+          aria-label="Modifier"
+          title="Glisser ou toucher pour éditer"
+        >
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
     </article>
     </div>
   )

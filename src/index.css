@@ -1003,32 +1003,50 @@ body {
   bottom: 0;
   width: 88px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  padding: 0 9px;
+  justify-content: center;
+  gap: 2px;
   border: none;
   background: var(--primary);
   color: #fff;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
 }
 .swipe-edit-ico {
-  font-size: 1.15rem;
+  font-size: 1.3rem;
+}
+/* Chevron discret au bord droit de la carte (indice de glissé + raccourci édition). */
+.swipe-hint {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0.55;
+  cursor: pointer;
+  z-index: 2;
+}
+.swipe-hint:active {
+  opacity: 1;
 }
 .game {
   display: grid;
   grid-template-columns: 66px 1fr auto;
   gap: 13px;
   align-items: start; /* tout le contenu aligné en haut (image, infos, boutons) */
-  padding: 11px;
+  padding: 11px 22px 11px 11px; /* bande droite réservée au chevron */
   background: var(--card);
   border: 1px solid var(--line);
-  /* Bord droit plat : la carte s'aboute au liseré « Éditer » (le coin arrondi vient
-     du .swipe-row). Marge droite = liseré visible au repos. */
-  border-radius: 16px 0 0 16px;
-  margin-right: 30px;
+  border-radius: 16px;
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
   position: relative;
   z-index: 1;
