@@ -2011,6 +2011,132 @@ body {
   color: var(--ink);
   margin-bottom: 12px;
 }
+
+/* ---- Podium des joueurs ---- */
+.podium {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.podium-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--input-bg);
+}
+.podium-row.top {
+  background: var(--nav-pill);
+}
+.podium-rank {
+  flex: 0 0 1.6em;
+  text-align: center;
+  font-weight: 800;
+  color: var(--muted);
+}
+.podium-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.podium-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.podium-wins {
+  font-weight: 700;
+  color: var(--ink);
+}
+.podium-rate {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+/* ---- Table moyenne & record ---- */
+.score-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.score-table th {
+  text-align: right;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 0.78rem;
+  padding: 0 6px 8px;
+}
+.score-table th:first-child {
+  text-align: left;
+}
+.score-table td {
+  text-align: right;
+  padding: 6px;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+}
+.score-table-name {
+  text-align: left !important;
+  font-weight: 600;
+}
+.score-table-best {
+  font-weight: 700;
+  color: var(--players);
+}
+
+/* ---- Courbe d'évolution ---- */
+.trend-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+.trend-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.trend-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.trend-axis {
+  fill: var(--muted);
+  font-size: 9px;
+}
+.trend-dot {
+  stroke: var(--card);
+  stroke-width: 1.5;
+}
+.trend-label {
+  font-size: 10px;
+  font-weight: 700;
+}
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 10px;
+}
+.trend-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--ink);
+}
+.trend-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 .bars {
   display: flex;
   flex-direction: column;

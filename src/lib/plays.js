@@ -123,7 +123,8 @@ export function computePlayStats(plays, scoring = 'high') {
   const list = plays || []
   const games = {} // nom → nb de parties jouées
   const wins = {} // nom → nb de victoires
-  const scores = [] // valeurs de score (par joueur en compétitif, du groupe en coop)
+  const playerScores = {} // nom → [scores perso] (individuel OU score de son équipe)
+  const scores = [] // valeurs de score agrégées (par joueur en compétitif, du groupe en coop)
   let coopWins = 0
   let coopTotal = 0
   list.forEach((p) => {
@@ -136,7 +137,7 @@ export function computePlayStats(plays, scoring = 'high') {
       if (Number.isFinite(s)) scores.push(s)
     } else if (isTeam) {
       // En équipes : le score est celui de l'équipe (dupliqué sur chaque membre) →
-      // on ne le compte qu'une fois par équipe.
+      // on ne le compte qu'une fois par équipe pour l'agrégat.
       const seen = new Set()
       ;(p.players || []).forEach((pl) => {
         const t = pl?.team
@@ -150,9 +151,10 @@ export function computePlayStats(plays, scoring = 'high') {
     ;(p.players || []).forEach((pl) => {
       const n = (pl?.name || '').trim() || '—'
       games[n] = (games[n] || 0) + 1
-      if (!coop && !isTeam) {
-        const t = Number(pl?.total)
-        if (Number.isFinite(t) && pl?.total !== undefined && pl?.total !== null) scores.push(t)
+      const t = Number(pl?.total)
+      if (Number.isFinite(t) && pl?.total !== undefined && pl?.total !== null) {
+        if (!coop && !isTeam) scores.push(t)
+        ;(playerScores[n] || (playerScores[n] = [])).push(t) // score perso (inclut les membres d'équipe)
       }
     })
     // Vainqueur(s) → chacun compte une victoire (gère l'égalité, le coop, les équipes).
@@ -160,15 +162,31 @@ export function computePlayStats(plays, scoring = 'high') {
       wins[w] = (wins[w] || 0) + 1
     })
   })
+  const ext = (arr) => (scoring === 'low' ? Math.min(...arr) : Math.max(...arr)) // « meilleur » selon le sens
+  const worst = (arr) => (scoring === 'low' ? Math.max(...arr) : Math.min(...arr))
   const names = [...new Set([...Object.keys(games), ...Object.keys(wins)])]
   const byPlayer = names
-    .map((name) => ({ name, games: games[name] || 0, wins: wins[name] || 0 }))
-    .sort((a, b) => b.wins - a.wins || b.games - a.games || a.name.localeCompare(b.name, 'fr'))
-  const bestScore = scores.length ? (scoring === 'low' ? Math.min(...scores) : Math.max(...scores)) : 0
+    .map((name) => {
+      const g = games[name] || 0
+      const w = wins[name] || 0
+      const ss = playerScores[name] || []
+      return {
+        name,
+        games: g,
+        wins: w,
+        winRate: g ? Math.round((w / g) * 100) : 0,
+        avg: ss.length ? Math.round(ss.reduce((s, v) => s + v, 0) / ss.length) : null,
+        best: ss.length ? ext(ss) : null,
+        worst: ss.length ? worst(ss) : null,
+      }
+    })
+    .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate || b.games - a.games || a.name.localeCompare(b.name, 'fr'))
+  const bestScore = scores.length ? ext(scores) : 0
   return {
     total: list.length,
     byPlayer,
     scores,
+    hasScores: Object.keys(playerScores).length > 0, // au moins un score perso enregistré
     coopWins,
     coopTotal,
     winRate: coopTotal ? Math.round((coopWins / coopTotal) * 100) : null,

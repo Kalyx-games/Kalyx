@@ -1,5 +1,7 @@
-import { useMemo } from 'react'
+import { lazy, Suspense, useMemo } from 'react'
 import { computePlayStats, playWinners } from '../lib/plays'
+
+const ScoreTrend = lazy(() => import('./ScoreTrend'))
 
 // Historique des parties d'un jeu : stats en haut (total, victoires/parties par
 // joueur, meilleur/moyen score) puis la liste des parties. Bouton « Nouvelle partie ».
@@ -18,27 +20,6 @@ function Tile({ value, label }) {
       <div className="stat-tile-value">{value}</div>
       <div className="stat-tile-label">{label}</div>
     </div>
-  )
-}
-
-function BarBlock({ title, rows, valueKey, color }) {
-  const max = Math.max(1, ...rows.map((r) => r[valueKey]))
-  if (!rows.length) return null
-  return (
-    <section className="stat-block">
-      <h3 className="stat-block-title">{title}</h3>
-      <div className="bars">
-        {rows.map((r) => (
-          <div key={r.name} className="bar-row">
-            <div className="bar-label">{r.name}</div>
-            <div className="bar-track">
-              <div className="bar-fill" style={{ width: `${(r[valueKey] / max) * 100}%`, background: color }} />
-            </div>
-            <div className="bar-val">{r[valueKey]}</div>
-          </div>
-        ))}
-      </div>
-    </section>
   )
 }
 
@@ -87,8 +68,59 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
             )}
           </div>
 
-          <BarBlock title="🏆 Victoires par joueur" rows={stats.byPlayer.filter((p) => p.wins > 0)} valueKey="wins" color="#eab308" />
-          <BarBlock title="🎮 Parties par joueur" rows={stats.byPlayer} valueKey="games" color="#2f6df6" />
+          {/* Podium : joueurs classés par victoires + taux de victoire + nb de parties. */}
+          {stats.byPlayer.length > 0 && (
+            <section className="stat-block">
+              <h3 className="stat-block-title">🏆 Podium</h3>
+              <div className="podium">
+                {stats.byPlayer.map((p, i) => (
+                  <div key={p.name} className={`podium-row ${i < 3 ? 'top' : ''}`}>
+                    <span className="podium-rank">{['🥇', '🥈', '🥉'][i] || i + 1}</span>
+                    <span className="podium-name">{p.name}</span>
+                    <span className="podium-stats">
+                      <span className="podium-wins">{p.wins} 🏆</span>
+                      <span className="podium-rate">{p.winRate} %</span>
+                      <span className="podium-games">{p.games} 🎮</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Moyenne & record par joueur (jeux à points). */}
+          {!noPoints && stats.hasScores && stats.byPlayer.some((p) => p.avg != null) && (
+            <section className="stat-block">
+              <h3 className="stat-block-title">📊 Moyenne &amp; record</h3>
+              <table className="score-table">
+                <thead>
+                  <tr>
+                    <th>Joueur</th>
+                    <th>Moyenne</th>
+                    <th>Record</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.byPlayer
+                    .filter((p) => p.avg != null)
+                    .map((p) => (
+                      <tr key={p.name}>
+                        <td className="score-table-name">{p.name}</td>
+                        <td>{p.avg}</td>
+                        <td className="score-table-best">{p.best}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </section>
+          )}
+
+          {/* Évolution des scores dans le temps (se masque tout seul si &lt; 2 parties). */}
+          {!noPoints && (
+            <Suspense fallback={null}>
+              <ScoreTrend plays={plays} scoring={scoring} />
+            </Suspense>
+          )}
 
           <section className="stat-block">
             <h3 className="stat-block-title">🗓️ Parties</h3>
