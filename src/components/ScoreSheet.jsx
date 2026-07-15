@@ -105,6 +105,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const [focusedPlayer, setFocusedPlayer] = useState(null)
   const [scenario, setScenario] = useState(ip?.scenario || '')
   const [notes, setNotes] = useState(ip ? ip.notes || '' : template?.notes || '')
+  const [forcedWinnerId, setForcedWinnerId] = useState(null) // vainqueur forcé en cas d'égalité
 
   // Coopératif
   const [outcome, setOutcome] = useState(ip?.outcome || null) // 'win' | 'loss'
@@ -209,6 +210,10 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const anyScore = players.some((p) => Object.values(p.scores).some((v) => v !== '' && v != null))
   // Meilleur score selon le sens (plus haut / plus petit).
   const best = anyScore ? (scoring === 'low' ? Math.min(...totals) : Math.max(...totals)) : null
+  // Égalité au sommet → on peut FORCER le vainqueur (départage secondaire du jeu).
+  const tiedPlayers = best != null ? players.filter((p) => totalOf(p) === best) : []
+  const forcedWinner = tiedPlayers.length >= 2 && forcedWinnerId && tiedPlayers.some((p) => p.id === forcedWinnerId) ? forcedWinnerId : null
+  const isTopWinner = (p) => (forcedWinner ? p.id === forcedWinner : best != null && totalOf(p) === best)
 
   const nameOf = (p, i) => (p.name || '').trim() || `Joueur ${i + 1}`
   const namesOf = () => players.map(nameOf)
@@ -256,7 +261,14 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       return { name: nameOf(p, i), total: totalOf(p), scores }
     })
     const extreme = scoring === 'low' ? Math.min(...built.map((b) => b.total)) : Math.max(...built.map((b) => b.total))
-    const winners = built.filter((b) => b.total === extreme).map((b) => b.name)
+    // Vainqueur forcé (égalité départagée à la main) sinon tous les ex æquo.
+    let winners
+    if (forcedWinner) {
+      const fp = players.find((p) => p.id === forcedWinner)
+      winners = [nameOf(fp, players.indexOf(fp))]
+    } else {
+      winners = built.filter((b) => b.total === extreme).map((b) => b.name)
+    }
     onSavePlay({ players: built, winner: winners.join(', '), scenario: scenarioVal(), extensions: [...activeExts], notes: notesVal() })
   }
 
@@ -544,7 +556,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
             <tr>
               <th className="sheet-cat-head">Catégorie</th>
               {players.map((p, i) => (
-                <th key={p.id} className={best != null && totals[i] === best ? 'sheet-winner' : ''}>
+                <th key={p.id} className={isTopWinner(p) ? 'sheet-winner' : ''}>
                   <div className="sheet-player">
                     <NameField
                       id={p.id}
@@ -596,8 +608,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
             <tr className="sheet-total-row">
               <th className="sheet-cat" scope="row">Total</th>
               {players.map((p, i) => (
-                <td key={p.id} className={`sheet-total ${best != null && totals[i] === best ? 'sheet-winner' : ''}`}>
-                  {best != null && totals[i] === best ? '🏆 ' : ''}
+                <td key={p.id} className={`sheet-total ${isTopWinner(p) ? 'sheet-winner' : ''}`}>
+                  {isTopWinner(p) ? '🏆 ' : ''}
                   {totals[i]}
                 </td>
               ))}
@@ -608,6 +620,27 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       </div>
 
       {visibleCats.length === 0 && <p className="empty" style={{ padding: 24 }}>Cette fiche n'a pas encore de catégories.</p>}
+
+      {tiedPlayers.length >= 2 && (
+        <div className="coop-form">
+          <div className="field">
+            <label className="field-label">🤝 Égalité — vainqueur <span className="field-opt">(départage secondaire)</span></label>
+            <div className="chips">
+              {tiedPlayers.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`fchip ${forcedWinner === p.id ? 'on' : ''}`}
+                  onClick={() => setForcedWinnerId((cur) => (cur === p.id ? null : p.id))}
+                >
+                  🏆 {nameOf(p, players.indexOf(p))}
+                </button>
+              ))}
+            </div>
+            <p className="field-hint" style={{ marginTop: 6 }}>Laisse vide = tous ex æquo gagnent.</p>
+          </div>
+        </div>
+      )}
 
       <div className="coop-form">{notesField}</div>
 
