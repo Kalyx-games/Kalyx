@@ -196,6 +196,12 @@ export function computePlayStats(plays, scoring = 'high') {
       }
     })
     .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate || b.games - a.games || a.name.localeCompare(b.name, 'fr'))
+  // Rang « compétition » (1224) : les ex æquo (mêmes victoires ET même taux) partagent
+  // le rang, et le suivant saute (ex. 3 premiers à égalité → rangs 1,1,1 puis 4).
+  byPlayer.forEach((p, i) => {
+    const prev = byPlayer[i - 1]
+    p.rank = i > 0 && p.wins === prev.wins && p.winRate === prev.winRate ? prev.rank : i + 1
+  })
   const bestScore = scores.length ? ext(scores) : 0
   return {
     total: list.length,

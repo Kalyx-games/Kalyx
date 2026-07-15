@@ -78,9 +78,9 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
               <div className="table-scroll">
                 <table className="stat-table podium-table">
                   <tbody>
-                    {stats.byPlayer.map((p, i) => (
-                      <tr key={p.name} className={i < 3 ? 'top' : ''}>
-                        <td className="rank">{['🥇', '🥈', '🥉'][i] || i + 1}</td>
+                    {stats.byPlayer.map((p) => (
+                      <tr key={p.name} className={p.rank <= 3 ? 'top' : ''}>
+                        <td className="rank">{['🥇', '🥈', '🥉'][p.rank - 1] || `${p.rank}e`}</td>
                         <td className="name">{p.name}</td>
                         <td className="num">{p.wins} 🏆</td>
                         <td className="num rate">{p.winRate} %</td>
