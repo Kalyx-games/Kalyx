@@ -239,29 +239,32 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
       style={{ transform: `translateX(${offset}px)` }}
     >
       <div className="game-thumb-col">
-        <div className="game-thumb">
-          {showImg ? (
-            <img
-              ref={imgRef}
-              src={cardImg}
-              alt=""
-              loading="lazy"
-              className={`game-img ${imgLoaded ? 'loaded' : ''} ${onImageClick ? 'zoomable' : ''}`}
-              onLoad={() => setImgLoaded(true)}
-              onError={(e) => {
-                // Si l'optimiseur échoue (domaine non géré…), on tente l'image brute avant le dé.
-                if (fullImg && e.currentTarget.src !== fullImg) {
-                  e.currentTarget.src = fullImg
-                } else {
-                  setImgBroken(true)
-                }
-              }}
-              onClick={onImageClick ? (e) => { e.stopPropagation(); if (gRef.current.justSwiped) return; onImageClick(fullImg) } : undefined}
-            />
-          ) : (
-            <span className="game-thumb-fallback">🎲</span>
-          )}
-          {/* Bulles propriétaires + tags, superposées en bas à gauche de l'image. */}
+        {/* Conteneur non-rogné : permet à la 1re bulle de déborder à gauche de l'image. */}
+        <div className="game-thumb-wrap">
+          <div className="game-thumb">
+            {showImg ? (
+              <img
+                ref={imgRef}
+                src={cardImg}
+                alt=""
+                loading="lazy"
+                className={`game-img ${imgLoaded ? 'loaded' : ''} ${onImageClick ? 'zoomable' : ''}`}
+                onLoad={() => setImgLoaded(true)}
+                onError={(e) => {
+                  // Si l'optimiseur échoue (domaine non géré…), on tente l'image brute avant le dé.
+                  if (fullImg && e.currentTarget.src !== fullImg) {
+                    e.currentTarget.src = fullImg
+                  } else {
+                    setImgBroken(true)
+                  }
+                }}
+                onClick={onImageClick ? (e) => { e.stopPropagation(); if (gRef.current.justSwiped) return; onImageClick(fullImg) } : undefined}
+              />
+            ) : (
+              <span className="game-thumb-fallback">🎲</span>
+            )}
+          </div>
+          {/* Bulles propriétaires + tags en bas à gauche : la 1re est à cheval sur le bord. */}
           {(parseOwners(game.owner).length > 0 || parseTags(game.tags).length > 0) && (
             <div className="owner-bubbles" onClick={(e) => e.stopPropagation()}>
               {parseOwners(game.owner).map((o) => {

@@ -1083,6 +1083,13 @@ body {
   transform: scale(0.995);
 }
 
+/* Conteneur de l'image NON rogné : les bulles peuvent déborder à gauche. */
+.game-thumb-wrap {
+  position: relative;
+  width: 66px;
+  height: 66px;
+  flex-shrink: 0;
+}
 .game-thumb {
   width: 66px;
   height: 66px;
@@ -1093,7 +1100,6 @@ body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  position: relative; /* pour superposer les bulles propriétaires en bas à gauche */
 }
 .game-thumb img {
   width: 100%;
@@ -1312,19 +1318,20 @@ body {
   font-weight: 600;
   flex-shrink: 0;
 }
-/* Sur la carte : bulles superposées en bas à gauche de l'image (léger chevauchement). */
-.game-thumb .owner-bubbles {
+/* Sur la carte : bulles en bas à gauche, la 1re à cheval sur le bord gauche de l'image
+   (moitié sur l'image, moitié dans la marge) → petit effet badge, harmonieux. */
+.game-thumb-wrap .owner-bubbles {
   position: absolute;
-  left: 3px;
-  bottom: 3px;
+  left: -10px;
+  bottom: 2px;
   display: flex;
   gap: 3px;
 }
-.game-thumb .owner-bubble {
+.game-thumb-wrap .owner-bubble {
   width: 20px;
   height: 20px;
   font-size: 0.6rem;
-  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.35); /* léger contour pour rester lisible sur l'image */
+  box-shadow: 0 0 0 2px var(--card); /* liseré couleur carte : nette séparation image/marge */
 }
 .bgg-logo {
   flex-shrink: 0;
