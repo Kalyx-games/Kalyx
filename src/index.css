@@ -1925,6 +1925,11 @@ body {
 .link-row:active {
   transform: scale(0.99);
 }
+.link-row.disabled {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
+}
 .link-fav {
   flex-shrink: 0;
   border-radius: 5px;

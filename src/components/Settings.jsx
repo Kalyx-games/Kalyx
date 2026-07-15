@@ -102,6 +102,7 @@ export default function Settings({
         items={owners}
         migrationCode="migration_proprietaires.sql"
         namePlaceholder="Nom du propriétaire (ex. Mathieu)"
+        online={online}
         onAdd={onAddOwner}
         onUpdate={onUpdateOwner}
         onDelete={onDeleteOwner}
@@ -112,6 +113,7 @@ export default function Settings({
         items={tags}
         migrationCode="migration_tags.sql"
         namePlaceholder="Nom du tag (ex. Coopératif)"
+        online={online}
         onAdd={onAddTag}
         onUpdate={onUpdateTag}
         onDelete={onDeleteTag}
@@ -196,21 +198,39 @@ export default function Settings({
         <div className="links">
           {LINKS.map((l, i) => (
             <Fragment key={l.url}>
-              <a className="link-row" href={l.url} target="_blank" rel="noreferrer">
-                <img
-                  className="link-fav"
-                  src={`https://www.google.com/s2/favicons?domain=${l.domain}&sz=64`}
-                  alt=""
-                  width="20"
-                  height="20"
-                  loading="lazy"
-                  onError={(e) => {
-                    e.currentTarget.style.visibility = 'hidden'
-                  }}
-                />
-                <span className="link-label">{l.label}</span>
-                <span className="link-arrow">↗</span>
-              </a>
+              {online ? (
+                <a className="link-row" href={l.url} target="_blank" rel="noreferrer">
+                  <img
+                    className="link-fav"
+                    src={`https://www.google.com/s2/favicons?domain=${l.domain}&sz=64`}
+                    alt=""
+                    width="20"
+                    height="20"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.style.visibility = 'hidden'
+                    }}
+                  />
+                  <span className="link-label">{l.label}</span>
+                  <span className="link-arrow">↗</span>
+                </a>
+              ) : (
+                <span className="link-row disabled" title="Indisponible hors ligne" aria-disabled="true">
+                  <img
+                    className="link-fav"
+                    src={`https://www.google.com/s2/favicons?domain=${l.domain}&sz=64`}
+                    alt=""
+                    width="20"
+                    height="20"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.style.visibility = 'hidden'
+                    }}
+                  />
+                  <span className="link-label">{l.label}</span>
+                  <span className="link-arrow">↗</span>
+                </span>
+              )}
               {/* Bouton "Copier le lien" placé juste sous le premier lien (Melodice). */}
               {i === 0 && (
                 <button type="button" className={`link-row link-copy ${copied ? 'copied' : ''}`} onClick={copyAppLink}>

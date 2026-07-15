@@ -7,7 +7,7 @@ import { ownerColor, ownerInitials } from '../lib/games'
 // Palette de couleurs des bulles.
 const PALETTE = ['#ef4444', '#f97316', '#f59e0b', '#16a34a', '#0d9488', '#2f6df6', '#8b5cf6', '#ec4899']
 
-export default function BubbleListManager({ title, items, migrationCode, namePlaceholder, onAdd, onUpdate, onDelete }) {
+export default function BubbleListManager({ title, items, migrationCode, namePlaceholder, online = true, onAdd, onUpdate, onDelete }) {
   const [editing, setEditing] = useState('new') // 'new' | ligne en cours d'édition
   const [name, setName] = useState('')
   const [initials, setInitials] = useState('')
@@ -63,14 +63,20 @@ export default function BubbleListManager({ title, items, migrationCode, namePla
                     {o.initials || ownerInitials(o.name)}
                   </span>
                   <span className="owner-name-txt">{o.name}</span>
-                  <button type="button" className="owner-edit" onClick={() => startEdit(o)} aria-label={`Modifier ${o.name}`}>✏️</button>
-                  <button type="button" className="owner-del" onClick={() => onDelete(o)} aria-label={`Supprimer ${o.name}`}>✕</button>
+                  {online && (
+                    <>
+                      <button type="button" className="owner-edit" onClick={() => startEdit(o)} aria-label={`Modifier ${o.name}`}>✏️</button>
+                      <button type="button" className="owner-del" onClick={() => onDelete(o)} aria-label={`Supprimer ${o.name}`}>✕</button>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
           )}
 
-          <div
+          {!online && <p className="muted">Hors ligne : lecture seule.</p>}
+
+          {online && <div
             className="owner-editor"
             onKeyDown={(e) => {
               // Entrée sur un champ → on masque le clavier (blur) sur mobile.
@@ -127,7 +133,7 @@ export default function BubbleListManager({ title, items, migrationCode, namePla
                 {editing === 'new' ? 'Ajouter' : 'Enregistrer'}
               </button>
             </div>
-          </div>
+          </div>}
         </>
       )}
     </section>

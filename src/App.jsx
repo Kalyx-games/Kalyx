@@ -985,9 +985,12 @@ export default function App() {
               online={online}
               onEdit={() => setEditing(g)}
               onMove={view === 'wishlist' ? () => setMoving(g) : undefined}
-              onBgg={g.bgg_id ? () => window.open(`https://boardgamegeek.com/boardgame/${g.bgg_id}`, '_blank', 'noopener') : undefined}
+              // Liens/fonctions réseau désactivés hors ligne (BGG, Philibert, fiches de score).
+              onBgg={g.bgg_id && online ? () => window.open(`https://boardgamegeek.com/boardgame/${g.bgg_id}`, '_blank', 'noopener') : undefined}
               onCardClick={
-                view === 'wishlist'
+                !online
+                  ? undefined
+                  : view === 'wishlist'
                   ? () => window.open(philibertSearchUrl(g.name), '_blank', 'noopener')
                   : () => handleGameClick(g)
               }

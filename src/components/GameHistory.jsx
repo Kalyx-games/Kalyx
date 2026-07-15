@@ -56,7 +56,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">←</button>
         <h2 className="sheet-title">📚 {game?.name}</h2>
         {onEditSheet && (
-          <button type="button" className="back-btn sheet-edit-btn" onClick={onEditSheet} title="Modifier la fiche" aria-label="Modifier la fiche">✏️</button>
+          <button type="button" className="back-btn sheet-edit-btn" onClick={onEditSheet} disabled={!online} title={online ? 'Modifier la fiche' : 'Indisponible hors ligne'} aria-label="Modifier la fiche">✏️</button>
         )}
       </div>
 
@@ -129,7 +129,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                         </span>
                       )}
                       {onDeletePlay && (
-                        <button type="button" className="hist-del" onClick={() => onDeletePlay(pl)} aria-label="Supprimer cette partie">🗑️</button>
+                        <button type="button" className="hist-del" onClick={() => onDeletePlay(pl)} disabled={!online} title={online ? 'Supprimer cette partie' : 'Indisponible hors ligne'} aria-label="Supprimer cette partie">🗑️</button>
                       )}
                     </div>
                     {coop ? (
