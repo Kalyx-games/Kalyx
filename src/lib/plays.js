@@ -162,6 +162,21 @@ export function computePlayStats(plays, scoring = 'high') {
       wins[w] = (wins[w] || 0) + 1
     })
   })
+  // Taux de victoire par scénario (jeux coopératifs avec scénario/niveau).
+  const scen = {}
+  list.forEach((p) => {
+    if (p.outcome && p.scenario) {
+      const s = (p.scenario || '').trim()
+      if (!s) return
+      const e = scen[s] || (scen[s] = { games: 0, wins: 0 })
+      e.games += 1
+      if (p.outcome === 'win') e.wins += 1
+    }
+  })
+  const byScenario = Object.entries(scen)
+    .map(([scenario, v]) => ({ scenario, games: v.games, wins: v.wins, winRate: Math.round((v.wins / v.games) * 100) }))
+    .sort((a, b) => b.winRate - a.winRate || b.games - a.games || a.scenario.localeCompare(b.scenario, 'fr'))
+
   const ext = (arr) => (scoring === 'low' ? Math.min(...arr) : Math.max(...arr)) // « meilleur » selon le sens
   const worst = (arr) => (scoring === 'low' ? Math.max(...arr) : Math.min(...arr))
   const names = [...new Set([...Object.keys(games), ...Object.keys(wins)])]
@@ -185,6 +200,7 @@ export function computePlayStats(plays, scoring = 'high') {
   return {
     total: list.length,
     byPlayer,
+    byScenario,
     scores,
     hasScores: Object.keys(playerScores).length > 0, // au moins un score perso enregistré
     coopWins,

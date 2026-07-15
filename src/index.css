@@ -2012,84 +2012,96 @@ body {
   margin-bottom: 12px;
 }
 
-/* ---- Podium des joueurs ---- */
-.podium {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* ---- Tableaux de stats (podium, moyenne/record) ----
+   En tableau → chaque colonne prend la largeur de son plus gros contenu et toutes
+   les lignes s'alignent. Enveloppés dans .table-scroll : si c'est trop large sur un
+   petit écran, on défile latéralement au lieu de couper l'info. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
-.podium-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
-  border-radius: 10px;
+.stat-table {
+  border-collapse: separate;
+  border-spacing: 0 6px;
+  width: 100%;
+  font-size: 0.88rem;
+}
+.stat-table th {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 0.76rem;
+  padding: 0 10px 2px;
+  white-space: nowrap;
+}
+.stat-table td {
+  padding: 8px 10px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.stat-table .name {
+  text-align: left;
+  font-weight: 600;
+  width: 100%; /* pousse les colonnes de chiffres à droite */
+}
+.stat-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums; /* chiffres de largeur fixe → colonnes alignées */
+}
+.stat-table .best {
+  font-weight: 700;
+  color: var(--players);
+}
+/* Podium : lignes en « pilules » (fond + coins arrondis via 1re/dernière cellule). */
+.podium-table td {
   background: var(--input-bg);
 }
-.podium-row.top {
+.podium-table tr.top td {
   background: var(--nav-pill);
 }
-.podium-rank {
-  flex: 0 0 1.6em;
+.podium-table td:first-child {
+  border-radius: 10px 0 0 10px;
+}
+.podium-table td:last-child {
+  border-radius: 0 10px 10px 0;
+}
+.podium-table .rank {
   text-align: center;
   font-weight: 800;
   color: var(--muted);
 }
-.podium-name {
-  flex: 1;
-  min-width: 0;
-  font-weight: 600;
-  color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.podium-stats {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.82rem;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.podium-wins {
-  font-weight: 700;
-  color: var(--ink);
-}
-.podium-rate {
+.podium-table .rate {
   color: var(--gold);
   font-weight: 700;
 }
 
-/* ---- Table moyenne & record ---- */
-.score-table {
-  width: 100%;
-  border-collapse: collapse;
+/* ---- Victoires par scénario (coop) ---- */
+.scenario-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.scenario-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+.scenario-name {
+  min-width: 0;
+  color: var(--ink);
+  font-weight: 600;
   font-size: 0.88rem;
 }
-.score-table th {
-  text-align: right;
-  font-weight: 600;
-  color: var(--muted);
-  font-size: 0.78rem;
-  padding: 0 6px 8px;
-}
-.score-table th:first-child {
-  text-align: left;
-}
-.score-table td {
-  text-align: right;
-  padding: 6px;
-  border-top: 1px solid var(--line);
+.scenario-val {
+  white-space: nowrap;
+  font-weight: 700;
   color: var(--ink);
 }
-.score-table-name {
-  text-align: left !important;
-  font-weight: 600;
-}
-.score-table-best {
-  font-weight: 700;
-  color: var(--players);
+.scenario-sub {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.82rem;
 }
 
 /* ---- Courbe d'évolution ---- */

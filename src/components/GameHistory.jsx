@@ -68,20 +68,44 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
             )}
           </div>
 
-          {/* Podium : joueurs classés par victoires + taux de victoire + nb de parties. */}
+          {/* Podium : joueurs classés par victoires + taux de victoire + nb de parties.
+              Tableau → colonnes alignées (largeur = plus gros contenu) + scroll latéral
+              si trop large sur un petit écran (aucune info coupée). */}
           {stats.byPlayer.length > 0 && (
             <section className="stat-block">
               <h3 className="stat-block-title">🏆 Podium</h3>
-              <div className="podium">
-                {stats.byPlayer.map((p, i) => (
-                  <div key={p.name} className={`podium-row ${i < 3 ? 'top' : ''}`}>
-                    <span className="podium-rank">{['🥇', '🥈', '🥉'][i] || i + 1}</span>
-                    <span className="podium-name">{p.name}</span>
-                    <span className="podium-stats">
-                      <span className="podium-wins">{p.wins} 🏆</span>
-                      <span className="podium-rate">{p.winRate} %</span>
-                      <span className="podium-games">{p.games} 🎮</span>
-                    </span>
+              <div className="table-scroll">
+                <table className="stat-table podium-table">
+                  <tbody>
+                    {stats.byPlayer.map((p, i) => (
+                      <tr key={p.name} className={i < 3 ? 'top' : ''}>
+                        <td className="rank">{['🥇', '🥈', '🥉'][i] || i + 1}</td>
+                        <td className="name">{p.name}</td>
+                        <td className="num">{p.wins} 🏆</td>
+                        <td className="num rate">{p.winRate} %</td>
+                        <td className="num">{p.games} 🎮</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* Taux de victoire par scénario (jeux coopératifs à scénarios/niveaux). */}
+          {isCoop && stats.byScenario.length > 0 && (
+            <section className="stat-block">
+              <h3 className="stat-block-title">🎯 Victoires par scénario</h3>
+              <div className="scenario-bars">
+                {stats.byScenario.map((s) => (
+                  <div key={s.scenario} className="scenario-row">
+                    <div className="scenario-head">
+                      <span className="scenario-name">{s.scenario}</span>
+                      <span className="scenario-val">{s.winRate} % <span className="scenario-sub">({s.wins}/{s.games})</span></span>
+                    </div>
+                    <div className="bar-track">
+                      <div className="bar-fill" style={{ width: `${s.winRate}%`, background: '#16a34a' }} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -92,26 +116,28 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
           {!noPoints && stats.hasScores && stats.byPlayer.some((p) => p.avg != null) && (
             <section className="stat-block">
               <h3 className="stat-block-title">📊 Moyenne &amp; record</h3>
-              <table className="score-table">
-                <thead>
-                  <tr>
-                    <th>Joueur</th>
-                    <th>Moyenne</th>
-                    <th>Record</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.byPlayer
-                    .filter((p) => p.avg != null)
-                    .map((p) => (
-                      <tr key={p.name}>
-                        <td className="score-table-name">{p.name}</td>
-                        <td>{p.avg}</td>
-                        <td className="score-table-best">{p.best}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+              <div className="table-scroll">
+                <table className="stat-table">
+                  <thead>
+                    <tr>
+                      <th className="name">Joueur</th>
+                      <th className="num">Moyenne</th>
+                      <th className="num">Record</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.byPlayer
+                      .filter((p) => p.avg != null)
+                      .map((p) => (
+                        <tr key={p.name}>
+                          <td className="name">{p.name}</td>
+                          <td className="num">{p.avg}</td>
+                          <td className="num best">{p.best}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
           )}
 
@@ -221,7 +247,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                         </div>
                       </>
                     )}
-                    {pl.notes && <div className="hist-note">📝 {pl.notes}</div>}
+                    {pl.notes && <div className="hist-note">{pl.notes}</div>}
                   </div>
                 )
               })}
