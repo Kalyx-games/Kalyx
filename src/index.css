@@ -2616,6 +2616,23 @@ body {
   padding: 10px 12px;
   background: var(--card);
 }
+.hist-row.clickable {
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.hist-row.clickable:active {
+  border-color: var(--primary);
+}
+/* Notes de la partie, affichées en petit sous les joueurs. */
+.hist-note {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--muted);
+  white-space: pre-wrap;
+  border-top: 1px dashed var(--line);
+  padding-top: 6px;
+}
 .hist-row-head {
   display: flex;
   align-items: center;

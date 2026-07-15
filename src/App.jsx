@@ -7,7 +7,7 @@ import { fetchTags, addTag, updateTag, deleteTag } from './lib/tags'
 import { downloadBackup, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
-import { fetchPlays, savePlay, deletePlay, fetchPlayerNames, fetchPlayCounts } from './lib/plays'
+import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayCounts } from './lib/plays'
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
 import ConfirmDialog from './components/ConfirmDialog'
@@ -226,7 +226,8 @@ export default function App() {
   const [ownersList, setOwnersList] = useState(null) // lignes de la table owners, ou null si absente
   const [tagsList, setTagsList] = useState(null) // lignes de la table tags, ou null si absente
   const [scoresheets, setScoresheets] = useState(null) // { game_id: template }, ou null si table absente
-  const [scoringGame, setScoringGame] = useState(null) // jeu en cours de notation (nouvelle partie) | null
+  const [scoringGame, setScoringGame] = useState(null) // jeu en cours de notation (nouvelle partie OU édition) | null
+  const [editingPlay, setEditingPlay] = useState(null) // partie en cours d'édition | null (= nouvelle partie)
   const [editingSheet, setEditingSheet] = useState(null) // jeu dont on édite/crée la fiche | null
   const [historyGame, setHistoryGame] = useState(null) // jeu dont on regarde l'historique | null
   const [gamePlays, setGamePlays] = useState(null) // parties du jeu affiché (null = chargement)
@@ -336,7 +337,7 @@ export default function App() {
     else if (s.scanOpen) setScanOpen(false)
     else if (s.chwaziOpen) setChwaziOpen(false)
     else if (s.editingSheet) setEditingSheet(null)
-    else if (s.scoringGame) setScoringGame(null)
+    else if (s.scoringGame) { setScoringGame(null); setEditingPlay(null) }
     else if (s.historyGame) { setHistoryGame(null); setGamePlays(null) }
     else if (s.statsOpen) setStatsOpen(false)
     else if (s.settingsOpen) setSettingsOpen(false)
@@ -729,24 +730,26 @@ export default function App() {
     setScoresheets((m) => ({ ...(m || {}), [gameId]: template }))
   }
 
-  // Enregistre une partie (depuis la fiche de score) → retour à l'historique.
+  // Ouvre une partie existante pour l'éditer (depuis l'historique).
+  function handleEditPlay(pl) {
+    if (!historyGame) return
+    setEditingPlay(pl)
+    setScoringGame(historyGame)
+  }
+
+  // Enregistre une partie (nouvelle OU édition) → retour à l'historique.
   async function handleSavePlay(play) {
     if (!scoringGame) return
     setSavingPlay(true)
     setError(null)
     try {
-      await savePlay(scoringGame.id, play)
-      // La note éditée pendant la partie est persistée sur la fiche du jeu.
-      const tpl = scoresheets?.[scoringGame.id]
-      if (tpl && (play.notes ?? '') !== (tpl.notes ?? '')) {
-        const newTpl = { ...tpl, notes: play.notes || '' }
-        setScoresheets((m) => ({ ...(m || {}), [scoringGame.id]: newTpl }))
-        saveScoresheet(scoringGame.id, newTpl).catch(() => {})
-      }
+      if (editingPlay) await updatePlay(editingPlay.id, play)
+      else await savePlay(scoringGame.id, play)
       const g = scoringGame
       setScoringGame(null)
+      setEditingPlay(null)
       refreshHistory(historyGame || g)
-      setNotice('Partie enregistrée.')
+      setNotice(editingPlay ? 'Partie modifiée.' : 'Partie enregistrée.')
     } catch (e) {
       setError(e.message)
     } finally {
@@ -1178,7 +1181,8 @@ export default function App() {
             plays={gamePlays}
             template={scoresheets?.[historyGame.id]}
             online={online}
-            onNewPlay={() => setScoringGame(historyGame)}
+            onNewPlay={() => { setEditingPlay(null); setScoringGame(historyGame) }}
+            onEditPlay={online ? handleEditPlay : undefined}
             onEditSheet={() => setEditingSheet(historyGame)}
             onDeletePlay={(pl) => setConfirmingPlay(pl)}
             onClose={() => {
@@ -1194,12 +1198,13 @@ export default function App() {
           <ScoreSheet
             game={scoringGame}
             template={scoresheets[scoringGame.id]}
+            initialPlay={editingPlay}
             playerNames={playerNames}
             scenarioNames={scenarioNames}
             saving={savingPlay}
             onSavePlay={handleSavePlay}
             onEdit={() => setEditingSheet(scoringGame)}
-            onClose={() => setScoringGame(null)}
+            onClose={() => { setScoringGame(null); setEditingPlay(null) }}
           />
         </Suspense>
       )}

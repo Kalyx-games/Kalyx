@@ -42,7 +42,7 @@ function BarBlock({ title, rows, valueKey, color }) {
   )
 }
 
-export default function GameHistory({ game, plays, template, online, onNewPlay, onEditSheet, onDeletePlay, onClose }) {
+export default function GameHistory({ game, plays, template, online, onNewPlay, onEditPlay, onEditSheet, onDeletePlay, onClose }) {
   const win = template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive')
   const scoring = template?.scoring || 'high'
   const isCoop = win === 'coop'
@@ -120,7 +120,12 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                   )
                 }
                 return (
-                  <div key={pl.id} className="hist-row">
+                  <div
+                    key={pl.id}
+                    className={`hist-row ${onEditPlay ? 'clickable' : ''}`}
+                    onClick={onEditPlay ? () => onEditPlay(pl) : undefined}
+                    title={onEditPlay ? 'Modifier cette partie' : undefined}
+                  >
                     <div className="hist-row-head">
                       <span className="hist-date">{playDate(pl.played_at)}</span>
                       {coop && (
@@ -129,7 +134,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                         </span>
                       )}
                       {onDeletePlay && (
-                        <button type="button" className="hist-del" onClick={() => onDeletePlay(pl)} disabled={!online} title={online ? 'Supprimer cette partie' : 'Indisponible hors ligne'} aria-label="Supprimer cette partie">🗑️</button>
+                        <button type="button" className="hist-del" onClick={(e) => { e.stopPropagation(); onDeletePlay(pl) }} disabled={!online} title={online ? 'Supprimer cette partie' : 'Indisponible hors ligne'} aria-label="Supprimer cette partie">🗑️</button>
                       )}
                     </div>
                     {coop ? (
@@ -184,6 +189,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                         </div>
                       </>
                     )}
+                    {pl.notes && <div className="hist-note">📝 {pl.notes}</div>}
                   </div>
                 )
               })}

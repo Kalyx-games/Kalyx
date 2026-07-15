@@ -171,19 +171,23 @@ create table if not exists public.plays (
   outcome    text,        -- coopératif : 'win' | 'loss' (null en compétitif)
   scenario   text,        -- coopératif : scénario / niveau (facultatif)
   score      numeric,     -- coopératif : score du groupe (facultatif)
+  notes      text,        -- notes propres à la partie (facultatif)
   created_at timestamptz not null default now()
 );
--- Colonnes coopératives (au cas où la table existe déjà sans elles).
+-- Colonnes ajoutées après coup (au cas où la table existe déjà sans elles).
 alter table public.plays add column if not exists outcome  text;
 alter table public.plays add column if not exists scenario text;
 alter table public.plays add column if not exists score    numeric;
+alter table public.plays add column if not exists notes    text;
 create index if not exists plays_game_id_idx on public.plays (game_id);
 
 alter table public.plays enable row level security;
-drop policy if exists "plays lecture"     on public.plays;
-drop policy if exists "plays insertion"   on public.plays;
-drop policy if exists "plays suppression" on public.plays;
-create policy "plays lecture"     on public.plays for select using (true);
-create policy "plays insertion"   on public.plays for insert with check (true);
-create policy "plays suppression" on public.plays for delete using (true);
+drop policy if exists "plays lecture"      on public.plays;
+drop policy if exists "plays insertion"    on public.plays;
+drop policy if exists "plays modification" on public.plays;
+drop policy if exists "plays suppression"  on public.plays;
+create policy "plays lecture"      on public.plays for select using (true);
+create policy "plays insertion"    on public.plays for insert with check (true);
+create policy "plays modification" on public.plays for update using (true) with check (true);
+create policy "plays suppression"  on public.plays for delete using (true);
 grant all on public.plays to anon, authenticated;

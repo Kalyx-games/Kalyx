@@ -10,10 +10,12 @@ const tableMissing = (error) => /does not exist|schema cache|relation/i.test(err
 const missingCol = (error) => /column .* does not exist|schema cache|could not find/i.test(error?.message || '')
 
 // Parties d'un jeu, plus récente d'abord. null si la table n'existe pas encore.
+// Dégradation en cascade selon les colonnes présentes (notes → coop → base).
 export async function fetchPlays(gameId) {
   const run = (cols) =>
     supabase.from('plays').select(cols).eq('game_id', gameId).order('played_at', { ascending: false })
-  let { data, error } = await run('id, played_at, players, winner, extensions, outcome, scenario, score')
+  let { data, error } = await run('id, played_at, players, winner, extensions, outcome, scenario, score, notes')
+  if (error && missingCol(error)) ({ data, error } = await run('id, played_at, players, winner, extensions, outcome, scenario, score'))
   if (error && missingCol(error)) ({ data, error } = await run('id, played_at, players, winner, extensions'))
   if (error) {
     if (tableMissing(error)) return null
@@ -22,16 +24,34 @@ export async function fetchPlays(gameId) {
   return data ?? []
 }
 
-// Enregistre une partie.
-//  Compétitif : play = { players:[{name,total,scores}], winner, extensions }
-//  Coopératif : play = { players:[{name}], outcome:'win'|'loss', scenario, score, extensions }
+// Construit les 3 niveaux de colonnes d'une partie (pour la dégradation en cascade).
+function playRows(play) {
+  const base = { players: play.players, winner: play.winner || null, extensions: play.extensions || [] }
+  const withCoop = { ...base, outcome: play.outcome || null, scenario: play.scenario || null, score: play.score ?? null }
+  const full = { ...withCoop, notes: play.notes || null }
+  return [full, withCoop, base]
+}
+
+// Enregistre une partie (INSERT).
+//  Compétitif : play = { players:[{name,total,scores}], winner, extensions, notes }
+//  Coopératif : play = { players:[{name}], outcome:'win'|'loss', scenario, score, extensions, notes }
 export async function savePlay(gameId, play) {
-  const base = { game_id: gameId, players: play.players, winner: play.winner || null, extensions: play.extensions || [] }
-  const full = { ...base, outcome: play.outcome || null, scenario: play.scenario || null, score: play.score ?? null }
+  const [full, withCoop, base] = playRows(play).map((r) => ({ ...r, game_id: gameId }))
   let { data, error } = await supabase.from('plays').insert(full).select('id').single()
+  if (error && missingCol(error)) ({ data, error } = await supabase.from('plays').insert(withCoop).select('id').single())
   if (error && missingCol(error)) ({ data, error } = await supabase.from('plays').insert(base).select('id').single())
   if (error) throw error
   return data
+}
+
+// Met à jour une partie existante (édition). Même dégradation en cascade.
+export async function updatePlay(id, play) {
+  const [full, withCoop, base] = playRows(play)
+  const upd = (row) => supabase.from('plays').update(row).eq('id', id)
+  let { error } = await upd(full)
+  if (error && missingCol(error)) ({ error } = await upd(withCoop))
+  if (error && missingCol(error)) ({ error } = await upd(base))
+  if (error) throw error
 }
 
 export async function deletePlay(id) {

@@ -59,7 +59,7 @@ const makeTeamRow = (t = {}) => {
   return { id: ++tid, name: t.name || '', size, players: Array.from({ length: n }, () => makePlayer()), score: '', win: false }
 }
 
-export default function ScoreSheet({ game, template, playerNames = [], scenarioNames = [], onSavePlay, saving, onEdit, onClose }) {
+export default function ScoreSheet({ game, template, initialPlay = null, playerNames = [], scenarioNames = [], onSavePlay, saving, onEdit, onClose }) {
   const win = template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive')
   const scoring = template?.scoring || 'high'
   const wantScenario = !!template?.scenario
@@ -71,19 +71,55 @@ export default function ScoreSheet({ game, template, playerNames = [], scenarioN
   const cats = template?.categories ?? []
   const exts = template?.extensions ?? []
 
-  const [activeExts, setActiveExts] = useState(() => new Set())
-  const [players, setPlayers] = useState(() => [makePlayer(), makePlayer()])
+  // Édition d'une partie existante : on pré-remplit tout depuis `ip`.
+  const ip = initialPlay
+  const isEdit = !!ip
+  const winnerNamesOf = (play) =>
+    new Set((play?.winner || '').split(',').map((s) => s.trim()).filter(Boolean))
+
+  const [activeExts, setActiveExts] = useState(() => new Set(ip?.extensions || []))
+  const [players, setPlayers] = useState(() => {
+    if (ip && !isTeams && (ip.players || []).length) {
+      return ip.players.map((p) => ({ id: ++pid, name: p.name || '', scores: p.scores || {} }))
+    }
+    return [makePlayer(), makePlayer()]
+  })
   const [focusedPlayer, setFocusedPlayer] = useState(null)
-  const [scenario, setScenario] = useState('')
-  const [notes, setNotes] = useState(template?.notes || '')
+  const [scenario, setScenario] = useState(ip?.scenario || '')
+  const [notes, setNotes] = useState(ip ? ip.notes || '' : template?.notes || '')
 
   // Coopératif
-  const [outcome, setOutcome] = useState(null) // 'win' | 'loss'
-  const [groupScore, setGroupScore] = useState('')
-  // Compétitif « pas de points » : id des vainqueurs cochés
-  const [winnerIds, setWinnerIds] = useState(() => new Set())
+  const [outcome, setOutcome] = useState(ip?.outcome || null) // 'win' | 'loss'
+  const [groupScore, setGroupScore] = useState(ip?.score != null ? String(ip.score) : '')
+  // Compétitif « pas de points » : id des vainqueurs cochés (reconstruit à l'édition).
+  const [winnerIds, setWinnerIds] = useState(() => {
+    if (ip && noPoints && !isTeams) {
+      const wn = winnerNamesOf(ip)
+      return new Set(players.filter((p) => wn.has((p.name || '').trim())).map((p) => p.id))
+    }
+    return new Set()
+  })
   // En équipes
   const [teams, setTeams] = useState(() => {
+    if (ip && isTeams) {
+      // Reconstruit les équipes à partir des joueurs de la partie (groupés par `team`).
+      const groups = []
+      ;(ip.players || []).forEach((p) => {
+        const key = p.team || '—'
+        let g = groups.find((x) => x.name === key)
+        if (!g) { g = { name: key, total: p.total, members: [] }; groups.push(g) }
+        g.members.push(p.name)
+      })
+      const wn = winnerNamesOf(ip)
+      return groups.map((g) => ({
+        id: ++tid,
+        name: g.name === '—' ? '' : g.name,
+        size: null,
+        players: (g.members.length ? g.members : ['']).map((m) => makePlayer(m)),
+        score: g.total != null ? String(g.total) : '',
+        win: g.members.some((m) => wn.has((m || '').trim())),
+      }))
+    }
     const list = teamsCfg?.list || []
     return (list.length ? list : [{}, {}]).map((t) => makeTeamRow(t))
   })
@@ -233,13 +269,14 @@ export default function ScoreSheet({ game, template, playerNames = [], scenarioN
     onSavePlay({ players: built, winner: winnerNames.join(', '), scenario: scenarioVal(), extensions: [...activeExts], notes: notesVal() })
   }
   const canSaveTeams = noPoints ? teams.some((t) => t.win) : teams.some((t) => t.score.trim() !== '')
+  const saveLabel = isEdit ? '💾 Enregistrer les modifications' : '💾 Enregistrer la partie'
 
   const head = (
     <>
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">←</button>
-        <h2 className="sheet-title">📚 {game?.name}</h2>
-        {onEdit && (
+        <h2 className="sheet-title">📚 {game?.name}{isEdit ? ' — modifier' : ''}</h2>
+        {onEdit && !isEdit && (
           <button type="button" className="back-btn sheet-edit-btn" onClick={onEdit} title="Modifier la fiche" aria-label="Modifier la fiche">✏️</button>
         )}
       </div>
@@ -355,7 +392,7 @@ export default function ScoreSheet({ game, template, playerNames = [], scenarioN
         {onSavePlay && (
           <div className="sheet-editor-actions">
             <button type="button" className="btn-primary" onClick={saveCoop} disabled={saving || !outcome}>
-              {saving ? '…' : '💾 Enregistrer la partie'}
+              {saving ? '…' : saveLabel}
             </button>
           </div>
         )}
@@ -439,7 +476,7 @@ export default function ScoreSheet({ game, template, playerNames = [], scenarioN
         {onSavePlay && (
           <div className="sheet-editor-actions">
             <button type="button" className="btn-primary" onClick={saveTeams} disabled={saving || !canSaveTeams}>
-              {saving ? '…' : '💾 Enregistrer la partie'}
+              {saving ? '…' : saveLabel}
             </button>
           </div>
         )}
@@ -463,7 +500,7 @@ export default function ScoreSheet({ game, template, playerNames = [], scenarioN
         {onSavePlay && (
           <div className="sheet-editor-actions">
             <button type="button" className="btn-primary" onClick={saveNoPoints} disabled={saving || !winnerIds.size}>
-              {saving ? '…' : '💾 Enregistrer la partie'}
+              {saving ? '…' : saveLabel}
             </button>
           </div>
         )}
@@ -553,7 +590,7 @@ export default function ScoreSheet({ game, template, playerNames = [], scenarioN
       {onSavePlay && visibleCats.length > 0 && (
         <div className="sheet-editor-actions">
           <button type="button" className="btn-primary" onClick={saveScored} disabled={saving || !anyScore}>
-            {saving ? '…' : '💾 Enregistrer la partie'}
+            {saving ? '…' : saveLabel}
           </button>
         </div>
       )}
