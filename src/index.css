@@ -2743,6 +2743,14 @@ body {
   height: 48px;
   font-size: 1rem;
 }
+/* Filtres des stats des parties (réutilise .filters/.filter-* de la collection). */
+.hist-filters {
+  margin-bottom: 12px;
+}
+.hist-filters .filters {
+  margin-top: 10px;
+}
+
 /* Bouton dépliant « Voir les N parties » (la liste est repliée par défaut). */
 .hist-toggle {
   width: 100%;

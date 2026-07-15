@@ -3,6 +3,14 @@ import { computePlayStats, playWinners } from '../lib/plays'
 
 const ScoreTrend = lazy(() => import('./ScoreTrend'))
 
+// Filtres des stats des parties (vide = tout).
+const EMPTY_HFILTERS = { players: [], period: 'all', extensions: [], scenarios: [] }
+const PERIODS = [
+  { value: 'all', label: 'Tout' },
+  { value: 'year', label: 'Cette année' },
+  { value: 'month', label: 'Ce mois-ci' },
+]
+
 // Historique des parties d'un jeu : stats en haut (total, victoires/parties par
 // joueur, meilleur/moyen score) puis la liste des parties. Bouton « Nouvelle partie ».
 
@@ -28,9 +36,54 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   const scoring = template?.scoring || 'high'
   const isCoop = win === 'coop'
   const noPoints = scoring === 'none'
-  const stats = useMemo(() => computePlayStats(plays || [], scoring), [plays, scoring])
   const loading = plays == null
   const [showPlays, setShowPlays] = useState(false) // liste des parties repliée par défaut
+
+  // --- Filtres des stats (joueur / période / extension / scénario) ---
+  const [filters, setFilters] = useState(EMPTY_HFILTERS)
+  const [showFilters, setShowFilters] = useState(false)
+  const allList = plays || []
+
+  // Choix disponibles, dérivés des parties.
+  const { allPlayers, allExts, allScenarios } = useMemo(() => {
+    const pl = new Set()
+    const ex = new Set()
+    const sc = new Set()
+    allList.forEach((p) => {
+      ;(p.players || []).forEach((x) => { const n = (x?.name || '').trim(); if (n) pl.add(n) })
+      ;(p.extensions || []).forEach((e) => e && ex.add(e))
+      if (p.scenario && p.scenario.trim()) sc.add(p.scenario.trim())
+    })
+    const s = (a) => [...a].sort((x, y) => x.localeCompare(y, 'fr'))
+    return { allPlayers: s(pl), allExts: s(ex), allScenarios: s(sc) }
+  }, [allList])
+
+  // Borne de période (début du mois / de l'année en cours).
+  const periodStart = useMemo(() => {
+    if (filters.period === 'all') return null
+    const now = new Date()
+    return filters.period === 'month'
+      ? new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+      : new Date(now.getFullYear(), 0, 1).getTime()
+  }, [filters.period])
+
+  const filtered = useMemo(
+    () =>
+      allList.filter((p) => {
+        if (filters.players.length && !(p.players || []).some((x) => filters.players.includes((x?.name || '').trim()))) return false
+        if (periodStart != null && !(Date.parse(p.played_at) >= periodStart)) return false
+        if (filters.extensions.length && !(p.extensions || []).some((e) => filters.extensions.includes(e))) return false
+        if (filters.scenarios.length && !(p.scenario && filters.scenarios.includes(p.scenario.trim()))) return false
+        return true
+      }),
+    [allList, filters, periodStart]
+  )
+
+  const stats = useMemo(() => computePlayStats(filtered, scoring), [filtered, scoring])
+  const activeFilters =
+    filters.players.length + filters.extensions.length + filters.scenarios.length + (filters.period !== 'all' ? 1 : 0)
+  const toggleIn = (key, val) =>
+    setFilters((f) => ({ ...f, [key]: f[key].includes(val) ? f[key].filter((x) => x !== val) : [...f[key], val] }))
 
   return (
     <div className="sheet">
@@ -50,12 +103,77 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
 
       {loading ? (
         <p className="field-hint" style={{ padding: 16 }}>Chargement…</p>
-      ) : stats.total === 0 ? (
+      ) : allList.length === 0 ? (
         <p className="empty" style={{ padding: 24 }}>
           Aucune partie enregistrée pour l'instant.
         </p>
       ) : (
         <>
+          {/* Bouton + panneau de filtres (masqués s'il n'y a rien à filtrer). */}
+          {(allPlayers.length > 0 || allExts.length > 0 || allScenarios.length > 0 || allList.length > 1) && (
+            <div className="hist-filters">
+              <button
+                type="button"
+                className={`filter-toggle ${activeFilters ? 'active' : ''}`}
+                onClick={() => setShowFilters((s) => !s)}
+                aria-expanded={showFilters}
+              >
+                Filtres
+                {activeFilters > 0 && <span className="filter-badge">{activeFilters}</span>}
+                <span className={`filter-chev ${showFilters ? 'up' : ''}`}>▾</span>
+              </button>
+              {showFilters && (
+                <div className="filters">
+                  {allPlayers.length > 0 && (
+                    <div className="filter-group">
+                      <span className="filter-label">👥 Joueur</span>
+                      <div className="chips">
+                        {allPlayers.map((p) => (
+                          <button key={p} type="button" className={`fchip ${filters.players.includes(p) ? 'on' : ''}`} onClick={() => toggleIn('players', p)}>{p}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="filter-group">
+                    <span className="filter-label">🗓️ Période</span>
+                    <div className="chips">
+                      {PERIODS.map((pd) => (
+                        <button key={pd.value} type="button" className={`fchip ${filters.period === pd.value ? 'on' : ''}`} onClick={() => setFilters((f) => ({ ...f, period: pd.value }))}>{pd.label}</button>
+                      ))}
+                    </div>
+                  </div>
+                  {allExts.length > 0 && (
+                    <div className="filter-group">
+                      <span className="filter-label">🧩 Extension</span>
+                      <div className="chips">
+                        {allExts.map((e) => (
+                          <button key={e} type="button" className={`fchip ${filters.extensions.includes(e) ? 'on' : ''}`} onClick={() => toggleIn('extensions', e)}>{e}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {allScenarios.length > 0 && (
+                    <div className="filter-group">
+                      <span className="filter-label">🎯 Scénario / niveau</span>
+                      <div className="chips">
+                        {allScenarios.map((s) => (
+                          <button key={s} type="button" className={`fchip ${filters.scenarios.includes(s) ? 'on' : ''}`} onClick={() => toggleIn('scenarios', s)}>{s}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {activeFilters > 0 && (
+                    <button type="button" className="filter-reset" onClick={() => setFilters(EMPTY_HFILTERS)}>Réinitialiser les filtres</button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {filtered.length === 0 ? (
+            <p className="empty" style={{ padding: 24 }}>Aucune partie ne correspond aux filtres.</p>
+          ) : (
+          <>
           <div className="stat-tiles">
             <Tile value={stats.total} label={stats.total > 1 ? 'parties jouées' : 'partie jouée'} />
             {isCoop && (
@@ -145,7 +263,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
           {/* Évolution des scores dans le temps (se masque tout seul si &lt; 2 parties). */}
           {!noPoints && (
             <Suspense fallback={null}>
-              <ScoreTrend plays={plays} scoring={scoring} />
+              <ScoreTrend plays={filtered} scoring={scoring} />
             </Suspense>
           )}
 
@@ -156,7 +274,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
             </button>
             {showPlays && (
             <div className="hist-list">
-              {plays.map((pl) => {
+              {filtered.map((pl) => {
                 const coop = !!pl.outcome
                 const teamPlay = !coop && (pl.players || []).some((p) => p && p.team)
                 const ranked = [...(pl.players || [])].sort((a, b) =>
@@ -259,6 +377,8 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
             </div>
             )}
           </section>
+          </>
+          )}
         </>
       )}
     </div>
