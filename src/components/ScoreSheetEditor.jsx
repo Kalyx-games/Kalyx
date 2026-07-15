@@ -34,9 +34,16 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   const [exts, setExts] = useState(() =>
     (template?.extensions || []).filter((n) => availableExts.includes(n))
   )
-  // Par défaut, à l'ouverture d'une fiche (saisie ET filtre des stats) : extensions
-  // toutes cochées ('all') ou aucune ('none').
-  const [extDefault, setExtDefault] = useState(() => template?.extDefault || 'none')
+  // Extensions cochées par défaut (saisie d'une partie + filtre des stats) : LISTE des
+  // extensions à cocher. Compat : ancien 'all' → toutes, 'none'/absent → aucune.
+  const [extDefault, setExtDefault] = useState(() => {
+    const d = template?.extDefault
+    if (Array.isArray(d)) return d.filter((n) => availableExts.includes(n))
+    if (d === 'all') return [...availableExts]
+    return []
+  })
+  const toggleExtDefault = (n) =>
+    setExtDefault((d) => (d.includes(n) ? d.filter((x) => x !== n) : [...d, n]))
   const [notes, setNotes] = useState(() => template?.notes || '')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -173,15 +180,16 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         <section className="settings-card">
           <h3>Extensions</h3>
 
-          {/* Réglage TOUJOURS présent (dès que le jeu a des extensions) : à la saisie
-              d'une partie et dans le filtre des stats, extensions toutes cochées ou non. */}
+          {/* Réglage TOUJOURS présent (dès que le jeu a des extensions) : on choisit
+              lesquelles sont cochées par défaut (à la saisie d'une partie + filtre stats). */}
           <label className="field-label">Cochées par défaut</label>
           <p className="field-hint" style={{ margin: '2px 0 8px' }}>
             À l'ouverture d'une partie et dans le filtre des stats.
           </p>
           <div className="chips">
-            <button type="button" className={`fchip ${extDefault === 'all' ? 'on' : ''}`} onClick={() => setExtDefault('all')}>Toutes</button>
-            <button type="button" className={`fchip ${extDefault === 'none' ? 'on' : ''}`} onClick={() => setExtDefault('none')}>Aucune</button>
+            {availableExts.map((n) => (
+              <button key={n} type="button" className={`fchip ${extDefault.includes(n) ? 'on' : ''}`} onClick={() => toggleExtDefault(n)}>{n}</button>
+            ))}
           </div>
 
           {/* Extensions qui modifient le score : seulement quand il y a des points. */}

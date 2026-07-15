@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { parseExtensions, effectivePlayersSet } from '../lib/games'
+import { resolveDefaultExts } from '../lib/scoresheets'
 
 // Fiche de saisie d'une partie. Le type de partie vient du template :
 //  • win     : 'competitive' | 'coop'
@@ -87,7 +88,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // Extensions cochées par défaut : réglage de la fiche (« toutes »/« aucune ») pour une
   // NOUVELLE partie ; celles de la partie éditée sinon.
   const [activeExts, setActiveExts] = useState(() =>
-    new Set(ip ? ip.extensions || [] : template?.extDefault === 'all' ? exts : [])
+    new Set(ip ? ip.extensions || [] : resolveDefaultExts(template, exts))
   )
   // Bornes de joueurs du jeu : une nouvelle partie démarre au MIN, et on ne peut ni
   // dépasser le MAX ni descendre sous le MIN. Le MAX tient compte des extensions qui

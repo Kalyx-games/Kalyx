@@ -8,6 +8,16 @@ import { supabase } from './supabase'
 
 const tableMissing = (error) => /does not exist|schema cache|relation/i.test(error?.message || '')
 
+// Extensions cochées par défaut (saisie d'une partie + filtre stats). `extDefault` est
+// une LISTE de noms ; compat ascendante avec l'ancien mode 'all' / 'none'.
+//   allNames = toutes les extensions du jeu (pour valider / résoudre 'all').
+export function resolveDefaultExts(template, allNames) {
+  const d = template?.extDefault
+  if (Array.isArray(d)) return d.filter((n) => allNames.includes(n))
+  if (d === 'all') return [...allNames]
+  return []
+}
+
 // Récupère toutes les fiches → objet { game_id: template }. null si table absente.
 export async function fetchScoresheets() {
   const { data, error } = await supabase.from('scoresheets').select('game_id, template')

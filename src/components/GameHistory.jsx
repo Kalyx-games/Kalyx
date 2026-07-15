@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { computePlayStats, playWinners } from '../lib/plays'
 import { parseCounts, parseExtensions } from '../lib/games'
+import { resolveDefaultExts } from '../lib/scoresheets'
 
 const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x))
 
@@ -43,7 +44,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   // --- Filtres des stats (joueur / période / extension / scénario) ---
   // Extensions cochées par défaut selon la fiche : « toutes » → toutes ; sinon aucune.
   const defaultExtensions = useMemo(
-    () => (template?.extDefault === 'all' ? parseExtensions(game?.extensions).map((e) => e.name).filter(Boolean) : []),
+    () => resolveDefaultExts(template, parseExtensions(game?.extensions).map((e) => e.name).filter(Boolean)),
     [template, game]
   )
   const [filters, setFilters] = useState(() => ({ ...EMPTY_HFILTERS, extensions: defaultExtensions }))
@@ -137,7 +138,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
     setFilters((f) => ({ ...f, [key]: f[key].includes(val) ? f[key].filter((x) => x !== val) : [...f[key], val] }))
 
   return (
-    <div className="sheet">
+    <div className="sheet hist-sheet">
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">←</button>
         <h2 className="sheet-title">📚 {game?.name}</h2>
