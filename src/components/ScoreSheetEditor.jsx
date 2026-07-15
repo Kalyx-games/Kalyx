@@ -65,10 +65,8 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         ext: c.ext && extList.includes(c.ext) ? c.ext : null,
       }))
       .filter((c) => c.label)
-    if (catsRelevant && !categories.length) {
-      setErr('Ajoute au moins une catégorie avec un nom.')
-      return
-    }
+    // Pas d'obligation de catégorie : sans catégorie, la saisie d'une partie affiche
+    // un champ « Points » par défaut (voir ScoreSheet).
     const teams = {
       on: teamsOn,
       list: teamList
@@ -173,46 +171,51 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
 
       {availableExts.length > 0 && (
         <section className="settings-card">
-          <h3>Extensions qui modifient le score</h3>
-          {exts.length === 0 && (
-            <p className="field-hint" style={{ marginBottom: 8 }}>Aucune pour l'instant.</p>
-          )}
-          {exts.map((name) => (
-            <div key={name} className="ext-chip-row">
-              <span className="ext-chip-name">🧩 {name}</span>
-              <button type="button" className="ext-row-x" onClick={() => removeExt(name)} aria-label="Retirer l'extension">×</button>
-            </div>
-          ))}
-          {remaining.length === 1 ? (
-            <button type="button" className="btn-ghost" onClick={() => addExtName(remaining[0])}>
-              ➕ Ajouter « {remaining[0]} »
-            </button>
-          ) : remaining.length > 1 ? (
-            <select
-              className="cat-edit-ext"
-              value=""
-              onChange={(e) => {
-                if (e.target.value) addExtName(e.target.value)
-              }}
-            >
-              <option value="">➕ Ajouter une extension…</option>
-              {remaining.map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          ) : null}
+          <h3>Extensions</h3>
 
-          {exts.length > 0 && (
-            <div style={{ marginTop: 14 }}>
-              <label className="field-label">Cochées par défaut</label>
-              <p className="field-hint" style={{ margin: '2px 0 8px' }}>
-                À l'ouverture d'une partie et dans le filtre des stats.
-              </p>
-              <div className="chips">
-                <button type="button" className={`fchip ${extDefault === 'all' ? 'on' : ''}`} onClick={() => setExtDefault('all')}>Toutes</button>
-                <button type="button" className={`fchip ${extDefault === 'none' ? 'on' : ''}`} onClick={() => setExtDefault('none')}>Aucune</button>
-              </div>
-            </div>
+          {/* Réglage TOUJOURS présent (dès que le jeu a des extensions) : à la saisie
+              d'une partie et dans le filtre des stats, extensions toutes cochées ou non. */}
+          <label className="field-label">Cochées par défaut</label>
+          <p className="field-hint" style={{ margin: '2px 0 8px' }}>
+            À l'ouverture d'une partie et dans le filtre des stats.
+          </p>
+          <div className="chips">
+            <button type="button" className={`fchip ${extDefault === 'all' ? 'on' : ''}`} onClick={() => setExtDefault('all')}>Toutes</button>
+            <button type="button" className={`fchip ${extDefault === 'none' ? 'on' : ''}`} onClick={() => setExtDefault('none')}>Aucune</button>
+          </div>
+
+          {/* Extensions qui modifient le score : seulement quand il y a des points. */}
+          {scoring !== 'none' && (
+            <>
+              <label className="field-label" style={{ marginTop: 16 }}>Qui modifient le score</label>
+              {exts.length === 0 && (
+                <p className="field-hint" style={{ margin: '2px 0 8px' }}>Aucune pour l'instant.</p>
+              )}
+              {exts.map((name) => (
+                <div key={name} className="ext-chip-row">
+                  <span className="ext-chip-name">🧩 {name}</span>
+                  <button type="button" className="ext-row-x" onClick={() => removeExt(name)} aria-label="Retirer l'extension">×</button>
+                </div>
+              ))}
+              {remaining.length === 1 ? (
+                <button type="button" className="btn-ghost" onClick={() => addExtName(remaining[0])}>
+                  ➕ Ajouter « {remaining[0]} »
+                </button>
+              ) : remaining.length > 1 ? (
+                <select
+                  className="cat-edit-ext"
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) addExtName(e.target.value)
+                  }}
+                >
+                  <option value="">➕ Ajouter une extension…</option>
+                  {remaining.map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              ) : null}
+            </>
           )}
         </section>
       )}

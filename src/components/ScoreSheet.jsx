@@ -155,7 +155,13 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       ts.map((t) => (t.id === teamId ? { ...t, players: t.players.map((p) => (p.id === pid ? { ...p, name } : p)) } : t))
     )
 
-  const visibleCats = useMemo(() => cats.filter((c) => !c.ext || activeExts.has(c.ext)), [cats, activeExts])
+  // Catégories visibles selon les extensions cochées. Si aucune catégorie n'est
+  // définie (et qu'il y a des points), on affiche un champ « Points » par défaut
+  // (terminologie de beaucoup de jeux → pas la peine de la recréer à chaque fois).
+  const visibleCats = useMemo(() => {
+    const cs = cats.filter((c) => !c.ext || activeExts.has(c.ext))
+    return cs.length === 0 && !noPoints ? [{ label: 'Points' }] : cs
+  }, [cats, activeExts, noPoints])
 
   const toggleExt = (name) =>
     setActiveExts((s) => {

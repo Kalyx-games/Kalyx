@@ -1,10 +1,8 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { computePlayStats, playWinners } from '../lib/plays'
 import { parseCounts, parseExtensions } from '../lib/games'
 
 const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x))
-
-const ScoreTrend = lazy(() => import('./ScoreTrend'))
 
 // Filtres des stats des parties (vide = tout).
 const EMPTY_HFILTERS = { players: [], period: 'all', extensions: [], scenarios: [] }
@@ -328,12 +326,6 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
             </section>
           )}
 
-          {/* Évolution des scores dans le temps (se masque tout seul si &lt; 2 parties). */}
-          {!noPoints && (
-            <Suspense fallback={null}>
-              <ScoreTrend plays={filtered} scoring={scoring} showPlayers={filters.players} />
-            </Suspense>
-          )}
 
           <section className="stat-block">
             <button type="button" className="hist-toggle" onClick={() => setShowPlays((v) => !v)} aria-expanded={showPlays}>
