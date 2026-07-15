@@ -20,7 +20,7 @@ const DURATIONS = [
 
 const fmtPrice = (v) => (v >= 150 ? '150 €+' : `${v} €`)
 
-export default function Filters({ owners, tags, filters, setFilters, showPrice, onReset }) {
+export default function Filters({ owners, tags, filters, setFilters, showPrice, showTags = true, onReset }) {
   const toggleOwner = (o) =>
     setFilters((f) => ({ ...f, owners: f.owners.includes(o) ? f.owners.filter((x) => x !== o) : [...f.owners, o] }))
   const toggleTag = (t) =>
@@ -87,7 +87,7 @@ export default function Filters({ owners, tags, filters, setFilters, showPrice, 
         </div>
       </div>
 
-      {tags.length > 0 && (
+      {showTags && tags.length > 0 && (
         <div className="filter-group">
           <span className="filter-label">🏷️ Tags</span>
           <div className="chips">

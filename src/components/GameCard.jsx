@@ -44,6 +44,18 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
     .map((e) => e.name)
     .sort((a, b) => a.localeCompare(b, 'fr'))
 
+  // Bulles propriétaires + tags : empilées en bas à gauche de l'image. Si la pile
+  // dépasse la hauteur de l'image, la carte s'agrandit pour les contenir (min-height
+  // sur la colonne image, image poussée en bas → la pile monte dans l'espace gagné).
+  const ownerList = parseOwners(game.owner)
+  const tagList = parseTags(game.tags)
+  const bubbleCount = ownerList.length + tagList.length
+  const BUBBLE_H = 20
+  const BUBBLE_GAP = 3
+  const stackH = bubbleCount ? bubbleCount * BUBBLE_H + (bubbleCount - 1) * BUBBLE_GAP : 0
+  // La pile déborde de l'image (66px) quand elle mesure plus de ~76px → on réserve la place.
+  const thumbColStyle = stackH > 76 ? { minHeight: stackH - 10 } : undefined
+
   // Joueurs : base, puis entre parenthèses ce que les extensions AJOUTENT.
   const basePlayers = basePlayersSet(game)
   const extraPlayers = effectivePlayersSet(game).filter((n) => !basePlayers.includes(n))
@@ -240,7 +252,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
       onClick={onCardTap}
       style={{ transform: `translateX(${offset}px)` }}
     >
-      <div className="game-thumb-col">
+      <div className="game-thumb-col" style={thumbColStyle}>
         {/* Conteneur non-rogné : permet à la 1re bulle de déborder à gauche de l'image. */}
         <div className="game-thumb-wrap">
           <div className="game-thumb">
@@ -266,10 +278,11 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
               <span className="game-thumb-fallback">🎲</span>
             )}
           </div>
-          {/* Bulles propriétaires + tags en bas à gauche : la 1re est à cheval sur le bord. */}
-          {(parseOwners(game.owner).length > 0 || parseTags(game.tags).length > 0) && (
+          {/* Bulles empilées en bas à gauche : la 1re (propriétaire) est à cheval sur le
+              coin bas-gauche, les suivantes montent. */}
+          {bubbleCount > 0 && (
             <div className="owner-bubbles" onClick={(e) => e.stopPropagation()}>
-              {parseOwners(game.owner).map((o) => {
+              {ownerList.map((o) => {
                 const d = ownerDisplay(o, ownerMap)
                 return (
                   <span key={`o-${o}`} className="owner-bubble" style={{ background: d.color }} title={o}>
@@ -277,7 +290,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
                   </span>
                 )
               })}
-              {parseTags(game.tags).map((t) => {
+              {tagList.map((t) => {
                 const d = ownerDisplay(t, tagMap)
                 return (
                   <span key={`t-${t}`} className="owner-bubble" style={{ background: d.color }} title={`Tag : ${t}`}>

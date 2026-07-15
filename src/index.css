@@ -1241,11 +1241,14 @@ body {
   border-radius: 10px;
   white-space: nowrap;
 }
-/* Première colonne : image + (en wishlist) prix juste en dessous. */
+/* Première colonne : image + (en wishlist) prix juste en dessous. Alignée en bas :
+   si la colonne grandit (beaucoup de bulles), l'image reste en bas et la pile de
+   bulles monte dans l'espace gagné. */
 .game-thumb-col {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
   gap: 5px;
 }
 .game-price-below {
@@ -1334,13 +1337,15 @@ body {
   font-weight: 600;
   flex-shrink: 0;
 }
-/* Sur la carte : bulles en bas à gauche, la 1re à cheval sur le bord gauche de l'image
-   (moitié sur l'image, moitié dans la marge) → petit effet badge, harmonieux. */
+/* Sur la carte : bulles EMPILÉES au coin bas-gauche, la 1re à cheval sur le coin
+   (même débord en bas qu'à gauche → 10px). Les suivantes montent (column-reverse). */
 .game-thumb-wrap .owner-bubbles {
   position: absolute;
   left: -10px;
-  bottom: 2px;
+  bottom: -10px;
   display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
   gap: 3px;
 }
 .game-thumb-wrap .owner-bubble {

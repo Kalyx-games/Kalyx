@@ -111,7 +111,7 @@ const norm = (s) => (s || '').normalize('NFD').replace(DIACRITICS, '').toLowerCa
 // Un jeu passe-t-il la recherche + les filtres ? (prédicat partagé entre la liste
 // Collection/Wishlist et l'onglet Stats, pour que les deux réagissent aux MÊMES filtres.)
 // `includePrice` : n'applique le filtre prix que dans la Wishlist (sans objet ailleurs).
-function passesFilters(g, filters, q, includePrice) {
+function passesFilters(g, filters, q, includePrice, applyTags = true) {
   // Recherche : nom OU noms d'extensions.
   if (q && !(norm(g.name).includes(q) || norm(extensionNames(g.extensions).join(' ')).includes(q))) return false
 
@@ -122,11 +122,14 @@ function passesFilters(g, filters, q, includePrice) {
   }
 
   // Tags : masqués par défaut (voir la logique détaillée plus bas dans le composant).
-  if (filters.tagsOnly && filters.tags.length) {
-    if (!parseTags(g.tags).some((t) => filters.tags.includes(t))) return false
-  } else {
-    const ts = parseTags(g.tags)
-    if (!(ts.length === 0 || ts.some((t) => filters.tags.includes(t)))) return false
+  // Ignoré en wishlist (les jeux à acheter n'ont pas de tag → le filtre n'a pas de sens).
+  if (applyTags) {
+    if (filters.tagsOnly && filters.tags.length) {
+      if (!parseTags(g.tags).some((t) => filters.tags.includes(t))) return false
+    } else {
+      const ts = parseTags(g.tags)
+      if (!(ts.length === 0 || ts.some((t) => filters.tags.includes(t)))) return false
+    }
   }
 
   // Pour chaque filtre : un jeu SANS valeur dans ce champ reste TOUJOURS affiché.
@@ -423,7 +426,7 @@ export default function App() {
   const visible = useMemo(() => {
     const q = norm(search)
     let list = (games ?? []).filter(
-      (g) => g.status === listStatus && passesFilters(g, filters, q, view === 'wishlist')
+      (g) => g.status === listStatus && passesFilters(g, filters, q, view === 'wishlist', view !== 'wishlist')
     )
 
     // Tri
@@ -476,7 +479,7 @@ export default function App() {
   // Nombre de filtres actifs (pour la pastille du bouton Filtres).
   const activeFilterCount =
     (filters.owners.length ? 1 : 0) +
-    (filters.tags.length ? 1 : 0) +
+    ((statsOpen || view !== 'wishlist') && filters.tags.length ? 1 : 0) +
     (filters.players.length ? 1 : 0) +
     (filters.duration != null ? 1 : 0) +
     (view === 'wishlist' && (filters.priceRange[0] !== PRICE_MIN || filters.priceRange[1] !== PRICE_MAX) ? 1 : 0) +
@@ -948,6 +951,7 @@ export default function App() {
           filters={filters}
           setFilters={setFilters}
           showPrice={!statsOpen && view === 'wishlist'}
+          showTags={statsOpen || view !== 'wishlist'}
           onReset={() => setFilters((f) => ({ ...EMPTY_FILTERS, owners: f.owners }))}
         />
       )}
