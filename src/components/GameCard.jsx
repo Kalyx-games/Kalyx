@@ -121,6 +121,23 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
   const actions = []
   if (onEdit) actions.push({ key: 'edit', label: 'Éditer', ico: '✏️', bg: 'var(--primary)', run: onEdit })
   if (onMove) actions.push({ key: 'move', label: 'Vers collection', node: <CollectionIcon size={20} color="#fff" />, bg: '#16a34a', run: onMove })
+  if (onBgg)
+    actions.push({
+      key: 'bgg',
+      label: 'BGG',
+      node: (
+        <img
+          className="bgg-logo"
+          src="https://www.google.com/s2/favicons?domain=boardgamegeek.com&sz=64"
+          alt=""
+          width="22"
+          height="22"
+          onError={(e) => { e.currentTarget.style.display = 'none' }}
+        />
+      ),
+      bg: '#475569',
+      run: onBgg,
+    })
   const menuW = actions.length * ACTION_W
   const OPEN = -menuW
   const [offset, setOffset] = useState(0)
@@ -244,7 +261,31 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
           ) : (
             <span className="game-thumb-fallback">🎲</span>
           )}
+          {/* Bulles propriétaires + tags, superposées en bas à gauche de l'image. */}
+          {(parseOwners(game.owner).length > 0 || parseTags(game.tags).length > 0) && (
+            <div className="owner-bubbles" onClick={(e) => e.stopPropagation()}>
+              {parseOwners(game.owner).map((o) => {
+                const d = ownerDisplay(o, ownerMap)
+                return (
+                  <span key={`o-${o}`} className="owner-bubble" style={{ background: d.color }} title={o}>
+                    {d.initials}
+                  </span>
+                )
+              })}
+              {parseTags(game.tags).map((t) => {
+                const d = ownerDisplay(t, tagMap)
+                return (
+                  <span key={`t-${t}`} className="owner-bubble" style={{ background: d.color }} title={`Tag : ${t}`}>
+                    {d.initials}
+                  </span>
+                )
+              })}
+            </div>
+          )}
         </div>
+        {game.status === 'wishlist' && game.price != null && (
+          <span className="game-price game-price-below">{formatPrice(game.price)}</span>
+        )}
       </div>
 
       <div className="game-body">
@@ -284,39 +325,6 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
         {extensions.length > 0 && (
           <div className="game-ext" title="Extensions">
             🧩 {extensions.join(', ')}
-          </div>
-        )}
-      </div>
-
-      <div className="game-actions" onClick={(e) => e.stopPropagation()}>
-        <div className="game-btns">
-          {game.status === 'wishlist' && game.price != null && (
-            <span className="game-price">{formatPrice(game.price)}</span>
-          )}
-          {onBgg && (
-            <button onClick={onBgg} title="Voir sur BoardGameGeek" aria-label="Voir sur BoardGameGeek">
-              <img className="bgg-logo" src="https://www.google.com/s2/favicons?domain=boardgamegeek.com&sz=64" alt="" width="18" height="18" onError={(e) => { e.currentTarget.style.display = 'none' }} />
-            </button>
-          )}
-        </div>
-        {(parseOwners(game.owner).length > 0 || parseTags(game.tags).length > 0) && (
-          <div className="owner-bubbles">
-            {parseOwners(game.owner).map((o) => {
-              const d = ownerDisplay(o, ownerMap)
-              return (
-                <span key={`o-${o}`} className="owner-bubble" style={{ background: d.color }} title={o}>
-                  {d.initials}
-                </span>
-              )
-            })}
-            {parseTags(game.tags).map((t) => {
-              const d = ownerDisplay(t, tagMap)
-              return (
-                <span key={`t-${t}`} className="owner-bubble" style={{ background: d.color }} title={`Tag : ${t}`}>
-                  {d.initials}
-                </span>
-              )
-            })}
           </div>
         )}
       </div>
