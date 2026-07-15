@@ -35,7 +35,7 @@ function durationLabel(g) {
 // dernière ouverte pour la refermer quand une autre s'ouvre.
 let openCard = null // { close: () => void }
 
-function GameCard({ game, online, onEdit, onMove, onBgg, onRules, onCardClick, onImageClick, ownerMap, tagMap, index = 0 }) {
+function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageClick, ownerMap, tagMap, index = 0 }) {
   const complexity = game.complexity ? Number(game.complexity) : null
   // Complexité sur 3 barres : plafonnée à 3, arrondie au demi près (remplissage partiel possible).
   const cx = complexity ? Math.min(3, complexity) : 0
@@ -118,12 +118,10 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onRules, onCardClick, o
   // Menu au dos de la carte, révélé en glissant vers la gauche (ou en tapant le chevron) :
   // Éditer, + « Déplacer vers la collection » en wishlist.
   // Ordre du menu (rendu de gauche à droite) : autres actions, puis Éditer, puis BGG
-  // → depuis le bord droit (là où on commence à glisser) : BGG en 1er, Éditer en 2e,
-  //   puis Règles, puis Vers collection.
+  // → depuis le bord droit (là où on commence à glisser) : BGG en 1er, Éditer en 2e.
   const ACTION_W = 76
   const actions = []
   if (onMove) actions.push({ key: 'move', label: 'Vers collection', node: <CollectionIcon size={20} color="#fff" />, bg: '#16a34a', run: onMove })
-  if (onRules) actions.push({ key: 'rules', label: 'Règles', ico: '📖', bg: '#b45309', run: onRules })
   if (onEdit) actions.push({ key: 'edit', label: 'Éditer', ico: '✏️', bg: 'var(--primary)', run: onEdit })
   if (onBgg)
     actions.push({
