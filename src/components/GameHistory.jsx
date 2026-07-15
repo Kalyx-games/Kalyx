@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { computePlayStats, playWinners } from '../lib/plays'
 
 const ScoreTrend = lazy(() => import('./ScoreTrend'))
@@ -30,6 +30,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   const noPoints = scoring === 'none'
   const stats = useMemo(() => computePlayStats(plays || [], scoring), [plays, scoring])
   const loading = plays == null
+  const [showPlays, setShowPlays] = useState(false) // liste des parties repliée par défaut
 
   return (
     <div className="sheet">
@@ -149,7 +150,11 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
           )}
 
           <section className="stat-block">
-            <h3 className="stat-block-title">🗓️ Parties</h3>
+            <button type="button" className="hist-toggle" onClick={() => setShowPlays((v) => !v)} aria-expanded={showPlays}>
+              <span>🗓️ {showPlays ? 'Masquer' : 'Voir'} les {stats.total} partie{stats.total > 1 ? 's' : ''}</span>
+              <span className={`hist-toggle-chev ${showPlays ? 'up' : ''}`}>▾</span>
+            </button>
+            {showPlays && (
             <div className="hist-list">
               {plays.map((pl) => {
                 const coop = !!pl.outcome
@@ -252,6 +257,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                 )
               })}
             </div>
+            )}
           </section>
         </>
       )}

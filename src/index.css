@@ -2743,10 +2743,37 @@ body {
   height: 48px;
   font-size: 1rem;
 }
+/* Bouton dépliant « Voir les N parties » (la liste est repliée par défaut). */
+.hist-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hist-toggle:active {
+  transform: scale(0.995);
+}
+.hist-toggle-chev {
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+.hist-toggle-chev.up {
+  transform: rotate(180deg);
+}
 .hist-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-top: 12px;
 }
 .hist-row {
   border: 1px solid var(--line);
