@@ -66,9 +66,12 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const scoring = template?.scoring || 'high'
   const wantScenario = !!template?.scenario
   const isCoop = win === 'coop'
-  const noPoints = scoring === 'none'
+  const noPoints = scoring === 'none' // = pas de table de score (branche « désignation »)
   const teamsCfg = template?.teams
   const isTeams = !isCoop && !!teamsCfg?.on
+  // Victoire directe (« pas de points » en plus du score) + déclencheurs nommés.
+  const hasInstant = !isCoop && !isTeams && (template?.instant ?? scoring === 'none')
+  const triggers = template?.triggers ?? []
   const predefined = (teamsCfg?.list || []).length > 0
   const cats = template?.categories ?? []
   // TOUTES les extensions du jeu (pas seulement celles qui modifient les points) : on
@@ -106,6 +109,16 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const [scenario, setScenario] = useState(ip?.scenario || '')
   const [notes, setNotes] = useState(ip ? ip.notes || '' : template?.notes || '')
   const [forcedWinnerId, setForcedWinnerId] = useState(null) // vainqueur forcé en cas d'égalité
+  // Victoire directe (déclencheur) : le déclencheur choisi + (si score) le vainqueur direct.
+  const [instantTrigger, setInstantTrigger] = useState(ip?.trigger || null)
+  const [instantWinnerId, setInstantWinnerId] = useState(() => {
+    if (ip && ip.trigger && scoring !== 'none' && !isTeams) {
+      const wn = winnerNamesOf(ip)
+      const p = players.find((pl) => wn.has((pl.name || '').trim()))
+      return p ? p.id : null
+    }
+    return null
+  })
 
   // Coopératif
   const [outcome, setOutcome] = useState(ip?.outcome || null) // 'win' | 'loss'
@@ -229,7 +242,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // Égalité au sommet → on peut FORCER le vainqueur (départage secondaire du jeu).
   const tiedPlayers = best != null ? players.filter((p) => totalOf(p) === best) : []
   const forcedWinner = tiedPlayers.length >= 2 && forcedWinnerId && tiedPlayers.some((p) => p.id === forcedWinnerId) ? forcedWinnerId : null
-  const isTopWinner = (p) => (forcedWinner ? p.id === forcedWinner : best != null && totalOf(p) === best)
+  const isTopWinner = (p) =>
+    instantWinnerId ? p.id === instantWinnerId : forcedWinner ? p.id === forcedWinner : best != null && totalOf(p) === best
 
   const nameOf = (p, i) => (p.name || '').trim() || `Joueur ${i + 1}`
   const namesOf = () => players.map(nameOf)
@@ -260,6 +274,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     onSavePlay({
       players: built.map((b) => ({ name: b.name })),
       winner: winnerNames.join(', '),
+      trigger: instantTrigger || null,
       scenario: scenarioVal(),
       extensions: [...activeExts],
       notes: notesVal(),
@@ -276,15 +291,25 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       return { name: nameOf(p, i), total: totalOf(p), scores }
     })
     const extreme = scoring === 'low' ? Math.min(...built.map((b) => b.total)) : Math.max(...built.map((b) => b.total))
-    // Vainqueur forcé (égalité départagée à la main) sinon tous les ex æquo.
+    // Priorité : victoire directe (déclencheur) → vainqueur forcé (égalité) → score.
+    const instantP = instantWinnerId ? players.find((p) => p.id === instantWinnerId) : null
     let winners
-    if (forcedWinner) {
+    if (instantP) {
+      winners = [nameOf(instantP, players.indexOf(instantP))]
+    } else if (forcedWinner) {
       const fp = players.find((p) => p.id === forcedWinner)
       winners = [nameOf(fp, players.indexOf(fp))]
     } else {
       winners = built.filter((b) => b.total === extreme).map((b) => b.name)
     }
-    onSavePlay({ players: built, winner: winners.join(', '), scenario: scenarioVal(), extensions: [...activeExts], notes: notesVal() })
+    onSavePlay({
+      players: built,
+      winner: winners.join(', '),
+      trigger: instantP ? instantTrigger || null : null,
+      scenario: scenarioVal(),
+      extensions: [...activeExts],
+      notes: notesVal(),
+    })
   }
 
   // Enregistre une partie EN ÉQUIPES. Le score d'équipe est copié sur chaque membre
@@ -382,6 +407,42 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         placeholder="Rappels de règles, variante maison, précisions de score…"
         rows={2}
       />
+    </div>
+  )
+
+  // Sélecteur de déclencheur (branche « pas de points » avec des déclencheurs définis).
+  const triggerField = hasInstant && noPoints && triggers.length > 0 && (
+    <div className="field">
+      <label className="field-label">🏁 Comment le jeu a été gagné <span className="field-opt">(facultatif)</span></label>
+      <div className="chips">
+        {triggers.map((t) => (
+          <button key={t} type="button" className={`fchip ${instantTrigger === t ? 'on' : ''}`} onClick={() => setInstantTrigger((cur) => (cur === t ? null : t))}>{t}</button>
+        ))}
+      </div>
+    </div>
+  )
+
+  // Section « victoire directe » (branche AU SCORE avec victoire instantanée possible).
+  const instantField = hasInstant && !noPoints && (
+    <div className="field">
+      <label className="field-label">🏁 Victoire directe ? <span className="field-opt">(sinon au score)</span></label>
+      <div className="chips">
+        {players.map((p, i) => (
+          <button key={p.id} type="button" className={`fchip ${instantWinnerId === p.id ? 'on' : ''}`} onClick={() => setInstantWinnerId((cur) => (cur === p.id ? null : p.id))}>
+            🏆 {nameOf(p, i)}
+          </button>
+        ))}
+      </div>
+      {instantWinnerId != null && triggers.length > 0 && (
+        <>
+          <label className="field-label" style={{ marginTop: 8 }}>Par quel déclencheur ?</label>
+          <div className="chips">
+            {triggers.map((t) => (
+              <button key={t} type="button" className={`fchip ${instantTrigger === t ? 'on' : ''}`} onClick={() => setInstantTrigger((cur) => (cur === t ? null : t))}>{t}</button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 
@@ -577,6 +638,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         {head}
         <div className="coop-form">
           {scenarioField}
+          {triggerField}
           <div className="field">
             <label className="field-label">Joueurs — coche le(s) vainqueur(s) 🏆</label>
             {playerList(true)}
@@ -598,7 +660,12 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   return (
     <div className="sheet">
       {head}
-      {scenarioField && <div className="coop-form">{scenarioField}</div>}
+      {(scenarioField || instantField) && (
+        <div className="coop-form">
+          {scenarioField}
+          {instantField}
+        </div>
+      )}
 
       <div className="sheet-scroll">
         <table className="sheet-table">
@@ -671,7 +738,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
       {visibleCats.length === 0 && <p className="empty" style={{ padding: 24 }}>Cette fiche n'a pas encore de catégories.</p>}
 
-      {tiedPlayers.length >= 2 && (
+      {tiedPlayers.length >= 2 && instantWinnerId == null && (
         <div className="coop-form">
           <div className="field">
             <label className="field-label">🤝 Égalité — vainqueur <span className="field-opt">(départage secondaire)</span></label>
@@ -696,7 +763,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
       {onSavePlay && visibleCats.length > 0 && (
         <div className="sheet-editor-actions">
-          <button type="button" className="btn-primary" onClick={saveScored} disabled={saving || !anyScore}>
+          <button type="button" className="btn-primary" onClick={saveScored} disabled={saving || (!anyScore && !instantWinnerId)}>
             {saving ? '…' : saveLabel}
           </button>
         </div>

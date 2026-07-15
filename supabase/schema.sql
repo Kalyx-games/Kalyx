@@ -172,6 +172,7 @@ create table if not exists public.plays (
   scenario   text,        -- coopératif : scénario / niveau (facultatif)
   score      numeric,     -- coopératif : score du groupe (facultatif)
   notes      text,        -- notes propres à la partie (facultatif)
+  trigger    text,        -- victoire directe : déclencheur de fin de partie (facultatif)
   created_at timestamptz not null default now()
 );
 -- Colonnes ajoutées après coup (au cas où la table existe déjà sans elles).
@@ -179,6 +180,7 @@ alter table public.plays add column if not exists outcome  text;
 alter table public.plays add column if not exists scenario text;
 alter table public.plays add column if not exists score    numeric;
 alter table public.plays add column if not exists notes    text;
+alter table public.plays add column if not exists trigger  text;
 create index if not exists plays_game_id_idx on public.plays (game_id);
 
 alter table public.plays enable row level security;

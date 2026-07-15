@@ -9,6 +9,8 @@ let cid = 0
 const mkCat = (c = {}) => ({ id: ++cid, label: c.label || '', hint: c.hint || '', ext: c.ext || '' })
 let teid = 0
 const mkTeam = (t = {}) => ({ id: ++teid, name: t.name || '', size: t.size != null ? String(t.size) : '' })
+let trid = 0
+const mkTrigger = (name = '') => ({ id: ++trid, name })
 
 export default function ScoreSheetEditor({ game, template, online, onSave, onClose }) {
   const isNew = !template
@@ -18,6 +20,10 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   // Type de partie (options composables).
   const [win, setWin] = useState(() => template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive'))
   const [scoring, setScoring] = useState(() => template?.scoring || 'high')
+  // « Pas de points » = victoire directe (par désignation / condition). Peut coexister
+  // avec un score (compat : ancien scoring 'none' → pas de points implicite).
+  const [instant, setInstant] = useState(() => template?.instant ?? template?.scoring === 'none')
+  const [triggers, setTriggers] = useState(() => (template?.triggers || []).map((n) => mkTrigger(n)))
   const [scenario, setScenario] = useState(() => !!template?.scenario)
   const [teamsOn, setTeamsOn] = useState(() => !!template?.teams?.on)
   const [teamList, setTeamList] = useState(() => (template?.teams?.list || []).map(mkTeam))
@@ -44,6 +50,9 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   })
   const toggleExtDefault = (n) =>
     setExtDefault((d) => (d.includes(n) ? d.filter((x) => x !== n) : [...d, n]))
+  const addTrigger = () => setTriggers((t) => [...t, mkTrigger()])
+  const updTrigger = (id, name) => setTriggers((t) => t.map((x) => (x.id === id ? { ...x, name } : x)))
+  const delTrigger = (id) => setTriggers((t) => t.filter((x) => x.id !== id))
   const [notes, setNotes] = useState(() => template?.notes || '')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -80,10 +89,27 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         .map((t) => ({ name: t.name.trim(), size: t.size.trim() !== '' && Number(t.size) > 0 ? Number(t.size) : null }))
         .filter((t) => t.name),
     }
+    // Il faut au moins un moyen de gagner : au score OU pas de points.
+    if (!isCoop && scoring === 'none' && !instant) {
+      setErr('Choisis au moins « au score » ou « pas de points ».')
+      return
+    }
+    const triggerNames = triggers.map((t) => t.name.trim()).filter(Boolean)
     setBusy(true)
     setErr('')
     try {
-      await onSave(game.id, { win, scoring, scenario, teams, notes: notes.trim(), categories, extensions: extList, extDefault })
+      await onSave(game.id, {
+        win,
+        scoring,
+        instant: !isCoop && instant,
+        triggers: !isCoop && instant ? triggerNames : [],
+        scenario,
+        teams,
+        notes: notes.trim(),
+        categories,
+        extensions: extList,
+        extDefault,
+      })
       onClose()
     } catch (e) {
       setErr(e.message)
@@ -112,18 +138,39 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
           </button>
         </div>
 
-        <label className="field-label" style={{ marginTop: 14 }}>Comment on départage</label>
+        <label className="field-label" style={{ marginTop: 14 }}>Au score</label>
         <div className="chips">
-          <button type="button" className={`fchip ${scoring === 'high' ? 'on' : ''}`} onClick={() => setScoring('high')}>
+          <button type="button" className={`fchip ${scoring === 'high' ? 'on' : ''}`} onClick={() => setScoring((s) => (s === 'high' ? 'none' : 'high'))}>
             ⬆️ Plus haut score
           </button>
-          <button type="button" className={`fchip ${scoring === 'low' ? 'on' : ''}`} onClick={() => setScoring('low')}>
+          <button type="button" className={`fchip ${scoring === 'low' ? 'on' : ''}`} onClick={() => setScoring((s) => (s === 'low' ? 'none' : 'low'))}>
             ⬇️ Plus petit score
           </button>
-          <button type="button" className={`fchip ${scoring === 'none' ? 'on' : ''}`} onClick={() => setScoring('none')}>
-            🏁 Pas de points
-          </button>
         </div>
+
+        {!isCoop && (
+          <label className="filter-check" style={{ marginTop: 12 }}>
+            <input type="checkbox" checked={instant} onChange={(e) => setInstant(e.target.checked)} />
+            <span>🏁 Pas de points / victoire directe (désignation, ou conditions)</span>
+          </label>
+        )}
+
+        {/* Déclencheurs de victoire (conditions instantanées), facultatifs. */}
+        {!isCoop && instant && (
+          <div style={{ marginTop: 10 }}>
+            <label className="field-label">Déclencheurs de victoire <span className="field-opt">(facultatif)</span></label>
+            <p className="field-hint" style={{ margin: '2px 0 8px' }}>
+              Conditions qui font gagner directement (ex. « 3 comptoirs alignés »). Choisies à la partie ; sinon c'est le score qui départage.
+            </p>
+            {triggers.map((t) => (
+              <div key={t.id} className="ext-chip-row">
+                <input className="cat-edit-label" value={t.name} onChange={(e) => updTrigger(t.id, e.target.value)} placeholder="ex. Objectif secret rempli" />
+                <button type="button" className="ext-row-x" onClick={() => delTrigger(t.id)} aria-label="Retirer le déclencheur">×</button>
+              </div>
+            ))}
+            <button type="button" className="btn-ghost" onClick={addTrigger}>➕ Ajouter un déclencheur</button>
+          </div>
+        )}
 
         <label className="filter-check" style={{ marginTop: 14 }}>
           <input type="checkbox" checked={scenario} onChange={(e) => setScenario(e.target.checked)} />
@@ -141,8 +188,10 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
           {isCoop
             ? 'Tout le groupe gagne ou perd ensemble.'
             : scoring === 'none'
-              ? 'Pas de points : on désigne simplement le(s) vainqueur(s).'
-              : 'Chacun marque ses points.'}
+              ? 'Pas de points : on désigne le vainqueur (via un déclencheur si défini).'
+              : instant
+                ? 'On marque des points, mais une victoire directe (déclencheur) peut départager avant le score.'
+                : 'Chacun marque ses points.'}
         </p>
       </section>
 

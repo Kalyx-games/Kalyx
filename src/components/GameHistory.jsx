@@ -319,6 +319,29 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
             </section>
           )}
 
+          {/* Répartition des victoires par déclencheur (jeux à victoire directe). */}
+          {stats.byTrigger.length > 0 && (
+            <section className="stat-block">
+              <h3 className="stat-block-title">🏁 Fins de partie</h3>
+              <div className="scenario-bars">
+                {stats.byTrigger.map((t) => {
+                  const maxC = stats.byTrigger[0].count || 1
+                  return (
+                    <div key={t.trigger} className="scenario-row">
+                      <div className="scenario-head">
+                        <span className="scenario-name">{t.trigger}</span>
+                        <span className="scenario-val">{t.count} <span className="scenario-sub">partie{t.count > 1 ? 's' : ''}</span></span>
+                      </div>
+                      <div className="bar-track">
+                        <div className="bar-fill" style={{ width: `${Math.round((t.count / maxC) * 100)}%`, background: '#8b5cf6' }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
           {/* Moyenne & record par joueur (jeux à points). */}
           {!noPoints && stats.hasScores && stats.byPlayer.some((p) => p.avg != null) && (
             <section className="stat-block">
@@ -468,7 +491,12 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                       </>
                     ) : (
                       <>
-                        {pl.scenario && <div className="hist-coop-meta"><span>🎯 {pl.scenario}</span></div>}
+                        {(pl.scenario || pl.trigger) && (
+                          <div className="hist-coop-meta">
+                            {pl.scenario ? <span>🎯 {pl.scenario}</span> : null}
+                            {pl.trigger ? <span>🏁 {pl.trigger}</span> : null}
+                          </div>
+                        )}
                         {pl.extensions && pl.extensions.length > 0 && (
                           <div className="hist-ext">🧩 {pl.extensions.join(', ')}</div>
                         )}

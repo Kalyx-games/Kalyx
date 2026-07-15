@@ -14,7 +14,8 @@ const missingCol = (error) => /column .* does not exist|schema cache|could not f
 export async function fetchPlays(gameId) {
   const run = (cols) =>
     supabase.from('plays').select(cols).eq('game_id', gameId).order('played_at', { ascending: false })
-  let { data, error } = await run('id, played_at, players, winner, extensions, outcome, scenario, score, notes')
+  let { data, error } = await run('id, played_at, players, winner, extensions, outcome, scenario, score, notes, trigger')
+  if (error && missingCol(error)) ({ data, error } = await run('id, played_at, players, winner, extensions, outcome, scenario, score, notes'))
   if (error && missingCol(error)) ({ data, error } = await run('id, played_at, players, winner, extensions, outcome, scenario, score'))
   if (error && missingCol(error)) ({ data, error } = await run('id, played_at, players, winner, extensions'))
   if (error) {
@@ -28,29 +29,32 @@ export async function fetchPlays(gameId) {
 function playRows(play) {
   const base = { players: play.players, winner: play.winner || null, extensions: play.extensions || [] }
   const withCoop = { ...base, outcome: play.outcome || null, scenario: play.scenario || null, score: play.score ?? null }
-  const full = { ...withCoop, notes: play.notes || null }
-  return [full, withCoop, base]
+  const withNotes = { ...withCoop, notes: play.notes || null }
+  const full = { ...withNotes, trigger: play.trigger || null }
+  return [full, withNotes, withCoop, base]
 }
 
 // Enregistre une partie (INSERT).
 //  Compétitif : play = { players:[{name,total,scores}], winner, extensions, notes }
 //  Coopératif : play = { players:[{name}], outcome:'win'|'loss', scenario, score, extensions, notes }
 export async function savePlay(gameId, play) {
-  const [full, withCoop, base] = playRows(play).map((r) => ({ ...r, game_id: gameId }))
-  let { data, error } = await supabase.from('plays').insert(full).select('id').single()
-  if (error && missingCol(error)) ({ data, error } = await supabase.from('plays').insert(withCoop).select('id').single())
-  if (error && missingCol(error)) ({ data, error } = await supabase.from('plays').insert(base).select('id').single())
-  if (error) throw error
-  return data
+  const rows = playRows(play).map((r) => ({ ...r, game_id: gameId }))
+  let res = await supabase.from('plays').insert(rows[0]).select('id').single()
+  for (let i = 1; i < rows.length && res.error && missingCol(res.error); i++) {
+    res = await supabase.from('plays').insert(rows[i]).select('id').single()
+  }
+  if (res.error) throw res.error
+  return res.data
 }
 
 // Met à jour une partie existante (édition). Même dégradation en cascade.
 export async function updatePlay(id, play) {
-  const [full, withCoop, base] = playRows(play)
+  const rows = playRows(play)
   const upd = (row) => supabase.from('plays').update(row).eq('id', id)
-  let { error } = await upd(full)
-  if (error && missingCol(error)) ({ error } = await upd(withCoop))
-  if (error && missingCol(error)) ({ error } = await upd(base))
+  let { error } = await upd(rows[0])
+  for (let i = 1; i < rows.length && error && missingCol(error); i++) {
+    ;({ error } = await upd(rows[i]))
+  }
   if (error) throw error
 }
 
@@ -180,6 +184,16 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
     .map(([scenario, v]) => ({ scenario, games: v.games, wins: v.wins, winRate: Math.round((v.wins / v.games) * 100) }))
     .sort((a, b) => b.winRate - a.winRate || b.games - a.games || a.scenario.localeCompare(b.scenario, 'fr'))
 
+  // Répartition des victoires par déclencheur (jeux à victoire directe).
+  const trig = {}
+  list.forEach((p) => {
+    const t = (p.trigger || '').trim()
+    if (t) trig[t] = (trig[t] || 0) + 1
+  })
+  const byTrigger = Object.entries(trig)
+    .map(([trigger, count]) => ({ trigger, count }))
+    .sort((a, b) => b.count - a.count || a.trigger.localeCompare(b.trigger, 'fr'))
+
   // Stats par catégorie de score (moyenne / min / max / médiane), joueurs affichés.
   const catVals = {}
   list.forEach((p) => {
@@ -238,6 +252,7 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
     total: list.length,
     byPlayer,
     byScenario,
+    byTrigger,
     byCategory,
     scores,
     hasScores: Object.keys(playerScores).length > 0, // au moins un score perso enregistré
