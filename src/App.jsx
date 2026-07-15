@@ -985,8 +985,11 @@ export default function App() {
               online={online}
               onEdit={() => setEditing(g)}
               onMove={view === 'wishlist' ? () => setMoving(g) : undefined}
-              // Liens/fonctions réseau désactivés hors ligne (BGG, Philibert, fiches de score).
+              // Liens/fonctions réseau désactivés hors ligne (BGG, règles, Philibert, fiches).
               onBgg={g.bgg_id && online ? () => window.open(`https://boardgamegeek.com/boardgame/${g.bgg_id}`, '_blank', 'noopener') : undefined}
+              // Règles : notre fonction /api/rules trouve le meilleur livret (FR sinon EN)
+              // sur BGG et redirige direct sur sa page (repli : liste des fichiers du jeu).
+              onRules={g.bgg_id && online ? () => window.open(`/api/rules?id=${g.bgg_id}`, '_blank', 'noopener') : undefined}
               onCardClick={
                 !online
                   ? undefined

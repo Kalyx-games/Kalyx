@@ -1057,6 +1057,22 @@ body {
 .swipe-hint:active {
   opacity: 1;
 }
+/* Le chevron pivote sur lui-même quand la carte est ouverte (‹ → ›), avec un léger
+   rebond ludique. Il indique alors qu'un nouveau geste referme la carte. */
+.swipe-hint svg {
+  transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.swipe-hint.open {
+  opacity: 0.85;
+}
+.swipe-hint.open svg {
+  transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .swipe-hint svg {
+    transition: none;
+  }
+}
 .game {
   display: grid;
   grid-template-columns: 66px 1fr;
