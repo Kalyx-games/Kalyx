@@ -117,10 +117,12 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
   // passifs (les seuls capables de preventDefault sur iOS pour capter le geste). ---
   // Menu au dos de la carte, révélé en glissant vers la gauche (ou en tapant le chevron) :
   // Éditer, + « Déplacer vers la collection » en wishlist.
+  // Ordre du menu (rendu de gauche à droite) : autres actions, puis Éditer, puis BGG
+  // → depuis le bord droit (là où on commence à glisser) : BGG en 1er, Éditer en 2e.
   const ACTION_W = 76
   const actions = []
-  if (onEdit) actions.push({ key: 'edit', label: 'Éditer', ico: '✏️', bg: 'var(--primary)', run: onEdit })
   if (onMove) actions.push({ key: 'move', label: 'Vers collection', node: <CollectionIcon size={20} color="#fff" />, bg: '#16a34a', run: onMove })
+  if (onEdit) actions.push({ key: 'edit', label: 'Éditer', ico: '✏️', bg: 'var(--primary)', run: onEdit })
   if (onBgg)
     actions.push({
       key: 'bgg',
