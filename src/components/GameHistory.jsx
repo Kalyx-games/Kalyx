@@ -1,5 +1,8 @@
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { computePlayStats, playWinners } from '../lib/plays'
+import { parseCounts } from '../lib/games'
+
+const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x))
 
 const ScoreTrend = lazy(() => import('./ScoreTrend'))
 
@@ -40,23 +43,59 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   const [showPlays, setShowPlays] = useState(false) // liste des parties repliée par défaut
 
   // --- Filtres des stats (joueur / période / extension / scénario) ---
-  const [filters, setFilters] = useState(EMPTY_HFILTERS)
+  // Extensions cochées par défaut selon la fiche : « toutes » → toutes ; sinon aucune.
+  const defaultExtensions = useMemo(
+    () => (template?.extDefault === 'all' ? [...(template?.extensions || [])] : []),
+    [template]
+  )
+  const [filters, setFilters] = useState(() => ({ ...EMPTY_HFILTERS, extensions: defaultExtensions }))
   const [showFilters, setShowFilters] = useState(false)
+  const [showOccasional, setShowOccasional] = useState(false)
   const allList = plays || []
 
-  // Choix disponibles, dérivés des parties.
-  const { allPlayers, allExts, allScenarios } = useMemo(() => {
-    const pl = new Set()
+  // Extensions / scénarios disponibles (dérivés des parties).
+  const { allExts, allScenarios } = useMemo(() => {
     const ex = new Set()
     const sc = new Set()
     allList.forEach((p) => {
-      ;(p.players || []).forEach((x) => { const n = (x?.name || '').trim(); if (n) pl.add(n) })
       ;(p.extensions || []).forEach((e) => e && ex.add(e))
       if (p.scenario && p.scenario.trim()) sc.add(p.scenario.trim())
     })
     const s = (a) => [...a].sort((x, y) => x.localeCompare(y, 'fr'))
-    return { allPlayers: s(pl), allExts: s(ex), allScenarios: s(sc) }
+    return { allExts: s(ex), allScenarios: s(sc) }
   }, [allList])
+
+  // Joueurs : nb de parties par joueur (sur TOUTES les parties du jeu), triés par
+  // parties décroissantes puis alpha. « Occasionnels » = ≤ ¼ du plus assidu (repliés).
+  // Y = nb max de joueurs idéal du jeu (plafond 12) → le top-Y coché par défaut.
+  const { regulars, occasional, defaultPlayers } = useMemo(() => {
+    const g = {}
+    allList.forEach((p) =>
+      (p.players || []).forEach((x) => {
+        const n = (x?.name || '').trim()
+        if (n) g[n] = (g[n] || 0) + 1
+      })
+    )
+    const rows = Object.entries(g)
+      .map(([name, games]) => ({ name, games }))
+      .sort((a, b) => b.games - a.games || a.name.localeCompare(b.name, 'fr'))
+    const maxGames = rows.length ? rows[0].games : 0
+    const ideal = parseCounts(game?.players_best)
+    const Y = Math.min(12, (ideal.length ? Math.max(...ideal) : game?.players_max || 0) || 12)
+    return {
+      regulars: rows.filter((r) => r.games * 4 > maxGames),
+      occasional: rows.filter((r) => r.games * 4 <= maxGames),
+      defaultPlayers: rows.slice(0, Y).map((r) => r.name),
+    }
+  }, [allList, game])
+
+  // Coche les joueurs principaux par défaut, une fois les parties chargées.
+  const didInitPlayers = useRef(false)
+  useEffect(() => {
+    if (didInitPlayers.current || plays == null) return
+    didInitPlayers.current = true
+    setFilters((f) => ({ ...f, players: defaultPlayers }))
+  }, [plays, defaultPlayers])
 
   // Borne de période (début du mois / de l'année en cours).
   const periodStart = useMemo(() => {
@@ -67,21 +106,35 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
       : new Date(now.getFullYear(), 0, 1).getTime()
   }, [filters.period])
 
-  const filtered = useMemo(
+  // Parties filtrées par période / extension / scénario (pas encore par joueur).
+  const prePlayer = useMemo(
     () =>
       allList.filter((p) => {
-        if (filters.players.length && !(p.players || []).some((x) => filters.players.includes((x?.name || '').trim()))) return false
         if (periodStart != null && !(Date.parse(p.played_at) >= periodStart)) return false
         if (filters.extensions.length && !(p.extensions || []).some((e) => filters.extensions.includes(e))) return false
         if (filters.scenarios.length && !(p.scenario && filters.scenarios.includes(p.scenario.trim()))) return false
         return true
       }),
-    [allList, filters, periodStart]
+    [allList, filters.extensions, filters.scenarios, periodStart]
+  )
+  // + filtre joueur : on ne garde que les parties impliquant un joueur coché.
+  const filtered = useMemo(
+    () =>
+      filters.players.length
+        ? prePlayer.filter((p) => (p.players || []).some((x) => filters.players.includes((x?.name || '').trim())))
+        : prePlayer,
+    [prePlayer, filters.players]
   )
 
-  const stats = useMemo(() => computePlayStats(filtered, scoring), [filtered, scoring])
+  // Podium / moyenne / courbe : seuls les joueurs cochés.
+  const stats = useMemo(() => computePlayStats(filtered, scoring, filters.players), [filtered, scoring, filters.players])
+  // Nb de filtres « actifs » = ce qui diffère de l'état par défaut (badge propre).
   const activeFilters =
-    filters.players.length + filters.extensions.length + filters.scenarios.length + (filters.period !== 'all' ? 1 : 0)
+    (filters.period !== 'all' ? 1 : 0) +
+    (filters.scenarios.length ? 1 : 0) +
+    (sameSet(filters.extensions, defaultExtensions) ? 0 : 1) +
+    (sameSet(filters.players, defaultPlayers) ? 0 : 1)
+  const resetFilters = () => setFilters({ ...EMPTY_HFILTERS, extensions: defaultExtensions, players: defaultPlayers })
   const toggleIn = (key, val) =>
     setFilters((f) => ({ ...f, [key]: f[key].includes(val) ? f[key].filter((x) => x !== val) : [...f[key], val] }))
 
@@ -109,8 +162,8 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
         </p>
       ) : (
         <>
-          {/* Bouton + panneau de filtres (masqués s'il n'y a rien à filtrer). */}
-          {(allPlayers.length > 0 || allExts.length > 0 || allScenarios.length > 0 || allList.length > 1) && (
+          {/* Bouton + panneau de filtres. */}
+          {(regulars.length + occasional.length > 0 || allExts.length > 0 || allScenarios.length > 0) && (
             <div className="hist-filters">
               <button
                 type="button"
@@ -124,14 +177,29 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
               </button>
               {showFilters && (
                 <div className="filters">
-                  {allPlayers.length > 0 && (
+                  {regulars.length + occasional.length > 0 && (
                     <div className="filter-group">
                       <span className="filter-label">👥 Joueur</span>
                       <div className="chips">
-                        {allPlayers.map((p) => (
-                          <button key={p} type="button" className={`fchip ${filters.players.includes(p) ? 'on' : ''}`} onClick={() => toggleIn('players', p)}>{p}</button>
+                        {regulars.map((r) => (
+                          <button key={r.name} type="button" className={`fchip ${filters.players.includes(r.name) ? 'on' : ''}`} onClick={() => toggleIn('players', r.name)}>{r.name}</button>
                         ))}
                       </div>
+                      {occasional.length > 0 && (
+                        <>
+                          <button type="button" className="occ-toggle" onClick={() => setShowOccasional((s) => !s)} aria-expanded={showOccasional}>
+                            Joueurs occasionnels ({occasional.length})
+                            <span className={`filter-chev ${showOccasional ? 'up' : ''}`}>▾</span>
+                          </button>
+                          {showOccasional && (
+                            <div className="chips" style={{ marginTop: 8 }}>
+                              {occasional.map((r) => (
+                                <button key={r.name} type="button" className={`fchip ${filters.players.includes(r.name) ? 'on' : ''}`} onClick={() => toggleIn('players', r.name)}>{r.name}</button>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   )}
                   <div className="filter-group">
@@ -163,7 +231,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                     </div>
                   )}
                   {activeFilters > 0 && (
-                    <button type="button" className="filter-reset" onClick={() => setFilters(EMPTY_HFILTERS)}>Réinitialiser les filtres</button>
+                    <button type="button" className="filter-reset" onClick={resetFilters}>Réinitialiser les filtres</button>
                   )}
                 </div>
               )}
@@ -263,7 +331,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
           {/* Évolution des scores dans le temps (se masque tout seul si &lt; 2 parties). */}
           {!noPoints && (
             <Suspense fallback={null}>
-              <ScoreTrend plays={filtered} scoring={scoring} />
+              <ScoreTrend plays={filtered} scoring={scoring} showPlayers={filters.players} />
             </Suspense>
           )}
 

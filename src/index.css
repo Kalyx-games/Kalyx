@@ -2750,6 +2750,24 @@ body {
 .hist-filters .filters {
   margin-top: 10px;
 }
+/* Repli « Joueurs occasionnels ». */
+.occ-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.occ-toggle:active {
+  transform: scale(0.98);
+}
 
 /* Bouton dépliant « Voir les N parties » (la liste est repliée par défaut). */
 .hist-toggle {

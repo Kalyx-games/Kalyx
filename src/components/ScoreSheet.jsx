@@ -77,7 +77,11 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const winnerNamesOf = (play) =>
     new Set((play?.winner || '').split(',').map((s) => s.trim()).filter(Boolean))
 
-  const [activeExts, setActiveExts] = useState(() => new Set(ip?.extensions || []))
+  // Extensions cochées par défaut : réglage de la fiche (« toutes »/« aucune ») pour une
+  // NOUVELLE partie ; celles de la partie éditée sinon.
+  const [activeExts, setActiveExts] = useState(() =>
+    new Set(ip ? ip.extensions || [] : template?.extDefault === 'all' ? exts : [])
+  )
   const [players, setPlayers] = useState(() => {
     if (ip && !isTeams && (ip.players || []).length) {
       return ip.players.map((p) => ({ id: ++pid, name: p.name || '', scores: p.scores || {} }))

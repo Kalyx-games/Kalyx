@@ -119,8 +119,11 @@ export function playWinners(play) {
 
 // Statistiques d'un jeu à partir de ses parties. `scoring` = 'high' | 'low' | 'none'
 // pilote le « meilleur score » (max ou min).
-export function computePlayStats(plays, scoring = 'high') {
+// `showPlayers` (facultatif) = seuls ces joueurs apparaissent dans le podium / la
+// moyenne&record (les autres sont ignorés de ces vues par-joueur).
+export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
   const list = plays || []
+  const inShow = (n) => !showPlayers || !showPlayers.length || showPlayers.includes(n) // score compté ?
   const games = {} // nom → nb de parties jouées
   const wins = {} // nom → nb de victoires
   const playerScores = {} // nom → [scores perso] (individuel OU score de son équipe)
@@ -153,7 +156,7 @@ export function computePlayStats(plays, scoring = 'high') {
       games[n] = (games[n] || 0) + 1
       const t = Number(pl?.total)
       if (Number.isFinite(t) && pl?.total !== undefined && pl?.total !== null) {
-        if (!coop && !isTeam) scores.push(t)
+        if (!coop && !isTeam && inShow(n)) scores.push(t) // tuiles meilleur/moyen : joueurs affichés
         ;(playerScores[n] || (playerScores[n] = [])).push(t) // score perso (inclut les membres d'équipe)
       }
     })
@@ -180,7 +183,7 @@ export function computePlayStats(plays, scoring = 'high') {
   const ext = (arr) => (scoring === 'low' ? Math.min(...arr) : Math.max(...arr)) // « meilleur » selon le sens
   const worst = (arr) => (scoring === 'low' ? Math.max(...arr) : Math.min(...arr))
   const names = [...new Set([...Object.keys(games), ...Object.keys(wins)])]
-  const byPlayer = names
+  let byPlayer = names
     .map((name) => {
       const g = games[name] || 0
       const w = wins[name] || 0
@@ -196,6 +199,8 @@ export function computePlayStats(plays, scoring = 'high') {
       }
     })
     .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate || b.games - a.games || a.name.localeCompare(b.name, 'fr'))
+  // On ne garde (podium / moyenne) que les joueurs sélectionnés, si une sélection est fournie.
+  if (showPlayers && showPlayers.length) byPlayer = byPlayer.filter((p) => showPlayers.includes(p.name))
   // Rang « compétition » (1224) : les ex æquo (mêmes victoires ET même taux) partagent
   // le rang, et le suivant saute (ex. 3 premiers à égalité → rangs 1,1,1 puis 4).
   byPlayer.forEach((p, i) => {

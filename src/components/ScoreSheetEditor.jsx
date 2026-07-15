@@ -34,6 +34,9 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   const [exts, setExts] = useState(() =>
     (template?.extensions || []).filter((n) => availableExts.includes(n))
   )
+  // Par défaut, à l'ouverture d'une fiche (saisie ET filtre des stats) : extensions
+  // toutes cochées ('all') ou aucune ('none').
+  const [extDefault, setExtDefault] = useState(() => template?.extDefault || 'none')
   const [notes, setNotes] = useState(() => template?.notes || '')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -75,7 +78,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
     setBusy(true)
     setErr('')
     try {
-      await onSave(game.id, { win, scoring, scenario, teams, notes: notes.trim(), categories, extensions: extList })
+      await onSave(game.id, { win, scoring, scenario, teams, notes: notes.trim(), categories, extensions: extList, extDefault })
       onClose()
     } catch (e) {
       setErr(e.message)
@@ -198,6 +201,19 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
               ))}
             </select>
           ) : null}
+
+          {exts.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <label className="field-label">Cochées par défaut</label>
+              <p className="field-hint" style={{ margin: '2px 0 8px' }}>
+                À l'ouverture d'une partie et dans le filtre des stats.
+              </p>
+              <div className="chips">
+                <button type="button" className={`fchip ${extDefault === 'all' ? 'on' : ''}`} onClick={() => setExtDefault('all')}>Toutes</button>
+                <button type="button" className={`fchip ${extDefault === 'none' ? 'on' : ''}`} onClick={() => setExtDefault('none')}>Aucune</button>
+              </div>
+            </div>
+          )}
         </section>
       )}
 

@@ -14,9 +14,10 @@ const initials = (name) =>
     .slice(0, 3)
     .toUpperCase()
 
-export default function ScoreTrend({ plays, scoring = 'high' }) {
+export default function ScoreTrend({ plays, scoring = 'high', showPlayers = null }) {
   const chron = [...(plays || [])].reverse() // plays = plus récent d'abord → on remet dans l'ordre
   const n = chron.length
+  const keep = showPlayers && showPlayers.length ? new Set(showPlayers) : null
 
   // Séries par joueur (ordre de première apparition = couleur stable).
   const order = []
@@ -26,6 +27,7 @@ export default function ScoreTrend({ plays, scoring = 'high' }) {
       const t = Number(pl?.total)
       if (!Number.isFinite(t) || pl?.total == null) return
       const nm = (pl?.name || '').trim() || '—'
+      if (keep && !keep.has(nm)) return // on ne trace que les joueurs sélectionnés
       if (!pts[nm]) { pts[nm] = []; order.push(nm) }
       pts[nm].push({ x: i, y: t })
     })
