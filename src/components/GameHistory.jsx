@@ -6,7 +6,7 @@ import { resolveDefaultExts } from '../lib/scoresheets'
 const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x))
 
 // Filtres des stats des parties (vide = tout).
-const EMPTY_HFILTERS = { players: [], period: 'all', extensions: [], scenarios: [] }
+const EMPTY_HFILTERS = { players: [], period: 'all', extensions: [], scenarios: [], counts: [] }
 const PERIODS = [
   { value: 'all', label: 'Tout' },
   { value: 'year', label: 'Cette année' },
@@ -52,16 +52,19 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   const [showOccasional, setShowOccasional] = useState(false)
   const allList = plays || []
 
-  // Extensions / scénarios disponibles (dérivés des parties).
-  const { allExts, allScenarios } = useMemo(() => {
+  // Extensions / scénarios / nombres de joueurs disponibles (dérivés des parties).
+  const { allExts, allScenarios, allCounts } = useMemo(() => {
     const ex = new Set()
     const sc = new Set()
+    const ct = new Set()
     allList.forEach((p) => {
       ;(p.extensions || []).forEach((e) => e && ex.add(e))
       if (p.scenario && p.scenario.trim()) sc.add(p.scenario.trim())
+      const n = (p.players || []).length
+      if (n) ct.add(n)
     })
     const s = (a) => [...a].sort((x, y) => x.localeCompare(y, 'fr'))
-    return { allExts: s(ex), allScenarios: s(sc) }
+    return { allExts: s(ex), allScenarios: s(sc), allCounts: [...ct].sort((a, b) => a - b) }
   }, [allList])
 
   // Joueurs : nb de parties par joueur (sur TOUTES les parties du jeu), triés par
@@ -105,16 +108,17 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
       : new Date(now.getFullYear(), 0, 1).getTime()
   }, [filters.period])
 
-  // Parties filtrées par période / extension / scénario (pas encore par joueur).
+  // Parties filtrées par période / extension / scénario / nb de joueurs (pas encore par joueur).
   const prePlayer = useMemo(
     () =>
       allList.filter((p) => {
         if (periodStart != null && !(Date.parse(p.played_at) >= periodStart)) return false
         if (filters.extensions.length && !(p.extensions || []).some((e) => filters.extensions.includes(e))) return false
         if (filters.scenarios.length && !(p.scenario && filters.scenarios.includes(p.scenario.trim()))) return false
+        if (filters.counts.length && !filters.counts.includes((p.players || []).length)) return false
         return true
       }),
-    [allList, filters.extensions, filters.scenarios, periodStart]
+    [allList, filters.extensions, filters.scenarios, filters.counts, periodStart]
   )
   // + filtre joueur : on ne garde que les parties impliquant un joueur coché.
   const filtered = useMemo(
@@ -131,9 +135,16 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   const activeFilters =
     (filters.period !== 'all' ? 1 : 0) +
     (filters.scenarios.length ? 1 : 0) +
+    (filters.counts.length ? 1 : 0) +
     (sameSet(filters.extensions, defaultExtensions) ? 0 : 1) +
     (sameSet(filters.players, defaultPlayers) ? 0 : 1)
   const resetFilters = () => setFilters({ ...EMPTY_HFILTERS, extensions: defaultExtensions, players: defaultPlayers })
+  // Chips extension = extensions jouées + celles cochées par défaut (pour toujours
+  // pouvoir décocher un défaut, même si aucune partie ne l'utilise encore).
+  const extChips = useMemo(
+    () => [...new Set([...allExts, ...defaultExtensions])].sort((a, b) => a.localeCompare(b, 'fr')),
+    [allExts, defaultExtensions]
+  )
   const toggleIn = (key, val) =>
     setFilters((f) => ({ ...f, [key]: f[key].includes(val) ? f[key].filter((x) => x !== val) : [...f[key], val] }))
 
@@ -209,11 +220,11 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                       ))}
                     </div>
                   </div>
-                  {allExts.length > 0 && (
+                  {extChips.length > 0 && (
                     <div className="filter-group">
                       <span className="filter-label">🧩 Extension</span>
                       <div className="chips">
-                        {allExts.map((e) => (
+                        {extChips.map((e) => (
                           <button key={e} type="button" className={`fchip ${filters.extensions.includes(e) ? 'on' : ''}`} onClick={() => toggleIn('extensions', e)}>{e}</button>
                         ))}
                       </div>
@@ -225,6 +236,16 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                       <div className="chips">
                         {allScenarios.map((s) => (
                           <button key={s} type="button" className={`fchip ${filters.scenarios.includes(s) ? 'on' : ''}`} onClick={() => toggleIn('scenarios', s)}>{s}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {allCounts.length > 1 && (
+                    <div className="filter-group">
+                      <span className="filter-label">👥 Nombre de joueurs</span>
+                      <div className="chips">
+                        {allCounts.map((n) => (
+                          <button key={n} type="button" className={`fchip ${filters.counts.includes(n) ? 'on' : ''}`} onClick={() => toggleIn('counts', n)}>{n}</button>
                         ))}
                       </div>
                     </div>
@@ -327,6 +348,36 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
             </section>
           )}
 
+          {/* Stats par catégorie de score (jeux qui scorent de plusieurs façons). */}
+          {!noPoints && stats.byCategory.length >= 2 && (
+            <section className="stat-block">
+              <h3 className="stat-block-title">🧮 Par catégorie</h3>
+              <div className="table-scroll">
+                <table className="stat-table">
+                  <thead>
+                    <tr>
+                      <th className="name">Catégorie</th>
+                      <th className="num">Moy.</th>
+                      <th className="num">Min</th>
+                      <th className="num">Max</th>
+                      <th className="num">Méd.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.byCategory.map((c) => (
+                      <tr key={c.category}>
+                        <td className="name">{c.category}</td>
+                        <td className="num">{c.avg}</td>
+                        <td className="num">{c.min}</td>
+                        <td className="num best">{c.max}</td>
+                        <td className="num">{c.median}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
           <section className="stat-block">
             <button type="button" className="hist-toggle" onClick={() => setShowPlays((v) => !v)} aria-expanded={showPlays}>

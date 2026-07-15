@@ -180,6 +180,32 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
     .map(([scenario, v]) => ({ scenario, games: v.games, wins: v.wins, winRate: Math.round((v.wins / v.games) * 100) }))
     .sort((a, b) => b.winRate - a.winRate || b.games - a.games || a.scenario.localeCompare(b.scenario, 'fr'))
 
+  // Stats par catégorie de score (moyenne / min / max / médiane), joueurs affichés.
+  const catVals = {}
+  list.forEach((p) => {
+    ;(p.players || []).forEach((pl) => {
+      const n = (pl?.name || '').trim() || '—'
+      if (!inShow(n)) return
+      Object.entries(pl?.scores || {}).forEach(([cat, v]) => {
+        const num = Number(v)
+        if (Number.isFinite(num)) (catVals[cat] || (catVals[cat] = [])).push(num)
+      })
+    })
+  })
+  const median = (arr) => {
+    const a = [...arr].sort((x, y) => x - y)
+    const m = Math.floor(a.length / 2)
+    return a.length % 2 ? a[m] : Math.round((a[m - 1] + a[m]) / 2)
+  }
+  const byCategory = Object.entries(catVals).map(([category, vals]) => ({
+    category,
+    avg: Math.round(vals.reduce((s, v) => s + v, 0) / vals.length),
+    min: Math.min(...vals),
+    max: Math.max(...vals),
+    median: median(vals),
+    count: vals.length,
+  }))
+
   const ext = (arr) => (scoring === 'low' ? Math.min(...arr) : Math.max(...arr)) // « meilleur » selon le sens
   const worst = (arr) => (scoring === 'low' ? Math.max(...arr) : Math.min(...arr))
   const names = [...new Set([...Object.keys(games), ...Object.keys(wins)])]
@@ -212,6 +238,7 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
     total: list.length,
     byPlayer,
     byScenario,
+    byCategory,
     scores,
     hasScores: Object.keys(playerScores).length > 0, // au moins un score perso enregistré
     coopWins,
