@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { parseExtensions } from '../lib/games'
+import { parseExtensions, effectivePlayersSet } from '../lib/games'
 
 // Fiche de saisie d'une partie. Le type de partie vient du template :
 //  • win     : 'competitive' | 'coop'
@@ -89,11 +89,17 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const [activeExts, setActiveExts] = useState(() =>
     new Set(ip ? ip.extensions || [] : template?.extDefault === 'all' ? exts : [])
   )
+  // Bornes de joueurs du jeu : une nouvelle partie démarre au MIN, et on ne peut ni
+  // dépasser le MAX ni descendre sous le MIN. Le MAX tient compte des extensions qui
+  // élargissent la plage (ex. Abyss 2-4 → 5 avec extension). Repli 1..8 si non renseigné.
+  const effP = effectivePlayersSet(game)
+  const minP = Math.max(1, Number(game?.players_min) || (effP.length ? Math.min(...effP) : 1))
+  const maxP = Math.max(minP, Math.min(8, effP.length ? Math.max(...effP) : Number(game?.players_max) || 8))
   const [players, setPlayers] = useState(() => {
     if (ip && !isTeams && (ip.players || []).length) {
       return ip.players.map((p) => ({ id: ++pid, name: p.name || '', scores: p.scores || {} }))
     }
-    return [makePlayer(), makePlayer()]
+    return Array.from({ length: minP }, () => makePlayer())
   })
   const [focusedPlayer, setFocusedPlayer] = useState(null)
   const [scenario, setScenario] = useState(ip?.scenario || '')
@@ -175,14 +181,14 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     setPlayers((ps) => ps.map((p) => (p.id === playerId ? { ...p, scores: { ...p.scores, [key]: value } } : p)))
   const setName = (playerId, name) =>
     setPlayers((ps) => ps.map((p) => (p.id === playerId ? { ...p, name } : p)))
-  const addPlayer = () => setPlayers((ps) => (ps.length < 8 ? [...ps, makePlayer()] : ps))
+  const addPlayer = () => setPlayers((ps) => (ps.length < maxP ? [...ps, makePlayer()] : ps))
   const removePlayer = (playerId) => {
     setWinnerIds((s) => {
       const n = new Set(s)
       n.delete(playerId)
       return n
     })
-    setPlayers((ps) => (ps.length > 1 ? ps.filter((p) => p.id !== playerId) : ps))
+    setPlayers((ps) => (ps.length > minP ? ps.filter((p) => p.id !== playerId) : ps))
   }
   const toggleWinner = (playerId) =>
     setWinnerIds((s) => {
@@ -369,12 +375,12 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
             focused={focusedPlayer}
             setFocused={setFocusedPlayer}
           />
-          {players.length > 1 && (
+          {players.length > minP && (
             <button type="button" className="sheet-del" onClick={() => removePlayer(p.id)} aria-label="Retirer ce joueur">×</button>
           )}
         </div>
       ))}
-      {players.length < 8 && (
+      {players.length < maxP && (
         <button type="button" className="btn-ghost coop-add" onClick={addPlayer}>➕ Ajouter un joueur</button>
       )}
     </div>
@@ -551,14 +557,14 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                       focused={focusedPlayer}
                       setFocused={setFocusedPlayer}
                     />
-                    {players.length > 1 && (
+                    {players.length > minP && (
                       <button type="button" className="sheet-del" onClick={() => removePlayer(p.id)} aria-label="Retirer ce joueur">×</button>
                     )}
                   </div>
                 </th>
               ))}
               <th className="sheet-add-col">
-                {players.length < 8 && (
+                {players.length < maxP && (
                   <button type="button" className="sheet-add" onClick={addPlayer} aria-label="Ajouter un joueur">＋</button>
                 )}
               </th>
