@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { computePlayStats, playWinners } from '../lib/plays'
-import { parseCounts } from '../lib/games'
+import { parseCounts, parseExtensions } from '../lib/games'
 
 const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x))
 
@@ -45,8 +45,8 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   // --- Filtres des stats (joueur / période / extension / scénario) ---
   // Extensions cochées par défaut selon la fiche : « toutes » → toutes ; sinon aucune.
   const defaultExtensions = useMemo(
-    () => (template?.extDefault === 'all' ? [...(template?.extensions || [])] : []),
-    [template]
+    () => (template?.extDefault === 'all' ? parseExtensions(game?.extensions).map((e) => e.name).filter(Boolean) : []),
+    [template, game]
   )
   const [filters, setFilters] = useState(() => ({ ...EMPTY_HFILTERS, extensions: defaultExtensions }))
   const [showFilters, setShowFilters] = useState(false)

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { parseExtensions } from '../lib/games'
 
 // Fiche de saisie d'une partie. Le type de partie vient du template :
 //  • win     : 'competitive' | 'coop'
@@ -69,7 +70,13 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const isTeams = !isCoop && !!teamsCfg?.on
   const predefined = (teamsCfg?.list || []).length > 0
   const cats = template?.categories ?? []
-  const exts = template?.extensions ?? []
+  // TOUTES les extensions du jeu (pas seulement celles qui modifient les points) : on
+  // veut pouvoir noter avec lesquelles on a joué (pour les stats). Celles qui modifient
+  // le score (template.extensions) pilotent en plus l'affichage des catégories.
+  const exts = parseExtensions(game?.extensions)
+    .map((e) => e.name)
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, 'fr'))
 
   // Édition d'une partie existante : on pré-remplit tout depuis `ip`.
   const ip = initialPlay

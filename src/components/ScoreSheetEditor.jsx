@@ -255,7 +255,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
       <section className="settings-card">
         <h3>📝 Notes</h3>
         <p className="field-hint" style={{ marginBottom: 8 }}>
-          Rappels de règles, variante maison, précisions de score… Affichées (et modifiables) à chaque partie.
+          Affichées (et modifiables) à chaque partie.
         </p>
         <textarea
           className="notes-area"
