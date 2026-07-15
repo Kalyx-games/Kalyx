@@ -109,7 +109,16 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
   // Coopératif
   const [outcome, setOutcome] = useState(ip?.outcome || null) // 'win' | 'loss'
-  const [groupScore, setGroupScore] = useState(ip?.score != null ? String(ip.score) : '')
+  // Score du groupe DÉTAILLÉ par catégorie (coop avec points). À l'édition, seul le
+  // total est stocké → on le remet dans la 1re catégorie pour le préserver.
+  const [groupScores, setGroupScores] = useState(() => {
+    if (!ip || ip.score == null) return {}
+    const actEx = ip.extensions || []
+    const vis = cats.filter((c) => !c.ext || actEx.includes(c.ext))
+    const first = (vis.length ? vis : [{ label: 'Points' }])[0]
+    return { [first.label]: String(ip.score) }
+  })
+  const setGroupScoreCat = (label, value) => setGroupScores((s) => ({ ...s, [label]: value }))
   // Compétitif « pas de points » : id des vainqueurs cochés (reconstruit à l'édition).
   const [winnerIds, setWinnerIds] = useState(() => {
     if (ip && noPoints && !isTeams) {
@@ -171,6 +180,13 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     return cs.length === 0 && !noPoints ? [{ label: 'Points' }] : cs
   }, [cats, activeExts, noPoints])
 
+  // Coop avec points : total du groupe = somme des catégories saisies.
+  const groupTotal = visibleCats.reduce((sum, c) => {
+    const n = Number(groupScores[c.label])
+    return sum + (Number.isFinite(n) ? n : 0)
+  }, 0)
+  const anyGroupScore = visibleCats.some((c) => groupScores[c.label] !== '' && groupScores[c.label] != null)
+
   const toggleExt = (name) =>
     setActiveExts((s) => {
       const n = new Set(s)
@@ -225,13 +241,12 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const saveCoop = () => {
     if (!outcome) return
     const built = namesOf().map((name) => ({ name }))
-    const s = Number(groupScore)
     onSavePlay({
       win: 'coop',
       players: built,
       outcome,
       scenario: scenarioVal(),
-      score: !noPoints && groupScore.trim() !== '' && Number.isFinite(s) ? s : null,
+      score: !noPoints && anyGroupScore ? groupTotal : null,
       winner: outcome === 'win' ? built.map((b) => b.name).join(', ') : '',
       extensions: [...activeExts],
       notes: notesVal(),
@@ -275,13 +290,17 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // Enregistre une partie EN ÉQUIPES. Le score d'équipe est copié sur chaque membre
   // (champ total), et les membres sont taggés avec le nom de leur équipe.
   const saveTeams = () => {
-    const data = teams.map((t, ti) => {
-      const tn = t.name.trim() || `Équipe ${ti + 1}`
-      const s = Number(t.score)
-      const scoreNum = !noPoints && t.score.trim() !== '' && Number.isFinite(s) ? s : null
-      const members = t.players.map((p, i) => (p.name || '').trim() || `${tn} ${i + 1}`)
-      return { tn, scoreNum, members, win: t.win }
-    })
+    const data = teams
+      .map((t, ti) => {
+        const tn = t.name.trim() || `Équipe ${ti + 1}`
+        const s = Number(t.score)
+        const scoreNum = !noPoints && t.score.trim() !== '' && Number.isFinite(s) ? s : null
+        // Seuls les membres réellement nommés comptent (pas de placeholder).
+        const members = t.players.map((p) => (p.name || '').trim()).filter(Boolean)
+        return { tn, scoreNum, members, win: t.win }
+      })
+      // Équipe non utilisée (aucun membre nommé) → ignorée (ni affichée ni comptée).
+      .filter((t) => t.members.length > 0)
     let winnerTeams = []
     if (noPoints) {
       winnerTeams = data.filter((t) => t.win)
@@ -304,7 +323,12 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     const winnerNames = built.filter((p) => winnerSet.has(p.team)).map((p) => p.name)
     onSavePlay({ players: built, winner: winnerNames.join(', '), scenario: scenarioVal(), extensions: [...activeExts], notes: notesVal() })
   }
-  const canSaveTeams = noPoints ? teams.some((t) => t.win) : teams.some((t) => t.score.trim() !== '')
+  // Une équipe « utilisée » = au moins un membre nommé. On peut enregistrer dès qu'une
+  // équipe utilisée a son résultat (victoire cochée en « pas de points », sinon un score).
+  const teamUsed = (t) => t.players.some((p) => (p.name || '').trim())
+  const canSaveTeams = noPoints
+    ? teams.some((t) => teamUsed(t) && t.win)
+    : teams.some((t) => teamUsed(t) && t.score.trim() !== '')
   const saveLabel = isEdit ? '💾 Enregistrer les modifications' : '💾 Enregistrer la partie'
 
   const head = (
@@ -413,10 +437,36 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
             </div>
           </div>
           {scenarioField}
+          {/* Score du groupe, détaillé par catégorie (total = somme). */}
           {!noPoints && (
             <div className="field">
               <label className="field-label">🔢 Score du groupe <span className="field-opt">(facultatif)</span></label>
-              <input className="input" type="number" inputMode="numeric" value={groupScore} onChange={(e) => setGroupScore(e.target.value)} placeholder="ex. 42" />
+              <table className="sheet-table">
+                <tbody>
+                  {visibleCats.map((c) => (
+                    <tr key={c.label}>
+                      <th className="sheet-cat" scope="row">
+                        <span className="sheet-cat-label">{c.label}</span>
+                        {c.hint ? <span className="sheet-cat-hint">{c.hint}</span> : null}
+                        {c.ext ? <span className="sheet-cat-ext">🧩 {c.ext}</span> : null}
+                      </th>
+                      <td>
+                        <input
+                          className="sheet-cell"
+                          type="number"
+                          inputMode="numeric"
+                          value={groupScores[c.label] ?? ''}
+                          onChange={(e) => setGroupScoreCat(c.label, e.target.value)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="sheet-total-row">
+                    <th className="sheet-cat" scope="row">Total</th>
+                    <td className="sheet-total">{groupTotal}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           )}
           <div className="field">

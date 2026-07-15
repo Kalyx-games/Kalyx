@@ -22,9 +22,9 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   const [teamsOn, setTeamsOn] = useState(() => !!template?.teams?.on)
   const [teamList, setTeamList] = useState(() => (template?.teams?.list || []).map(mkTeam))
   const isCoop = win === 'coop'
-  // Les catégories de score (détail par joueur) ne servent qu'en compétitif, avec
-  // points, et hors équipes (en équipes le score est celui de l'équipe).
-  const catsRelevant = !isCoop && !teamsOn && scoring !== 'none'
+  // Catégories de score : en compétitif (détail par joueur) OU en coop (détail du score
+  // du groupe), tant qu'il y a des points et hors équipes (là le score est par équipe).
+  const catsRelevant = !teamsOn && scoring !== 'none'
   const [cats, setCats] = useState(() => (template?.categories || []).map(mkCat))
 
   const addTeam = () => setTeamList((t) => [...t, mkTeam()])
