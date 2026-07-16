@@ -2083,6 +2083,14 @@ body {
   color: var(--gold);
   font-weight: 700;
 }
+/* Ligne « Joueurs occasionnels » : pas de pilule, c'est un dépliant. */
+.podium-table td.occ-cell {
+  background: none;
+  padding: 4px 0 0;
+}
+.podium-table td.occ-cell .occ-toggle {
+  width: 100%;
+}
 
 /* ---- Victoires par scénario (coop) ---- */
 .scenario-bars {

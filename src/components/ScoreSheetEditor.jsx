@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { parseExtensions } from '../lib/games'
 
 // Éditeur d'une fiche de score : on définit les catégories (nom + explication +
@@ -72,6 +72,38 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   const dragRef = useRef(null)
   const [dragId, setDragId] = useState(null)
 
+  // --- Animation FLIP : les lignes GLISSENT vers leur nouvelle place ---
+  // On mémorise leur position juste avant le réordonnancement (snapshot), puis, une fois
+  // le DOM à jour, on les repose visuellement à l'ancienne place et on laisse une
+  // transition les ramener → le déplacement est lisible au lieu de « sauter ».
+  const flipRef = useRef(null)
+  const snapshot = () => {
+    const el = listRef.current
+    if (!el) return
+    const map = new Map()
+    el.querySelectorAll('[data-cat]').forEach((r) => map.set(r.dataset.cat, r.getBoundingClientRect().top))
+    flipRef.current = map
+  }
+  useLayoutEffect(() => {
+    const el = listRef.current
+    const prev = flipRef.current
+    flipRef.current = null
+    if (!el || !prev) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    el.querySelectorAll('[data-cat]').forEach((r) => {
+      const before = prev.get(r.dataset.cat)
+      if (before == null) return
+      const delta = before - r.getBoundingClientRect().top
+      if (!delta) return
+      r.style.transition = 'none'
+      r.style.transform = `translateY(${delta}px)`
+      requestAnimationFrame(() => {
+        r.style.transition = 'transform 180ms ease'
+        r.style.transform = ''
+      })
+    })
+  }, [cats])
+
   useEffect(() => {
     const el = listRef.current
     if (!el) return
@@ -100,6 +132,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         if (i > from && y > mid) to = Math.max(to, i)
       })
       if (to === from) return
+      snapshot() // positions AVANT le réordonnancement → animation FLIP après le rendu
       setCats((list) => {
         const next = [...list]
         const [item] = next.splice(from, 1)
@@ -230,7 +263,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
             ⬇️ Plus petit score
           </button>
           <button type="button" className={`fchip ${instant ? 'on' : ''}`} onClick={() => setInstant((v) => !v)}>
-            🏁 Pas de points / victoire directe
+            🏁 Pas de points / Victoire directe
           </button>
         </div>
 

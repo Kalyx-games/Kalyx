@@ -137,6 +137,24 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   // Colonnes moyenne/record : seulement si le jeu a des points ET qu'il y en a d'enregistrés.
   const showScores = !noPoints && stats.hasScores && stats.byPlayer.some((p) => p.avg != null)
 
+  // Classement : réguliers visibles, occasionnels repliés (même règle que les filtres).
+  const [showOccStats, setShowOccStats] = useState(false)
+  const regularPlayers = stats.byPlayer.filter((p) => !p.occasional)
+  const occPlayers = stats.byPlayer.filter((p) => p.occasional)
+  // Les médailles restent aux joueurs réguliers : un occasionnel ne monte pas sur le
+  // podium (il garde son rang chiffré, à la suite).
+  const playerRow = (p) => (
+    <tr key={p.name} className={!p.occasional && p.rank <= 3 ? 'top' : ''}>
+      <td className="rank">{(!p.occasional && ['🥇', '🥈', '🥉'][p.rank - 1]) || `${p.rank}e`}</td>
+      <td className="name">{p.name}</td>
+      <td className="num rate">{p.winRate} %</td>
+      <td className="num">{p.wins}</td>
+      <td className="num">{p.games}</td>
+      {showScores && <td className="num">{p.avg != null ? p.avg : '—'}</td>}
+      {showScores && <td className="num best">{p.best != null ? p.best : '—'}</td>}
+    </tr>
+  )
+
   // Catégories des stats rangées dans l'ORDRE DE LA FICHE. Celles qui n'y sont plus
   // (renommées/supprimées après coup, mais présentes dans d'anciennes parties) passent
   // à la fin, marquées « obsolète » → aucune donnée perdue.
@@ -282,7 +300,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
           ) : (
           <>
           <div className="stat-tiles">
-            <Tile value={stats.total} label={stats.total > 1 ? 'parties jouées' : 'partie jouée'} />
+            {/* Pas de tuile « parties jouées » : le bouton dépliant en bas l'indique déjà. */}
             {isCoop && (
               <Tile value={stats.winRate != null ? `${stats.winRate} %` : '—'} label="taux de victoire" />
             )}
@@ -294,9 +312,10 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
             )}
           </div>
 
-          {/* Joueurs : tout au même endroit — classement (victoires, taux, parties) et,
-              si le jeu a des points, moyenne & record. Tableau → colonnes alignées +
-              scroll latéral si trop large sur un petit écran (aucune info coupée). */}
+          {/* Joueurs : tout au même endroit — classement par taux de victoire et, si le jeu
+              a des points, moyenne & record. Les joueurs occasionnels sont repliés (sinon
+              une seule partie gagnée = 100 % = 1er en permanence). Tableau → colonnes
+              alignées + scroll latéral sur petit écran (aucune info coupée). */}
           {stats.byPlayer.length > 0 && (
             <section className="stat-block">
               <h3 className="stat-block-title">🏆 Joueurs</h3>
@@ -306,25 +325,31 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                     <tr>
                       <th />
                       <th className="name">Joueur</th>
-                      <th className="num" title="Victoires">🏆</th>
                       <th className="num" title="Taux de victoire">%</th>
+                      <th className="num" title="Victoires">🏆</th>
                       <th className="num" title="Parties jouées">🎮</th>
                       {showScores && <th className="num">Moyenne</th>}
                       {showScores && <th className="num">Record</th>}
                     </tr>
                   </thead>
                   <tbody>
-                    {stats.byPlayer.map((p) => (
-                      <tr key={p.name} className={p.rank <= 3 ? 'top' : ''}>
-                        <td className="rank">{['🥇', '🥈', '🥉'][p.rank - 1] || `${p.rank}e`}</td>
-                        <td className="name">{p.name}</td>
-                        <td className="num">{p.wins}</td>
-                        <td className="num rate">{p.winRate} %</td>
-                        <td className="num">{p.games}</td>
-                        {showScores && <td className="num">{p.avg != null ? p.avg : '—'}</td>}
-                        {showScores && <td className="num best">{p.best != null ? p.best : '—'}</td>}
+                    {regularPlayers.map(playerRow)}
+                    {occPlayers.length > 0 && (
+                      <tr>
+                        <td className="occ-cell" colSpan={showScores ? 7 : 5}>
+                          <button
+                            type="button"
+                            className="occ-toggle"
+                            onClick={() => setShowOccStats((v) => !v)}
+                            aria-expanded={showOccStats}
+                          >
+                            Joueurs occasionnels ({occPlayers.length})
+                            <span className={`hist-toggle-chev ${showOccStats ? 'up' : ''}`}>▾</span>
+                          </button>
+                        </td>
                       </tr>
-                    ))}
+                    )}
+                    {showOccStats && occPlayers.map(playerRow)}
                   </tbody>
                 </table>
               </div>

@@ -271,14 +271,32 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
         worst: ss.length ? worst(ss) : null,
       }
     })
-    .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate || b.games - a.games || a.name.localeCompare(b.name, 'fr'))
-  // On ne garde (podium / moyenne) que les joueurs sélectionnés, si une sélection est fournie.
+  // On ne garde (classement / moyenne) que les joueurs sélectionnés, si une sélection est fournie.
   if (showPlayers && showPlayers.length) byPlayer = byPlayer.filter((p) => showPlayers.includes(p.name))
-  // Rang « compétition » (1224) : les ex æquo (mêmes victoires ET même taux) partagent
+  // « Occasionnel » = ≤ ¼ des parties du plus assidu (même règle que les filtres). Ils sont
+  // classés APRÈS les réguliers : sinon un joueur d'une seule partie gagnée (100 %) serait
+  // premier en permanence.
+  const topGames = byPlayer.reduce((m, p) => Math.max(m, p.games), 0)
+  byPlayer.forEach((p) => {
+    p.occasional = p.games * 4 <= topGames
+  })
+  // Classement par TAUX DE VICTOIRE (réguliers d'abord, puis occasionnels entre eux).
+  byPlayer.sort(
+    (a, b) =>
+      a.occasional - b.occasional ||
+      b.winRate - a.winRate ||
+      b.wins - a.wins ||
+      b.games - a.games ||
+      a.name.localeCompare(b.name, 'fr')
+  )
+  // Rang « compétition » (1224) : les ex æquo (même taux ET mêmes victoires) partagent
   // le rang, et le suivant saute (ex. 3 premiers à égalité → rangs 1,1,1 puis 4).
   byPlayer.forEach((p, i) => {
     const prev = byPlayer[i - 1]
-    p.rank = i > 0 && p.wins === prev.wins && p.winRate === prev.winRate ? prev.rank : i + 1
+    p.rank =
+      i > 0 && p.occasional === prev.occasional && p.winRate === prev.winRate && p.wins === prev.wins
+        ? prev.rank
+        : i + 1
   })
   const bestScore = scores.length ? ext(scores) : 0
   return {

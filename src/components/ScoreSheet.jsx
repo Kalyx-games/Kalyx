@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { parseExtensions, effectivePlayersSet } from '../lib/games'
 import { resolveDefaultExts } from '../lib/scoresheets'
 
@@ -123,6 +123,14 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
   // Coopératif
   const [outcome, setOutcome] = useState(ip?.outcome || null) // 'win' | 'loss'
+
+  // Un SEUL déclencheur possible → coché d'office dès que la question se pose (jeu qui ne
+  // se gagne que par victoire directe, vainqueur direct désigné, ou groupe gagnant en coop).
+  // On ne force qu'à la bascule → décocher à la main reste possible.
+  const triggerAsked = hasInstant && (isCoop ? outcome === 'win' : noPoints || instantWinnerId != null)
+  useEffect(() => {
+    if (triggerAsked && triggers.length === 1) setInstantTrigger((t) => t ?? triggers[0])
+  }, [triggerAsked])
   // Score du groupe DÉTAILLÉ par catégorie (coop avec points). À l'édition, seul le
   // total est stocké → on le remet dans la 1re catégorie pour le préserver.
   const [groupScores, setGroupScores] = useState(() => {
@@ -416,7 +424,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const showTrigger = hasInstant && triggers.length > 0 && (isCoop ? outcome === 'win' : noPoints)
   const triggerField = showTrigger && (
     <div className="field">
-      <label className="field-label">🏁 Comment {isCoop ? 'le groupe' : 'le jeu'} a gagné <span className="field-opt">(facultatif)</span></label>
+      <label className="field-label">🏁 {isCoop ? 'Comment le groupe a gagné' : 'Comment le jeu a été gagné'} <span className="field-opt">(facultatif)</span></label>
       <div className="chips">
         {triggers.map((t) => (
           <button key={t} type="button" className={`fchip ${instantTrigger === t ? 'on' : ''}`} onClick={() => setInstantTrigger((cur) => (cur === t ? null : t))}>{t}</button>
