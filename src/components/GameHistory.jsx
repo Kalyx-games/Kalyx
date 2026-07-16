@@ -500,7 +500,12 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                       </>
                     ) : teamPlay ? (
                       <>
-                        {pl.scenario && <div className="hist-coop-meta"><span>🎯 {pl.scenario}</span></div>}
+                        {(pl.scenario || pl.trigger) && (
+                          <div className="hist-coop-meta">
+                            {pl.scenario ? <span>🎯 {pl.scenario}</span> : null}
+                            {pl.trigger ? <span>🏁 {pl.trigger}</span> : null}
+                          </div>
+                        )}
                         {pl.extensions && pl.extensions.length > 0 && (
                           <div className="hist-ext">🧩 {pl.extensions.join(', ')}</div>
                         )}

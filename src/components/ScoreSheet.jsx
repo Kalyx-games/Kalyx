@@ -70,8 +70,10 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const teamsCfg = template?.teams
   const isTeams = !isCoop && !!teamsCfg?.on
   // Victoire directe (« pas de points » en plus du score) + déclencheurs nommés.
-  // En coop, elle ne sert qu'à noter PAR QUOI le groupe a gagné (pas à désigner un joueur).
-  const hasInstant = !isTeams && (template?.instant ?? scoring === 'none')
+  // En coop, elle ne sert qu'à noter PAR QUOI le groupe a gagné (pas à désigner un joueur) ;
+  // en équipes, l'équipe gagnante est désignée par son 🏆 et le déclencheur dit ce qui a
+  // arrêté la partie.
+  const hasInstant = template?.instant ?? scoring === 'none'
   const triggers = template?.triggers ?? []
   const predefined = (teamsCfg?.list || []).length > 0
   const cats = template?.categories ?? []
@@ -124,13 +126,6 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // Coopératif
   const [outcome, setOutcome] = useState(ip?.outcome || null) // 'win' | 'loss'
 
-  // Un SEUL déclencheur possible → coché d'office dès que la question se pose (jeu qui ne
-  // se gagne que par victoire directe, vainqueur direct désigné, ou groupe gagnant en coop).
-  // On ne force qu'à la bascule → décocher à la main reste possible.
-  const triggerAsked = hasInstant && (isCoop ? outcome === 'win' : noPoints || instantWinnerId != null)
-  useEffect(() => {
-    if (triggerAsked && triggers.length === 1) setInstantTrigger((t) => t ?? triggers[0])
-  }, [triggerAsked])
   // Score du groupe DÉTAILLÉ par catégorie (coop avec points). À l'édition, seul le
   // total est stocké → on le remet dans la 1re catégorie pour le préserver.
   const [groupScores, setGroupScores] = useState(() => {
@@ -336,10 +331,10 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       })
       // Équipe non utilisée (aucun membre nommé) → ignorée (ni affichée ni comptée).
       .filter((t) => t.members.length > 0)
-    let winnerTeams = []
-    if (noPoints) {
-      winnerTeams = data.filter((t) => t.win)
-    } else {
+    // Une équipe désignée 🏆 l'emporte (sans points, ou victoire directe) ; sinon on
+    // départage au score.
+    let winnerTeams = data.filter((t) => t.win)
+    if (!winnerTeams.length && !noPoints) {
       const scored = data.filter((t) => t.scoreNum != null)
       if (scored.length) {
         const extreme = scoring === 'low' ? Math.min(...scored.map((t) => t.scoreNum)) : Math.max(...scored.map((t) => t.scoreNum))
@@ -356,7 +351,14 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       })
     })
     const winnerNames = built.filter((p) => winnerSet.has(p.team)).map((p) => p.name)
-    onSavePlay({ players: built, winner: winnerNames.join(', '), scenario: scenarioVal(), extensions: [...activeExts], notes: notesVal() })
+    onSavePlay({
+      players: built,
+      winner: winnerNames.join(', '),
+      trigger: instantTrigger || null,
+      scenario: scenarioVal(),
+      extensions: [...activeExts],
+      notes: notesVal(),
+    })
   }
   // Une équipe « utilisée » = au moins un membre nommé. On peut enregistrer dès qu'une
   // équipe utilisée a son résultat (victoire cochée en « pas de points », sinon un score).
@@ -420,8 +422,20 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     </div>
   )
 
-  // Sélecteur de déclencheur : en coop dès que le groupe gagne, sinon en « pas de points ».
-  const showTrigger = hasInstant && triggers.length > 0 && (isCoop ? outcome === 'win' : noPoints)
+  // Sélecteur de déclencheur : en coop dès que le groupe gagne ; en équipes dès qu'une
+  // équipe est désignée gagnante (ou si le jeu est sans points) ; sinon en « pas de points ».
+  const teamWon = isTeams && teams.some((t) => t.win)
+  const showTrigger =
+    hasInstant && triggers.length > 0 && (isCoop ? outcome === 'win' : isTeams ? noPoints || teamWon : noPoints)
+
+  // Un SEUL déclencheur possible → coché d'office dès que la question est posée (ici, ou
+  // dans la section « victoire directe » du mode score individuel). On ne force qu'à la
+  // bascule → décocher à la main reste possible.
+  const triggerAsked =
+    showTrigger || (hasInstant && !isCoop && !isTeams && !noPoints && triggers.length > 0 && instantWinnerId != null)
+  useEffect(() => {
+    if (triggerAsked && triggers.length === 1) setInstantTrigger((t) => t ?? triggers[0])
+  }, [triggerAsked])
   const triggerField = showTrigger && (
     <div className="field">
       <label className="field-label">🏁 {isCoop ? 'Comment le groupe a gagné' : 'Comment le jeu a été gagné'} <span className="field-opt">(facultatif)</span></label>
@@ -433,8 +447,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     </div>
   )
 
-  // Section « victoire directe » (branche AU SCORE avec victoire instantanée possible).
-  const instantField = hasInstant && !isCoop && !noPoints && (
+  // Section « victoire directe » (branche AU SCORE individuelle : on désigne un joueur).
+  const instantField = hasInstant && !isCoop && !isTeams && !noPoints && (
     <div className="field">
       <label className="field-label">🏁 Victoire directe ? <span className="field-opt">(sinon au score)</span></label>
       <div className="chips">
@@ -565,17 +579,20 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       <div className="sheet">
         {head}
         <div className="coop-form">
+          {triggerField}
           {scenarioField}
           {teams.map((t, ti) => (
             <div key={t.id} className="team-block">
               <div className="team-block-head">
-                {noPoints && (
+                {/* 🏆 = équipe gagnante. Sans points c'est le seul moyen de désigner le
+                    vainqueur ; avec points, il sert à marquer une victoire directe. */}
+                {(noPoints || hasInstant) && (
                   <button
                     type="button"
                     className={`win-toggle ${t.win ? 'on' : ''}`}
                     onClick={() => toggleTeamWin(t.id)}
                     aria-label="Équipe gagnante"
-                    title="Équipe gagnante"
+                    title={noPoints ? 'Équipe gagnante' : 'Victoire directe de cette équipe'}
                   >🏆</button>
                 )}
                 {predefined ? (
