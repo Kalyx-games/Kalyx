@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { parseExtensions } from '../lib/games'
 
 // Éditeur d'une fiche de score : on définit les catégories (nom + explication +
@@ -6,7 +6,10 @@ import { parseExtensions } from '../lib/games'
 // lesquelles modifient le score. Sert à corriger une fiche générée OU à en créer une.
 
 let cid = 0
-const mkCat = (c = {}) => ({ id: ++cid, label: c.label || '', hint: c.hint || '', ext: c.ext || '' })
+// `orig` = nom de la catégorie tel qu'il était en base à l'ouverture. Sert à détecter
+// un RENOMMAGE au moment d'enregistrer (les scores des parties sont rangés par nom de
+// catégorie → il faut les renommer aussi, sinon les stats gardent l'ancien nom).
+const mkCat = (c = {}) => ({ id: ++cid, label: c.label || '', hint: c.hint || '', ext: c.ext || '', orig: c.label || '' })
 let teid = 0
 const mkTeam = (t = {}) => ({ id: ++teid, name: t.name || '', size: t.size != null ? String(t.size) : '' })
 let trid = 0
@@ -60,6 +63,73 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   const extNames = exts
   const remaining = availableExts.filter((n) => !exts.includes(n))
 
+  // --- Réordonner les catégories en les glissant par leur poignée (⠿) ---
+  // Écouteurs tactiles NATIFS : ceux de React sont passifs → impossible de bloquer le
+  // défilement de la page pendant le glissé (même piège que le swipe des cartes).
+  const catsRef = useRef(cats)
+  catsRef.current = cats
+  const listRef = useRef(null)
+  const dragRef = useRef(null)
+  const [dragId, setDragId] = useState(null)
+
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return
+    const yOf = (e) => (e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY)
+    const start = (e) => {
+      const grip = e.target.closest('.cat-grip')
+      if (!grip || !el.contains(grip)) return
+      const row = grip.closest('[data-cat]')
+      if (!row) return
+      dragRef.current = Number(row.dataset.cat)
+      setDragId(dragRef.current)
+      if (e.cancelable) e.preventDefault() // pas de défilement / sélection pendant le glissé
+    }
+    const move = (e) => {
+      if (dragRef.current == null) return
+      if (e.cancelable) e.preventDefault()
+      const y = yOf(e)
+      const from = catsRef.current.findIndex((c) => c.id === dragRef.current)
+      if (from < 0) return
+      // Index cible = la ligne la plus éloignée dont on a dépassé le milieu.
+      let to = from
+      ;[...el.querySelectorAll('[data-cat]')].forEach((r, i) => {
+        const b = r.getBoundingClientRect()
+        const mid = b.top + b.height / 2
+        if (i < from && y < mid) to = Math.min(to, i)
+        if (i > from && y > mid) to = Math.max(to, i)
+      })
+      if (to === from) return
+      setCats((list) => {
+        const next = [...list]
+        const [item] = next.splice(from, 1)
+        next.splice(to, 0, item)
+        return next
+      })
+    }
+    const end = () => {
+      if (dragRef.current == null) return
+      dragRef.current = null
+      setDragId(null)
+    }
+    el.addEventListener('touchstart', start, { passive: false })
+    el.addEventListener('touchmove', move, { passive: false })
+    el.addEventListener('touchend', end)
+    el.addEventListener('touchcancel', end)
+    el.addEventListener('mousedown', start)
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', end)
+    return () => {
+      el.removeEventListener('touchstart', start)
+      el.removeEventListener('touchmove', move)
+      el.removeEventListener('touchend', end)
+      el.removeEventListener('touchcancel', end)
+      el.removeEventListener('mousedown', start)
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', end)
+    }
+  }, [])
+
   const addCat = () => setCats((c) => [...c, mkCat()])
   const updCat = (id, field, val) => setCats((c) => c.map((x) => (x.id === id ? { ...x, [field]: val } : x)))
   const delCat = (id) => setCats((c) => c.filter((x) => x.id !== id))
@@ -81,6 +151,13 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         ext: c.ext && extList.includes(c.ext) ? c.ext : null,
       }))
       .filter((c) => c.label)
+    // Catégories renommées → les parties déjà enregistrées doivent suivre (leurs scores
+    // sont rangés par nom de catégorie). On ignore un renommage vers un nom déjà pris.
+    const taken = new Set(categories.map((c) => c.label))
+    const renames = cats
+      .map((c) => ({ from: c.orig.trim(), to: c.label.trim() }))
+      .filter((r) => r.from && r.to && r.from !== r.to && !cats.some((c) => c.orig.trim() === r.to))
+      .filter((r) => taken.has(r.to))
     // Pas d'obligation de catégorie : sans catégorie, la saisie d'une partie affiche
     // un champ « Points » par défaut (voir ScoreSheet).
     const teams = {
@@ -90,6 +167,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         .filter((t) => t.name),
     }
     // Il faut au moins un moyen de gagner : au score OU pas de points.
+    // (En coop le groupe gagne/perd de toute façon, donc aucune contrainte.)
     if (!isCoop && scoring === 'none' && !instant) {
       setErr('Choisis au moins « au score » ou « pas de points ».')
       return
@@ -98,18 +176,22 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
     setBusy(true)
     setErr('')
     try {
-      await onSave(game.id, {
-        win,
-        scoring,
-        instant: !isCoop && instant,
-        triggers: !isCoop && instant ? triggerNames : [],
-        scenario,
-        teams,
-        notes: notes.trim(),
-        categories,
-        extensions: extList,
-        extDefault,
-      })
+      await onSave(
+        game.id,
+        {
+          win,
+          scoring,
+          instant,
+          triggers: instant ? triggerNames : [],
+          scenario,
+          teams,
+          notes: notes.trim(),
+          categories,
+          extensions: extList,
+          extDefault,
+        },
+        renames
+      )
       onClose()
     } catch (e) {
       setErr(e.message)
@@ -138,7 +220,8 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
           </button>
         </div>
 
-        <label className="field-label" style={{ marginTop: 14 }}>Au score</label>
+        {/* Conditions de victoire : au score et/ou victoire directe, au même niveau. */}
+        <label className="field-label" style={{ marginTop: 14 }}>Comment on gagne</label>
         <div className="chips">
           <button type="button" className={`fchip ${scoring === 'high' ? 'on' : ''}`} onClick={() => setScoring((s) => (s === 'high' ? 'none' : 'high'))}>
             ⬆️ Plus haut score
@@ -146,25 +229,18 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
           <button type="button" className={`fchip ${scoring === 'low' ? 'on' : ''}`} onClick={() => setScoring((s) => (s === 'low' ? 'none' : 'low'))}>
             ⬇️ Plus petit score
           </button>
+          <button type="button" className={`fchip ${instant ? 'on' : ''}`} onClick={() => setInstant((v) => !v)}>
+            🏁 Pas de points / victoire directe
+          </button>
         </div>
 
-        {!isCoop && (
-          <label className="filter-check" style={{ marginTop: 12 }}>
-            <input type="checkbox" checked={instant} onChange={(e) => setInstant(e.target.checked)} />
-            <span>🏁 Pas de points / victoire directe (désignation, ou conditions)</span>
-          </label>
-        )}
-
         {/* Déclencheurs de victoire (conditions instantanées), facultatifs. */}
-        {!isCoop && instant && (
+        {instant && (
           <div style={{ marginTop: 10 }}>
             <label className="field-label">Déclencheurs de victoire <span className="field-opt">(facultatif)</span></label>
-            <p className="field-hint" style={{ margin: '2px 0 8px' }}>
-              Conditions qui font gagner directement (ex. « 3 comptoirs alignés »). Choisies à la partie ; sinon c'est le score qui départage.
-            </p>
             {triggers.map((t) => (
               <div key={t.id} className="ext-chip-row">
-                <input className="cat-edit-label" value={t.name} onChange={(e) => updTrigger(t.id, e.target.value)} placeholder="ex. Objectif secret rempli" />
+                <input className="cat-edit-label" value={t.name} onChange={(e) => updTrigger(t.id, e.target.value)} placeholder="ex. 3 comptoirs alignés" />
                 <button type="button" className="ext-row-x" onClick={() => delTrigger(t.id)} aria-label="Retirer le déclencheur">×</button>
               </div>
             ))}
@@ -184,15 +260,6 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
           </label>
         )}
 
-        <p className="field-hint" style={{ marginTop: 10 }}>
-          {isCoop
-            ? 'Tout le groupe gagne ou perd ensemble.'
-            : scoring === 'none'
-              ? 'Pas de points : on désigne le vainqueur (via un déclencheur si défini).'
-              : instant
-                ? 'On marque des points, mais une victoire directe (déclencheur) peut départager avant le score.'
-                : 'Chacun marque ses points.'}
-        </p>
       </section>
 
       {teamsOn && !isCoop && (
@@ -281,9 +348,20 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
       <section className="settings-card">
         <h3>Catégories de score</h3>
         {cats.length === 0 && <p className="field-hint" style={{ marginBottom: 8 }}>Aucune catégorie. Ajoute-en une ci-dessous.</p>}
+        <div ref={listRef}>
         {cats.map((c) => (
-          <div key={c.id} className="cat-edit">
+          <div key={c.id} data-cat={c.id} className={`cat-edit ${dragId === c.id ? 'dragging' : ''}`}>
             <div className="cat-edit-row">
+              <span className="cat-grip" role="button" tabIndex={-1} aria-label="Déplacer la catégorie" title="Glisser pour réordonner">
+                <svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true">
+                  {[3, 8, 13].map((y) => (
+                    <g key={y}>
+                      <circle cx="2.5" cy={y} r="1.4" fill="currentColor" />
+                      <circle cx="7.5" cy={y} r="1.4" fill="currentColor" />
+                    </g>
+                  ))}
+                </svg>
+              </span>
               <input
                 className="cat-edit-label"
                 value={c.label}
@@ -308,6 +386,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
             )}
           </div>
         ))}
+        </div>
         <button type="button" className="btn-ghost" onClick={addCat}>➕ Ajouter une catégorie</button>
       </section>
       )}
@@ -321,7 +400,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
           className="notes-area"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="ex. Départage : joueur avec le plus de cartes. Variante maison : on retire les Léviathans."
+          placeholder="Rappels de règles, variante maison, précisions de score…"
           rows={4}
         />
       </section>

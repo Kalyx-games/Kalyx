@@ -2051,6 +2051,16 @@ body {
   font-weight: 700;
   color: var(--players);
 }
+/* Catégorie présente dans d'anciennes parties mais retirée de la fiche : reléguée en bas. */
+.stat-table tr.stale td {
+  opacity: 0.6;
+}
+.cat-stale {
+  font-weight: 400;
+  font-size: 0.74rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
 /* Podium : lignes en « pilules » (fond + coins arrondis via 1re/dernière cellule). */
 .podium-table td {
   background: var(--input-bg);
@@ -2708,6 +2718,28 @@ body {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+/* Poignée de glissé (⠿) : on saisit ici pour réordonner les catégories. */
+.cat-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 6px 2px;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none; /* le doigt sert au glissé, pas au défilement */
+  -webkit-user-select: none;
+  user-select: none;
+}
+.cat-grip:active {
+  cursor: grabbing;
+  color: var(--ink);
+}
+.cat-edit.dragging {
+  border-color: var(--accent);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  opacity: 0.95;
 }
 .cat-edit-label,
 .cat-edit-hint,

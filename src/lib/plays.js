@@ -58,6 +58,45 @@ export async function updatePlay(id, play) {
   if (error) throw error
 }
 
+// Renomme des catégories de score dans les parties DÉJÀ enregistrées d'un jeu.
+// Les scores sont rangés par nom de catégorie (`players[].scores = { "Seigneurs": 19 }`),
+// donc renommer une catégorie sur la fiche laisserait l'ancien nom dans les stats.
+// `renames` = [{ from, to }]. Renvoie le nombre de parties modifiées.
+export async function renameCategories(gameId, renames) {
+  const list = (renames || []).filter((r) => r && r.from && r.to && r.from !== r.to)
+  if (!list.length) return 0
+  const { data, error } = await supabase.from('plays').select('id, players').eq('game_id', gameId)
+  if (error) {
+    if (tableMissing(error)) return 0
+    throw error
+  }
+  let changed = 0
+  for (const play of data ?? []) {
+    let touched = false
+    const players = (play.players || []).map((pl) => {
+      const scores = pl?.scores
+      if (!scores) return pl
+      const next = {}
+      // On reconstruit l'objet pour préserver l'ordre des clés.
+      Object.entries(scores).forEach(([cat, v]) => {
+        const hit = list.find((r) => r.from === cat)
+        if (hit && !(hit.to in scores)) {
+          next[hit.to] = v
+          touched = true
+        } else {
+          next[cat] = v
+        }
+      })
+      return touched ? { ...pl, scores: next } : pl
+    })
+    if (!touched) continue
+    const { error: upErr } = await supabase.from('plays').update({ players }).eq('id', play.id)
+    if (upErr) throw upErr
+    changed += 1
+  }
+  return changed
+}
+
 export async function deletePlay(id) {
   const { error } = await supabase.from('plays').delete().eq('id', id)
   if (error) throw error
@@ -206,17 +245,11 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
       })
     })
   })
-  const median = (arr) => {
-    const a = [...arr].sort((x, y) => x - y)
-    const m = Math.floor(a.length / 2)
-    return a.length % 2 ? a[m] : Math.round((a[m - 1] + a[m]) / 2)
-  }
   const byCategory = Object.entries(catVals).map(([category, vals]) => ({
     category,
     avg: Math.round(vals.reduce((s, v) => s + v, 0) / vals.length),
     min: Math.min(...vals),
     max: Math.max(...vals),
-    median: median(vals),
     count: vals.length,
   }))
 

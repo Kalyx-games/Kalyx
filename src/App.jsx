@@ -7,7 +7,7 @@ import { fetchTags, addTag, updateTag, deleteTag } from './lib/tags'
 import { downloadBackup, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
-import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayCounts } from './lib/plays'
+import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayCounts, renameCategories } from './lib/plays'
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
 import ConfirmDialog from './components/ConfirmDialog'
@@ -725,9 +725,18 @@ export default function App() {
   }
 
   // Enregistre une fiche (création ou modification) et met à jour l'état local.
-  async function handleSaveSheet(gameId, template) {
+  async function handleSaveSheet(gameId, template, renames) {
     await saveScoresheet(gameId, template)
     setScoresheets((m) => ({ ...(m || {}), [gameId]: template }))
+    // Une catégorie renommée doit l'être aussi dans les parties déjà enregistrées,
+    // sinon leurs scores restent rangés sous l'ancien nom (stats incohérentes).
+    if (renames && renames.length) {
+      const n = await renameCategories(gameId, renames)
+      if (n) {
+        setNotice(`✅ Fiche enregistrée · ${n} partie${n > 1 ? 's' : ''} mise${n > 1 ? 's' : ''} à jour.`)
+        if (historyGame && historyGame.id === gameId) refreshHistory(historyGame)
+      }
+    }
   }
 
   // Ouvre une partie existante pour l'éditer (depuis l'historique).

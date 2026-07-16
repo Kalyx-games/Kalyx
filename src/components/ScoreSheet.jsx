@@ -70,7 +70,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const teamsCfg = template?.teams
   const isTeams = !isCoop && !!teamsCfg?.on
   // Victoire directe (« pas de points » en plus du score) + déclencheurs nommés.
-  const hasInstant = !isCoop && !isTeams && (template?.instant ?? scoring === 'none')
+  // En coop, elle ne sert qu'à noter PAR QUOI le groupe a gagné (pas à désigner un joueur).
+  const hasInstant = !isTeams && (template?.instant ?? scoring === 'none')
   const triggers = template?.triggers ?? []
   const predefined = (teamsCfg?.list || []).length > 0
   const cats = template?.categories ?? []
@@ -261,6 +262,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       outcome,
       scenario: scenarioVal(),
       score: !noPoints && anyGroupScore ? groupTotal : null,
+      trigger: outcome === 'win' ? instantTrigger || null : null,
       winner: outcome === 'win' ? built.map((b) => b.name).join(', ') : '',
       extensions: [...activeExts],
       notes: notesVal(),
@@ -410,10 +412,11 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     </div>
   )
 
-  // Sélecteur de déclencheur (branche « pas de points » avec des déclencheurs définis).
-  const triggerField = hasInstant && noPoints && triggers.length > 0 && (
+  // Sélecteur de déclencheur : en coop dès que le groupe gagne, sinon en « pas de points ».
+  const showTrigger = hasInstant && triggers.length > 0 && (isCoop ? outcome === 'win' : noPoints)
+  const triggerField = showTrigger && (
     <div className="field">
-      <label className="field-label">🏁 Comment le jeu a été gagné <span className="field-opt">(facultatif)</span></label>
+      <label className="field-label">🏁 Comment {isCoop ? 'le groupe' : 'le jeu'} a gagné <span className="field-opt">(facultatif)</span></label>
       <div className="chips">
         {triggers.map((t) => (
           <button key={t} type="button" className={`fchip ${instantTrigger === t ? 'on' : ''}`} onClick={() => setInstantTrigger((cur) => (cur === t ? null : t))}>{t}</button>
@@ -423,7 +426,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   )
 
   // Section « victoire directe » (branche AU SCORE avec victoire instantanée possible).
-  const instantField = hasInstant && !noPoints && (
+  const instantField = hasInstant && !isCoop && !noPoints && (
     <div className="field">
       <label className="field-label">🏁 Victoire directe ? <span className="field-opt">(sinon au score)</span></label>
       <div className="chips">
@@ -497,6 +500,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
               <button type="button" className={`fchip coop-loss ${outcome === 'loss' ? 'on' : ''}`} onClick={() => setOutcome('loss')}>💀 Perdu</button>
             </div>
           </div>
+          {triggerField}
           {scenarioField}
           {/* Score du groupe, détaillé par catégorie (total = somme). */}
           {!noPoints && (

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { computePlayStats, playWinners } from '../lib/plays'
-import { parseCounts, parseExtensions } from '../lib/games'
+import { effectivePlayersSet, parseExtensions } from '../lib/games'
 import { resolveDefaultExts } from '../lib/scoresheets'
 
 const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x))
@@ -52,24 +52,28 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   const [showOccasional, setShowOccasional] = useState(false)
   const allList = plays || []
 
-  // Extensions / scénarios / nombres de joueurs disponibles (dérivés des parties).
+  // Nombres de joueurs POSSIBLES pour ce jeu (extensions comprises) — ex. 2, 3, 4.
+  // C'est la plage du jeu, pas seulement les configurations déjà jouées.
+  const gameCounts = useMemo(() => (game ? effectivePlayersSet(game) : []), [game])
+
+  // Extensions / scénarios / nombres de joueurs disponibles au filtrage.
   const { allExts, allScenarios, allCounts } = useMemo(() => {
     const ex = new Set()
     const sc = new Set()
-    const ct = new Set()
+    const ct = new Set(gameCounts)
     allList.forEach((p) => {
       ;(p.extensions || []).forEach((e) => e && ex.add(e))
       if (p.scenario && p.scenario.trim()) sc.add(p.scenario.trim())
       const n = (p.players || []).length
-      if (n) ct.add(n)
+      if (n) ct.add(n) // une partie hors plage (ex. variante) reste filtrable
     })
     const s = (a) => [...a].sort((x, y) => x.localeCompare(y, 'fr'))
     return { allExts: s(ex), allScenarios: s(sc), allCounts: [...ct].sort((a, b) => a - b) }
-  }, [allList])
+  }, [allList, gameCounts])
 
   // Joueurs : nb de parties par joueur (sur TOUTES les parties du jeu), triés par
   // parties décroissantes puis alpha. « Occasionnels » = ≤ ¼ du plus assidu (repliés).
-  // Y = nb max de joueurs idéal du jeu (plafond 12) → le top-Y coché par défaut.
+  // Y = nb MAX de joueurs du jeu (extensions comprises, plafond 12) → top-Y coché par défaut.
   const { regulars, occasional, defaultPlayers } = useMemo(() => {
     const g = {}
     allList.forEach((p) =>
@@ -82,14 +86,13 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
       .map(([name, games]) => ({ name, games }))
       .sort((a, b) => b.games - a.games || a.name.localeCompare(b.name, 'fr'))
     const maxGames = rows.length ? rows[0].games : 0
-    const ideal = parseCounts(game?.players_best)
-    const Y = Math.min(12, (ideal.length ? Math.max(...ideal) : game?.players_max || 0) || 12)
+    const Y = Math.min(12, (gameCounts.length ? Math.max(...gameCounts) : 0) || 12)
     return {
       regulars: rows.filter((r) => r.games * 4 > maxGames),
       occasional: rows.filter((r) => r.games * 4 <= maxGames),
       defaultPlayers: rows.slice(0, Y).map((r) => r.name),
     }
-  }, [allList, game])
+  }, [allList, gameCounts])
 
   // Coche les joueurs principaux par défaut, une fois les parties chargées.
   const didInitPlayers = useRef(false)
@@ -131,6 +134,22 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
 
   // Podium / moyenne / courbe : seuls les joueurs cochés.
   const stats = useMemo(() => computePlayStats(filtered, scoring, filters.players), [filtered, scoring, filters.players])
+  // Colonnes moyenne/record : seulement si le jeu a des points ET qu'il y en a d'enregistrés.
+  const showScores = !noPoints && stats.hasScores && stats.byPlayer.some((p) => p.avg != null)
+
+  // Catégories des stats rangées dans l'ORDRE DE LA FICHE. Celles qui n'y sont plus
+  // (renommées/supprimées après coup, mais présentes dans d'anciennes parties) passent
+  // à la fin, marquées « obsolète » → aucune donnée perdue.
+  const orderedCats = useMemo(() => {
+    const order = (template?.categories || []).map((c) => c.label)
+    const rank = (name) => {
+      const i = order.indexOf(name)
+      return i === -1 ? Infinity : i
+    }
+    return stats.byCategory
+      .map((c) => ({ ...c, stale: rank(c.category) === Infinity }))
+      .sort((a, b) => rank(a.category) - rank(b.category) || a.category.localeCompare(b.category, 'fr'))
+  }, [stats.byCategory, template])
   // Nb de filtres « actifs » = ce qui diffère de l'état par défaut (badge propre).
   const activeFilters =
     (filters.period !== 'all' ? 1 : 0) +
@@ -275,22 +294,35 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
             )}
           </div>
 
-          {/* Podium : joueurs classés par victoires + taux de victoire + nb de parties.
-              Tableau → colonnes alignées (largeur = plus gros contenu) + scroll latéral
-              si trop large sur un petit écran (aucune info coupée). */}
+          {/* Joueurs : tout au même endroit — classement (victoires, taux, parties) et,
+              si le jeu a des points, moyenne & record. Tableau → colonnes alignées +
+              scroll latéral si trop large sur un petit écran (aucune info coupée). */}
           {stats.byPlayer.length > 0 && (
             <section className="stat-block">
-              <h3 className="stat-block-title">🏆 Podium</h3>
+              <h3 className="stat-block-title">🏆 Joueurs</h3>
               <div className="table-scroll">
                 <table className="stat-table podium-table">
+                  <thead>
+                    <tr>
+                      <th />
+                      <th className="name">Joueur</th>
+                      <th className="num" title="Victoires">🏆</th>
+                      <th className="num" title="Taux de victoire">%</th>
+                      <th className="num" title="Parties jouées">🎮</th>
+                      {showScores && <th className="num">Moyenne</th>}
+                      {showScores && <th className="num">Record</th>}
+                    </tr>
+                  </thead>
                   <tbody>
                     {stats.byPlayer.map((p) => (
                       <tr key={p.name} className={p.rank <= 3 ? 'top' : ''}>
                         <td className="rank">{['🥇', '🥈', '🥉'][p.rank - 1] || `${p.rank}e`}</td>
                         <td className="name">{p.name}</td>
-                        <td className="num">{p.wins} 🏆</td>
+                        <td className="num">{p.wins}</td>
                         <td className="num rate">{p.winRate} %</td>
-                        <td className="num">{p.games} 🎮</td>
+                        <td className="num">{p.games}</td>
+                        {showScores && <td className="num">{p.avg != null ? p.avg : '—'}</td>}
+                        {showScores && <td className="num best">{p.best != null ? p.best : '—'}</td>}
                       </tr>
                     ))}
                   </tbody>
@@ -342,37 +374,8 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
             </section>
           )}
 
-          {/* Moyenne & record par joueur (jeux à points). */}
-          {!noPoints && stats.hasScores && stats.byPlayer.some((p) => p.avg != null) && (
-            <section className="stat-block">
-              <h3 className="stat-block-title">📊 Moyenne &amp; record</h3>
-              <div className="table-scroll">
-                <table className="stat-table">
-                  <thead>
-                    <tr>
-                      <th className="name">Joueur</th>
-                      <th className="num">Moyenne</th>
-                      <th className="num">Record</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.byPlayer
-                      .filter((p) => p.avg != null)
-                      .map((p) => (
-                        <tr key={p.name}>
-                          <td className="name">{p.name}</td>
-                          <td className="num">{p.avg}</td>
-                          <td className="num best">{p.best}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-
           {/* Stats par catégorie de score (jeux qui scorent de plusieurs façons). */}
-          {!noPoints && stats.byCategory.length >= 2 && (
+          {!noPoints && orderedCats.length >= 2 && (
             <section className="stat-block">
               <h3 className="stat-block-title">🧮 Par catégorie</h3>
               <div className="table-scroll">
@@ -383,17 +386,18 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                       <th className="num">Moy.</th>
                       <th className="num">Min</th>
                       <th className="num">Max</th>
-                      <th className="num">Méd.</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {stats.byCategory.map((c) => (
-                      <tr key={c.category}>
-                        <td className="name">{c.category}</td>
+                    {orderedCats.map((c) => (
+                      <tr key={c.category} className={c.stale ? 'stale' : ''}>
+                        <td className="name">
+                          {c.category}
+                          {c.stale && <span className="cat-stale"> · n'est plus dans la fiche</span>}
+                        </td>
                         <td className="num">{c.avg}</td>
                         <td className="num">{c.min}</td>
                         <td className="num best">{c.max}</td>
-                        <td className="num">{c.median}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -455,9 +459,10 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                     </div>
                     {coop ? (
                       <>
-                        {(pl.scenario || pl.score != null) && (
+                        {(pl.scenario || pl.trigger || pl.score != null) && (
                           <div className="hist-coop-meta">
                             {pl.scenario ? <span>🎯 {pl.scenario}</span> : null}
+                            {pl.trigger ? <span>🏁 {pl.trigger}</span> : null}
                             {pl.score != null ? <span>🔢 {pl.score} pts</span> : null}
                           </div>
                         )}
