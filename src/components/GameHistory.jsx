@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { computePlayStats, playWinners } from '../lib/plays'
 import { effectivePlayersSet, parseExtensions } from '../lib/games'
 import { resolveDefaultExts } from '../lib/scoresheets'
@@ -73,8 +73,9 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
 
   // Joueurs : nb de parties par joueur (sur TOUTES les parties du jeu), triés par
   // parties décroissantes puis alpha. « Occasionnels » = ≤ ¼ du plus assidu (repliés).
-  // Y = nb MAX de joueurs du jeu (extensions comprises, plafond 12) → top-Y coché par défaut.
-  const { regulars, occasional, defaultPlayers } = useMemo(() => {
+  // Aucun joueur n'est coché par défaut → toutes les parties comptent (sélection vide
+  // = pas de filtre) ; cocher sert à restreindre les stats à ces joueurs.
+  const { regulars, occasional } = useMemo(() => {
     const g = {}
     allList.forEach((p) =>
       (p.players || []).forEach((x) => {
@@ -86,21 +87,11 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
       .map(([name, games]) => ({ name, games }))
       .sort((a, b) => b.games - a.games || a.name.localeCompare(b.name, 'fr'))
     const maxGames = rows.length ? rows[0].games : 0
-    const Y = Math.min(12, (gameCounts.length ? Math.max(...gameCounts) : 0) || 12)
     return {
       regulars: rows.filter((r) => r.games * 4 > maxGames),
       occasional: rows.filter((r) => r.games * 4 <= maxGames),
-      defaultPlayers: rows.slice(0, Y).map((r) => r.name),
     }
-  }, [allList, gameCounts])
-
-  // Coche les joueurs principaux par défaut, une fois les parties chargées.
-  const didInitPlayers = useRef(false)
-  useEffect(() => {
-    if (didInitPlayers.current || plays == null) return
-    didInitPlayers.current = true
-    setFilters((f) => ({ ...f, players: defaultPlayers }))
-  }, [plays, defaultPlayers])
+  }, [allList])
 
   // Borne de période (début du mois / de l'année en cours).
   const periodStart = useMemo(() => {
@@ -132,7 +123,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
     [prePlayer, filters.players]
   )
 
-  // Podium / moyenne / courbe : seuls les joueurs cochés.
+  // Classement / moyenne : seuls les joueurs cochés (aucun coché = tout le monde).
   const stats = useMemo(() => computePlayStats(filtered, scoring, filters.players), [filtered, scoring, filters.players])
   // Colonnes moyenne/record : seulement si le jeu a des points ET qu'il y en a d'enregistrés.
   const showScores = !noPoints && stats.hasScores && stats.byPlayer.some((p) => p.avg != null)
@@ -174,8 +165,8 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
     (filters.scenarios.length ? 1 : 0) +
     (filters.counts.length ? 1 : 0) +
     (sameSet(filters.extensions, defaultExtensions) ? 0 : 1) +
-    (sameSet(filters.players, defaultPlayers) ? 0 : 1)
-  const resetFilters = () => setFilters({ ...EMPTY_HFILTERS, extensions: defaultExtensions, players: defaultPlayers })
+    (filters.players.length ? 1 : 0)
+  const resetFilters = () => setFilters({ ...EMPTY_HFILTERS, extensions: defaultExtensions })
   // Chips extension = extensions jouées + celles cochées par défaut (pour toujours
   // pouvoir décocher un défaut, même si aucune partie ne l'utilise encore).
   const extChips = useMemo(

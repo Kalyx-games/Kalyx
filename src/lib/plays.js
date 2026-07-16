@@ -117,22 +117,23 @@ export async function fetchPlayCounts() {
   return counts
 }
 
-// Tous les noms de joueurs déjà utilisés (toutes parties confondues), triés,
-// pour l'auto-complétion. [] si table absente.
+// Tous les noms de joueurs déjà utilisés (TOUS jeux confondus), pour l'auto-complétion.
+// Triés du plus assidu au moins assidu → les joueurs habituels sont proposés en premier.
+// [] si table absente.
 export async function fetchPlayerNames() {
   const { data, error } = await supabase.from('plays').select('players')
   if (error) {
     if (tableMissing(error)) return []
     throw error
   }
-  const set = new Set()
+  const counts = {}
   ;(data ?? []).forEach((row) => {
     ;(row.players || []).forEach((p) => {
       const n = (p?.name || '').trim()
-      if (n) set.add(n)
+      if (n) counts[n] = (counts[n] || 0) + 1
     })
   })
-  return [...set].sort((a, b) => a.localeCompare(b, 'fr'))
+  return Object.keys(counts).sort((a, b) => counts[b] - counts[a] || a.localeCompare(b, 'fr'))
 }
 
 // Vainqueur(s) d'une partie au score le plus élevé (gère les égalités).
