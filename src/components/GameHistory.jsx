@@ -1,9 +1,13 @@
 import { useMemo, useState } from 'react'
-import { computePlayStats, playWinners } from '../lib/plays'
+import { computePlayStats, computeEntityStats, playWinners } from '../lib/plays'
 import { effectivePlayersSet } from '../lib/games'
+import SortMenu from './SortMenu'
 
 // Filtres des stats des parties (vide = tout).
 const EMPTY_HFILTERS = { players: [], period: 'all', extensions: [], scenarios: [], counts: [] }
+// Les deux « entités » spéciales du tableau comparatif (sinon = un nom de joueur).
+const ALL = '__all__'
+const REGULARS = '__regulars__'
 const PERIODS = [
   { value: 'all', label: 'Tout' },
   { value: 'year', label: 'Cette année' },
@@ -157,7 +161,11 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   const playerRow = (p) => (
     <tr key={p.name} className={!p.occasional && p.rank <= 3 ? 'top' : ''}>
       <td className="rank">{(!p.occasional && ['🥇', '🥈', '🥉'][p.rank - 1]) || `${p.rank}e`}</td>
-      <td className="name">{p.name}</td>
+      <td className="name">
+        <button type="button" className="player-link" onClick={() => filterOnPlayer(p.name)} title={`Ne voir que ${p.name}`}>
+          {p.name}
+        </button>
+      </td>
       <td className="num rate">{p.winRate} %</td>
       <td className="num">{p.wins}</td>
       <td className="num">{p.games}</td>
@@ -166,24 +174,75 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
     </tr>
   )
 
-  // Catégories des stats rangées dans l'ORDRE DE LA FICHE. Celles qui n'y sont plus
-  // (renommées/supprimées après coup, mais présentes dans d'anciennes parties) passent
-  // à la fin, marquées « obsolète » → aucune donnée perdue.
-  const orderedCats = useMemo(() => {
+  // ---- Tableau comparatif (2 entités : un joueur, les réguliers, ou tout le monde) ----
+  // Il ne suit PAS le filtre « Joueur » : il a ses propres sélecteurs. Il respecte en
+  // revanche les autres filtres (période, extension…) → il part de `prePlayer`.
+  const regularNames = useMemo(() => regulars.map((r) => r.name), [regulars])
+  const allPlayerNames = useMemo(() => [...regulars, ...occasional].map((r) => r.name), [regulars, occasional])
+  const entityNames = (key) => (key === ALL ? allPlayerNames : key === REGULARS ? regularNames : [key])
+  const entityOptions = useMemo(
+    () => [
+      { value: ALL, label: 'Tout le monde' },
+      ...(regularNames.length > 1 ? [{ value: REGULARS, label: 'Joueurs réguliers' }] : []),
+      ...allPlayerNames.map((n) => ({ value: n, label: n })),
+    ],
+    [regularNames, allPlayerNames]
+  )
+  // Meilleur joueur = 1er du classement, hors filtre joueur → sert de défaut à droite.
+  const bestPlayer = useMemo(() => computePlayStats(prePlayer, scoring).byPlayer[0]?.name || null, [prePlayer, scoring])
+  const [cmp, setCmp] = useState({ left: null, right: null })
+  // Défaut : les réguliers (groupés) face au meilleur joueur.
+  const cmpLeft = cmp.left ?? (regularNames.length > 1 ? REGULARS : ALL)
+  const cmpRight = cmp.right ?? (bestPlayer || ALL)
+  const cmpA = useMemo(() => computeEntityStats(prePlayer, scoring, entityNames(cmpLeft)), [prePlayer, scoring, cmpLeft, allPlayerNames, regularNames])
+  const cmpB = useMemo(() => computeEntityStats(prePlayer, scoring, entityNames(cmpRight)), [prePlayer, scoring, cmpRight, allPlayerNames, regularNames])
+  const showCmpScores = !noPoints && (cmpA.avg != null || cmpB.avg != null)
+
+  // Catégories comparées : celles de la fiche (dans son ordre), hors valeur fixe (une
+  // constante n'a rien à comparer), puis celles qui ne sont plus dans la fiche.
+  const cmpCats = useMemo(() => {
     const tcats = template?.categories || []
-    const order = tcats.map((c) => c.label)
-    const rank = (name) => {
-      const i = order.indexOf(name)
-      return i === -1 ? Infinity : i
-    }
-    // Une catégorie à valeur fixe vaut toujours la même chose → moyenne/min/max n'ont
-    // aucun sens : on ne l'affiche pas ici (elle compte bien dans les totaux).
     const fixed = new Set(tcats.filter((c) => c.value != null).map((c) => c.label))
-    return stats.byCategory
-      .filter((c) => !fixed.has(c.category))
-      .map((c) => ({ ...c, stale: rank(c.category) === Infinity }))
-      .sort((a, b) => rank(a.category) - rank(b.category) || a.category.localeCompare(b.category, 'fr'))
-  }, [stats.byCategory, template])
+    const order = tcats.map((c) => c.label).filter((n) => !fixed.has(n))
+    const seen = new Set([...Object.keys(cmpA.byCategory), ...Object.keys(cmpB.byCategory)])
+    const extra = [...seen].filter((n) => !fixed.has(n) && !order.includes(n)).sort((a, b) => a.localeCompare(b, 'fr'))
+    return [...order.filter((n) => seen.has(n)), ...extra]
+  }, [template, cmpA, cmpB])
+  // Le filtre est-il exactement « les réguliers » ? (état du raccourci)
+  const onlyRegulars =
+    regularNames.length > 1 &&
+    filters.players.length === regularNames.length &&
+    regularNames.every((n) => filters.players.includes(n))
+  // Clic sur un nom dans le classement → filtre sur lui seul (re-clic = tout le monde).
+  const filterOnPlayer = (name) =>
+    setFilters((f) => ({ ...f, players: f.players.length === 1 && f.players[0] === name ? [] : [name] }))
+
+  // Vert = meilleur, rouge = moins bon, gris = égalité (ou rien à comparer).
+  const scoreDir = scoring === 'low' ? 'low' : 'high'
+  const cmpClasses = (a, b, dir) => {
+    if (a == null || b == null || a === b) return ['cmp-tie', 'cmp-tie']
+    const aBetter = dir === 'low' ? a < b : a > b
+    return aBetter ? ['cmp-good', 'cmp-bad'] : ['cmp-bad', 'cmp-good']
+  }
+  // Une ligne du comparatif. `colored:false` → gris (ex. victoires/parties : un groupe en
+  // a forcément plus qu'un joueur, le colorer ne voudrait rien dire).
+  const cmpRow = (label, a, b, { colored = true, dir = 'high', fmt = (v) => (v == null ? '—' : v), subA, subB } = {}) => {
+    const [ca, cb] = colored ? cmpClasses(a, b, dir) : ['cmp-tie', 'cmp-tie']
+    return (
+      <tr key={label}>
+        <th className="cmp-label" scope="row">{label}</th>
+        <td className={`cmp-cell ${ca}`}>
+          <span className="cmp-val">{fmt(a)}</span>
+          {subA ? <span className="cmp-range">{subA}</span> : null}
+        </td>
+        <td className={`cmp-cell ${cb}`}>
+          <span className="cmp-val">{fmt(b)}</span>
+          {subB ? <span className="cmp-range">{subB}</span> : null}
+        </td>
+      </tr>
+    )
+  }
+
   // Nb de filtres « actifs » = tout ce qui est coché (le défaut est vide partout).
   const activeFilters =
     (filters.period !== 'all' ? 1 : 0) +
@@ -240,6 +299,25 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                   {regulars.length + occasional.length > 0 && (
                     <div className="filter-group">
                       <span className="filter-label">👥 Joueur</span>
+                      {/* Raccourcis : tout le monde (= aucun filtre) ou les réguliers. */}
+                      <div className="chips" style={{ marginBottom: 8 }}>
+                        <button
+                          type="button"
+                          className={`fchip ${filters.players.length === 0 ? 'on' : ''}`}
+                          onClick={() => setFilters((f) => ({ ...f, players: [] }))}
+                        >
+                          Tout le monde
+                        </button>
+                        {regularNames.length > 1 && (
+                          <button
+                            type="button"
+                            className={`fchip ${onlyRegulars ? 'on' : ''}`}
+                            onClick={() => setFilters((f) => ({ ...f, players: onlyRegulars ? [] : [...regularNames] }))}
+                          >
+                            Joueurs réguliers
+                          </button>
+                        )}
+                      </div>
                       <div className="chips">
                         {regulars.map((r) => (
                           <button key={r.name} type="button" className={`fchip ${filters.players.includes(r.name) ? 'on' : ''}`} onClick={() => toggleIn('players', r.name)}>{r.name}</button>
@@ -412,35 +490,45 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
             </section>
           )}
 
-          {/* Stats par catégorie de score (jeux qui scorent de plusieurs façons). */}
-          {!noPoints && orderedCats.length >= 2 && (
+          {/* Comparatif : deux entités au choix (un joueur, les réguliers, tout le monde).
+              Absorbe les stats par catégorie (moyenne en gros, min–max en dessous). */}
+          {allPlayerNames.length > 0 && (
             <section className="stat-block">
-              <h3 className="stat-block-title">🧮 Par catégorie</h3>
-              <div className="table-scroll">
-                <table className="stat-table">
-                  <thead>
-                    <tr>
-                      <th className="name">Catégorie</th>
-                      <th className="num">Min</th>
-                      <th className="num">Max</th>
-                      <th className="num">Moy.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orderedCats.map((c) => (
-                      <tr key={c.category} className={c.stale ? 'stale' : ''}>
-                        <td className="name">
-                          {c.category}
-                          {c.stale && <span className="cat-stale"> · n'est plus dans la fiche</span>}
-                        </td>
-                        <td className="num">{c.min}</td>
-                        <td className="num">{c.max}</td>
-                        <td className="num best">{c.avg}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <h3 className="stat-block-title">⚖️ Comparaison</h3>
+              <div className="cmp-heads">
+                <SortMenu
+                  value={cmpLeft}
+                  options={entityOptions.filter((o) => o.value !== cmpRight)}
+                  onChange={(v) => setCmp((c) => ({ ...c, left: v }))}
+                  arrows={false}
+                />
+                <span className="cmp-vs">vs</span>
+                <SortMenu
+                  value={cmpRight}
+                  options={entityOptions.filter((o) => o.value !== cmpLeft)}
+                  onChange={(v) => setCmp((c) => ({ ...c, right: v }))}
+                  arrows={false}
+                />
               </div>
+              <table className="stat-table cmp-table">
+                <tbody>
+                  {cmpRow('Taux de victoire', cmpA.winRate, cmpB.winRate, { fmt: (v) => `${v} %` })}
+                  {cmpRow('Victoires', cmpA.wins, cmpB.wins, { colored: false })}
+                  {cmpRow('Parties', cmpA.games, cmpB.games, { colored: false })}
+                  {showCmpScores && cmpRow('Score moyen', cmpA.avg, cmpB.avg, { dir: scoreDir })}
+                  {showCmpScores && cmpRow('Meilleur score', cmpA.best, cmpB.best, { dir: scoreDir })}
+                  {showCmpScores &&
+                    cmpCats.map((cat) => {
+                      const a = cmpA.byCategory[cat]
+                      const b = cmpB.byCategory[cat]
+                      return cmpRow(cat, a?.avg ?? null, b?.avg ?? null, {
+                        dir: scoreDir,
+                        subA: a ? `${a.min}–${a.max}` : null,
+                        subB: b ? `${b.min}–${b.max}` : null,
+                      })
+                    })}
+                </tbody>
+              </table>
             </section>
           )}
 

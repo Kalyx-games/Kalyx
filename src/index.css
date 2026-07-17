@@ -2144,6 +2144,93 @@ body {
   color: var(--gold);
   font-weight: 700;
 }
+/* ---- Tableau comparatif (2 entités) ---- */
+.cmp-heads {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.cmp-heads .sortmenu {
+  flex: 1;
+  min-width: 0;
+}
+.cmp-heads .sortmenu-btn {
+  width: 100%;
+  justify-content: space-between;
+}
+.cmp-vs {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.cmp-table {
+  width: 100%;
+  table-layout: fixed;
+}
+.cmp-label {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding: 0 8px 0 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.cmp-cell {
+  width: 34%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.cmp-val {
+  display: block;
+  font-weight: 800;
+  font-size: 1rem;
+}
+.cmp-range {
+  display: block;
+  margin-top: 1px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  opacity: 0.7;
+}
+/* Vert = meilleur, rouge = moins bon, gris = égalité / non comparable. */
+.cmp-good {
+  background: var(--ok-bg);
+  color: var(--ok-ink);
+}
+.cmp-bad {
+  background: var(--danger-bg);
+  color: var(--danger-ink);
+}
+.cmp-tie {
+  background: var(--input-bg);
+  color: var(--ink);
+}
+
+/* Nom cliquable dans le classement (→ filtre sur ce joueur). */
+.player-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.15s;
+}
+.player-link:hover,
+.player-link:active {
+  text-decoration-color: var(--muted);
+}
+
 /* Ligne « Joueurs occasionnels » : pas de pilule, c'est un dépliant. */
 .podium-table td.occ-cell {
   background: none;

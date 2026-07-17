@@ -201,6 +201,51 @@ export function playWinners(play) {
   return winnersOf(play?.players)
 }
 
+// Stats d'un ENSEMBLE de joueurs vu comme UNE entité (un joueur seul, les réguliers,
+// ou tout le monde) → sert au tableau comparatif. `names` = les joueurs à agréger.
+//  • games = nb de participations (pour un joueur seul : ses parties)
+//  • wins  = nb de fois qu'un membre a gagné
+//  • byCategory = { catégorie: { avg, min, max } } sur les scores des membres
+export function computeEntityStats(plays, scoring, names) {
+  const set = new Set(names || [])
+  const ext = (arr) => (scoring === 'low' ? Math.min(...arr) : Math.max(...arr))
+  let games = 0
+  let wins = 0
+  const scores = []
+  const catVals = {}
+  ;(plays || []).forEach((p) => {
+    const winners = new Set(playWinners(p))
+    ;(p.players || []).forEach((pl) => {
+      const n = (pl?.name || '').trim()
+      if (!set.has(n)) return
+      games += 1
+      if (winners.has(n)) wins += 1
+      const t = Number(pl?.total)
+      if (Number.isFinite(t) && pl?.total !== undefined && pl?.total !== null) scores.push(t)
+      Object.entries(pl?.scores || {}).forEach(([cat, v]) => {
+        const num = Number(v)
+        if (Number.isFinite(num)) (catVals[cat] || (catVals[cat] = [])).push(num)
+      })
+    })
+  })
+  const byCategory = {}
+  Object.entries(catVals).forEach(([cat, vals]) => {
+    byCategory[cat] = {
+      avg: Math.round(vals.reduce((s, v) => s + v, 0) / vals.length),
+      min: Math.min(...vals),
+      max: Math.max(...vals),
+    }
+  })
+  return {
+    games,
+    wins,
+    winRate: games ? Math.round((wins / games) * 100) : 0,
+    avg: scores.length ? Math.round(scores.reduce((s, v) => s + v, 0) / scores.length) : null,
+    best: scores.length ? ext(scores) : null,
+    byCategory,
+  }
+}
+
 // Statistiques d'un jeu à partir de ses parties. `scoring` = 'high' | 'low' | 'none'
 // pilote le « meilleur score » (max ou min).
 // `showPlayers` (facultatif) = seuls ces joueurs apparaissent dans le podium / la
