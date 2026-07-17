@@ -137,8 +137,6 @@ export default function Stats({ games, ownerMap, hasCollection, playerOverall })
         />
       </div>
 
-      <PlayerSection playerOverall={playerOverall} />
-
       <BarBlock
         title="👥 Par nombre de joueurs"
         color={PLAYERS_COLOR}
@@ -166,6 +164,14 @@ export default function Stats({ games, ownerMap, hasCollection, playerOverall })
         empty="Aucune complexité renseignée."
         rows={s.byComplexity.map((r) => ({ key: r.label, label: r.label, sub: r.hint, count: r.count }))}
       />
+
+      {/* Séparateur : au-dessus les stats sur les JEUX, en dessous les stats sur les JOUEURS. */}
+      {(playerOverall || []).length > 0 && (
+        <div className="stats-divider">
+          <span>Joueurs</span>
+        </div>
+      )}
+      <PlayerSection playerOverall={playerOverall} />
     </div>
   )
 }
