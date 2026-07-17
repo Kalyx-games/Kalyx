@@ -515,7 +515,8 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                   {cmpRow('Taux de victoire', cmpA.winRate, cmpB.winRate, { fmt: (v) => `${v} %` })}
                   {cmpRow('Victoires', cmpA.wins, cmpB.wins, { colored: false })}
                   {cmpRow('Parties', cmpA.games, cmpB.games, { colored: false })}
-                  {showCmpScores && cmpRow('Score moyen', cmpA.avg, cmpB.avg, { dir: scoreDir })}
+                  {/* Une seule catégorie → sa moyenne EST le score moyen : ligne redondante, masquée. */}
+                  {showCmpScores && cmpCats.length !== 1 && cmpRow('Score moyen', cmpA.avg, cmpB.avg, { dir: scoreDir })}
                   {showCmpScores && cmpRow('Meilleur score', cmpA.best, cmpB.best, { dir: scoreDir })}
                   {showCmpScores &&
                     cmpCats.map((cat) => {
