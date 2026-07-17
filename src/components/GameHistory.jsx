@@ -21,12 +21,37 @@ function playDate(iso) {
   }
 }
 
-function Tile({ value, label }) {
+// Tuile de stat. Si `holder` est fourni (qui détient ce score), la tuile se retourne
+// au clic pour l'afficher — sinon c'est une simple boîte.
+function Tile({ value, label, holder }) {
+  const [flipped, setFlipped] = useState(false)
+  if (!holder) {
+    return (
+      <div className="stat-tile">
+        <div className="stat-tile-value">{value}</div>
+        <div className="stat-tile-label">{label}</div>
+      </div>
+    )
+  }
   return (
-    <div className="stat-tile">
-      <div className="stat-tile-value">{value}</div>
-      <div className="stat-tile-label">{label}</div>
-    </div>
+    <button
+      type="button"
+      className={`stat-tile-flip ${flipped ? 'flipped' : ''}`}
+      onClick={() => setFlipped((f) => !f)}
+      aria-label={flipped ? `${label} : ${holder}` : `Voir qui détient ce ${label}`}
+      title={flipped ? 'Revenir au score' : 'Voir qui détient ce score'}
+    >
+      <span className="tile-inner">
+        <span className="tile-face stat-tile">
+          <span className="stat-tile-value">{value}</span>
+          <span className="stat-tile-label">{label}</span>
+        </span>
+        <span className="tile-face tile-back stat-tile">
+          <span className="tile-holder-icon">🏆</span>
+          <span className="tile-holder-name">{holder}</span>
+        </span>
+      </span>
+    </button>
   )
 }
 
@@ -294,7 +319,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
             )}
             {!noPoints && stats.scores.length > 0 && (
               <>
-                <Tile value={stats.maxScore} label="meilleur score" />
+                <Tile value={stats.maxScore} label="meilleur score" holder={stats.bestScoreBy.join(' · ') || null} />
                 {!isCoop && <Tile value={stats.avgScore ?? '—'} label="score moyen" />}
               </>
             )}

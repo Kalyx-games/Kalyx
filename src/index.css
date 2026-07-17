@@ -1998,6 +1998,67 @@ body {
   color: var(--muted);
   opacity: 0.85;
 }
+/* Tuile qui se RETOURNE au clic pour révéler qui détient le score. */
+.stat-tile-flip {
+  position: relative;
+  min-height: 82px; /* les faces sont en absolu → il faut une hauteur au bouton */
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  perspective: 800px;
+  -webkit-tap-highlight-color: transparent;
+}
+.stat-tile-flip .tile-inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.stat-tile-flip.flipped .tile-inner {
+  transform: rotateY(180deg);
+}
+.stat-tile-flip .tile-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.stat-tile-flip .tile-back {
+  transform: rotateY(180deg);
+  align-items: center;
+  text-align: center;
+  border-color: var(--gold);
+}
+.tile-holder-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.tile-holder-name {
+  margin-top: 4px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--gold);
+  line-height: 1.2;
+  overflow-wrap: anywhere; /* un nom long (ou plusieurs ex æquo) passe à la ligne */
+}
+.stat-tile-flip:active .tile-inner {
+  transform: scale(0.97);
+}
+.stat-tile-flip.flipped:active .tile-inner {
+  transform: rotateY(180deg) scale(0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  .stat-tile-flip .tile-inner {
+    transition: none;
+  }
+}
 .stat-block {
   background: var(--card);
   border: 1px solid var(--line);

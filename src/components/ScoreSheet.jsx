@@ -17,10 +17,16 @@ const makePlayer = (name = '') => ({ id: ++pid, name, scores: {} })
 // marche pas partout sur mobile). Partagé par tous les modes.
 function NameField({ id, value, onChange, onPick, placeholder, playerNames, focused, setFocused, className, style }) {
   const v = (value || '').trim().toLowerCase()
-  const suggestions =
-    focused === id
-      ? playerNames.filter((n) => n.toLowerCase() !== v && (v === '' || n.toLowerCase().includes(v))).slice(0, 6)
-      : []
+  // Propositions : celles qui COMMENCENT par ce qui est tapé d'abord, puis celles qui le
+  // contiennent ailleurs. Chaque groupe garde l'ordre reçu (les plus assidus en tête).
+  const suggestions = useMemo(() => {
+    if (focused !== id) return []
+    const hits = playerNames.filter((n) => n.toLowerCase() !== v && (v === '' || n.toLowerCase().includes(v)))
+    if (v === '') return hits.slice(0, 6)
+    const starts = hits.filter((n) => n.toLowerCase().startsWith(v))
+    const rest = hits.filter((n) => !n.toLowerCase().startsWith(v))
+    return [...starts, ...rest].slice(0, 6)
+  }, [focused, id, playerNames, v])
   return (
     <div className="sheet-name-wrap">
       <input

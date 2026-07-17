@@ -212,6 +212,7 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
   const wins = {} // nom → nb de victoires
   const playerScores = {} // nom → [scores perso] (individuel OU score de son équipe)
   const scores = [] // valeurs de score agrégées (par joueur en compétitif, du groupe en coop)
+  const scoreRows = [] // { name, value } — qui a fait quel score (name null = le groupe, en coop)
   let coopWins = 0
   let coopTotal = 0
   list.forEach((p) => {
@@ -221,7 +222,10 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
       coopTotal += 1
       if (p.outcome === 'win') coopWins += 1
       const s = Number(p.score)
-      if (Number.isFinite(s)) scores.push(s)
+      if (Number.isFinite(s)) {
+        scores.push(s)
+        scoreRows.push({ name: null, value: s }) // coop : c'est le groupe, pas quelqu'un
+      }
     } else if (isTeam) {
       // En équipes : le score est celui de l'équipe (dupliqué sur chaque membre) →
       // on ne le compte qu'une fois par équipe pour l'agrégat.
@@ -231,7 +235,10 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
         if (t && !seen.has(t)) {
           seen.add(t)
           const s = Number(pl?.total)
-          if (Number.isFinite(s) && pl?.total !== undefined && pl?.total !== null) scores.push(s)
+          if (Number.isFinite(s) && pl?.total !== undefined && pl?.total !== null) {
+            scores.push(s)
+            scoreRows.push({ name: t, value: s }) // en équipes, le score est celui de l'équipe
+          }
         }
       })
     }
@@ -240,7 +247,10 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
       games[n] = (games[n] || 0) + 1
       const t = Number(pl?.total)
       if (Number.isFinite(t) && pl?.total !== undefined && pl?.total !== null) {
-        if (!coop && !isTeam && inShow(n)) scores.push(t) // tuiles meilleur/moyen : joueurs affichés
+        if (!coop && !isTeam && inShow(n)) {
+          scores.push(t) // tuiles meilleur/moyen : joueurs affichés
+          scoreRows.push({ name: n, value: t })
+        }
         ;(playerScores[n] || (playerScores[n] = [])).push(t) // score perso (inclut les membres d'équipe)
       }
     })
@@ -340,6 +350,8 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
         : i + 1
   })
   const bestScore = scores.length ? ext(scores) : 0
+  // Qui détient le meilleur score (plusieurs si ex æquo). Vide en coop : c'est le groupe.
+  const bestScoreBy = [...new Set(scoreRows.filter((r) => r.name && r.value === bestScore).map((r) => r.name))]
   return {
     total: list.length,
     byPlayer,
@@ -347,6 +359,7 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
     byTrigger,
     byCategory,
     scores,
+    bestScoreBy,
     hasScores: Object.keys(playerScores).length > 0, // au moins un score perso enregistré
     coopWins,
     coopTotal,
