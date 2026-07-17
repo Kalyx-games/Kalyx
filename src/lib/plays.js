@@ -117,10 +117,9 @@ export async function fetchPlayCounts() {
   return counts
 }
 
-// Tous les noms de joueurs déjà utilisés (TOUS jeux confondus), pour l'auto-complétion.
-// Triés du plus assidu au moins assidu → les joueurs habituels sont proposés en premier.
-// [] si table absente.
-export async function fetchPlayerNames() {
+// Tous les joueurs enregistrés (TOUS jeux confondus) → [{ name, games }], du plus
+// assidu au moins assidu. [] si table absente.
+export async function fetchPlayerRoster() {
   const { data, error } = await supabase.from('plays').select('players')
   if (error) {
     if (tableMissing(error)) return []
@@ -133,7 +132,48 @@ export async function fetchPlayerNames() {
       if (n) counts[n] = (counts[n] || 0) + 1
     })
   })
-  return Object.keys(counts).sort((a, b) => counts[b] - counts[a] || a.localeCompare(b, 'fr'))
+  return Object.keys(counts)
+    .sort((a, b) => counts[b] - counts[a] || a.localeCompare(b, 'fr'))
+    .map((name) => ({ name, games: counts[name] }))
+}
+
+// Noms seuls, dans le même ordre (les joueurs habituels d'abord) → auto-complétion.
+export async function fetchPlayerNames() {
+  return (await fetchPlayerRoster()).map((p) => p.name)
+}
+
+// Renomme un joueur PARTOUT : dans toutes les parties de tous les jeux, à la fois dans
+// la liste des joueurs et dans le champ `winner` (noms séparés par des virgules).
+// Renommer vers un nom existant FUSIONNE les deux joueurs (sert à corriger les doublons).
+// Renvoie le nombre de parties modifiées.
+export async function renamePlayer(from, to) {
+  const oldName = (from || '').trim()
+  const newName = (to || '').trim()
+  if (!oldName || !newName || oldName === newName) return 0
+  const { data, error } = await supabase.from('plays').select('id, players, winner')
+  if (error) {
+    if (tableMissing(error)) return 0
+    throw error
+  }
+  let changed = 0
+  for (const play of data ?? []) {
+    const hasPlayer = (play.players || []).some((p) => (p?.name || '').trim() === oldName)
+    const winners =
+      typeof play.winner === 'string' ? play.winner.split(',').map((s) => s.trim()).filter(Boolean) : []
+    const hasWinner = winners.includes(oldName)
+    if (!hasPlayer && !hasWinner) continue
+    const patch = {
+      players: (play.players || []).map((p) => ((p?.name || '').trim() === oldName ? { ...p, name: newName } : p)),
+    }
+    if (hasWinner) {
+      // Dédoublonne : si le nouveau nom gagnait déjà cette partie, on ne le liste pas 2×.
+      patch.winner = [...new Set(winners.map((w) => (w === oldName ? newName : w)))].join(', ')
+    }
+    const { error: upErr } = await supabase.from('plays').update(patch).eq('id', play.id)
+    if (upErr) throw upErr
+    changed += 1
+  }
+  return changed
 }
 
 // Vainqueur(s) d'une partie au score le plus élevé (gère les égalités).

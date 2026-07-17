@@ -404,9 +404,9 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                   <thead>
                     <tr>
                       <th className="name">Catégorie</th>
-                      <th className="num">Moy.</th>
                       <th className="num">Min</th>
                       <th className="num">Max</th>
+                      <th className="num">Moy.</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -416,9 +416,9 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                           {c.category}
                           {c.stale && <span className="cat-stale"> · n'est plus dans la fiche</span>}
                         </td>
-                        <td className="num">{c.avg}</td>
                         <td className="num">{c.min}</td>
-                        <td className="num best">{c.max}</td>
+                        <td className="num">{c.max}</td>
+                        <td className="num best">{c.avg}</td>
                       </tr>
                     ))}
                   </tbody>

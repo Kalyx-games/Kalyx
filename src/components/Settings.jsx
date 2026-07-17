@@ -40,6 +40,7 @@ export default function Settings({
   tags, onAddTag, onUpdateTag, onDeleteTag,
   onExport, onImportFile,
   backupFreq, onSetBackupFreq, backups, backupBusy, onBackupNow, onRestore,
+  onOpenPlayers,
   online, onClose,
 }) {
   const fileRef = useRef(null)
@@ -118,6 +119,14 @@ export default function Settings({
         onUpdate={onUpdateTag}
         onDelete={onDeleteTag}
       />
+
+      <section className="settings-card">
+        <h3>Joueurs</h3>
+        <button type="button" className="btn-ghost settings-open" onClick={onOpenPlayers} disabled={!online}>
+          👥 Renommer les joueurs
+        </button>
+        {!online && <p className="field-hint" style={{ marginTop: 8 }}>Hors ligne : lecture seule.</p>}
+      </section>
 
       <section className="settings-card">
         <h3>Sauvegarde</h3>

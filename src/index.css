@@ -2748,6 +2748,40 @@ body {
   gap: 8px;
   align-items: center;
 }
+/* ---- Écran Joueurs (renommage global) ---- */
+.settings-open {
+  width: 100%;
+}
+.player-row {
+  margin-bottom: 10px;
+}
+.player-main {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.player-main .input {
+  flex: 1;
+  min-width: 0;
+}
+.player-count {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.player-save {
+  flex-shrink: 0;
+  padding: 10px 14px;
+}
+.player-merge {
+  margin: 6px 0 0;
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
 /* Poignée de glissé (⠿) : on saisit ici pour réordonner les catégories. */
 .cat-grip {
   display: inline-flex;

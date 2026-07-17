@@ -7,7 +7,7 @@ import { fetchTags, addTag, updateTag, deleteTag } from './lib/tags'
 import { downloadBackup, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
-import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayCounts, renameCategories } from './lib/plays'
+import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayCounts, renameCategories, fetchPlayerRoster, renamePlayer } from './lib/plays'
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
 import ConfirmDialog from './components/ConfirmDialog'
@@ -17,6 +17,7 @@ import ImageZoom from './components/ImageZoom'
 // Écrans lourds ou rarement ouverts : chargés à la demande (allège le bundle de départ ;
 // le scanner embarque ZXing, ~470 Ko, inutile tant qu'on ne scanne pas).
 const Settings = lazy(() => import('./components/Settings'))
+const PlayersManager = lazy(() => import('./components/PlayersManager'))
 const Stats = lazy(() => import('./components/Stats'))
 const Chwazi = lazy(() => import('./components/Chwazi'))
 const BarcodeScanner = lazy(() => import('./components/BarcodeScanner'))
@@ -199,6 +200,9 @@ export default function App() {
   const [movingBusy, setMovingBusy] = useState(false)
   const [view, setView] = useState(() => (loadView() === 'wishlist' ? 'wishlist' : 'collection')) // 'collection' | 'wishlist'
   const [settingsOpen, setSettingsOpen] = useState(false) // écran Réglages (engrenage en haut à droite)
+  const [playersOpen, setPlayersOpen] = useState(false) // écran Joueurs (renommage global)
+  const [playerRoster, setPlayerRoster] = useState(null) // [{name, games}] | null = en cours
+  const [renamingPlayer, setRenamingPlayer] = useState(false)
   const [statsOpen, setStatsOpen] = useState(() => loadView() === 'stats') // écran Stats
   // On mémorise l'onglet (stats/collection/wishlist) pour y revenir après une actualisation.
   useEffect(() => {
@@ -301,7 +305,7 @@ export default function App() {
   // se ferme jamais : on remet toujours une entrée d'historique "piège".
   const viewHistoryRef = useRef([]) // vues précédentes (pour revenir en arrière)
   const uiRef = useRef({})
-  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, scanOpen, chwaziOpen, editingSheet, scoringGame, historyGame, statsOpen, settingsOpen, zoomImage }
+  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, scanOpen, chwaziOpen, editingSheet, scoringGame, historyGame, statsOpen, playersOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
   viewRef.current = view
 
@@ -309,7 +313,8 @@ export default function App() {
   const layerCount =
     (editing ? 1 : 0) + (confirming ? 1 : 0) + (moving ? 1 : 0) + (confirmingOwner ? 1 : 0) + (confirmingTag ? 1 : 0) +
     (importing ? 1 : 0) + (restoring ? 1 : 0) + (confirmingPlay ? 1 : 0) + (scanOpen ? 1 : 0) + (chwaziOpen ? 1 : 0) +
-    (editingSheet ? 1 : 0) + (scoringGame ? 1 : 0) + (historyGame ? 1 : 0) + (statsOpen ? 1 : 0) + (settingsOpen ? 1 : 0) + (zoomImage ? 1 : 0)
+    (editingSheet ? 1 : 0) + (scoringGame ? 1 : 0) + (historyGame ? 1 : 0) + (statsOpen ? 1 : 0) +
+    (playersOpen ? 1 : 0) + (settingsOpen ? 1 : 0) + (zoomImage ? 1 : 0)
   const layerRef = useRef(0)
 
   // Change de vue en mémorisant la vue actuelle + une entrée d'historique (pour le retour).
@@ -340,6 +345,7 @@ export default function App() {
     else if (s.scoringGame) { setScoringGame(null); setEditingPlay(null) }
     else if (s.historyGame) { setHistoryGame(null); setGamePlays(null) }
     else if (s.statsOpen) setStatsOpen(false)
+    else if (s.playersOpen) setPlayersOpen(false) // s'ouvre PAR-DESSUS les Réglages
     else if (s.settingsOpen) setSettingsOpen(false)
     else return false
     return true
@@ -724,6 +730,29 @@ export default function App() {
     fetchPlayCounts().then(setPlayCounts).catch(() => {})
   }
 
+  // Écran Joueurs : liste de tous les joueurs enregistrés (chargée à l'ouverture).
+  function handleOpenPlayers() {
+    setPlayersOpen(true)
+    setPlayerRoster(null)
+    fetchPlayerRoster().then(setPlayerRoster).catch(() => setPlayerRoster([]))
+  }
+
+  // Renomme un joueur dans TOUTES les parties, puis rafraîchit ce qui l'affiche.
+  async function handleRenamePlayer(from, to) {
+    setRenamingPlayer(true)
+    try {
+      const n = await renamePlayer(from, to)
+      setPlayerRoster(await fetchPlayerRoster())
+      fetchPlayerNames().then(setPlayerNames).catch(() => {})
+      if (historyGame) refreshHistory(historyGame)
+      setNotice(n ? `« ${to} » : ${n} partie${n > 1 ? 's' : ''} mise${n > 1 ? 's' : ''} à jour.` : 'Aucune partie à mettre à jour.')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setRenamingPlayer(false)
+    }
+  }
+
   // Enregistre une fiche (création ou modification) et met à jour l'état local.
   async function handleSaveSheet(gameId, template, renames) {
     await saveScoresheet(gameId, template)
@@ -733,7 +762,7 @@ export default function App() {
     if (renames && renames.length) {
       const n = await renameCategories(gameId, renames)
       if (n) {
-        setNotice(`✅ Fiche enregistrée · ${n} partie${n > 1 ? 's' : ''} mise${n > 1 ? 's' : ''} à jour.`)
+        setNotice(`Fiche enregistrée · ${n} partie${n > 1 ? 's' : ''} mise${n > 1 ? 's' : ''} à jour.`)
         if (historyGame && historyGame.id === gameId) refreshHistory(historyGame)
       }
     }
@@ -872,7 +901,17 @@ export default function App() {
       {error && <p className="banner banner-err">⚠️ {error}</p>}
       {notice && <p className="banner banner-ok" onClick={() => setNotice('')}>✅ {notice}</p>}
 
-      {settingsOpen ? (
+      {settingsOpen && playersOpen ? (
+        <Suspense fallback={null}>
+          <PlayersManager
+            roster={playerRoster}
+            busy={renamingPlayer}
+            online={online}
+            onRename={handleRenamePlayer}
+            onClose={() => setPlayersOpen(false)}
+          />
+        </Suspense>
+      ) : settingsOpen ? (
         <Suspense fallback={null}>
           <Settings
             owners={ownersList}
@@ -891,6 +930,7 @@ export default function App() {
             backupBusy={backupBusy}
             onBackupNow={handleBackupNow}
             onRestore={(b) => setRestoring(b)}
+            onOpenPlayers={handleOpenPlayers}
             online={online}
             onClose={() => setSettingsOpen(false)}
           />
