@@ -2557,6 +2557,27 @@ body {
   line-height: 1.25;
   margin-top: 2px;
 }
+/* Catégorie à valeur fixe : les points sont rappelés à côté du nom (la case cochée les vaut). */
+.sheet-cat-val {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* Case à cocher d'une catégorie à valeur fixe (remplace le champ de score). */
+.sheet-check {
+  display: block;
+  margin: 0 auto;
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
 .sheet-cat-ext {
   display: inline-block;
   font-size: 0.7rem;
@@ -2751,6 +2772,7 @@ body {
 }
 .cat-edit-label,
 .cat-edit-hint,
+.cat-edit-value,
 .cat-edit-ext {
   width: 100%;
   padding: 9px 10px;
@@ -2766,6 +2788,17 @@ body {
   font-weight: 600;
 }
 .cat-edit-hint {
+  font-size: 0.85rem;
+}
+/* Explication + valeur fixe côte à côte (la valeur reste un petit champ discret). */
+.cat-edit-row2 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.cat-edit-value {
+  width: 104px;
+  flex-shrink: 0;
   font-size: 0.85rem;
 }
 /* Barre d'actions TOUJOURS visible en bas (collée pendant le défilement). */

@@ -289,9 +289,11 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const saveScored = () => {
     const built = players.map((p, i) => {
       const scores = {}
+      // Case laissée vide = 0 (c'est ce que suggère le « 0 » grisé) → la catégorie compte
+      // quand même dans les stats, au lieu d'être absente de la partie.
       visibleCats.forEach((c) => {
-        const v = p.scores[c.label]
-        if (v !== '' && v != null && Number.isFinite(Number(v))) scores[c.label] = Number(v)
+        const n = Number(p.scores[c.label])
+        scores[c.label] = Number.isFinite(n) ? n : 0
       })
       return { name: nameOf(p, i), total: totalOf(p), scores }
     })
@@ -533,18 +535,32 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                   {visibleCats.map((c) => (
                     <tr key={c.label}>
                       <th className="sheet-cat" scope="row">
-                        <span className="sheet-cat-label">{c.label}</span>
+                        <span className="sheet-cat-label">
+                          {c.label}
+                          {c.value != null ? <span className="sheet-cat-val">{c.value > 0 ? `+${c.value}` : c.value}</span> : null}
+                        </span>
                         {c.hint ? <span className="sheet-cat-hint">{c.hint}</span> : null}
                         {c.ext ? <span className="sheet-cat-ext">🧩 {c.ext}</span> : null}
                       </th>
                       <td>
-                        <input
-                          className="sheet-cell"
-                          type="number"
-                          inputMode="numeric"
-                          value={groupScores[c.label] ?? ''}
-                          onChange={(e) => setGroupScoreCat(c.label, e.target.value)}
-                        />
+                        {c.value != null ? (
+                          <input
+                            className="sheet-check"
+                            type="checkbox"
+                            checked={Number(groupScores[c.label]) === c.value}
+                            onChange={(e) => setGroupScoreCat(c.label, e.target.checked ? String(c.value) : '')}
+                            aria-label={`${c.label} — ${c.value} points`}
+                          />
+                        ) : (
+                          <input
+                            className="sheet-cell"
+                            type="number"
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={groupScores[c.label] ?? ''}
+                            onChange={(e) => setGroupScoreCat(c.label, e.target.value)}
+                          />
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -733,19 +749,34 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
             {visibleCats.map((c) => (
               <tr key={c.label}>
                 <th className="sheet-cat" scope="row">
-                  <span className="sheet-cat-label">{c.label}</span>
+                  <span className="sheet-cat-label">
+                    {c.label}
+                    {c.value != null ? <span className="sheet-cat-val">{c.value > 0 ? `+${c.value}` : c.value}</span> : null}
+                  </span>
                   {c.hint ? <span className="sheet-cat-hint">{c.hint}</span> : null}
                   {c.ext ? <span className="sheet-cat-ext">🧩 {c.ext}</span> : null}
                 </th>
                 {players.map((p) => (
                   <td key={p.id}>
-                    <input
-                      className="sheet-cell"
-                      type="number"
-                      inputMode="numeric"
-                      value={p.scores[c.label] ?? ''}
-                      onChange={(e) => setScore(p.id, c.label, e.target.value)}
-                    />
+                    {c.value != null ? (
+                      // Catégorie à valeur fixe → simple case à cocher.
+                      <input
+                        className="sheet-check"
+                        type="checkbox"
+                        checked={Number(p.scores[c.label]) === c.value}
+                        onChange={(e) => setScore(p.id, c.label, e.target.checked ? String(c.value) : '')}
+                        aria-label={`${c.label} — ${c.value} points`}
+                      />
+                    ) : (
+                      <input
+                        className="sheet-cell"
+                        type="number"
+                        inputMode="numeric"
+                        placeholder="0"
+                        value={p.scores[c.label] ?? ''}
+                        onChange={(e) => setScore(p.id, c.label, e.target.value)}
+                      />
+                    )}
                   </td>
                 ))}
                 <td className="sheet-add-col" />

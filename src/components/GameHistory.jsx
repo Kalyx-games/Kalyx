@@ -150,12 +150,17 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   // (renommées/supprimées après coup, mais présentes dans d'anciennes parties) passent
   // à la fin, marquées « obsolète » → aucune donnée perdue.
   const orderedCats = useMemo(() => {
-    const order = (template?.categories || []).map((c) => c.label)
+    const tcats = template?.categories || []
+    const order = tcats.map((c) => c.label)
     const rank = (name) => {
       const i = order.indexOf(name)
       return i === -1 ? Infinity : i
     }
+    // Une catégorie à valeur fixe vaut toujours la même chose → moyenne/min/max n'ont
+    // aucun sens : on ne l'affiche pas ici (elle compte bien dans les totaux).
+    const fixed = new Set(tcats.filter((c) => c.value != null).map((c) => c.label))
     return stats.byCategory
+      .filter((c) => !fixed.has(c.category))
       .map((c) => ({ ...c, stale: rank(c.category) === Infinity }))
       .sort((a, b) => rank(a.category) - rank(b.category) || a.category.localeCompare(b.category, 'fr'))
   }, [stats.byCategory, template])

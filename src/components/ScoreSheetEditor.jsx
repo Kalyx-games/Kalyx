@@ -9,7 +9,16 @@ let cid = 0
 // `orig` = nom de la catégorie tel qu'il était en base à l'ouverture. Sert à détecter
 // un RENOMMAGE au moment d'enregistrer (les scores des parties sont rangés par nom de
 // catégorie → il faut les renommer aussi, sinon les stats gardent l'ancien nom).
-const mkCat = (c = {}) => ({ id: ++cid, label: c.label || '', hint: c.hint || '', ext: c.ext || '', orig: c.label || '' })
+// `value` (facultatif) = la catégorie vaut TOUJOURS ce nombre de points → à la saisie
+// d'une partie, il n'y a qu'une case à cocher au lieu d'un score à taper.
+const mkCat = (c = {}) => ({
+  id: ++cid,
+  label: c.label || '',
+  hint: c.hint || '',
+  ext: c.ext || '',
+  value: c.value != null ? String(c.value) : '',
+  orig: c.label || '',
+})
 let teid = 0
 const mkTeam = (t = {}) => ({ id: ++teid, name: t.name || '', size: t.size != null ? String(t.size) : '' })
 let trid = 0
@@ -178,11 +187,16 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
     // On garde les catégories même en coopératif (elles ne servent pas mais on ne
     // les perd pas si on rebascule en compétitif).
     const categories = cats
-      .map((c) => ({
-        label: c.label.trim(),
-        hint: c.hint.trim() || null,
-        ext: c.ext && extList.includes(c.ext) ? c.ext : null,
-      }))
+      .map((c) => {
+        const v = Number(c.value)
+        return {
+          label: c.label.trim(),
+          hint: c.hint.trim() || null,
+          ext: c.ext && extList.includes(c.ext) ? c.ext : null,
+          // Valeur fixe → case à cocher à la saisie. Vide / illisible = score libre.
+          value: c.value.trim() !== '' && Number.isFinite(v) ? v : null,
+        }
+      })
       .filter((c) => c.label)
     // Catégories renommées → les parties déjà enregistrées doivent suivre (leurs scores
     // sont rangés par nom de catégorie). On ignore un renommage vers un nom déjà pris.
@@ -403,12 +417,23 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
               />
               <button type="button" className="ext-row-x" onClick={() => delCat(c.id)} aria-label="Retirer la catégorie">×</button>
             </div>
-            <input
-              className="cat-edit-hint"
-              value={c.hint}
-              onChange={(e) => updCat(c.id, 'hint', e.target.value)}
-              placeholder="Explication (facultatif)"
-            />
+            <div className="cat-edit-row2">
+              <input
+                className="cat-edit-hint"
+                value={c.hint}
+                onChange={(e) => updCat(c.id, 'hint', e.target.value)}
+                placeholder="Explication (facultatif)"
+              />
+              <input
+                className="cat-edit-value"
+                type="number"
+                inputMode="numeric"
+                value={c.value}
+                onChange={(e) => updCat(c.id, 'value', e.target.value)}
+                placeholder="Valeur fixe"
+                title="Si cette façon de scorer vaut toujours le même nombre de points, indique-le : à la partie, il n'y aura qu'une case à cocher."
+              />
+            </div>
             {extNames.length > 0 && (
               <select className="cat-edit-ext" value={c.ext} onChange={(e) => updCat(c.id, 'ext', e.target.value)}>
                 <option value="">Jeu de base (toujours visible)</option>
