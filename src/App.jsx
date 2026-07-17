@@ -7,7 +7,7 @@ import { fetchTags, addTag, updateTag, deleteTag } from './lib/tags'
 import { downloadBackup, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
-import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayCounts, renameCategories, fetchPlayerRoster, renamePlayer } from './lib/plays'
+import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayCounts, renameCategories, fetchPlayerRoster, fetchPlayerOverall, renamePlayer } from './lib/plays'
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
 import ConfirmDialog from './components/ConfirmDialog'
@@ -204,10 +204,16 @@ export default function App() {
   const [playerRoster, setPlayerRoster] = useState(null) // [{name, games}] | null = en cours
   const [renamingPlayer, setRenamingPlayer] = useState(false)
   const [statsOpen, setStatsOpen] = useState(() => loadView() === 'stats') // écran Stats
+  const [playerOverall, setPlayerOverall] = useState(null) // [{name, games, wins, winRate}] tous jeux | null
   // On mémorise l'onglet (stats/collection/wishlist) pour y revenir après une actualisation.
   useEffect(() => {
     saveView(statsOpen ? 'stats' : view)
   }, [view, statsOpen])
+  // Stats générales par joueur (toutes parties) : (re)chargées quand on ouvre l'onglet Stats.
+  useEffect(() => {
+    if (!statsOpen) return
+    fetchPlayerOverall().then(setPlayerOverall).catch(() => setPlayerOverall([]))
+  }, [statsOpen])
   const [chwaziOpen, setChwaziOpen] = useState(false) // écran Chwazi plein écran (onglet à droite)
   const [confirmingOwner, setConfirmingOwner] = useState(null) // propriétaire à supprimer | null
   const [deletingOwnerBusy, setDeletingOwnerBusy] = useState(false)
@@ -1010,7 +1016,7 @@ export default function App() {
 
       {statsOpen ? (
         <Suspense fallback={null}>
-          <Stats games={statsGames} ownerMap={ownerMap} hasCollection={hasCollection} />
+          <Stats games={statsGames} ownerMap={ownerMap} hasCollection={hasCollection} playerOverall={playerOverall} />
         </Suspense>
       ) : (
       <main className="list" ref={listRef}>

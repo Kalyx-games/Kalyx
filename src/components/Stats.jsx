@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { computeStats } from '../lib/stats'
+import SortMenu from './SortMenu'
 
 // Écran Statistiques : chiffres clés + répartitions en barres horizontales.
 // Tout est calculé sur la COLLECTION (jeux possédés) déjà filtrée par les filtres
@@ -57,7 +58,41 @@ function Tile({ value, label, sub }) {
   )
 }
 
-export default function Stats({ games, ownerMap, hasCollection }) {
+// Section « Joueur » : choisir un joueur → son bilan global (toutes parties, tous jeux).
+// `playerOverall` = [{name, games, wins, winRate}] trié par nb de parties (le + assidu 1er).
+function PlayerSection({ playerOverall }) {
+  const list = playerOverall || []
+  const [selected, setSelected] = useState(null)
+  if (list.length === 0) return null // pas encore de partie enregistrée → section masquée
+  const current = list.find((p) => p.name === selected) || list[0] // défaut : le + de parties
+  return (
+    <section className="stat-block">
+      <h3 className="stat-block-title">🏆 Bilan d'un joueur</h3>
+      <SortMenu
+        value={current.name}
+        options={list.map((p) => ({ value: p.name, label: p.name }))}
+        onChange={setSelected}
+        arrows={false}
+      />
+      <div className="stat-tiles" style={{ marginTop: 12, marginBottom: 0 }}>
+        <div className="stat-tile">
+          <div className="stat-tile-value">{current.winRate} %</div>
+          <div className="stat-tile-label">taux de victoire</div>
+        </div>
+        <div className="stat-tile">
+          <div className="stat-tile-value">{current.games}</div>
+          <div className="stat-tile-label">{current.games > 1 ? 'parties jouées' : 'partie jouée'}</div>
+        </div>
+        <div className="stat-tile">
+          <div className="stat-tile-value">{current.wins}</div>
+          <div className="stat-tile-label">{current.wins > 1 ? 'parties gagnées' : 'partie gagnée'}</div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+export default function Stats({ games, ownerMap, hasCollection, playerOverall }) {
   const s = useMemo(() => computeStats(games, ownerMap), [games, ownerMap])
 
   // Aucun jeu de collection à afficher : soit la collection est vraiment vide,
@@ -101,6 +136,8 @@ export default function Stats({ games, ownerMap, hasCollection }) {
           sub={s.medComplexity != null ? `médiane ${fmt1(s.medComplexity)}` : null}
         />
       </div>
+
+      <PlayerSection playerOverall={playerOverall} />
 
       <BarBlock
         title="👥 Par nombre de joueurs"

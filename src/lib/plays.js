@@ -142,6 +142,35 @@ export async function fetchPlayerNames() {
   return (await fetchPlayerRoster()).map((p) => p.name)
 }
 
+// Stats GÉNÉRALES par joueur, TOUS jeux confondus → [{ name, games, wins, winRate }],
+// du plus assidu au moins assidu. [] si table absente. (Pour l'onglet Stats.)
+export async function fetchPlayerOverall() {
+  const { data, error } = await supabase.from('plays').select('players, winner, outcome')
+  if (error) {
+    if (tableMissing(error)) return []
+    throw error
+  }
+  const games = {}
+  const wins = {}
+  ;(data ?? []).forEach((play) => {
+    ;(play.players || []).forEach((p) => {
+      const n = (p?.name || '').trim()
+      if (n) games[n] = (games[n] || 0) + 1
+    })
+    new Set(playWinners(play)).forEach((n) => {
+      if (n) wins[n] = (wins[n] || 0) + 1
+    })
+  })
+  return Object.keys(games)
+    .map((name) => ({
+      name,
+      games: games[name],
+      wins: wins[name] || 0,
+      winRate: Math.round(((wins[name] || 0) / games[name]) * 100),
+    }))
+    .sort((a, b) => b.games - a.games || a.name.localeCompare(b.name, 'fr'))
+}
+
 // Renomme un joueur PARTOUT : dans toutes les parties de tous les jeux, à la fois dans
 // la liste des joueurs et dans le champ `winner` (noms séparés par des virgules).
 // Renommer vers un nom existant FUSIONNE les deux joueurs (sert à corriger les doublons).
