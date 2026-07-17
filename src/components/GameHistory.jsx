@@ -1,9 +1,6 @@
 import { useMemo, useState } from 'react'
 import { computePlayStats, playWinners } from '../lib/plays'
-import { effectivePlayersSet, parseExtensions } from '../lib/games'
-import { resolveDefaultExts } from '../lib/scoresheets'
-
-const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x))
+import { effectivePlayersSet } from '../lib/games'
 
 // Filtres des stats des parties (vide = tout).
 const EMPTY_HFILTERS = { players: [], period: 'all', extensions: [], scenarios: [], counts: [] }
@@ -42,12 +39,10 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   const [showPlays, setShowPlays] = useState(false) // liste des parties repliée par défaut
 
   // --- Filtres des stats (joueur / période / extension / scénario) ---
-  // Extensions cochées par défaut selon la fiche : « toutes » → toutes ; sinon aucune.
-  const defaultExtensions = useMemo(
-    () => resolveDefaultExts(template, parseExtensions(game?.extensions).map((e) => e.name).filter(Boolean)),
-    [template, game]
-  )
-  const [filters, setFilters] = useState(() => ({ ...EMPTY_HFILTERS, extensions: defaultExtensions }))
+  // RIEN n'est coché par défaut → toutes les parties comptent (une sélection vide = pas
+  // de filtre). Le réglage « extensions cochées par défaut » de la fiche ne sert QU'À la
+  // saisie d'une partie : ici, il cachait silencieusement les parties en jeu de base.
+  const [filters, setFilters] = useState(() => ({ ...EMPTY_HFILTERS }))
   const [showFilters, setShowFilters] = useState(false)
   const [showOccasional, setShowOccasional] = useState(false)
   const allList = plays || []
@@ -164,20 +159,17 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
       .map((c) => ({ ...c, stale: rank(c.category) === Infinity }))
       .sort((a, b) => rank(a.category) - rank(b.category) || a.category.localeCompare(b.category, 'fr'))
   }, [stats.byCategory, template])
-  // Nb de filtres « actifs » = ce qui diffère de l'état par défaut (badge propre).
+  // Nb de filtres « actifs » = tout ce qui est coché (le défaut est vide partout).
   const activeFilters =
     (filters.period !== 'all' ? 1 : 0) +
     (filters.scenarios.length ? 1 : 0) +
     (filters.counts.length ? 1 : 0) +
-    (sameSet(filters.extensions, defaultExtensions) ? 0 : 1) +
+    (filters.extensions.length ? 1 : 0) +
     (filters.players.length ? 1 : 0)
-  const resetFilters = () => setFilters({ ...EMPTY_HFILTERS, extensions: defaultExtensions })
-  // Chips extension = extensions jouées + celles cochées par défaut (pour toujours
-  // pouvoir décocher un défaut, même si aucune partie ne l'utilise encore).
-  const extChips = useMemo(
-    () => [...new Set([...allExts, ...defaultExtensions])].sort((a, b) => a.localeCompare(b, 'fr')),
-    [allExts, defaultExtensions]
-  )
+  const resetFilters = () => setFilters({ ...EMPTY_HFILTERS })
+  // Chips extension = celles réellement utilisées dans les parties (filtrer sur une
+  // extension jamais jouée ne renverrait rien).
+  const extChips = allExts
   const toggleIn = (key, val) =>
     setFilters((f) => ({ ...f, [key]: f[key].includes(val) ? f[key].filter((x) => x !== val) : [...f[key], val] }))
 
