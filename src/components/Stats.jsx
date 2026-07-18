@@ -61,7 +61,11 @@ function Tile({ value, label, sub }) {
 // Section « Joueur » : choisir un joueur → son bilan global (toutes parties, tous jeux).
 // `playerOverall` = [{name, games, wins, winRate}] trié par nb de parties (le + assidu 1er).
 function PlayerSection({ playerOverall }) {
-  const list = playerOverall || []
+  const all = playerOverall || []
+  // On ne propose que les joueurs réguliers sur au moins un jeu : ceux qui n'ont fait que
+  // passer encombreraient le menu. (Repli sur la liste complète par sécurité.)
+  const regulars = all.filter((p) => p.regular)
+  const list = regulars.length ? regulars : all
   const [selected, setSelected] = useState(null)
   if (list.length === 0) return null // pas encore de partie enregistrée → section masquée
   const current = list.find((p) => p.name === selected) || list[0] // défaut : le + de parties

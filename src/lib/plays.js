@@ -147,7 +147,8 @@ export async function fetchPlayerNames() {
 const BEST_GAME_MIN_PLAYS = 3
 
 // Stats GÉNÉRALES par joueur, TOUS jeux confondus →
-// [{ name, games, wins, winRate, bestGame }], du plus assidu au moins assidu.
+// [{ name, games, wins, winRate, bestGame, regular }], du plus assidu au moins assidu.
+// `regular` = joueur régulier sur au moins un jeu (voir plus bas).
 // `bestGame` = { name, winRate, games } : le jeu où il gagne le plus souvent, parmi les
 // jeux COMPÉTITIFS joués au moins 3 fois (en coopératif tout le monde gagne ensemble,
 // ça remonterait un coop à 100 %). null si aucun jeu ne remplit la condition.
@@ -170,12 +171,17 @@ export async function fetchPlayerOverall() {
   const games = {}
   const wins = {}
   const perGame = {} // joueur → { game_id: { games, wins } }, parties compétitives seulement
+  const byGameAll = {} // game_id → { joueur: nb de parties }, TOUTES parties (coop compris)
   ;(data ?? []).forEach((play) => {
     const winnerSet = new Set(playWinners(play))
     ;(play.players || []).forEach((p) => {
       const n = (p?.name || '').trim()
       if (!n) return
       games[n] = (games[n] || 0) + 1
+      if (play.game_id) {
+        const b = byGameAll[play.game_id] || (byGameAll[play.game_id] = {})
+        b[n] = (b[n] || 0) + 1
+      }
       if (!play.outcome && play.game_id) {
         const byGame = perGame[n] || (perGame[n] = {})
         const e = byGame[play.game_id] || (byGame[play.game_id] = { games: 0, wins: 0 })
@@ -185,6 +191,17 @@ export async function fetchPlayerOverall() {
     })
     winnerSet.forEach((n) => {
       if (n) wins[n] = (wins[n] || 0) + 1
+    })
+  })
+
+  // « Régulier » sur un jeu = plus du quart des parties du joueur le plus assidu de CE jeu
+  // (même règle que les filtres de l'historique). Un joueur est retenu s'il est régulier
+  // sur au moins un jeu → écarte ceux qui n'ont fait que passer.
+  const regular = new Set()
+  Object.values(byGameAll).forEach((byPlayer) => {
+    const top = Math.max(...Object.values(byPlayer))
+    Object.entries(byPlayer).forEach(([n, c]) => {
+      if (c * 4 > top) regular.add(n)
     })
   })
 
@@ -209,6 +226,7 @@ export async function fetchPlayerOverall() {
       wins: wins[name] || 0,
       winRate: Math.round(((wins[name] || 0) / games[name]) * 100),
       bestGame: bestGameOf(name),
+      regular: regular.has(name),
     }))
     .sort((a, b) => b.games - a.games || a.name.localeCompare(b.name, 'fr'))
 }
