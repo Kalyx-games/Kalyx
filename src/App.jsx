@@ -4,7 +4,7 @@ import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwner
 import { saveGamesCache, loadGamesCache } from './lib/cache'
 import { fetchOwners, addOwner, updateOwner, deleteOwner } from './lib/owners'
 import { fetchTags, addTag, updateTag, deleteTag } from './lib/tags'
-import { downloadBackup, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup, restorePreview } from './lib/backup'
+import { downloadBackup, downloadCsv, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup, restorePreview } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
 import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayCounts, renameCategories, fetchPlayerRoster, fetchPlayerOverall, renamePlayer } from './lib/plays'
@@ -612,6 +612,18 @@ export default function App() {
       setError(e.message)
     }
   }
+  // Export tableur : 2 fichiers CSV (jeux, parties) ouvrables dans Excel / LibreOffice.
+  async function handleExportCsv() {
+    setError(null)
+    const dateStr = new Date().toISOString().slice(0, 10)
+    try {
+      const n = await downloadCsv(games ?? [], ownersList ?? [], tagsList ?? [], dateStr)
+      setNotice(`2 fichiers tableur téléchargés : ${n.games} jeux et ${n.lignesParties} lignes de parties.`)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
   async function handleImportFile(file) {
     setError(null)
     setNotice('')
@@ -692,7 +704,16 @@ export default function App() {
     autoBackupRef.current = true
     ;(async () => {
       try {
-        await maybeAutoBackup(backupFreq, games, ownersList, tagsList)
+        const res = await maybeAutoBackup(backupFreq, games, ownersList, tagsList)
+        // Garde-fou : chute brutale du nombre de jeux → sauvegarde refusée, on alerte.
+        // Mieux vaut une sauvegarde ancienne mais saine qu'un instantané de l'accident.
+        if (res && res.skipped === 'drop') {
+          setError(
+            `⚠️ Sauvegarde automatique suspendue : ta collection est passée de ${res.before} à ${res.after} jeux ` +
+              `(${res.lost} de moins). Si c'est normal, sauvegarde à la main dans Réglages. Sinon, tes anciennes ` +
+              `sauvegardes sont intactes : tu peux restaurer.`
+          )
+        }
       } catch {
         /* silencieux */
       }
@@ -941,6 +962,7 @@ export default function App() {
             onUpdateTag={handleUpdateTag}
             onDeleteTag={(tag) => setConfirmingTag(tag)}
             onExport={handleExport}
+            onExportCsv={handleExportCsv}
             onImportFile={handleImportFile}
             backupFreq={backupFreq}
             onSetBackupFreq={handleSetBackupFreq}

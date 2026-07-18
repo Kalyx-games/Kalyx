@@ -660,28 +660,6 @@ body {
   transform: scale(0.94);
 }
 
-/* Ajout d'un propriétaire (champ + bouton) dans le formulaire */
-.owner-add {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-.owner-add input {
-  flex: 1;
-  min-width: 0;
-  height: 44px;
-  padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--input-bg);
-  color: var(--ink);
-  font-size: 1rem;
-}
-.owner-add input:focus {
-  outline: none;
-  border-color: var(--primary);
-  background: var(--input-focus);
-}
 .owner-add-btn,
 .price-btn {
   flex-shrink: 0;
@@ -2142,16 +2120,6 @@ body {
   font-weight: 700;
   color: var(--players);
 }
-/* Catégorie présente dans d'anciennes parties mais retirée de la fiche : reléguée en bas. */
-.stat-table tr.stale td {
-  opacity: 0.6;
-}
-.cat-stale {
-  font-weight: 400;
-  font-size: 0.74rem;
-  color: var(--muted);
-  white-space: nowrap;
-}
 /* Podium : lignes en « pilules » (fond + coins arrondis via 1re/dernière cellule). */
 .podium-table td {
   background: var(--input-bg);
@@ -2305,51 +2273,6 @@ body {
   font-size: 0.82rem;
 }
 
-/* ---- Courbe d'évolution ---- */
-.trend-wrap {
-  width: 100%;
-  overflow-x: auto;
-}
-.trend-svg {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-.trend-grid {
-  stroke: var(--line);
-  stroke-width: 1;
-}
-.trend-axis {
-  fill: var(--muted);
-  font-size: 9px;
-}
-.trend-dot {
-  stroke: var(--card);
-  stroke-width: 1.5;
-}
-.trend-label {
-  font-size: 10px;
-  font-weight: 700;
-}
-.trend-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  margin-top: 10px;
-}
-.trend-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
-  color: var(--ink);
-}
-.trend-legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
 .bars {
   display: flex;
   flex-direction: column;
@@ -2522,22 +2445,6 @@ body {
   font-weight: 600;
   color: var(--muted);
   pointer-events: none;
-}
-.chwazi-count {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1;
-  font-size: 9rem;
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.5);
-  pointer-events: none;
-  animation: chwazi-pop 1s ease;
-}
-@keyframes chwazi-pop {
-  from { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
-  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 }
 .chwazi-dot {
   position: absolute;

@@ -53,7 +53,3 @@ export async function saveScoresheet(gameId, template) {
 }
 
 // Supprime la fiche d'un jeu.
-export async function deleteScoresheet(gameId) {
-  const { error } = await supabase.from('scoresheets').delete().eq('game_id', gameId)
-  if (error) throw error
-}

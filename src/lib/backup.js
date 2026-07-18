@@ -70,6 +70,95 @@ export async function downloadBackup(games, owners, tags, dateStr) {
   return { games: data.games.length, plays: data.plays.length, sheets: data.scoresheets.length }
 }
 
+// ============================================================
+//  Export CSV (pour ouvrir les données dans un tableur)
+// ============================================================
+// Excel en français attend le POINT-VIRGULE comme séparateur et un BOM UTF-8, sinon les
+// accents deviennent illisibles et tout se retrouve dans une seule colonne.
+const SEP = ';'
+const BOM = '﻿'
+
+// Échappe une valeur : guillemets doublés, et on entoure dès qu'il y a un caractère gênant.
+function csvCell(v) {
+  if (v === null || v === undefined) return ''
+  const s = String(v)
+  return /["\n\r;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+function toCsv(entetes, lignes) {
+  return BOM + [entetes, ...lignes].map((r) => r.map(csvCell).join(SEP)).join('\r\n')
+}
+
+function telecharger(contenu, nom, type) {
+  const blob = new Blob([contenu], { type })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = nom
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+// Deux fichiers CSV : un pour les jeux, un pour les parties (une ligne PAR JOUEUR et par
+// partie — le format le plus pratique pour un tableur croisé dynamique).
+export async function downloadCsv(games, owners, tags, dateStr) {
+  const data = await collectSnapshot(games, owners, tags, dateStr)
+  const nomDuJeu = new Map(data.games.map((g) => [g.id, g.name]))
+
+  const jeux = data.games.map((g) => [
+    g.name, g.status === 'wishlist' ? 'wishlist' : 'collection', g.players,
+    g.players_best, g.duration_max ?? g.duration_min, g.complexity, g.price,
+    g.owner, g.tags, g.bgg_id, g.image_url,
+  ])
+  telecharger(
+    toCsv(
+      ['Jeu', 'Statut', 'Joueurs', 'Joueurs idéal', 'Durée (min)', 'Complexité', 'Prix', 'Propriétaires', 'Tags', 'ID BGG', 'Image'],
+      jeux
+    ),
+    `kalyx-jeux-${dateStr || 'export'}.csv`,
+    'text/csv;charset=utf-8'
+  )
+
+  // Une ligne par joueur ET par partie : le nom du jeu est écrit en clair (pas d'identifiant
+  // à recoller à la main), ce qui rend le fichier exploitable tel quel dans un tableur.
+  const parties = []
+  data.plays.forEach((p) => {
+    const gagnants = String(p.winner || '').split(',').map((s) => s.trim()).filter(Boolean)
+    ;(p.players || []).forEach((j) => {
+      const nom = (j?.name || '').trim()
+      // Les catégories varient d'un jeu à l'autre : les mettre en colonnes fixes n'aurait
+      // aucun sens. On les rassemble en un texte lisible « Lieux=14, Seigneurs=20 ».
+      const detail = Object.entries(j?.scores || {}).map(([c, v]) => `${c}=${v}`).join(', ')
+      parties.push([
+        nomDuJeu.get(p.game_id) || '(jeu supprimé)',
+        (p.played_at || '').slice(0, 10),
+        nom,
+        j?.team || '',
+        j?.total ?? p.score ?? '',
+        gagnants.includes(nom) || p.outcome === 'win' ? 'oui' : 'non',
+        p.outcome === 'win' ? 'gagné' : p.outcome === 'loss' ? 'perdu' : '',
+        p.scenario || '',
+        p.trigger || '',
+        (p.extensions || []).join(', '),
+        detail,
+        p.notes || '',
+      ])
+    })
+  })
+  telecharger(
+    toCsv(
+      ['Jeu', 'Date', 'Joueur', 'Équipe', 'Score', 'Gagnant', 'Résultat (coop)', 'Scénario', 'Fin de partie', 'Extensions', 'Détail des points', 'Notes'],
+      parties
+    ),
+    `kalyx-parties-${dateStr || 'export'}.csv`,
+    'text/csv;charset=utf-8'
+  )
+
+  return { games: jeux.length, lignesParties: parties.length }
+}
+
 // Valide et lit un fichier de sauvegarde (texte JSON). Lève une erreur si invalide.
 export function parseBackup(text) {
   let obj
@@ -162,7 +251,10 @@ export async function importBackup({ games, owners, tags, plays, scoresheets }) 
 //  → rechargeables depuis n'importe quel appareil, rotation des N plus récentes.
 // ============================================================
 
-const BACKUP_KEEP = 3 // nombre de sauvegardes conservées (rotation)
+const BACKUP_KEEP = 3 // nombre de sauvegardes AUTO conservées (rotation)
+// Chute du nombre de jeux au-delà de laquelle on refuse la sauvegarde automatique
+// (0.2 = 20 %) : on préfère garder les sauvegardes saines et alerter.
+const DROP_ALERT = 0.2
 
 // Délai minimal entre 2 sauvegardes AUTO, selon la fréquence choisie.
 const FREQ_MS = {
@@ -230,6 +322,20 @@ export async function maybeAutoBackup(frequency, games, owners, tags) {
   if (list === null) return false // table absente → rien à faire
   const newest = list[0]
   if (newest && Date.now() - new Date(newest.created_at).getTime() < interval) return false // trop récent
+
+  // GARDE-FOU : une chute brutale du nombre de jeux signale presque toujours un incident
+  // (import raté, suppressions en série, base à moitié chargée) et jamais une intention.
+  // On refuse alors d'écraser les sauvegardes saines par l'état abîmé, et on prévient.
+  if (newest && newest.games_count > 0) {
+    const perdus = newest.games_count - games.length
+    // Seuil calculé EN NOMBRE DE JEUX (arrondi) : comparer des pourcentages en décimaux
+    // rate le cas pile-au-seuil (135 → 108 donne 0,19999… et non 0,2).
+    const seuil = Math.max(1, Math.round(newest.games_count * DROP_ALERT))
+    if (perdus >= seuil) {
+      return { skipped: 'drop', before: newest.games_count, after: games.length, lost: perdus }
+    }
+  }
+
   await createBackup(games, owners, tags, 'auto')
   return true
 }

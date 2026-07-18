@@ -38,7 +38,7 @@ function backupDate(iso) {
 export default function Settings({
   owners, onAddOwner, onUpdateOwner, onDeleteOwner,
   tags, onAddTag, onUpdateTag, onDeleteTag,
-  onExport, onImportFile,
+  onExport, onExportCsv, onImportFile,
   backupFreq, onSetBackupFreq, backups, backupBusy, onBackupNow, onRestore,
   onOpenPlayers,
   online, onClose,
@@ -148,8 +148,11 @@ export default function Settings({
 
         {/* Sauvegarde en fichier : le duo exporter / importer. */}
         <div className="save-actions" style={{ marginTop: 10 }}>
-          <button type="button" className="btn-ghost" onClick={onExport} title="Télécharger un fichier de sauvegarde">
+          <button type="button" className="btn-ghost" onClick={onExport} title="Télécharger la sauvegarde complète (fichier .json)">
             ⬇️ Exporter
+          </button>
+          <button type="button" className="btn-ghost" onClick={onExportCsv} title="Télécharger 2 fichiers .csv (jeux et parties) ouvrables dans un tableur">
+            📊 Export tableur
           </button>
           <button
             type="button"
