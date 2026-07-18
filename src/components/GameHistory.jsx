@@ -510,6 +510,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                   arrows={false}
                 />
               </div>
+              <div className="table-scroll">
               <table className="stat-table cmp-table">
                 <tbody>
                   {cmpRow('Taux de victoire', cmpA.winRate, cmpB.winRate, { fmt: (v) => `${v} %` })}
@@ -530,6 +531,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                     })}
                 </tbody>
               </table>
+              </div>
             </section>
           )}
 

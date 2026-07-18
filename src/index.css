@@ -2189,8 +2189,13 @@ body {
 .cmp-table {
   width: 100%;
   table-layout: fixed;
+  /* Tient sur un téléphone courant (≥360px) ; sur un écran vraiment étroit on défile
+     latéralement (via .table-scroll) plutôt que d'écraser les colonnes. */
+  min-width: 250px;
 }
-.cmp-label {
+/* ⚠️ sélecteur à 2 classes : il doit battre `.stat-table th { white-space: nowrap }`,
+   sinon un libellé long (« Plus grande coalition ») reste sur une seule ligne. */
+.cmp-table .cmp-label {
   text-align: left;
   font-weight: 600;
   font-size: 0.8rem;
