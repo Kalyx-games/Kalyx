@@ -1,15 +1,23 @@
 import { supabase } from './supabase'
+import { fetchAllPlays } from './plays'
+import { fetchAllScoresheets } from './scoresheets'
 
-// Sauvegarde / restauration de la collection (fichier JSON).
-// Export = un fichier téléchargé contenant tous les jeux + propriétaires.
-// Import = on ré-insère ce fichier (mise à jour des jeux existants par identifiant,
-// ajout des nouveaux), pour restaurer ou transférer une collection.
+// Sauvegarde / restauration de TOUTES les données (fichier JSON ou table `backups`).
+// Contenu d'une sauvegarde : jeux + propriétaires + tags + PARTIES + FICHES DE SCORE.
+// Import = on ré-insère ce contenu (mise à jour de l'existant par identifiant, ajout du
+// reste), pour restaurer après une fausse manœuvre ou déménager vers une autre base.
 
-// Colonnes connues d'un jeu (on ignore le reste à l'import, par sécurité).
+// ⚠️ Ces listes de colonnes sont écrites À LA MAIN : toute nouvelle colonne ajoutée en
+// base doit être ajoutée ici, sinon elle sera silencieusement absente des sauvegardes.
 const GAME_COLS = [
   'id', 'bgg_id', 'name', 'players', 'players_min', 'players_max', 'players_best',
   'duration_min', 'duration_max', 'complexity', 'price', 'image_url', 'owner', 'tags', 'status', 'extensions', 'created_at',
 ]
+const PLAY_COLS = [
+  'id', 'game_id', 'played_at', 'players', 'winner', 'extensions',
+  'outcome', 'scenario', 'score', 'notes', 'trigger', 'created_at',
+]
+const SHEET_COLS = ['id', 'game_id', 'template', 'updated_at']
 
 function pick(obj, cols) {
   const out = {}
@@ -24,21 +32,32 @@ function pickBubble(o) {
   return { name: o.name, initials: o.initials ?? null, color: o.color ?? null }
 }
 
-// Construit l'objet de sauvegarde à partir de l'état chargé dans l'app.
-export function buildBackup(games, owners, tags, exportedAt) {
+// Construit l'objet de sauvegarde. `plays` et `scoresheets` viennent de la base
+// (ils ne sont pas tous chargés dans l'app) → voir collectSnapshot ci-dessous.
+// version 2 = contient les parties et les fiches ; version 1 = anciennes sauvegardes.
+export function buildBackup(games, owners, tags, plays, scoresheets, exportedAt) {
   return {
     app: 'kalyx',
-    version: 1,
+    version: 2,
     exportedAt: exportedAt || null,
     games: (games ?? []).map((g) => pick(g, GAME_COLS)),
     owners: (owners ?? []).map(pickBubble),
     tags: (tags ?? []).map(pickBubble),
+    plays: (plays ?? []).map((p) => pick(p, PLAY_COLS)),
+    scoresheets: (scoresheets ?? []).map((s) => pick(s, SHEET_COLS)),
   }
 }
 
-// Déclenche le téléchargement du fichier de sauvegarde. Renvoie le nb de jeux.
-export function downloadBackup(games, owners, tags, dateStr) {
-  const data = buildBackup(games, owners, tags, dateStr)
+// Instantané COMPLET : on relit les parties et les fiches en base (l'app n'en garde
+// qu'une partie en mémoire), puis on assemble la sauvegarde.
+export async function collectSnapshot(games, owners, tags, exportedAt) {
+  const [plays, scoresheets] = await Promise.all([fetchAllPlays(), fetchAllScoresheets()])
+  return buildBackup(games, owners, tags, plays, scoresheets, exportedAt)
+}
+
+// Déclenche le téléchargement du fichier de sauvegarde. Renvoie le détail des quantités.
+export async function downloadBackup(games, owners, tags, dateStr) {
+  const data = await collectSnapshot(games, owners, tags, dateStr)
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -48,7 +67,7 @@ export function downloadBackup(games, owners, tags, dateStr) {
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
-  return data.games.length
+  return { games: data.games.length, plays: data.plays.length, sheets: data.scoresheets.length }
 }
 
 // Valide et lit un fichier de sauvegarde (texte JSON). Lève une erreur si invalide.
@@ -65,7 +84,11 @@ export function parseBackup(text) {
   const games = obj.games.filter((g) => g && g.name)
   const owners = Array.isArray(obj.owners) ? obj.owners.filter((o) => o && o.name) : []
   const tags = Array.isArray(obj.tags) ? obj.tags.filter((t) => t && t.name) : []
-  return { games, owners, tags }
+  // Anciennes sauvegardes (version 1) : pas de parties ni de fiches → tableaux vides,
+  // et surtout on ne touchera à rien de ce côté-là à l'import.
+  const plays = Array.isArray(obj.plays) ? obj.plays.filter((p) => p && p.id && p.game_id) : []
+  const scoresheets = Array.isArray(obj.scoresheets) ? obj.scoresheets.filter((s) => s && s.game_id) : []
+  return { games, owners, tags, plays, scoresheets }
 }
 
 // Insère/écrase une liste de bulles gérées (propriétaires ou tags) par nom.
@@ -81,8 +104,21 @@ async function upsertBubbles(table, list) {
   if (error && !/does not exist|schema cache|relation/i.test(error.message || '')) throw error
 }
 
-// Applique une sauvegarde : propriétaires + tags (par nom) puis jeux (par identifiant).
-export async function importBackup({ games, owners, tags }) {
+// Ré-insère des lignes par identifiant, en ignorant la table si elle n'existe pas encore.
+async function upsertRows(table, rows, conflictCol) {
+  if (!rows || !rows.length) return 0
+  const { error } = await supabase.from(table).upsert(rows, { onConflict: conflictCol })
+  if (error) {
+    if (tableMissing(error)) return 0
+    throw error
+  }
+  return rows.length
+}
+
+// Applique une sauvegarde : propriétaires + tags (par nom), puis les jeux (par
+// identifiant), puis les parties et les fiches — DANS CET ORDRE : parties et fiches
+// pointent vers un jeu, celui-ci doit donc exister d'abord.
+export async function importBackup({ games, owners, tags, plays, scoresheets }) {
   await upsertBubbles('owners', owners)
   await upsertBubbles('tags', tags)
 
@@ -103,7 +139,22 @@ export async function importBackup({ games, owners, tags }) {
   }
   if (error) throw error
 
-  return { games: rows.length, owners: (owners && owners.length) || 0, tags: (tags && tags.length) || 0 }
+  // Les parties et fiches ne sont réinsérées que pour des jeux réellement présents,
+  // sinon la clé étrangère ferait échouer tout le lot.
+  const gameIds = new Set(rows.map((r) => r.id).filter(Boolean))
+  const okGame = (r) => gameIds.size === 0 || gameIds.has(r.game_id)
+  const playRows = (plays ?? []).map((p) => pick(p, PLAY_COLS)).filter(okGame)
+  const sheetRows = (scoresheets ?? []).map((s) => pick(s, SHEET_COLS)).filter(okGame)
+  const nPlays = await upsertRows('plays', playRows, 'id')
+  const nSheets = await upsertRows('scoresheets', sheetRows, 'game_id')
+
+  return {
+    games: rows.length,
+    owners: (owners && owners.length) || 0,
+    tags: (tags && tags.length) || 0,
+    plays: nPlays,
+    scoresheets: nSheets,
+  }
 }
 
 // ============================================================
@@ -140,7 +191,7 @@ export async function fetchBackups() {
 // Crée une sauvegarde (snapshot complet) puis ne garde que les BACKUP_KEEP plus récentes.
 // kind = 'auto' | 'manual'. Renvoie true, ou null si la table n'existe pas encore.
 export async function createBackup(games, owners, tags, kind = 'auto') {
-  const snapshot = buildBackup(games, owners, tags, new Date().toISOString())
+  const snapshot = await collectSnapshot(games, owners, tags, new Date().toISOString())
   const row = {
     data: snapshot,
     games_count: snapshot.games.length,
@@ -153,10 +204,16 @@ export async function createBackup(games, owners, tags, kind = 'auto') {
     if (tableMissing(error)) return null
     throw error
   }
-  // Rotation : supprime les sauvegardes au-delà des BACKUP_KEEP plus récentes.
-  const { data: all } = await supabase.from('backups').select('id').order('created_at', { ascending: false })
-  if (all && all.length > BACKUP_KEEP) {
-    const toDelete = all.slice(BACKUP_KEEP).map((b) => b.id)
+  // Rotation : uniquement sur les sauvegardes AUTOMATIQUES. Une sauvegarde manuelle est
+  // faite exprès (souvent juste avant une manœuvre risquée) → elle ne doit pas être
+  // balayée par les automatiques des jours suivants.
+  const { data: autos } = await supabase
+    .from('backups')
+    .select('id')
+    .eq('kind', 'auto')
+    .order('created_at', { ascending: false })
+  if (autos && autos.length > BACKUP_KEEP) {
+    const toDelete = autos.slice(BACKUP_KEEP).map((b) => b.id)
     await supabase.from('backups').delete().in('id', toDelete)
   }
   return true
@@ -191,7 +248,33 @@ async function deleteExtra(table, keyCol, keep) {
   }
 }
 
-// Restaure une sauvegarde : remet EXACTEMENT son état (ré-insère/écrase + supprime le surplus).
+// Ce qu'une restauration détruirait : les jeux absents de la sauvegarde, et — par effet
+// de cascade en base — leurs parties et leurs fiches. Sert à prévenir AVANT d'agir.
+export async function restorePreview(backupId) {
+  const { data: row, error } = await supabase.from('backups').select('data').eq('id', backupId).single()
+  if (error) throw error
+  const snap = row?.data || {}
+  const keep = new Set((Array.isArray(snap.games) ? snap.games : []).map((g) => g.id).filter(Boolean))
+  const { data: current } = await supabase.from('games').select('id, name')
+  const doomed = (current ?? []).filter((g) => !keep.has(g.id))
+  if (!doomed.length) return { games: 0, plays: 0, sheets: 0, names: [] }
+  const ids = doomed.map((g) => g.id)
+  const [{ data: pl }, { data: sh }] = await Promise.all([
+    supabase.from('plays').select('id').in('game_id', ids),
+    supabase.from('scoresheets').select('id').in('game_id', ids),
+  ])
+  return {
+    games: doomed.length,
+    plays: (pl ?? []).length,
+    sheets: (sh ?? []).length,
+    names: doomed.map((g) => g.name).filter(Boolean),
+  }
+}
+
+// Restaure une sauvegarde.
+//  • jeux / propriétaires / tags : vrai retour arrière (on remet l'état, on supprime le surplus)
+//  • parties et fiches : AJOUT/MISE À JOUR SEULEMENT — une partie jouée après la sauvegarde
+//    est conservée. Revenir en arrière sur la collection ne doit pas effacer une soirée de jeu.
 export async function restoreBackup(backupId) {
   const { data: row, error } = await supabase.from('backups').select('data').eq('id', backupId).single()
   if (error) throw error
@@ -199,13 +282,15 @@ export async function restoreBackup(backupId) {
   const games = Array.isArray(snap.games) ? snap.games : []
   const owners = Array.isArray(snap.owners) ? snap.owners : []
   const tags = Array.isArray(snap.tags) ? snap.tags : []
+  const plays = Array.isArray(snap.plays) ? snap.plays : []
+  const scoresheets = Array.isArray(snap.scoresheets) ? snap.scoresheets : []
 
-  // 1) ré-insère / met à jour tout ce qui est dans la sauvegarde
-  await importBackup({ games, owners, tags })
-  // 2) supprime ce qui n'existe PAS dans la sauvegarde (vrai retour arrière)
+  // 1) ré-insère / met à jour tout ce qui est dans la sauvegarde (jeux d'abord)
+  const res = await importBackup({ games, owners, tags, plays, scoresheets })
+  // 2) supprime les jeux / propriétaires / tags absents de la sauvegarde (retour arrière)
   await deleteExtra('games', 'id', new Set(games.map((g) => g.id).filter(Boolean)))
   await deleteExtra('owners', 'name', new Set(owners.map((o) => o.name)))
   await deleteExtra('tags', 'name', new Set(tags.map((t) => t.name)))
 
-  return { games: games.length, owners: owners.length, tags: tags.length }
+  return { games: games.length, owners: owners.length, tags: tags.length, plays: res.plays, scoresheets: res.scoresheets }
 }

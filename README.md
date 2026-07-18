@@ -23,11 +23,13 @@ Application web installable sur téléphone (PWA) pour répertorier une collecti
 - [x] **Statistiques** : cases propriétaires (filtre) + chiffres clés (total, wishlist, durée & complexité moyennes **et** médianes) + répartitions par joueurs / joueurs idéal / durée / complexité ✅
 - [x] **Chwazi** : posez vos doigts, l'app choisit — mode « qui commence » ou « 2 équipes », plein écran, marche hors ligne ✅
 - [x] **Remplissage auto depuis Philibert** : bouton qui remplit l'image (et le prix en wishlist) d'un jeu à partir de son nom, avec vignette de vérification ✅
-- [x] **Sauvegarde / restauration** : export de toute la collection dans un fichier + réimport (dans Réglages) ✅
+- [x] **Sauvegarde / restauration** : export de **toutes** les données dans un fichier (jeux, propriétaires, tags, **parties**, **fiches de score**) + réimport, et sauvegardes automatiques dans le cloud (dans Réglages) ✅
+- [x] **Fiches de score et parties** : fiche par jeu (catégories, coop, équipes, victoire directe), saisie des parties, historique, statistiques par joueur et comparatif ✅
+- [x] **Écran Joueurs** : renommer un joueur partout d'un coup (Réglages) ✅
 - [x] **Scan de code-barres** : scanne la boîte d'un jeu (ou saisis le code) → le jeu est pré-rempli automatiquement (nom, image, prix) ✅
 - [x] **Mode sombre** : thème clair / sombre / automatique (suit le téléphone), réglable dans Réglages ✅
 - [x] **Finitions visuelles** : animations (cartes en cascade, fenêtres qui glissent, thème en fondu), cartes « fantômes » au chargement, onglet actif surligné qui glisse, images en fondu ✅
-- [ ] **Import BoardGameGeek** (recherche → fiche pré-remplie) — app BGG enregistrée ✅, reste à récupérer le jeton
+- [x] **Import BoardGameGeek** : recherche par nom → fiche pré-remplie (joueurs, durée, complexité, image) ✅
 
 ---
 
@@ -40,8 +42,8 @@ Application web installable sur téléphone (PWA) pour répertorier une collecti
 | **Vite** | L'outil qui assemble tous les fichiers du projet en un site web optimisé |
 | **React** | La bibliothèque avec laquelle on écrit l'interface (boutons, listes, écrans) |
 | **PWA** | *Progressive Web App* : un site web qui s'installe comme une vraie app, avec icône et mode hors ligne |
-| **Supabase** | La base de données dans le cloud où seront stockés les jeux (à venir) |
-| **BGG** | BoardGameGeek, l'encyclopédie mondiale des jeux de société, d'où on importera les fiches (à venir) |
+| **Supabase** | La base de données dans le cloud où sont stockés les jeux, les parties et les sauvegardes |
+| **BGG** | BoardGameGeek, l'encyclopédie mondiale des jeux de société, d'où viennent les fiches pré-remplies |
 
 ---
 
@@ -147,7 +149,9 @@ Supabase héberge dans le cloud la liste de tes jeux, partagée entre toi et ton
 1. Dans le menu de gauche, clique **« SQL Editor »** (icône `</>`).
 2. Clique **« New query »**.
 3. Ouvre le fichier **`supabase/schema.sql`** de ce projet, copie **tout** son contenu, et colle-le dans l'éditeur.
-4. Clique **« Run »** (en bas à droite, ou `Ctrl + Entrée`). Un message vert « Success » confirme. La table `games` est créée, avec 3 jeux de démo.
+4. Clique **« Run »** (en bas à droite, ou `Ctrl + Entrée`). Un message vert « Success » confirme. Les 6 tables sont créées (jeux, propriétaires, tags, sauvegardes, fiches de score, parties), **vides** : c'est normal.
+
+> 📌 **Un seul fichier à lancer : `schema.sql`.** Les fichiers `migration_*.sql` à côté ne sont que l'historique des ajouts successifs — ils font double emploi, ne les lance pas en plus.
 
 ### C. Récupérer l'adresse et la clé
 
@@ -160,51 +164,70 @@ Supabase héberge dans le cloud la liste de tes jeux, partagée entre toi et ton
 
 > 💡 Ces deux valeurs ne sont pas secrètes : la clé publique est conçue pour vivre dans le navigateur. Elles finissent dans `.env` (local) et dans les variables d'environnement Vercel (en ligne) — Claude s'en occupe.
 
-### D. ⚡ Petite mise à jour (« joueurs idéal » en plage)
+## 🎲 Import BoardGameGeek — **fait** ✅
 
-Pour que le champ *joueurs idéal* accepte une **plage** (« 2-4 ») ou des **valeurs séparées** (« 2, 4 »), il faut passer cette colonne en texte. **À faire une fois** : SQL Editor → New query → colle le contenu de **`supabase/migration_ideal_texte.sql`** → Run. Tant que ce n'est pas fait, saisir une plage dans « idéal » renverra une erreur.
+Depuis juillet 2025, BGG exige que chaque application soit **enregistrée** et utilise un **jeton d'autorisation**. En plus, BGG bloque les appels directs depuis un navigateur. Solution retenue : une petite **fonction relais côté serveur**, `api/bgg.js`, hébergée **avec le site** (pas sur Supabase), qui appelle BGG et garde le jeton secret.
 
-## 🎲 Import BoardGameGeek (Palier 4)
+C'est en place : l'app Kalyx est enregistrée chez BGG et le jeton est rangé dans une variable d'environnement **`BGG_TOKEN`** chez l'hébergeur (Vercel → Settings → Environment Variables). Il n'apparaît jamais dans le code ni dans le navigateur.
 
-⚠️ Depuis juillet 2025, BGG exige que chaque application soit **enregistrée** et utilise un **jeton d'autorisation** (sans quoi l'API répond « Unauthorized »). En plus, l'API BGG bloque les appels directs depuis un navigateur (CORS). Solution retenue : une petite **fonction relais** hébergée sur Supabase appellera BGG à notre place, en gardant le jeton secret.
+> Si un jour tu recrées le projet ailleurs : recrée un jeton sur https://boardgamegeek.com/applications/create et redéfinis `BGG_TOKEN` chez le nouvel hébergeur. Sans lui, tout le reste de l'app marche, seul le bouton « Chercher sur BoardGameGeek » répond « BGG_TOKEN absent côté serveur ».
 
-**Ce que tu dois faire (une seule fois) :**
-1. Crée un compte gratuit sur https://boardgamegeek.com (bouton « Sign Up »).
-2. Une fois connecté, va sur **https://boardgamegeek.com/applications/create**.
-3. Remplis le formulaire d'enregistrement de l'application :
-   - **Nom** : `Kalyx`
-   - **Description** : par ex. « Petit catalogue personnel de jeux de société pour un usage privé entre amis. »
-   - **Lien / URL** (si demandé) : `https://kalyx-sepia.vercel.app`
-4. Valide. BGG te fournit un **jeton (token)** — parfois immédiatement, parfois après une courte validation manuelle de leur part.
-5. **Colle-moi ce jeton dans le chat** dès que tu l'as. Je le range dans un **coffre-fort côté serveur** (secret Supabase), il ne sera jamais visible dans l'app ni dans le code.
+---
 
-> Tant que le jeton n'est pas là, tu peux déjà utiliser Kalyx en **saisie manuelle** (bouton +). L'import BGG viendra s'ajouter par-dessus, sans rien casser.
+## 🖥️ Ce que l'hébergeur doit savoir faire
+
+Kalyx n'est **pas** un site 100 % statique. En plus des fichiers du dossier `dist/`, l'hébergeur doit pouvoir **exécuter les fonctions du dossier `api/`** (petits fichiers Node) :
+
+| Fichier | À quoi il sert | Si absent |
+|---|---|---|
+| `api/bgg.js` | Relais vers BoardGameGeek (recherche + fiche) | L'import BGG ne marche plus |
+| `api/price.js` | Prix et image depuis Philibert | Les boutons Philibert ne marchent plus |
+
+Sur un hébergeur purement statique (GitHub Pages par exemple), l'app s'affiche et la collection fonctionne, mais ces boutons échouent.
+
+**Autre point à connaître :** les vignettes des cartes passent par l'optimiseur d'images de Vercel (`/_vercel/image`, configuré dans `vercel.json`). Ailleurs, un repli automatique affiche l'image d'origine : rien ne casse, mais les images sont beaucoup plus lourdes (~1,3 Mo au lieu de ~13 Ko). Le cas échéant, il faudra adapter `thumbSrc()` dans `src/components/GameCard.jsx`.
+
+---
+
+## 💾 Ce que contient une sauvegarde
+
+Le bouton **Exporter** (Réglages → Sauvegarde) produit un fichier `kalyx-sauvegarde-AAAA-MM-JJ.json`, lisible dans n'importe quel éditeur de texte. Il contient **tout** :
+
+| Contenu | Détail |
+|---|---|
+| `games` | tous les jeux, toutes leurs colonnes |
+| `owners` / `tags` | les propriétaires et les tags (nom, initiales, couleur) |
+| `plays` | **toutes les parties enregistrées** (joueurs, scores, dates, gagnants, notes) |
+| `scoresheets` | **toutes les fiches de score** |
+
+Les sauvegardes automatiques (stockées dans Supabase) contiennent exactement la même chose.
+
+> ⚠️ **Supprimer un jeu supprime aussi ses parties et sa fiche de score** (la base les efface en cascade). L'app le rappelle dans la fenêtre de confirmation. Pense à exporter avant une grosse opération.
 
 ---
 
 ## 🔩 Fiche technique
 
-- **Stack** : React 19 + Vite 8 + vite-plugin-pwa 1.3 (PWA), Supabase (base de données, à venir), IndexedDB (cache hors ligne, à venir)
-- Versions vérifiées sur le registre npm le **08/07/2026** : vite 8.1.3 · @vitejs/plugin-react 6.0.3 · vite-plugin-pwa 1.3.0 · react 19.2.7 · @supabase/supabase-js 2.110.1 · idb 8.0.3 · recharts 3.9.2
+- **Stack** : React 19 + Vite 8 + vite-plugin-pwa 1.3 (PWA), Supabase (base de données), IndexedDB via `idb` (cache hors ligne), `@zxing/browser` (scan de code-barres). Les graphiques sont faits « maison » en CSS — aucune bibliothèque de graphiques.
+- **Variables d'environnement** : voir `.env.example` (2 obligatoires côté navigateur, 1 facultative côté serveur).
 - **Structure du projet :**
 
 ```
 Kalyx/
 ├── index.html               ← la page de base
 ├── package.json             ← la liste des bibliothèques utilisées
+├── package-lock.json        ← versions exactes (à conserver : garantit un build identique)
 ├── vite.config.js           ← configuration de Vite + PWA (manifest, icônes…)
-├── .env                     ← tes identifiants Supabase (privé, non partagé)
-├── supabase/schema.sql      ← script de création de la table (à coller dans Supabase)
+├── vercel.json              ← optimiseur d'images (spécifique à Vercel)
+├── .env.example             ← modèle des variables ; à copier en .env (le .env est privé)
+├── api/                     ← fonctions serveur (relais BGG, prix Philibert)
+├── supabase/schema.sql      ← création de TOUTE la base (à coller dans Supabase)
 ├── public/                  ← icônes de l'app (générées)
 ├── src/
 │   ├── main.jsx             ← point d'entrée React
-│   ├── App.jsx              ← écran principal (vue Collection : liste, recherche, tri…)
+│   ├── App.jsx              ← écran principal (navigation, listes, sauvegardes)
 │   ├── index.css            ← les styles (couleurs, mise en page)
-│   ├── lib/
-│   │   ├── supabase.js      ← connexion à la base
-│   │   └── games.js         ← lire/ajouter/modifier/supprimer un jeu
-│   └── components/
-│       ├── GameCard.jsx     ← une carte de jeu
-│       └── GameForm.jsx     ← le formulaire d'ajout/modification
+│   ├── lib/                 ← accès aux données (supabase, games, plays, backup…)
+│   └── components/          ← les écrans et briques d'interface
 └── dist/                    ← version construite, prête à déployer (créée par npm run build)
 ```

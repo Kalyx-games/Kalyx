@@ -4,7 +4,7 @@ import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwner
 import { saveGamesCache, loadGamesCache } from './lib/cache'
 import { fetchOwners, addOwner, updateOwner, deleteOwner } from './lib/owners'
 import { fetchTags, addTag, updateTag, deleteTag } from './lib/tags'
-import { downloadBackup, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup } from './lib/backup'
+import { downloadBackup, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup, restorePreview } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
 import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayCounts, renameCategories, fetchPlayerRoster, fetchPlayerOverall, renamePlayer } from './lib/plays'
@@ -226,6 +226,7 @@ export default function App() {
   const [backupFreq, setBackupFreq] = useState(loadBackupFreq)
   const [backupsList, setBackupsList] = useState(null) // liste des sauvegardes, ou null si table absente
   const [restoring, setRestoring] = useState(null) // sauvegarde à restaurer (confirmation) | null
+  const [restorePlan, setRestorePlan] = useState(null) // ce que la restauration détruirait | null = en cours
   const [restoreBusy, setRestoreBusy] = useState(false)
   const [backupBusy, setBackupBusy] = useState(false)
   const autoBackupRef = useRef(false) // pour ne lancer la sauvegarde auto qu'une fois par chargement
@@ -600,12 +601,13 @@ export default function App() {
   }
 
   // --- Sauvegarde / restauration ---
-  function handleExport() {
+  async function handleExport() {
     setError(null)
     const dateStr = new Date().toISOString().slice(0, 10)
     try {
-      const n = downloadBackup(games ?? [], ownersList ?? [], tagsList ?? [], dateStr)
-      setNotice(`Sauvegarde téléchargée : ${n} jeu${n > 1 ? 'x' : ''}.`)
+      // Relit les parties et les fiches en base → la sauvegarde contient TOUT.
+      const n = await downloadBackup(games ?? [], ownersList ?? [], tagsList ?? [], dateStr)
+      setNotice(`Sauvegarde téléchargée : ${n.games} jeux, ${n.plays} parties, ${n.sheets} fiches de score.`)
     } catch (e) {
       setError(e.message)
     }
@@ -661,8 +663,11 @@ export default function App() {
       await loadGames()
       reloadOwners()
       reloadTags()
+      refreshHistory(historyGame)
+      fetchScoresheets().then((m) => setScoresheets(m || {})).catch(() => {})
       setImporting(null)
-      setNotice(`Import réussi : ${res.games} jeu${res.games > 1 ? 'x' : ''}.`)
+      const extra = res.plays ? ` et ${res.plays} partie${res.plays > 1 ? 's' : ''}` : ''
+      setNotice(`Import réussi : ${res.games} jeu${res.games > 1 ? 'x' : ''}${extra}.`)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -818,12 +823,19 @@ export default function App() {
     setRestoreBusy(true)
     setError(null)
     try {
+      // Filet de sécurité : on photographie l'état ACTUEL avant de revenir en arrière,
+      // pour pouvoir annuler la restauration elle-même. (Marquée « manuelle » → la
+      // rotation des sauvegardes automatiques ne l'effacera pas.)
+      await createBackup(games ?? [], ownersList ?? [], tagsList ?? [], 'manual').catch(() => null)
       const res = await restoreBackup(restoring.id)
       await loadGames()
       reloadOwners()
       reloadTags()
+      refreshHistory(historyGame)
+      fetchScoresheets().then((m) => setScoresheets(m || {})).catch(() => {})
+      reloadBackups()
       setRestoring(null)
-      setNotice(`Sauvegarde restaurée : ${res.games} jeu${res.games > 1 ? 'x' : ''}.`)
+      setNotice(`Sauvegarde restaurée : ${res.games} jeux, ${res.plays} parties. Une sauvegarde de l'état précédent a été créée.`)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -935,7 +947,12 @@ export default function App() {
             backups={backupsList}
             backupBusy={backupBusy}
             onBackupNow={handleBackupNow}
-            onRestore={(b) => setRestoring(b)}
+            onRestore={(b) => {
+              setRestoring(b)
+              // On calcule ce qui serait détruit AVANT de demander confirmation.
+              setRestorePlan(null)
+              restorePreview(b.id).then(setRestorePlan).catch(() => setRestorePlan({ games: 0, plays: 0, sheets: 0, names: [] }))
+            }}
             onOpenPlayers={handleOpenPlayers}
             online={online}
             onClose={() => setSettingsOpen(false)}
@@ -1117,7 +1134,25 @@ export default function App() {
       {confirming && (
         <ConfirmDialog
           title="Supprimer ce jeu ?"
-          message={<><strong>{confirming.name}</strong> sera définitivement retiré de la base.</>}
+          message={(() => {
+            // Les parties et la fiche sont supprimées en cascade par la base : on le dit.
+            const n = playCounts[confirming.id] || 0
+            const sheet = Boolean(scoresheets[confirming.id])
+            const plusieurs = n + (sheet ? 1 : 0) > 1 // « parties » et « fiche » sont féminins
+            return (
+              <>
+                <strong>{confirming.name}</strong> sera définitivement retiré de la base.
+                {(n > 0 || sheet) && (
+                  <>
+                    {' '}⚠️ {n > 0 && <>ses <strong>{n} partie{n > 1 ? 's' : ''} enregistrée{n > 1 ? 's' : ''}</strong></>}
+                    {n > 0 && sheet ? ' et ' : ''}
+                    {sheet && <>sa <strong>fiche de score</strong></>}
+                    {plusieurs ? ' seront supprimées' : ' sera supprimée'} aussi.
+                  </>
+                )}
+              </>
+            )
+          })()}
           confirmLabel="Supprimer"
           busy={deletingBusy}
           onConfirm={handleDelete}
@@ -1183,7 +1218,21 @@ export default function App() {
           message={
             <>
               L'état de cette sauvegarde (<strong>{restoring.games_count}</strong> jeu{restoring.games_count > 1 ? 'x' : ''})
-              va <strong>remplacer</strong> ta collection actuelle. Les jeux ajoutés depuis seront supprimés.
+              va <strong>remplacer</strong> ta collection actuelle.
+              {restorePlan == null ? (
+                <> Vérification de ce qui sera supprimé…</>
+              ) : restorePlan.games === 0 ? (
+                <> Aucun jeu ne sera supprimé.</>
+              ) : (
+                <>
+                  {' '}⚠️ <strong>{restorePlan.games} jeu{restorePlan.games > 1 ? 'x' : ''}</strong> ajouté{restorePlan.games > 1 ? 's' : ''} depuis
+                  {restorePlan.plays > 0 && <>, avec <strong>{restorePlan.plays} partie{restorePlan.plays > 1 ? 's' : ''} enregistrée{restorePlan.plays > 1 ? 's' : ''}</strong></>}
+                  {restorePlan.sheets > 0 && <> et {restorePlan.sheets} fiche{restorePlan.sheets > 1 ? 's' : ''} de score</>}
+                  {' '}: tout cela sera supprimé.
+                  {restorePlan.names.length > 0 && <> ({restorePlan.names.slice(0, 5).join(', ')}{restorePlan.names.length > 5 ? '…' : ''})</>}
+                </>
+              )}
+              {' '}Une sauvegarde de l'état actuel sera créée avant, pour pouvoir revenir en arrière.
             </>
           }
           confirmLabel="Restaurer"

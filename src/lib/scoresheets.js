@@ -32,6 +32,18 @@ export async function fetchScoresheets() {
   return map
 }
 
+// TOUTES les fiches, en lignes brutes (pour les sauvegardes) : on garde game_id et
+// updated_at, contrairement à fetchScoresheets qui n'en fait qu'une table de consultation.
+// [] si la table n'existe pas encore.
+export async function fetchAllScoresheets() {
+  const { data, error } = await supabase.from('scoresheets').select('id, game_id, template, updated_at')
+  if (error) {
+    if (tableMissing(error)) return []
+    throw error
+  }
+  return data ?? []
+}
+
 // Enregistre (crée ou met à jour) la fiche d'un jeu. Renvoie le template sauvegardé.
 export async function saveScoresheet(gameId, template) {
   const row = { game_id: gameId, template, updated_at: new Date().toISOString() }

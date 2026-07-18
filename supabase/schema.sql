@@ -1,14 +1,17 @@
 -- ============================================================
 --  Kalyx — SCHÉMA COMPLET de la base (un seul fichier)
 --
---  Ce fichier décrit la base telle qu'elle est AUJOURD'HUI : les 3 tables
---  (games + owners + tags), leurs colonnes, la sécurité et les droits d'accès.
---  Il remplace toutes les anciennes petites migrations.
+--  Ce fichier décrit la base telle qu'elle est AUJOURD'HUI : les 6 tables
+--    games · owners · tags · backups · scoresheets · plays
+--  avec leurs colonnes, la sécurité (RLS) et les droits d'accès.
 --
---  ⚠️ Tu n'as RIEN à lancer : ta base est déjà à jour. Ce fichier sert de
---     RÉFÉRENCE (et à tout recréer d'un coup si un jour tu repars de zéro).
---     Il est « idempotent » : sans danger à relancer, il ne casse rien et
---     n'efface aucune donnée.
+--  ⚠️ BASE NEUVE : exécuter CE FICHIER, ET LUI SEUL. Il contient déjà tout.
+--     Les fichiers migration_*.sql à côté ne sont que l'historique des ajouts
+--     faits au fil du temps : ils font double emploi, ne PAS les lancer en plus.
+--
+--  ⚠️ Base existante : tu n'as RIEN à lancer, elle est déjà à jour. Ce fichier
+--     sert de RÉFÉRENCE. Il est « idempotent » : sans danger à relancer, il ne
+--     casse rien et n'efface aucune donnée.
 --
 --  Pour l'utiliser (repartir de zéro) : Supabase → SQL Editor → New query →
 --  coller tout ce fichier → Run.

@@ -9,5 +9,6 @@ dev-dist
 
 .vercel
 .env*
+!.env.example
 deploy_url.txt
 .claude/settings.local.json

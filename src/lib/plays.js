@@ -25,6 +25,20 @@ export async function fetchPlays(gameId) {
   return data ?? []
 }
 
+// TOUTES les parties, tous jeux confondus (pour les sauvegardes). [] si table absente.
+// Contrairement à fetchPlays, aucun filtre sur game_id : c'est un instantané complet.
+export async function fetchAllPlays() {
+  const run = (cols) => supabase.from('plays').select(cols).order('played_at', { ascending: true })
+  let { data, error } = await run('id, game_id, played_at, players, winner, extensions, outcome, scenario, score, notes, trigger, created_at')
+  if (error && missingCol(error)) ({ data, error } = await run('id, game_id, played_at, players, winner, extensions, outcome, scenario, score, notes, created_at'))
+  if (error && missingCol(error)) ({ data, error } = await run('id, game_id, played_at, players, winner, extensions, created_at'))
+  if (error) {
+    if (tableMissing(error)) return []
+    throw error
+  }
+  return data ?? []
+}
+
 // Construit les 3 niveaux de colonnes d'une partie (pour la dégradation en cascade).
 function playRows(play) {
   const base = { players: play.players, winner: play.winner || null, extensions: play.extensions || [] }
