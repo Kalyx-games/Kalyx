@@ -184,3 +184,20 @@ export function playReveal() {
     /* rien */
   }
 }
+
+// Libère complètement l'audio (à la fermeture du Chwazi). Sans ça, le contexte reste
+// « running » : le fil audio continue de tourner en arrière-plan et consomme de la
+// batterie alors qu'on ne joue plus rien. Le prochain usage recréera tout via ensure().
+export function closeAudio() {
+  try {
+    stopRiser()
+    if (ctx) {
+      ctx.close()
+      ctx = null
+      master = null
+      reverbIn = null
+    }
+  } catch {
+    /* rien */
+  }
+}

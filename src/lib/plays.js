@@ -167,7 +167,10 @@ const BEST_GAME_MIN_PLAYS = 3
 // jeux COMPÉTITIFS joués au moins 3 fois (en coopératif tout le monde gagne ensemble,
 // ça remonterait un coop à 100 %). null si aucun jeu ne remplit la condition.
 // [] si table absente. (Pour l'onglet Stats.)
-export async function fetchPlayerOverall() {
+// `knownGames` : les jeux déjà chargés par l'app. On les réutilise pour nommer le
+// « meilleur jeu » plutôt que de re-télécharger la liste (économie de réseau à chaque
+// visite de l'onglet Stats). On ne va la chercher que si elle n'est pas fournie.
+export async function fetchPlayerOverall(knownGames = null) {
   const { data, error } = await supabase.from('plays').select('game_id, players, winner, outcome')
   if (error) {
     if (tableMissing(error)) return []
@@ -176,7 +179,9 @@ export async function fetchPlayerOverall() {
   // Noms des jeux, pour pouvoir nommer le « meilleur jeu ».
   let nameOf = new Map()
   try {
-    const { data: gs } = await supabase.from('games').select('id, name')
+    const gs = knownGames && knownGames.length
+      ? knownGames
+      : (await supabase.from('games').select('id, name')).data
     nameOf = new Map((gs ?? []).map((g) => [g.id, g.name]))
   } catch {
     /* sans les noms, on n'affiche simplement pas le meilleur jeu */

@@ -112,8 +112,8 @@ body {
   width: 100%;
   max-width: var(--app-w);
   display: flex;
+  /* Pas de backdrop-filter : le fond est opaque, le flou serait calculé pour rien. */
   background: var(--card);
-  backdrop-filter: blur(12px);
   border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 30;
@@ -192,8 +192,8 @@ body {
   justify-content: space-between;
   padding: 13px 16px;
   padding-top: max(13px, env(safe-area-inset-top));
+  /* Pas de backdrop-filter : le fond est opaque, le flou serait calculé pour rien. */
   background: var(--card);
-  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
   transition: transform 0.25s ease;
 }

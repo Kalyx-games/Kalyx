@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { enterFullscreen, exitFullscreen } from '../lib/fullscreen'
-import { playFinger, startRiser, stopRiser, playReveal } from '../lib/sound'
+import { playFinger, startRiser, stopRiser, playReveal, closeAudio } from '../lib/sound'
 
 // Chwazi : chacun pose un doigt, l'app choisit au hasard.
 // Deux modes : « Gagnant » (tire N gagnants) ou « Équipes » (répartit en N équipes).
@@ -171,6 +171,10 @@ export default function Chwazi({ onClose }) {
       el.removeEventListener('touchmove', block)
     }
   }, [])
+
+  // À la fermeture de l'écran, on libère l'audio : sans ça le contexte reste actif et
+  // le fil audio continue de tourner en arrière-plan (batterie) alors qu'on ne joue plus.
+  useEffect(() => closeAudio, [])
 
   // Plein écran : masque la barre du navigateur/système dès qu'un doigt est posé.
   // Sur Android, le bouton retour SORT du plein écran (au lieu de fermer Chwazi) :

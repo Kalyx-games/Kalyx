@@ -17,6 +17,10 @@ export default function BarcodeScanner({ onDetected, onClose, busy }) {
 
   useEffect(() => {
     doneRef.current = false // réinit (le montage/démontage double de React en dev le mettrait sinon à true)
+    // La caméra met un instant à s'ouvrir. Si l'écran est fermé AVANT, le nettoyage
+    // s'exécute alors que controlsRef est encore vide : sans ce drapeau, la caméra
+    // resterait allumée en arrière-plan (voyant allumé et batterie qui file).
+    let cancelled = false
     const hints = new Map()
     hints.set(DecodeHintType.POSSIBLE_FORMATS, FORMATS)
     const reader = new BrowserMultiFormatReader(hints)
@@ -29,11 +33,20 @@ export default function BarcodeScanner({ onDetected, onClose, busy }) {
       })
       .then((controls) => {
         controlsRef.current = controls
+        if (cancelled) {
+          // Déjà fermé pendant l'ouverture → on coupe tout de suite.
+          try {
+            controls.stop()
+          } catch {
+            /* rien */
+          }
+        }
       })
       .catch(() => {
-        setError("Impossible d'ouvrir la caméra. Autorise l'accès, ou saisis le code à la main.")
+        if (!cancelled) setError("Impossible d'ouvrir la caméra. Autorise l'accès, ou saisis le code à la main.")
       })
     return () => {
+      cancelled = true
       doneRef.current = true
       try {
         controlsRef.current && controlsRef.current.stop()

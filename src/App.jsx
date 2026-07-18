@@ -210,9 +210,13 @@ export default function App() {
     saveView(statsOpen ? 'stats' : view)
   }, [view, statsOpen])
   // Stats générales par joueur (toutes parties) : (re)chargées quand on ouvre l'onglet Stats.
+  // On passe les jeux déjà en mémoire → évite de re-télécharger la liste à chaque visite.
   useEffect(() => {
     if (!statsOpen) return
-    fetchPlayerOverall().then(setPlayerOverall).catch(() => setPlayerOverall([]))
+    fetchPlayerOverall(games).then(setPlayerOverall).catch(() => setPlayerOverall([]))
+    // volontairement pas de dépendance sur `games` : on ne veut recharger qu'à l'ouverture
+    // de l'onglet, pas à chaque modification de la collection.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statsOpen])
   const [chwaziOpen, setChwaziOpen] = useState(false) // écran Chwazi plein écran (onglet à droite)
   const [confirmingOwner, setConfirmingOwner] = useState(null) // propriétaire à supprimer | null
@@ -455,9 +459,13 @@ export default function App() {
     return list
   }, [games, search, sort, sortDir, shuffleSeed, filters, listStatus, view, playCounts])
 
-  // Largeur de la 1re colonne (joueurs/idéal) des cartes = largeur du jeu qui en
-  // prend le plus dans la sélection filtrée → toutes les cartes partagent cette
-  // largeur (colonnes alignées) sans laisser d'espace vide inutile.
+  // Largeur de la 1re colonne (joueurs/idéal) des cartes = largeur du jeu qui en prend le
+  // plus → toutes les cartes partagent cette largeur (colonnes alignées).
+  // ⚠️ On ne recalcule QUE quand les jeux ou l'onglet changent, pas à chaque filtrage :
+  // lire les largeurs force le navigateur à refaire toute la mise en page (~20 ms mesurés
+  // sur 89 cartes), ce qui rendait la frappe dans la recherche saccadée. Contrepartie
+  // assumée : après un filtrage, la colonne garde la largeur calculée sur la liste
+  // complète — au pire quelques pixels de trop, invisibles à l'usage.
   const listRef = useRef(null)
   useLayoutEffect(() => {
     const list = listRef.current
@@ -471,7 +479,7 @@ export default function App() {
     })
     // …puis on fixe la colonne à ce maximum (repli 1fr si liste vide).
     list.style.setProperty('--meta-left', max ? `${Math.ceil(max)}px` : 'minmax(0, 1fr)')
-  }, [visible])
+  }, [games, listStatus])
 
   // Scénarios déjà utilisés pour ce jeu (auto-complétion du champ scénario).
   const scenarioNames = useMemo(

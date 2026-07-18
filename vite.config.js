@@ -35,6 +35,10 @@ export default defineConfig({
       workbox: {
         // Fichiers mis en cache par le service worker (l'app marche hors ligne)
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        // Le scanner de code-barres (~480 Ko, un tiers du préchargement) a besoin de la
+        // caméra ET du réseau : il ne peut de toute façon pas servir hors ligne. On ne le
+        // précharge donc pas — il sera téléchargé au premier scan, puis mis en cache.
+        globIgnores: ['**/BarcodeScanner-*.js'],
       },
     }),
   ],
