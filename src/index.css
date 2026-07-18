@@ -917,16 +917,19 @@ body {
   align-self: flex-start;
   padding: 9px 14px;
 }
-.save-intro {
-  margin-bottom: 12px;
-}
 .save-actions {
   display: flex;
+  flex-wrap: wrap; /* 3 boutons : ils passent à la ligne plutôt que de s'écraser */
   gap: 10px;
 }
 .save-actions .btn-ghost {
-  flex: 1;
+  flex: 1 1 130px;
+  min-width: 0;
   height: 44px;
+}
+/* Sauvegarde en ligne : seule sur sa ligne (libellé long). */
+.save-actions .save-now {
+  flex-basis: 100%;
 }
 
 /* Fréquence de sauvegarde : libellé + menu déroulant sur une ligne */
@@ -2013,6 +2016,12 @@ body {
   font-size: 0.78rem;
   color: var(--muted);
 }
+/* Tuile dont la valeur est un TEXTE (ex. nom de jeu) : plus petit, et qui passe à la ligne. */
+.stat-tile-value.stat-tile-text {
+  font-size: 1.05rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
 .stat-tile-sub {
   margin-top: 2px;
   font-size: 0.74rem;
@@ -2922,6 +2931,12 @@ body {
   gap: 8px;
   align-items: center;
 }
+/* Bouton d'ajout d'une bulle (propriétaire / tag) : l'éditeur ne s'ouvre qu'au clic. */
+.bubble-add {
+  width: 100%;
+  margin-top: 4px;
+}
+
 /* ---- Écran Joueurs (renommage global) ---- */
 .settings-open {
   width: 100%;

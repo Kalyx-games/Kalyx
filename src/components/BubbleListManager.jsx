@@ -7,13 +7,16 @@ import { ownerColor, ownerInitials } from '../lib/games'
 // Palette de couleurs des bulles.
 const PALETTE = ['#ef4444', '#f97316', '#f59e0b', '#16a34a', '#0d9488', '#2f6df6', '#8b5cf6', '#ec4899']
 
-export default function BubbleListManager({ title, items, migrationCode, namePlaceholder, online = true, onAdd, onUpdate, onDelete }) {
-  const [editing, setEditing] = useState('new') // 'new' | ligne en cours d'édition
+export default function BubbleListManager({ title, items, migrationCode, namePlaceholder, addLabel, online = true, onAdd, onUpdate, onDelete }) {
+  // null = éditeur fermé (on ne voit que la liste + le bouton d'ajout) ;
+  // 'new' = création ; sinon = la ligne en cours de modification.
+  const [editing, setEditing] = useState(null)
   const [name, setName] = useState('')
   const [initials, setInitials] = useState('')
   const [color, setColor] = useState(PALETTE[0])
   const [initialsTouched, setInitialsTouched] = useState(false)
 
+  const close = () => setEditing(null)
   const startNew = () => {
     setEditing('new')
     setName('')
@@ -41,7 +44,7 @@ export default function BubbleListManager({ title, items, migrationCode, namePla
     } else {
       onUpdate(editing.id, { initials: ini, color })
     }
-    startNew()
+    close() // on referme : la liste reste lisible
   }
 
   const previewInitials = (initials || name).trim().slice(0, 2).toUpperCase() || '?'
@@ -76,7 +79,14 @@ export default function BubbleListManager({ title, items, migrationCode, namePla
 
           {!online && <p className="muted">Hors ligne : lecture seule.</p>}
 
-          {online && <div
+          {/* Éditeur replié par défaut : on ne montre qu'un bouton, l'écran reste léger. */}
+          {online && editing === null && (
+            <button type="button" className="btn-ghost bubble-add" onClick={startNew}>
+              ➕ {addLabel}
+            </button>
+          )}
+
+          {online && editing !== null && <div
             className="owner-editor"
             onKeyDown={(e) => {
               // Entrée sur un champ → on masque le clavier (blur) sur mobile.
@@ -126,9 +136,7 @@ export default function BubbleListManager({ title, items, migrationCode, namePla
             </div>
 
             <div className="oe-actions">
-              {editing !== 'new' && (
-                <button type="button" className="btn-ghost" onClick={startNew}>Annuler</button>
-              )}
+              <button type="button" className="btn-ghost" onClick={close}>Annuler</button>
               <button type="button" className="owner-add-btn" onClick={save} disabled={editing === 'new' && !name.trim()}>
                 {editing === 'new' ? 'Ajouter' : 'Enregistrer'}
               </button>

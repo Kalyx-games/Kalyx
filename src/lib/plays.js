@@ -142,31 +142,73 @@ export async function fetchPlayerNames() {
   return (await fetchPlayerRoster()).map((p) => p.name)
 }
 
-// Stats GÉNÉRALES par joueur, TOUS jeux confondus → [{ name, games, wins, winRate }],
-// du plus assidu au moins assidu. [] si table absente. (Pour l'onglet Stats.)
+// Nb minimum de parties sur un jeu pour qu'il puisse être le « meilleur jeu » d'un joueur
+// (sinon une seule partie gagnée donnerait 100 %).
+const BEST_GAME_MIN_PLAYS = 3
+
+// Stats GÉNÉRALES par joueur, TOUS jeux confondus →
+// [{ name, games, wins, winRate, bestGame }], du plus assidu au moins assidu.
+// `bestGame` = { name, winRate, games } : le jeu où il gagne le plus souvent, parmi les
+// jeux COMPÉTITIFS joués au moins 3 fois (en coopératif tout le monde gagne ensemble,
+// ça remonterait un coop à 100 %). null si aucun jeu ne remplit la condition.
+// [] si table absente. (Pour l'onglet Stats.)
 export async function fetchPlayerOverall() {
-  const { data, error } = await supabase.from('plays').select('players, winner, outcome')
+  const { data, error } = await supabase.from('plays').select('game_id, players, winner, outcome')
   if (error) {
     if (tableMissing(error)) return []
     throw error
   }
+  // Noms des jeux, pour pouvoir nommer le « meilleur jeu ».
+  let nameOf = new Map()
+  try {
+    const { data: gs } = await supabase.from('games').select('id, name')
+    nameOf = new Map((gs ?? []).map((g) => [g.id, g.name]))
+  } catch {
+    /* sans les noms, on n'affiche simplement pas le meilleur jeu */
+  }
+
   const games = {}
   const wins = {}
+  const perGame = {} // joueur → { game_id: { games, wins } }, parties compétitives seulement
   ;(data ?? []).forEach((play) => {
+    const winnerSet = new Set(playWinners(play))
     ;(play.players || []).forEach((p) => {
       const n = (p?.name || '').trim()
-      if (n) games[n] = (games[n] || 0) + 1
+      if (!n) return
+      games[n] = (games[n] || 0) + 1
+      if (!play.outcome && play.game_id) {
+        const byGame = perGame[n] || (perGame[n] = {})
+        const e = byGame[play.game_id] || (byGame[play.game_id] = { games: 0, wins: 0 })
+        e.games += 1
+        if (winnerSet.has(n)) e.wins += 1
+      }
     })
-    new Set(playWinners(play)).forEach((n) => {
+    winnerSet.forEach((n) => {
       if (n) wins[n] = (wins[n] || 0) + 1
     })
   })
+
+  const bestGameOf = (who) => {
+    let best = null
+    Object.entries(perGame[who] || {}).forEach(([gid, e]) => {
+      const label = nameOf.get(gid)
+      if (!label || e.games < BEST_GAME_MIN_PLAYS) return
+      const winRate = Math.round((e.wins / e.games) * 100)
+      // À taux égal, le jeu le plus joué prime (résultat mieux établi).
+      if (!best || winRate > best.winRate || (winRate === best.winRate && e.games > best.games)) {
+        best = { name: label, winRate, games: e.games }
+      }
+    })
+    return best
+  }
+
   return Object.keys(games)
     .map((name) => ({
       name,
       games: games[name],
       wins: wins[name] || 0,
       winRate: Math.round(((wins[name] || 0) / games[name]) * 100),
+      bestGame: bestGameOf(name),
     }))
     .sort((a, b) => b.games - a.games || a.name.localeCompare(b.name, 'fr'))
 }

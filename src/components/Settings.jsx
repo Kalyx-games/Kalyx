@@ -103,6 +103,7 @@ export default function Settings({
         items={owners}
         migrationCode="migration_proprietaires.sql"
         namePlaceholder="Nom du propriétaire (ex. Mathieu)"
+        addLabel="Ajouter un propriétaire"
         online={online}
         onAdd={onAddOwner}
         onUpdate={onUpdateOwner}
@@ -114,6 +115,7 @@ export default function Settings({
         items={tags}
         migrationCode="migration_tags.sql"
         namePlaceholder="Nom du tag (ex. Coopératif)"
+        addLabel="Ajouter un tag"
         online={online}
         onAdd={onAddTag}
         onUpdate={onUpdateTag}
@@ -128,13 +130,27 @@ export default function Settings({
         {!online && <p className="field-hint" style={{ marginTop: 8 }}>Hors ligne : lecture seule.</p>}
       </section>
 
+      {/* Une seule carte : sauvegarde automatique (fréquence + liste) ET fichier (export/import). */}
       <section className="settings-card">
         <h3>Sauvegarde</h3>
-        <p className="muted save-intro">
-          Télécharge un fichier contenant toute ta collection (jeux + propriétaires + tags).
-        </p>
-        <div className="save-actions">
-          <button type="button" className="btn-ghost" onClick={onExport}>⬇️ Exporter</button>
+
+        <div className="backup-freq-row">
+          <span className="field-label">Fréquence</span>
+          <SortMenu value={backupFreq} options={FREQ_OPTIONS} onChange={onSetBackupFreq} arrows={false} />
+        </div>
+
+        {/* Sauvegarde en ligne (liée à la fréquence ci-dessus), sur sa propre ligne. */}
+        <div className="save-actions" style={{ marginTop: 14 }}>
+          <button type="button" className="btn-ghost save-now" onClick={onBackupNow} disabled={!online || backupBusy}>
+            {backupBusy ? '…' : '💾 Sauvegarder maintenant'}
+          </button>
+        </div>
+
+        {/* Sauvegarde en fichier : le duo exporter / importer. */}
+        <div className="save-actions" style={{ marginTop: 10 }}>
+          <button type="button" className="btn-ghost" onClick={onExport} title="Télécharger un fichier de sauvegarde">
+            ⬇️ Exporter
+          </button>
           <button
             type="button"
             className="btn-ghost"
@@ -155,21 +171,6 @@ export default function Settings({
               e.target.value = '' // permet de réimporter le même fichier
             }}
           />
-        </div>
-      </section>
-
-      <section className="settings-card">
-        <h3>Sauvegarde automatique</h3>
-
-        <div className="backup-freq-row">
-          <span className="field-label">Fréquence</span>
-          <SortMenu value={backupFreq} options={FREQ_OPTIONS} onChange={onSetBackupFreq} arrows={false} />
-        </div>
-
-        <div className="save-actions" style={{ marginTop: 14 }}>
-          <button type="button" className="btn-ghost" onClick={onBackupNow} disabled={!online || backupBusy}>
-            {backupBusy ? '…' : '💾 Sauvegarder maintenant'}
-          </button>
         </div>
 
         {backups === null || backups.length === 0 ? (

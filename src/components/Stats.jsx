@@ -87,6 +87,13 @@ function PlayerSection({ playerOverall }) {
           <div className="stat-tile-value">{current.wins}</div>
           <div className="stat-tile-label">{current.wins > 1 ? 'parties gagnées' : 'partie gagnée'}</div>
         </div>
+        {/* Meilleur jeu : hors coopératif (tout le monde y gagne), min. 3 parties. */}
+        <div className="stat-tile">
+          <div className="stat-tile-value stat-tile-text">{current.bestGame ? current.bestGame.name : '—'}</div>
+          <div className="stat-tile-label">
+            meilleur jeu{current.bestGame ? ` (${current.bestGame.winRate} %)` : ''}
+          </div>
+        </div>
       </div>
     </section>
   )
