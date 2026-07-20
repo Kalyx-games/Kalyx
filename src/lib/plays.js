@@ -427,11 +427,15 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
     .map(([scenario, v]) => ({ scenario, games: v.games, wins: v.wins, winRate: Math.round((v.wins / v.games) * 100) }))
     .sort((a, b) => b.winRate - a.winRate || b.games - a.games || a.scenario.localeCompare(b.scenario, 'fr'))
 
-  // Répartition des victoires par déclencheur (jeux à victoire directe).
+  // Répartition des fins de partie par déclencheur (jeux à victoire directe).
+  // Le déclencheur est causé par le(s) VAINQUEUR(S) → avec un filtre joueur, on ne compte
+  // que les fins de partie déclenchées PAR un joueur affiché (pas celles subies).
   const trig = {}
   list.forEach((p) => {
     const t = (p.trigger || '').trim()
-    if (t) trig[t] = (trig[t] || 0) + 1
+    if (!t) return
+    if (!playWinners(p).some((n) => inShow(n))) return
+    trig[t] = (trig[t] || 0) + 1
   })
   const byTrigger = Object.entries(trig)
     .map(([trigger, count]) => ({ trigger, count }))
