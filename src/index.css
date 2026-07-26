@@ -1254,6 +1254,13 @@ body {
   font-size: 0.8rem;
   color: var(--muted);
 }
+/* Ligne d'info liée au tri (parties jouées, dernière partie) : discrète, sous les métas. */
+.game-playinfo {
+  margin-top: 5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+}
 /* Cellules de la grille. min-width:0 = elles ne débordent pas de leur colonne. */
 .game-meta > span {
   min-width: 0;
@@ -3022,12 +3029,12 @@ body {
   padding: 10px 12px;
   background: var(--card);
 }
-.hist-row.clickable {
-  cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-.hist-row.clickable:active {
-  border-color: var(--primary);
+/* Crayon + corbeille groupés à droite de la ligne de partie. */
+.hist-actions {
+  flex-shrink: 0;
+  margin-left: auto;
+  display: inline-flex;
+  gap: 6px;
 }
 /* Notes de la partie, affichées en petit sous les joueurs. */
 .hist-note {

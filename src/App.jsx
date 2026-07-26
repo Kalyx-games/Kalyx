@@ -7,7 +7,7 @@ import { fetchTags, addTag, updateTag, deleteTag } from './lib/tags'
 import { downloadBackup, downloadCsv, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup, restorePreview } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
-import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayCounts, renameCategories, fetchPlayerRoster, fetchPlayerOverall, renamePlayer } from './lib/plays'
+import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayMeta, renameCategories, fetchPlayerRoster, fetchPlayerOverall, renamePlayer } from './lib/plays'
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
 import ConfirmDialog from './components/ConfirmDialog'
@@ -170,6 +170,15 @@ function shuffleRank(id, seed) {
   return (h >>> 0) / 4294967296
 }
 
+// Date courte « 12 juil. 2026 » pour la ligne d'info des cartes.
+function formatDay(iso) {
+  try {
+    return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+  } catch {
+    return iso
+  }
+}
+
 const SORT_OPTIONS = [
   { value: 'name', label: 'Nom' },
   { value: 'random', label: 'Aléatoire' },
@@ -247,7 +256,7 @@ export default function App() {
   const [historyGame, setHistoryGame] = useState(null) // jeu dont on regarde l'historique | null
   const [gamePlays, setGamePlays] = useState(null) // parties du jeu affiché (null = chargement)
   const [playerNames, setPlayerNames] = useState([]) // noms déjà utilisés (auto-complétion)
-  const [playCounts, setPlayCounts] = useState({}) // { game_id: nb de parties } (tri)
+  const [playMeta, setPlayMeta] = useState({}) // { game_id: { count, last } } (tris + cartes)
   const [savingPlay, setSavingPlay] = useState(false)
   const [confirmingPlay, setConfirmingPlay] = useState(null) // partie à supprimer | null
 
@@ -263,7 +272,7 @@ export default function App() {
     reloadTags()
     fetchScoresheets().then(setScoresheets).catch(() => setScoresheets(null))
     fetchPlayerNames().then(setPlayerNames).catch(() => {})
-    fetchPlayCounts().then(setPlayCounts).catch(() => {})
+    fetchPlayMeta().then(setPlayMeta).catch(() => {})
   }, [reloadOwners, reloadTags])
 
   // Charge les jeux : depuis Supabase si possible (et on met en cache), sinon
@@ -437,7 +446,13 @@ export default function App() {
   // Le tri par prix n'a de sens que dans la Wishlist.
   const sortOptions = [
     ...SORT_OPTIONS,
-    view === 'wishlist' ? { value: 'price', label: 'Prix' } : { value: 'plays', label: 'Parties jouées' },
+    // La collection donne accès aux tris liés aux parties ; la wishlist au tri par prix.
+    ...(view === 'wishlist'
+      ? [{ value: 'price', label: 'Prix' }]
+      : [
+          { value: 'plays', label: 'Parties jouées' },
+          { value: 'lastplayed', label: 'Dernière partie' },
+        ]),
   ].sort((a, b) => a.label.localeCompare(b.label, 'fr'))
 
   // Jeux de la vue courante, filtrés (recherche + filtres) puis triés.
@@ -454,10 +469,12 @@ export default function App() {
     else if (sort === 'complexity') list = [...list].sort((a, b) => (a.complexity ?? 99) - (b.complexity ?? 99))
     else if (sort === 'duration') list = [...list].sort((a, b) => (a.duration_max ?? a.duration_min ?? 9999) - (b.duration_max ?? b.duration_min ?? 9999))
     else if (sort === 'price') list = [...list].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity))
-    else if (sort === 'plays') list = [...list].sort((a, b) => (playCounts[a.id] || 0) - (playCounts[b.id] || 0) || a.name.localeCompare(b.name, 'fr'))
+    else if (sort === 'plays') list = [...list].sort((a, b) => (playMeta[a.id]?.count || 0) - (playMeta[b.id]?.count || 0) || a.name.localeCompare(b.name, 'fr'))
+    // Dernière partie : les jeux jamais joués (pas de date) en dernier (ordre croissant).
+    else if (sort === 'lastplayed') list = [...list].sort((a, b) => (playMeta[a.id]?.last || '').localeCompare(playMeta[b.id]?.last || '') || a.name.localeCompare(b.name, 'fr'))
     if (sortDir === 'desc') list.reverse()
     return list
-  }, [games, search, sort, sortDir, shuffleSeed, filters, listStatus, view, playCounts])
+  }, [games, search, sort, sortDir, shuffleSeed, filters, listStatus, view, playMeta])
 
   // Largeur de la 1re colonne (joueurs/idéal) des cartes = largeur du jeu qui en prend le
   // plus → toutes les cartes partagent cette largeur (colonnes alignées).
@@ -763,11 +780,22 @@ export default function App() {
     }
   }
 
+  // « Nouvelle partie » directement depuis une carte (menu de glissement). Si le jeu a une
+  // fiche → on ouvre la saisie ; sinon → on ouvre l'éditeur pour créer la fiche d'abord.
+  function handleNewPlayFromCard(g) {
+    if (scoresheets && scoresheets[g.id]) {
+      setEditingPlay(null)
+      setScoringGame(g)
+    } else {
+      setEditingSheet(g)
+    }
+  }
+
   // Recharge les parties du jeu affiché + la liste des noms.
   const refreshHistory = (g) => {
     if (g) fetchPlays(g.id).then((p) => setGamePlays(p || [])).catch(() => {})
     fetchPlayerNames().then(setPlayerNames).catch(() => {})
-    fetchPlayCounts().then(setPlayCounts).catch(() => {})
+    fetchPlayMeta().then(setPlayMeta).catch(() => {})
   }
 
   // Écran Joueurs : liste de tous les joueurs enregistrés (chargée à l'ouverture).
@@ -1104,6 +1132,20 @@ export default function App() {
                   : () => handleGameClick(g)
               }
               onImageClick={(url) => setZoomImage(url)}
+              // « Nouvelle partie » depuis le menu de glissement (collection en ligne).
+              onNewPlay={online && view !== 'wishlist' ? () => handleNewPlayFromCard(g) : undefined}
+              // Quand on trie par une info absente des cartes, on l'affiche dessus.
+              metaLine={
+                sort === 'lastplayed'
+                  ? playMeta[g.id]?.last
+                    ? `🕓 Dernière partie : ${formatDay(playMeta[g.id].last)}`
+                    : '🕓 Jamais jouée'
+                  : sort === 'plays'
+                  ? playMeta[g.id]?.count
+                    ? `🎲 ${playMeta[g.id].count} partie${playMeta[g.id].count > 1 ? 's' : ''} jouée${playMeta[g.id].count > 1 ? 's' : ''}`
+                    : '🎲 Jamais jouée'
+                  : null
+              }
               ownerMap={ownerMap}
               tagMap={tagMap}
               hasSheet={!!(scoresheets && scoresheets[g.id])}
@@ -1166,7 +1208,7 @@ export default function App() {
           title="Supprimer ce jeu ?"
           message={(() => {
             // Les parties et la fiche sont supprimées en cascade par la base : on le dit.
-            const n = playCounts[confirming.id] || 0
+            const n = playMeta[confirming.id]?.count || 0
             const sheet = Boolean(scoresheets[confirming.id])
             const plusieurs = n + (sheet ? 1 : 0) > 1 // « parties » et « fiche » sont féminins
             return (

@@ -60,6 +60,15 @@ function Tile({ value, label, sub }) {
 
 // Section « Joueur » : choisir un joueur → son bilan global (toutes parties, tous jeux).
 // `playerOverall` = [{name, games, wins, winRate}] trié par nb de parties (le + assidu 1er).
+// Entités spéciales du comparatif (sinon = un nom de joueur).
+const ALL = '__all__'
+const REGULARS = '__regulars__'
+// Vert = meilleur, rouge = moins bon, gris = égalité (mêmes règles que le comparatif d'un jeu).
+function cmpClasses(a, b) {
+  if (a == null || b == null || a === b) return ['cmp-tie', 'cmp-tie']
+  return a > b ? ['cmp-good', 'cmp-bad'] : ['cmp-bad', 'cmp-good']
+}
+
 function PlayerSection({ playerOverall }) {
   const all = playerOverall || []
   // On ne propose que les joueurs réguliers sur au moins un jeu : ceux qui n'ont fait que
@@ -67,6 +76,44 @@ function PlayerSection({ playerOverall }) {
   const regulars = all.filter((p) => p.regular)
   const list = regulars.length ? regulars : all
   const [selected, setSelected] = useState(null)
+  const [cmp, setCmp] = useState({ left: null, right: null })
+
+  // Agrège un ensemble de joueurs vu comme UNE entité (somme des parties/victoires).
+  const aggregate = (names) => {
+    const set = new Set(names)
+    let games = 0
+    let wins = 0
+    all.forEach((p) => {
+      if (!set.has(p.name)) return
+      games += p.games
+      wins += p.wins
+    })
+    return { games, wins, winRate: games ? Math.round((wins / games) * 100) : 0 }
+  }
+  const entityNames = (key) =>
+    key === ALL ? all.map((p) => p.name) : key === REGULARS ? regulars.map((p) => p.name) : [key]
+  const entityOptions = [
+    { value: ALL, label: 'Tout le monde' },
+    ...(regulars.length > 1 ? [{ value: REGULARS, label: 'Joueurs réguliers' }] : []),
+    ...list.map((p) => ({ value: p.name, label: p.name })),
+  ]
+  // Défaut : les réguliers face au joueur le plus assidu.
+  const cmpLeft = cmp.left ?? (regulars.length > 1 ? REGULARS : ALL)
+  const cmpRight = cmp.right ?? (list[0]?.name || ALL)
+  const A = aggregate(entityNames(cmpLeft))
+  const B = aggregate(entityNames(cmpRight))
+  // aNum/bNum servent à COLORER (comparaison numérique) ; aTxt/bTxt à AFFICHER.
+  const cmpRow = (label, aTxt, bTxt, aNum, bNum, colored) => {
+    const [ca, cb] = colored ? cmpClasses(aNum, bNum) : ['cmp-tie', 'cmp-tie']
+    return (
+      <tr>
+        <th className="cmp-label" scope="row">{label}</th>
+        <td className={`cmp-cell ${ca}`}><span className="cmp-val">{aTxt}</span></td>
+        <td className={`cmp-cell ${cb}`}><span className="cmp-val">{bTxt}</span></td>
+      </tr>
+    )
+  }
+
   if (list.length === 0) return null // pas encore de partie enregistrée → section masquée
   const current = list.find((p) => p.name === selected) || list[0] // défaut : le + de parties
   return (
@@ -99,6 +146,33 @@ function PlayerSection({ playerOverall }) {
           </div>
         </div>
       </div>
+
+      {/* Comparaison de deux entités (un joueur, les réguliers, ou tout le monde),
+          même principe que le comparatif d'un jeu. */}
+      <h3 className="stat-block-title" style={{ marginTop: 18 }}>⚖️ Comparaison</h3>
+      <div className="cmp-heads">
+        <SortMenu
+          value={cmpLeft}
+          options={entityOptions.filter((o) => o.value !== cmpRight)}
+          onChange={(v) => setCmp((c) => ({ ...c, left: v }))}
+          arrows={false}
+        />
+        <span className="cmp-vs">vs</span>
+        <SortMenu
+          value={cmpRight}
+          options={entityOptions.filter((o) => o.value !== cmpLeft)}
+          onChange={(v) => setCmp((c) => ({ ...c, right: v }))}
+          arrows={false}
+        />
+      </div>
+      <table className="stat-table cmp-table">
+        <tbody>
+          {cmpRow('Taux de victoire', `${A.winRate} %`, `${B.winRate} %`, A.winRate, B.winRate, true)}
+          {/* Victoires/parties en gris : un groupe en a forcément plus, colorer n'aurait aucun sens. */}
+          {cmpRow('Victoires', A.wins, B.wins, A.wins, B.wins, false)}
+          {cmpRow('Parties', A.games, B.games, A.games, B.games, false)}
+        </tbody>
+      </table>
     </section>
   )
 }

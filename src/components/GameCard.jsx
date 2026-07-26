@@ -35,7 +35,7 @@ function durationLabel(g) {
 // dernière ouverte pour la refermer quand une autre s'ouvre.
 let openCard = null // { close: () => void }
 
-function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageClick, ownerMap, tagMap, index = 0 }) {
+function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick, onImageClick, metaLine, ownerMap, tagMap, index = 0 }) {
   const complexity = game.complexity ? Number(game.complexity) : null
   // Complexité sur 3 barres : plafonnée à 3, arrondie au demi près (remplissage partiel possible).
   const cx = complexity ? Math.min(3, complexity) : 0
@@ -127,13 +127,13 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
   // toujours visible au bord droit (affordance + zone cliquable de secours). On glisse
   // la carte vers la gauche pour la révéler entièrement. Écouteurs tactiles NATIFS non
   // passifs (les seuls capables de preventDefault sur iOS pour capter le geste). ---
-  // Menu au dos de la carte, révélé en glissant vers la gauche (ou en tapant le chevron) :
-  // Éditer, + « Déplacer vers la collection » en wishlist.
-  // Ordre du menu (rendu de gauche à droite) : autres actions, puis Éditer, puis BGG
-  // → depuis le bord droit (là où on commence à glisser) : BGG en 1er, Éditer en 2e.
+  // Menu au dos de la carte, révélé en glissant vers la gauche (ou en tapant le chevron).
+  // Rendu de gauche à droite ; le geste part du BORD DROIT → le dernier élément du tableau
+  // est le plus proche du pouce (« tout à droite »).
+  //   Collection : Éditer · BGG · Nouvelle partie (tout à droite)
+  //   Wishlist   : Éditer · BGG · Vers collection (tout à droite)
   const ACTION_W = 76
   const actions = []
-  if (onMove) actions.push({ key: 'move', label: 'Vers collection', node: <CollectionIcon size={20} color="#fff" />, bg: '#16a34a', run: onMove })
   if (onEdit) actions.push({ key: 'edit', label: 'Éditer', ico: '✏️', bg: 'var(--primary)', run: onEdit })
   if (onBgg)
     actions.push({
@@ -152,6 +152,9 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
       bg: '#475569',
       run: onBgg,
     })
+  // Actions « tout à droite » (les plus accessibles au pouce), une par vue :
+  if (onNewPlay) actions.push({ key: 'play', label: 'Partie', ico: '🎲', bg: '#0d9488', run: onNewPlay })
+  if (onMove) actions.push({ key: 'move', label: 'Vers collection', node: <CollectionIcon size={20} color="#fff" />, bg: '#16a34a', run: onMove })
   const menuW = actions.length * ACTION_W
   const OPEN = -menuW
   const [offset, setOffset] = useState(0)
@@ -345,6 +348,8 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageCli
             🧩 {extensions.join(', ')}
           </div>
         )}
+        {/* Info liée au tri en cours (parties jouées, dernière partie…), sinon absente. */}
+        {metaLine && <div className="game-playinfo">{metaLine}</div>}
       </div>
 
       {/* Chevron discret au bord droit : indique qu'on peut glisser la carte ; le taper
@@ -379,5 +384,7 @@ export default memo(
     prev.tagMap === next.tagMap &&
     // Sans ça, créer une fiche ne redessinait pas la carte → elle gardait l'ancien
     // onCardClick (sans fiche) et recliquer rouvrait l'éditeur au lieu de l'historique.
-    prev.hasSheet === next.hasSheet
+    prev.hasSheet === next.hasSheet &&
+    // La ligne d'info dépend du tri : elle doit se redessiner quand le tri change.
+    prev.metaLine === next.metaLine
 )

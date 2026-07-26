@@ -569,12 +569,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                   )
                 }
                 return (
-                  <div
-                    key={pl.id}
-                    className={`hist-row ${onEditPlay ? 'clickable' : ''}`}
-                    onClick={onEditPlay ? () => onEditPlay(pl) : undefined}
-                    title={onEditPlay ? 'Modifier cette partie' : undefined}
-                  >
+                  <div key={pl.id} className="hist-row">
                     <div className="hist-row-head">
                       <span className="hist-date">{playDate(pl.played_at)}</span>
                       {coop && (
@@ -582,9 +577,16 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                           {pl.outcome === 'win' ? '🏆 Gagné' : '💀 Perdu'}
                         </span>
                       )}
-                      {onDeletePlay && (
-                        <button type="button" className="hist-del" onClick={(e) => { e.stopPropagation(); onDeletePlay(pl) }} disabled={!online} title={online ? 'Supprimer cette partie' : 'Indisponible hors ligne'} aria-label="Supprimer cette partie">🗑️</button>
-                      )}
+                      {/* Crayon (édition) + corbeille, groupés à droite. Le clic sur la
+                          ligne elle-même n'édite plus. */}
+                      <span className="hist-actions">
+                        {onEditPlay && (
+                          <button type="button" className="hist-del" onClick={() => onEditPlay(pl)} disabled={!online} title={online ? 'Modifier cette partie' : 'Indisponible hors ligne'} aria-label="Modifier cette partie">✏️</button>
+                        )}
+                        {onDeletePlay && (
+                          <button type="button" className="hist-del" onClick={() => onDeletePlay(pl)} disabled={!online} title={online ? 'Supprimer cette partie' : 'Indisponible hors ligne'} aria-label="Supprimer cette partie">🗑️</button>
+                        )}
+                      </span>
                     </div>
                     {coop ? (
                       <>

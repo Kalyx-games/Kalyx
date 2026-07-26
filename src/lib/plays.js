@@ -116,19 +116,23 @@ export async function deletePlay(id) {
   if (error) throw error
 }
 
-// Nombre de parties enregistrées par jeu → { game_id: nb }. {} si table absente.
-// Sert au tri « par nombre de parties jouées ».
-export async function fetchPlayCounts() {
-  const { data, error } = await supabase.from('plays').select('game_id')
+// Par jeu : nombre de parties ET date de la dernière → { game_id: { count, last } }.
+// {} si table absente. Sert aux tris « parties jouées » / « dernière partie » et à
+// l'affichage de ces infos sur les cartes.
+export async function fetchPlayMeta() {
+  const { data, error } = await supabase.from('plays').select('game_id, played_at')
   if (error) {
     if (tableMissing(error)) return {}
     throw error
   }
-  const counts = {}
+  const meta = {}
   ;(data ?? []).forEach((row) => {
-    if (row.game_id) counts[row.game_id] = (counts[row.game_id] || 0) + 1
+    if (!row.game_id) return
+    const m = meta[row.game_id] || (meta[row.game_id] = { count: 0, last: null })
+    m.count += 1
+    if (row.played_at && (!m.last || row.played_at > m.last)) m.last = row.played_at
   })
-  return counts
+  return meta
 }
 
 // Tous les joueurs enregistrés (TOUS jeux confondus) → [{ name, games }], du plus
