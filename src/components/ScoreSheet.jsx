@@ -80,6 +80,9 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // nom. Pas gérée en équipes (rare). Les valeurs proposées = celles de la fiche.
   const variantCfg = !isTeams && template?.variant?.label ? template.variant : null
   const variantOptions = (variantCfg?.options || []).filter(Boolean)
+  // Portée : 'player' = une valeur par joueur ; 'play' = une seule pour toute la partie.
+  const variantPerPlayer = variantCfg && variantCfg.scope !== 'play'
+  const variantPerPlay = variantCfg && variantCfg.scope === 'play'
   // Victoire directe (« pas de points » en plus du score) + déclencheurs nommés.
   // En coop, elle ne sert qu'à noter PAR QUOI le groupe a gagné (pas à désigner un joueur) ;
   // en équipes, l'équipe gagnante est désignée par son 🏆 et le déclencheur dit ce qui a
@@ -120,6 +123,9 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     return Array.from({ length: minP }, () => makePlayer())
   })
   const [focusedPlayer, setFocusedPlayer] = useState(null)
+  // Variante « pour toute la partie » (portée play) : valeur unique, relue depuis n'importe
+  // quel joueur de la partie éditée (elle y est stockée à l'identique sur chacun).
+  const [playVariant, setPlayVariant] = useState(() => (ip?.players || []).map((p) => p?.variant).find(Boolean) || '')
   const [scenario, setScenario] = useState(ip?.scenario || '')
   const [notes, setNotes] = useState(ip ? ip.notes || '' : template?.notes || '')
   const [forcedWinnerId, setForcedWinnerId] = useState(null) // vainqueur forcé en cas d'égalité
@@ -269,8 +275,13 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const notesVal = () => notes
 
   // ----- Enregistrement selon le type -----
-  // Ajoute la variante (héros/faction) à un joueur enregistré, si la fiche en a une.
-  const withVariant = (obj, p) => (variantCfg && p.variant?.trim() ? { ...obj, variant: p.variant.trim() } : obj)
+  // Ajoute la variante à un joueur enregistré. Portée 'player' → sa propre valeur ;
+  // portée 'play' → la valeur unique de la partie, recopiée sur chaque joueur (pas de
+  // colonne dédiée → on réutilise le jsonb players, valeur identique partout).
+  const withVariant = (obj, p) => {
+    const v = variantPerPlay ? playVariant.trim() : variantPerPlayer ? (p.variant || '').trim() : ''
+    return v ? { ...obj, variant: v } : obj
+  }
 
   const saveCoop = () => {
     if (!outcome) return
@@ -492,7 +503,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // Champ « variante par joueur » (héros, faction…). Réutilise NameField : liste de la
   // fiche + saisie libre + auto-complétion. Rien si la fiche n'a pas de variante.
   const variantField = (p) =>
-    variantCfg ? (
+    variantPerPlayer ? (
       <NameField
         id={`v:${p.id}`}
         className="input variant-input"
@@ -505,6 +516,24 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         setFocused={setFocusedPlayer}
       />
     ) : null
+
+  // Champ UNIQUE quand la variante vaut pour toute la partie (ex. la carte de Toy Battle).
+  const playVariantField = variantPerPlay ? (
+    <div className="field">
+      <label className="field-label">🎭 {variantCfg.label}</label>
+      <NameField
+        id="playVariant"
+        className="input"
+        value={playVariant}
+        onChange={setPlayVariant}
+        onPick={setPlayVariant}
+        placeholder={variantCfg.label}
+        playerNames={variantOptions}
+        focused={focusedPlayer}
+        setFocused={setFocusedPlayer}
+      />
+    </div>
+  ) : null
 
   // Liste de noms de joueurs (utilisée en coop et en « pas de points »).
   const playerList = (withWinnerToggle) => (
@@ -562,6 +591,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           </div>
           {triggerField}
           {scenarioField}
+          {playVariantField}
           {/* Score du groupe, détaillé par catégorie (total = somme). */}
           {!noPoints && (
             <div className="field">
@@ -720,6 +750,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         <div className="coop-form">
           {scenarioField}
           {triggerField}
+          {playVariantField}
           <div className="field">
             <label className="field-label">Joueurs — coche le(s) vainqueur(s) 🏆</label>
             {playerList(true)}
@@ -741,9 +772,10 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   return (
     <div className="sheet">
       {head}
-      {(scenarioField || instantField) && (
+      {(scenarioField || instantField || playVariantField) && (
         <div className="coop-form">
           {scenarioField}
+          {playVariantField}
           {instantField}
         </div>
       )}

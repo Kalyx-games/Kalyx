@@ -39,8 +39,10 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   const [instant, setInstant] = useState(() => template?.instant ?? template?.scoring === 'none')
   const [triggers, setTriggers] = useState(() => (template?.triggers || []).map((n) => mkTrigger(n)))
   const [scenario, setScenario] = useState(() => !!template?.scenario)
-  // Variante par joueur (héros/faction…) : nom + liste de valeurs proposées.
+  // Variante (héros/faction/carte…) : nom + liste de valeurs + PORTÉE.
+  // scope 'player' = une par joueur (Dice Throne) ; 'play' = une pour toute la partie (Toy Battle).
   const [variantLabel, setVariantLabel] = useState(() => template?.variant?.label || '')
+  const [variantScope, setVariantScope] = useState(() => template?.variant?.scope || 'player')
   const [variantOptions, setVariantOptions] = useState(() => (template?.variant?.options || []).map((n) => mkOption(n)))
   const addVariantOption = () => setVariantOptions((o) => [...o, mkOption()])
   const updVariantOption = (id, name) => setVariantOptions((o) => o.map((x) => (x.id === id ? { ...x, name } : x)))
@@ -195,7 +197,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
     // Variante par joueur : conservée seulement si un nom est donné.
     const vLabel = variantLabel.trim()
     const variant = vLabel
-      ? { label: vLabel, options: variantOptions.map((o) => o.name.trim()).filter(Boolean) }
+      ? { label: vLabel, scope: variantScope, options: variantOptions.map((o) => o.name.trim()).filter(Boolean) }
       : null
     // On garde les catégories même en coopératif (elles ne servent pas mais on ne
     // les perd pas si on rebascule en compétitif).
@@ -323,21 +325,31 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
 
       </section>
 
-      {/* Variante par joueur : chacun joue un héros / une faction / un personnage. */}
+      {/* Variante : un héros/faction par joueur, ou une carte/scénario pour toute la partie. */}
       {!teamsOn && (
         <section className="settings-card">
-          <h3>Variante par joueur</h3>
+          <h3>Variante</h3>
           <p className="field-hint" style={{ marginBottom: 8 }}>
-            Si chaque joueur incarne un héros, une faction, un personnage… donne-lui un nom.
-            À chaque partie, chacun choisira le sien. Laisse vide si le jeu n'en a pas.
+            Un héros, une faction, une carte, un scénario… donne-lui un nom. Laisse vide si
+            le jeu n'en a pas.
           </p>
           <input
             className="cat-edit-label"
             value={variantLabel}
             onChange={(e) => setVariantLabel(e.target.value)}
-            placeholder="Nom de la variante (ex. Héros, Faction, Personnage)"
+            placeholder="Nom de la variante (ex. Héros, Faction, Carte)"
           />
           {variantLabel.trim() && (
+            <>
+            {/* Portée : une valeur par joueur, ou une seule pour toute la partie. */}
+            <div className="chips" style={{ marginTop: 10 }}>
+              <button type="button" className={`fchip ${variantScope === 'player' ? 'on' : ''}`} onClick={() => setVariantScope('player')}>
+                👤 Une par joueur
+              </button>
+              <button type="button" className={`fchip ${variantScope === 'play' ? 'on' : ''}`} onClick={() => setVariantScope('play')}>
+                🎲 Une pour toute la partie
+              </button>
+            </div>
             <div style={{ marginTop: 10 }}>
               <label className="field-label">Valeurs proposées <span className="field-opt">(facultatif)</span></label>
               <p className="field-hint" style={{ margin: '2px 0 8px' }}>
@@ -351,6 +363,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
               ))}
               <button type="button" className="btn-ghost" onClick={addVariantOption}>➕ Ajouter une valeur</button>
             </div>
+            </>
           )}
         </section>
       )}
