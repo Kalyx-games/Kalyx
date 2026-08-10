@@ -11,7 +11,8 @@ import { resolveDefaultExts } from '../lib/scoresheets'
 // gagne/perd ensemble (+ score de groupe facultatif).
 
 let pid = 0
-const makePlayer = (name = '') => ({ id: ++pid, name, scores: {} })
+// `variant` = valeur de la variante par joueur (héros, faction…) choisie pour cette partie.
+const makePlayer = (name = '', variant = '') => ({ id: ++pid, name, scores: {}, variant })
 
 // Champ « nom de joueur » avec auto-complétion maison (le <datalist> natif ne
 // marche pas partout sur mobile). Partagé par tous les modes.
@@ -75,6 +76,10 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const noPoints = scoring === 'none' // = pas de table de score (branche « désignation »)
   const teamsCfg = template?.teams
   const isTeams = !isCoop && !!teamsCfg?.on
+  // Variante par joueur (héros, faction, personnage…). Active si la fiche lui a donné un
+  // nom. Pas gérée en équipes (rare). Les valeurs proposées = celles de la fiche.
+  const variantCfg = !isTeams && template?.variant?.label ? template.variant : null
+  const variantOptions = (variantCfg?.options || []).filter(Boolean)
   // Victoire directe (« pas de points » en plus du score) + déclencheurs nommés.
   // En coop, elle ne sert qu'à noter PAR QUOI le groupe a gagné (pas à désigner un joueur) ;
   // en équipes, l'équipe gagnante est désignée par son 🏆 et le déclencheur dit ce qui a
@@ -110,7 +115,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const maxP = Math.max(minP, Math.min(8, effP.length ? Math.max(...effP) : Number(game?.players_max) || 8))
   const [players, setPlayers] = useState(() => {
     if (ip && !isTeams && (ip.players || []).length) {
-      return ip.players.map((p) => ({ id: ++pid, name: p.name || '', scores: p.scores || {} }))
+      return ip.players.map((p) => ({ id: ++pid, name: p.name || '', scores: p.scores || {}, variant: p.variant || '' }))
     }
     return Array.from({ length: minP }, () => makePlayer())
   })
@@ -222,6 +227,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     setPlayers((ps) => ps.map((p) => (p.id === playerId ? { ...p, scores: { ...p.scores, [key]: value } } : p)))
   const setName = (playerId, name) =>
     setPlayers((ps) => ps.map((p) => (p.id === playerId ? { ...p, name } : p)))
+  const setVariant = (playerId, value) =>
+    setPlayers((ps) => ps.map((p) => (p.id === playerId ? { ...p, variant: value } : p)))
   const addPlayer = () => setPlayers((ps) => (ps.length < maxP ? [...ps, makePlayer()] : ps))
   const removePlayer = (playerId) => {
     setWinnerIds((s) => {
@@ -262,9 +269,12 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const notesVal = () => notes
 
   // ----- Enregistrement selon le type -----
+  // Ajoute la variante (héros/faction) à un joueur enregistré, si la fiche en a une.
+  const withVariant = (obj, p) => (variantCfg && p.variant?.trim() ? { ...obj, variant: p.variant.trim() } : obj)
+
   const saveCoop = () => {
     if (!outcome) return
-    const built = namesOf().map((name) => ({ name }))
+    const built = players.map((p, i) => withVariant({ name: nameOf(p, i) }, p))
     onSavePlay({
       win: 'coop',
       players: built,
@@ -280,10 +290,10 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
   const saveNoPoints = () => {
     if (!winnerIds.size) return
-    const built = players.map((p, i) => ({ name: nameOf(p, i), winner: winnerIds.has(p.id) }))
+    const built = players.map((p, i) => ({ p, name: nameOf(p, i), winner: winnerIds.has(p.id) }))
     const winnerNames = built.filter((b) => b.winner).map((b) => b.name)
     onSavePlay({
-      players: built.map((b) => ({ name: b.name })),
+      players: built.map((b) => withVariant({ name: b.name }, b.p)),
       winner: winnerNames.join(', '),
       trigger: instantTrigger || null,
       scenario: scenarioVal(),
@@ -301,7 +311,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         const n = Number(p.scores[c.label])
         scores[c.label] = Number.isFinite(n) ? n : 0
       })
-      return { name: nameOf(p, i), total: totalOf(p), scores }
+      return withVariant({ name: nameOf(p, i), total: totalOf(p), scores }, p)
     })
     const extreme = scoring === 'low' ? Math.min(...built.map((b) => b.total)) : Math.max(...built.map((b) => b.total))
     // Priorité : victoire directe (déclencheur) → vainqueur forcé (égalité) → score.
@@ -479,36 +489,56 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     </div>
   )
 
+  // Champ « variante par joueur » (héros, faction…). Réutilise NameField : liste de la
+  // fiche + saisie libre + auto-complétion. Rien si la fiche n'a pas de variante.
+  const variantField = (p) =>
+    variantCfg ? (
+      <NameField
+        id={`v:${p.id}`}
+        className="input variant-input"
+        value={p.variant || ''}
+        onChange={(v) => setVariant(p.id, v)}
+        onPick={(v) => setVariant(p.id, v)}
+        placeholder={variantCfg.label}
+        playerNames={variantOptions}
+        focused={focusedPlayer}
+        setFocused={setFocusedPlayer}
+      />
+    ) : null
+
   // Liste de noms de joueurs (utilisée en coop et en « pas de points »).
   const playerList = (withWinnerToggle) => (
     <div className="coop-players">
       {players.map((p, i) => (
-        <div key={p.id} className="coop-player-row">
-          {withWinnerToggle && (
-            <button
-              type="button"
-              className={`win-toggle ${winnerIds.has(p.id) ? 'on' : ''}`}
-              onClick={() => toggleWinner(p.id)}
-              aria-label="Désigner vainqueur"
-              title="Vainqueur"
-            >
-              🏆
-            </button>
-          )}
-          <NameField
-            id={p.id}
-            className="input"
-            value={p.name}
-            onChange={(v) => setName(p.id, v)}
-            onPick={(n) => setName(p.id, n)}
-            placeholder={`Joueur ${i + 1}`}
-            playerNames={playerNames}
-            focused={focusedPlayer}
-            setFocused={setFocusedPlayer}
-          />
-          {players.length > minP && (
-            <button type="button" className="sheet-del" onClick={() => removePlayer(p.id)} aria-label="Retirer ce joueur">×</button>
-          )}
+        <div key={p.id} className="coop-player">
+          <div className="coop-player-row">
+            {withWinnerToggle && (
+              <button
+                type="button"
+                className={`win-toggle ${winnerIds.has(p.id) ? 'on' : ''}`}
+                onClick={() => toggleWinner(p.id)}
+                aria-label="Désigner vainqueur"
+                title="Vainqueur"
+              >
+                🏆
+              </button>
+            )}
+            <NameField
+              id={p.id}
+              className="input"
+              value={p.name}
+              onChange={(v) => setName(p.id, v)}
+              onPick={(n) => setName(p.id, n)}
+              placeholder={`Joueur ${i + 1}`}
+              playerNames={playerNames}
+              focused={focusedPlayer}
+              setFocused={setFocusedPlayer}
+            />
+            {players.length > minP && (
+              <button type="button" className="sheet-del" onClick={() => removePlayer(p.id)} aria-label="Retirer ce joueur">×</button>
+            )}
+          </div>
+          {variantField(p)}
         </div>
       ))}
       {players.length < maxP && (
@@ -742,6 +772,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                       <button type="button" className="sheet-del" onClick={() => removePlayer(p.id)} aria-label="Retirer ce joueur">×</button>
                     )}
                   </div>
+                  {variantField(p)}
                 </th>
               ))}
               <th className="sheet-add-col">

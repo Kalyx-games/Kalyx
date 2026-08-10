@@ -445,6 +445,39 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
     .map(([trigger, count]) => ({ trigger, count }))
     .sort((a, b) => b.count - a.count || a.trigger.localeCompare(b.trigger, 'fr'))
 
+  // Variante par joueur (héros/faction) : taux de victoire par valeur, et favori par joueur.
+  // Suit le filtre joueur (inShow) : on ne compte que les variantes des joueurs affichés.
+  const varAgg = {} // valeur → { games, wins }
+  const varByPlayer = {} // joueur → { valeur → { games, wins } }
+  list.forEach((p) => {
+    const winners = new Set(playWinners(p))
+    ;(p.players || []).forEach((pl) => {
+      const v = (pl?.variant || '').trim()
+      const n = (pl?.name || '').trim()
+      if (!v || !inShow(n)) return
+      const won = winners.has(n)
+      const a = varAgg[v] || (varAgg[v] = { games: 0, wins: 0 })
+      a.games += 1
+      if (won) a.wins += 1
+      const byP = varByPlayer[n] || (varByPlayer[n] = {})
+      const e = byP[v] || (byP[v] = { games: 0, wins: 0 })
+      e.games += 1
+      if (won) e.wins += 1
+    })
+  })
+  const byVariant = Object.entries(varAgg)
+    .map(([value, v]) => ({ value, games: v.games, wins: v.wins, winRate: Math.round((v.wins / v.games) * 100) }))
+    .sort((a, b) => b.winRate - a.winRate || b.games - a.games || a.value.localeCompare(b.value, 'fr'))
+  // Favori de chaque joueur = la valeur qu'il a le plus jouée (à égalité, meilleur taux).
+  const favoriteVariant = Object.entries(varByPlayer)
+    .map(([name, m]) => {
+      const best = Object.entries(m)
+        .map(([value, e]) => ({ value, games: e.games, winRate: Math.round((e.wins / e.games) * 100) }))
+        .sort((a, b) => b.games - a.games || b.winRate - a.winRate || a.value.localeCompare(b.value, 'fr'))[0]
+      return { name, ...best }
+    })
+    .sort((a, b) => b.games - a.games || a.name.localeCompare(b.name, 'fr'))
+
   // Stats par catégorie de score (moyenne / min / max / médiane), joueurs affichés.
   const catVals = {}
   list.forEach((p) => {
@@ -518,6 +551,8 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
     byPlayer,
     byScenario,
     byTrigger,
+    byVariant,
+    favoriteVariant,
     byCategory,
     scores,
     bestScoreBy,

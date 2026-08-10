@@ -64,6 +64,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   const scoring = template?.scoring || 'high'
   const isCoop = win === 'coop'
   const noPoints = scoring === 'none'
+  const variantLabel = template?.variant?.label || null // « Héros », « Faction »… ou null
   const loading = plays == null
   const [showPlays, setShowPlays] = useState(false) // liste des parties repliée par défaut
 
@@ -490,6 +491,55 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
             </section>
           )}
 
+          {/* Variante par joueur (héros/faction) : taux de victoire par valeur. */}
+          {variantLabel && stats.byVariant.length > 0 && (
+            <section className="stat-block">
+              <h3 className="stat-block-title">🎭 {variantLabel} — taux de victoire</h3>
+              <div className="scenario-bars">
+                {stats.byVariant.map((v) => (
+                  <div key={v.value} className="scenario-row">
+                    <div className="scenario-head">
+                      <span className="scenario-name">{v.value}</span>
+                      <span className="scenario-val">{v.winRate} % <span className="scenario-sub">({v.wins}/{v.games})</span></span>
+                    </div>
+                    <div className="bar-track">
+                      <div className="bar-fill" style={{ width: `${v.winRate}%`, background: '#2f6df6' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Favori de chaque joueur pour cette variante. */}
+          {variantLabel && stats.favoriteVariant.length > 0 && (
+            <section className="stat-block">
+              <h3 className="stat-block-title">🎭 {variantLabel} favori par joueur</h3>
+              <div className="table-scroll">
+                <table className="stat-table">
+                  <thead>
+                    <tr>
+                      <th className="name">Joueur</th>
+                      <th className="name">{variantLabel}</th>
+                      <th className="num">Parties</th>
+                      <th className="num">Victoire</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.favoriteVariant.map((f) => (
+                      <tr key={f.name}>
+                        <td className="name">{f.name}</td>
+                        <td className="name">{f.value}</td>
+                        <td className="num">{f.games}</td>
+                        <td className="num">{f.winRate} %</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
           {/* Comparatif : deux entités au choix (un joueur, les réguliers, tout le monde).
               Absorbe les stats par catégorie (moyenne en gros, min–max en dessous). */}
           {allPlayerNames.length > 0 && (
@@ -601,7 +651,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                           <div className="hist-ext">🧩 {pl.extensions.join(', ')}</div>
                         )}
                         <div className="hist-coop-players">
-                          👥 {(pl.players || []).map((p) => p.name).join(', ')}
+                          👥 {(pl.players || []).map((p) => (p.variant ? `${p.name} (${p.variant})` : p.name)).join(', ')}
                         </div>
                       </>
                     ) : teamPlay ? (
@@ -644,7 +694,10 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                         <div className="hist-players">
                           {ranked.map((p, i) => (
                             <div key={i} className={`hist-player ${winners.has((p.name || '').trim()) ? 'hist-winner' : ''}`}>
-                              <span className="hist-player-name">{winners.has((p.name || '').trim()) ? '🏆 ' : ''}{p.name}</span>
+                              <span className="hist-player-name">
+                                {winners.has((p.name || '').trim()) ? '🏆 ' : ''}{p.name}
+                                {p.variant ? <span className="hist-variant">{p.variant}</span> : null}
+                              </span>
                               {!noPoints && <span className="hist-player-score">{p.total}</span>}
                             </div>
                           ))}

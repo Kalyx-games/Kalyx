@@ -3099,6 +3099,17 @@ body {
 .hist-player-score {
   font-weight: 700;
 }
+/* Variante (héros/faction) jouée, en petite pastille à côté du nom. */
+.hist-variant {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
 
 /* ---- Coopératif : saisie + historique ---- */
 .coop-form {
@@ -3154,10 +3165,40 @@ body {
   flex-direction: column;
   gap: 8px;
 }
+/* Un joueur = sa ligne (nom + actions) puis, en dessous, sa variante (héros/faction). */
+.coop-player {
+  margin-bottom: 10px;
+}
 .coop-player-row {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+/* Champ « variante par joueur » (héros/faction). En liste : indenté sous le nom.
+   Dans la table de score : petit champ sous le nom, à la largeur de la colonne. */
+.variant-input {
+  margin-top: 5px;
+  font-size: 0.85rem;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--input-bg);
+  color: var(--ink);
+}
+.coop-player .variant-input {
+  display: block;
+  width: 100%;
+  margin-left: 4px;
+}
+.sheet-player + .variant-input {
+  width: 100%;
+  min-width: 72px;
+  box-sizing: border-box;
+}
+.variant-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--input-focus);
 }
 .coop-player-row .sheet-name-wrap {
   flex: 1;

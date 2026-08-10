@@ -23,6 +23,8 @@ let teid = 0
 const mkTeam = (t = {}) => ({ id: ++teid, name: t.name || '', size: t.size != null ? String(t.size) : '' })
 let trid = 0
 const mkTrigger = (name = '') => ({ id: ++trid, name })
+let oid = 0
+const mkOption = (name = '') => ({ id: ++oid, name })
 
 export default function ScoreSheetEditor({ game, template, online, onSave, onClose }) {
   const isNew = !template
@@ -37,6 +39,12 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   const [instant, setInstant] = useState(() => template?.instant ?? template?.scoring === 'none')
   const [triggers, setTriggers] = useState(() => (template?.triggers || []).map((n) => mkTrigger(n)))
   const [scenario, setScenario] = useState(() => !!template?.scenario)
+  // Variante par joueur (héros/faction…) : nom + liste de valeurs proposées.
+  const [variantLabel, setVariantLabel] = useState(() => template?.variant?.label || '')
+  const [variantOptions, setVariantOptions] = useState(() => (template?.variant?.options || []).map((n) => mkOption(n)))
+  const addVariantOption = () => setVariantOptions((o) => [...o, mkOption()])
+  const updVariantOption = (id, name) => setVariantOptions((o) => o.map((x) => (x.id === id ? { ...x, name } : x)))
+  const delVariantOption = (id) => setVariantOptions((o) => o.filter((x) => x.id !== id))
   const [teamsOn, setTeamsOn] = useState(() => !!template?.teams?.on)
   const [teamList, setTeamList] = useState(() => (template?.teams?.list || []).map(mkTeam))
   const isCoop = win === 'coop'
@@ -184,6 +192,11 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
 
   const save = async () => {
     const extList = [...exts]
+    // Variante par joueur : conservée seulement si un nom est donné.
+    const vLabel = variantLabel.trim()
+    const variant = vLabel
+      ? { label: vLabel, options: variantOptions.map((o) => o.name.trim()).filter(Boolean) }
+      : null
     // On garde les catégories même en coopératif (elles ne servent pas mais on ne
     // les perd pas si on rebascule en compétitif).
     const categories = cats
@@ -236,6 +249,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
           categories,
           extensions: extList,
           extDefault,
+          variant,
         },
         renames
       )
@@ -308,6 +322,38 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         )}
 
       </section>
+
+      {/* Variante par joueur : chacun joue un héros / une faction / un personnage. */}
+      {!teamsOn && (
+        <section className="settings-card">
+          <h3>Variante par joueur</h3>
+          <p className="field-hint" style={{ marginBottom: 8 }}>
+            Si chaque joueur incarne un héros, une faction, un personnage… donne-lui un nom.
+            À chaque partie, chacun choisira le sien. Laisse vide si le jeu n'en a pas.
+          </p>
+          <input
+            className="cat-edit-label"
+            value={variantLabel}
+            onChange={(e) => setVariantLabel(e.target.value)}
+            placeholder="Nom de la variante (ex. Héros, Faction, Personnage)"
+          />
+          {variantLabel.trim() && (
+            <div style={{ marginTop: 10 }}>
+              <label className="field-label">Valeurs proposées <span className="field-opt">(facultatif)</span></label>
+              <p className="field-hint" style={{ margin: '2px 0 8px' }}>
+                Les choix rapides à la partie (tu pourras toujours en taper un autre).
+              </p>
+              {variantOptions.map((o) => (
+                <div key={o.id} className="ext-chip-row">
+                  <input className="cat-edit-label" value={o.name} onChange={(e) => updVariantOption(o.id, e.target.value)} placeholder="ex. Barbare" />
+                  <button type="button" className="ext-row-x" onClick={() => delVariantOption(o.id)} aria-label="Retirer la valeur">×</button>
+                </div>
+              ))}
+              <button type="button" className="btn-ghost" onClick={addVariantOption}>➕ Ajouter une valeur</button>
+            </div>
+          )}
+        </section>
+      )}
 
       {teamsOn && !isCoop && (
         <section className="settings-card">
