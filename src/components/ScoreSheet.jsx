@@ -76,13 +76,18 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const noPoints = scoring === 'none' // = pas de table de score (branche « désignation »)
   const teamsCfg = template?.teams
   const isTeams = !isCoop && !!teamsCfg?.on
-  // Variante par joueur (héros, faction, personnage…). Active si la fiche lui a donné un
-  // nom. Pas gérée en équipes (rare). Les valeurs proposées = celles de la fiche.
-  const variantCfg = !isTeams && template?.variant?.label ? template.variant : null
+  // Deux variantes indépendantes, chacune optionnelle. Pas gérées en équipes (rare).
+  //  · PAR JOUEUR (héros, faction…) → une valeur par joueur, stockée dans players[].variant.
+  //  · POUR TOUTE LA PARTIE (carte, mission…) → une seule valeur, recopiée sur chaque joueur
+  //    dans players[].playVariant (aucune colonne dédiée → aucune migration).
+  // Rétrocompat : une ancienne fiche avec `variant.scope === 'play'` = variante de la partie.
+  const legacyPlay = template?.variant?.scope === 'play' ? template.variant : null
+  const variantCfg = !isTeams && template?.variant?.label && !legacyPlay ? template.variant : null
+  const playVariantCfg = !isTeams ? template?.playVariant?.label ? template.playVariant : legacyPlay : null
   const variantOptions = (variantCfg?.options || []).filter(Boolean)
-  // Portée : 'player' = une valeur par joueur ; 'play' = une seule pour toute la partie.
-  const variantPerPlayer = variantCfg && variantCfg.scope !== 'play'
-  const variantPerPlay = variantCfg && variantCfg.scope === 'play'
+  const playVariantOptions = (playVariantCfg?.options || []).filter(Boolean)
+  const variantPerPlayer = !!variantCfg
+  const variantPerPlay = !!playVariantCfg
   // Victoire directe (« pas de points » en plus du score) + déclencheurs nommés.
   // En coop, elle ne sert qu'à noter PAR QUOI le groupe a gagné (pas à désigner un joueur) ;
   // en équipes, l'équipe gagnante est désignée par son 🏆 et le déclencheur dit ce qui a
@@ -123,9 +128,15 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     return Array.from({ length: minP }, () => makePlayer())
   })
   const [focusedPlayer, setFocusedPlayer] = useState(null)
-  // Variante « pour toute la partie » (portée play) : valeur unique, relue depuis n'importe
-  // quel joueur de la partie éditée (elle y est stockée à l'identique sur chacun).
-  const [playVariant, setPlayVariant] = useState(() => (ip?.players || []).map((p) => p?.variant).find(Boolean) || '')
+  // Variante « pour toute la partie » : valeur unique, relue depuis n'importe quel joueur de
+  // la partie éditée (stockée à l'identique sur chacun dans playVariant ; repli sur `variant`
+  // pour les rares parties enregistrées avant la refonte, quand il n'y a pas de variante joueur).
+  const [playVariant, setPlayVariant] = useState(
+    () =>
+      (ip?.players || []).map((p) => p?.playVariant).find(Boolean) ||
+      (!variantPerPlayer ? (ip?.players || []).map((p) => p?.variant).find(Boolean) : '') ||
+      ''
+  )
   const [scenario, setScenario] = useState(ip?.scenario || '')
   const [notes, setNotes] = useState(ip ? ip.notes || '' : template?.notes || '')
   const [forcedWinnerId, setForcedWinnerId] = useState(null) // vainqueur forcé en cas d'égalité
@@ -275,12 +286,20 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const notesVal = () => notes
 
   // ----- Enregistrement selon le type -----
-  // Ajoute la variante à un joueur enregistré. Portée 'player' → sa propre valeur ;
-  // portée 'play' → la valeur unique de la partie, recopiée sur chaque joueur (pas de
-  // colonne dédiée → on réutilise le jsonb players, valeur identique partout).
+  // Ajoute les variantes à un joueur enregistré. Les deux sont indépendantes et peuvent
+  // coexister : `variant` = sa valeur par joueur ; `playVariant` = la valeur unique de la
+  // partie, recopiée à l'identique sur chaque joueur (pas de colonne dédiée → jsonb players).
   const withVariant = (obj, p) => {
-    const v = variantPerPlay ? playVariant.trim() : variantPerPlayer ? (p.variant || '').trim() : ''
-    return v ? { ...obj, variant: v } : obj
+    const out = { ...obj }
+    if (variantPerPlayer) {
+      const v = (p.variant || '').trim()
+      if (v) out.variant = v
+    }
+    if (variantPerPlay) {
+      const pv = playVariant.trim()
+      if (pv) out.playVariant = pv
+    }
+    return out
   }
 
   const saveCoop = () => {
@@ -520,15 +539,15 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // Champ UNIQUE quand la variante vaut pour toute la partie (ex. la carte de Toy Battle).
   const playVariantField = variantPerPlay ? (
     <div className="field">
-      <label className="field-label">🎭 {variantCfg.label}</label>
+      <label className="field-label">🎭 {playVariantCfg.label}</label>
       <NameField
         id="playVariant"
         className="input"
         value={playVariant}
         onChange={setPlayVariant}
         onPick={setPlayVariant}
-        placeholder={variantCfg.label}
-        playerNames={variantOptions}
+        placeholder={playVariantCfg.label}
+        playerNames={playVariantOptions}
         focused={focusedPlayer}
         setFocused={setFocusedPlayer}
       />

@@ -64,8 +64,15 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   const scoring = template?.scoring || 'high'
   const isCoop = win === 'coop'
   const noPoints = scoring === 'none'
-  const variantLabel = template?.variant?.label || null // « Héros », « Faction »… ou null
-  const variantPerPlay = template?.variant?.scope === 'play' // une valeur pour toute la partie
+  // Deux variantes indépendantes. Rétrocompat : `variant.scope === 'play'` = variante de partie.
+  const legacyPlay = template?.variant?.scope === 'play' ? template.variant : null
+  const variantLabel = legacyPlay ? null : template?.variant?.label || null // par joueur
+  const playVariantLabel = template?.playVariant?.label || legacyPlay?.label || null // pour toute la partie
+  // Valeur « pour toute la partie » d'une partie donnée (stockée sur chaque joueur).
+  const playVariantOf = (pl) =>
+    (pl.players || []).map((p) => p?.playVariant).find(Boolean) ||
+    (legacyPlay ? (pl.players || []).map((p) => p?.variant).find(Boolean) : '') ||
+    ''
   const loading = plays == null
   const [showPlays, setShowPlays] = useState(false) // liste des parties repliée par défaut
 
@@ -157,16 +164,17 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   // Variante « pour toute la partie » : répartition des PARTIES par valeur (une valeur par
   // partie, stockée à l'identique sur chaque joueur → on la relit et on compte les parties).
   const variantPlayDist = useMemo(() => {
-    if (!variantPerPlay) return []
+    if (!playVariantLabel) return []
     const c = {}
     filtered.forEach((p) => {
-      const v = (p.players || []).map((x) => x?.variant).find(Boolean)
+      const v = playVariantOf(p)
       if (v) c[v] = (c[v] || 0) + 1
     })
     return Object.entries(c)
       .map(([value, count]) => ({ value, count }))
       .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, 'fr'))
-  }, [filtered, variantPerPlay])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, playVariantLabel])
 
   // Classement : réguliers visibles, occasionnels repliés (même règle que les filtres).
   const [showOccStats, setShowOccStats] = useState(false)
@@ -508,9 +516,9 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
 
           {/* Variante « pour toute la partie » (ex. carte jouée à Toy Battle) :
               répartition des PARTIES par valeur (une seule valeur par partie). */}
-          {variantLabel && variantPerPlay && variantPlayDist.length > 0 && (
+          {playVariantLabel && variantPlayDist.length > 0 && (
             <section className="stat-block">
-              <h3 className="stat-block-title">🎭 Par {variantLabel.toLowerCase()}</h3>
+              <h3 className="stat-block-title">🎭 Par {playVariantLabel.toLowerCase()}</h3>
               <div className="scenario-bars">
                 {variantPlayDist.map((v) => {
                   const max = Math.max(...variantPlayDist.map((x) => x.count))
@@ -531,7 +539,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
           )}
 
           {/* Variante par joueur (héros/faction) : taux de victoire par valeur. */}
-          {variantLabel && !variantPerPlay && stats.byVariant.length > 0 && (
+          {variantLabel && stats.byVariant.length > 0 && (
             <section className="stat-block">
               <h3 className="stat-block-title">🎭 {variantLabel} — taux de victoire</h3>
               <div className="scenario-bars">
@@ -551,7 +559,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
           )}
 
           {/* Favori de chaque joueur pour cette variante. */}
-          {variantLabel && !variantPerPlay && stats.favoriteVariant.length > 0 && (
+          {variantLabel && stats.favoriteVariant.length > 0 && (
             <section className="stat-block">
               <h3 className="stat-block-title">🎭 {variantLabel} favori par joueur</h3>
               <div className="table-scroll">
@@ -658,7 +666,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                   )
                 }
                 // Variante « pour toute la partie » : une seule valeur, affichée en tête de ligne.
-                const rowVariant = variantPerPlay ? (pl.players || []).map((p) => p?.variant).find(Boolean) || '' : ''
+                const rowVariant = playVariantLabel ? playVariantOf(pl) : ''
                 return (
                   <div key={pl.id} className="hist-row">
                     <div className="hist-row-head">
@@ -693,7 +701,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                           <div className="hist-ext">🧩 {pl.extensions.join(', ')}</div>
                         )}
                         <div className="hist-coop-players">
-                          👥 {(pl.players || []).map((p) => (!variantPerPlay && p.variant ? `${p.name} (${p.variant})` : p.name)).join(', ')}
+                          👥 {(pl.players || []).map((p) => (variantLabel && p.variant ? `${p.name} (${p.variant})` : p.name)).join(', ')}
                         </div>
                       </>
                     ) : teamPlay ? (
@@ -740,7 +748,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                             <div key={i} className={`hist-player ${winners.has((p.name || '').trim()) ? 'hist-winner' : ''}`}>
                               <span className="hist-player-name">
                                 {winners.has((p.name || '').trim()) ? '🏆 ' : ''}{p.name}
-                                {!variantPerPlay && p.variant ? <span className="hist-variant">{p.variant}</span> : null}
+                                {variantLabel && p.variant ? <span className="hist-variant">{p.variant}</span> : null}
                               </span>
                               {!noPoints && <span className="hist-player-score">{p.total}</span>}
                             </div>
