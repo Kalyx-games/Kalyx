@@ -188,3 +188,94 @@ export function computeGlobalTierlist(tierlists, gameIds, repById) {
   const unranked = gameIds.filter((id) => avg[id] == null)
   return { ranking, unranked, avg }
 }
+
+// Tier (lettre) le plus proche d'un score moyen.
+function tierOfScore(s) {
+  return SCORED_TIERS.reduce((best, t) => (Math.abs(t.score - s) < Math.abs(best.score - s) ? t : best), SCORED_TIERS[0])
+}
+
+// « Anecdotes » de la tierlist globale : petits constats amusants tirés des classements
+// de tous les joueurs. `nameById` : id → nom de jeu. Chaque champ peut être vide/null si
+// pas assez de données → l'affichage n'en montre que ce qui existe.
+export function computeGlobalAnecdotes(tierlists, gameIds, repById, nameById) {
+  const valid = new Set(gameIds)
+  const gname = (id) => nameById.get(id) || '?'
+  const byGame = {} // id → [{ player, score }]
+  const byPlayer = {} // player → { id → score }
+  ;(tierlists || []).forEach((tl) => {
+    const rk = repById ? remapRanking(tl.ranking, repById, valid) : tl.ranking || {}
+    SCORED_TIERS.forEach((t) => {
+      ;(rk[t.key] || []).forEach((id) => {
+        ;(byGame[id] = byGame[id] || []).push({ player: tl.player, score: t.score })
+        ;(byPlayer[tl.player] = byPlayer[tl.player] || {})[id] = t.score
+      })
+    })
+  })
+
+  // ⚔️ Ça divise : le plus grand écart de notes (min↔max), avec qui note haut / bas.
+  const divisive = Object.entries(byGame)
+    .filter(([, arr]) => arr.length >= 2)
+    .map(([id, arr]) => {
+      const scores = arr.map((a) => a.score)
+      const max = Math.max(...scores)
+      const min = Math.min(...scores)
+      return {
+        name: gname(id),
+        spread: max - min,
+        hiTier: tierOfScore(max).label,
+        loTier: tierOfScore(min).label,
+        hi: arr.filter((a) => a.score === max).map((a) => a.player),
+        lo: arr.filter((a) => a.score === min).map((a) => a.player),
+      }
+    })
+    .filter((d) => d.spread > 0)
+    .sort((a, b) => b.spread - a.spread)
+    .slice(0, 3)
+
+  // 🤝 À l'unanimité : mêmes notes pour tout le monde (≥ 2 joueurs).
+  const unanime = Object.entries(byGame)
+    .filter(([, arr]) => arr.length >= 2 && new Set(arr.map((a) => a.score)).size === 1)
+    .map(([id, arr]) => ({ name: gname(id), score: arr[0].score, tier: tierOfScore(arr[0].score).label, n: arr.length }))
+  const adorés = unanime.filter((u) => u.score >= 5).sort((a, b) => b.n - a.n || b.score - a.score).slice(0, 4)
+  const boudés = unanime.filter((u) => u.score <= 2).sort((a, b) => b.n - a.n || a.score - b.score).slice(0, 4)
+
+  // 🌶️ L'avis le plus tranché : la note d'un joueur la plus éloignée de celle des autres.
+  let bold = null
+  Object.entries(byGame).forEach(([id, arr]) => {
+    if (arr.length < 3) return
+    arr.forEach((a) => {
+      const others = arr.filter((x) => x !== a)
+      const avgOthers = others.reduce((s, x) => s + x.score, 0) / others.length
+      const dev = Math.abs(a.score - avgOthers)
+      if (!bold || dev > bold.dev) {
+        bold = {
+          name: gname(id),
+          player: a.player,
+          tier: tierOfScore(a.score).label,
+          othersTier: tierOfScore(avgOthers).label,
+          higher: a.score > avgOthers,
+          dev,
+        }
+      }
+    })
+  })
+
+  // 👯 Goûts les plus proches / les plus opposés : paires de joueurs (≥ 5 jeux en commun).
+  const players = Object.keys(byPlayer)
+  const pairs = []
+  for (let i = 0; i < players.length; i++) {
+    for (let j = i + 1; j < players.length; j++) {
+      const A = byPlayer[players[i]]
+      const B = byPlayer[players[j]]
+      const common = Object.keys(A).filter((id) => id in B)
+      if (common.length < 5) continue
+      const diff = common.reduce((s, id) => s + Math.abs(A[id] - B[id]), 0) / common.length
+      pairs.push({ a: players[i], b: players[j], diff, n: common.length })
+    }
+  }
+  pairs.sort((x, y) => x.diff - y.diff)
+  const soulmates = pairs[0] || null
+  const opposites = pairs.length > 1 ? pairs[pairs.length - 1] : null
+
+  return { divisive, adorés, boudés, bold, soulmates, opposites }
+}

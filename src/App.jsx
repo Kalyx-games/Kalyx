@@ -8,7 +8,7 @@ import { downloadBackup, downloadCsv, parseBackup, importBackup, fetchBackups, c
 import { philibertSearchUrl } from './lib/philibert'
 import { EMPTY_FILTERS, PRICE_MIN, PRICE_MAX, norm, passesFilters } from './lib/filtering'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
-import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, emptyRanking, dedupeByName, repIdMap, remapRanking } from './lib/tierlists'
+import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, computeGlobalAnecdotes, emptyRanking, dedupeByName, repIdMap, remapRanking } from './lib/tierlists'
 import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayMeta, renameCategories, fetchPlayerRoster, fetchPlayerOverall, renamePlayer } from './lib/plays'
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
@@ -827,7 +827,9 @@ export default function App() {
   function handleOpenGlobalTierlist() {
     const ids = collectionGames.map((g) => g.id)
     const { ranking, unranked } = computeGlobalTierlist(tierlists || [], ids, repById)
-    setTierlistView({ mode: 'global', title: '🌍 Tierlist globale', ranking, unranked, player: '', id: null })
+    const nameById = new Map(collectionGames.map((g) => [g.id, g.name]))
+    const anecdotes = computeGlobalAnecdotes(tierlists || [], ids, repById, nameById)
+    setTierlistView({ mode: 'global', title: '🌍 Tierlist globale', ranking, unranked, anecdotes, player: '', id: null })
   }
   function handleOpenTierlist(tl) {
     // Remappe vers les représentants (mutualise les doublons de nom) + retire les jeux supprimés.
@@ -1392,6 +1394,7 @@ export default function App() {
             title={tierlistView.title}
             initialRanking={tierlistView.ranking}
             unranked={tierlistView.unranked}
+            anecdotes={tierlistView.anecdotes}
             initialPlayer={tierlistView.player}
             filters={filters}
             setFilters={setFilters}

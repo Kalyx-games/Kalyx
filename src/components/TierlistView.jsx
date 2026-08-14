@@ -39,6 +39,7 @@ export default function TierlistView({
   title,
   initialRanking,
   unranked = [],
+  anecdotes,
   games,
   allOwners,
   allTags,
@@ -66,6 +67,7 @@ export default function TierlistView({
   const [tip, setTip] = useState(null) // { name, x, y } — infobulle au tap
   const [focusedName, setFocusedName] = useState(null)
   const [az, setAz] = useState(false) // tri A→Z de TOUTES les lignes (lecture seule)
+  const [showAnec, setShowAnec] = useState(false) // encart « Anecdotes » (global) replié/déplié
   const idRef = useRef(savedId)
   const rootRef = useRef(null)
 
@@ -415,6 +417,59 @@ export default function TierlistView({
               </>
             ) : (
               <p className="muted" style={{ padding: '8px 2px' }}>Tous les jeux sont classés 🎉</p>
+            )}
+          </div>
+        )}
+
+        {/* Encart « Anecdotes » (tierlist globale) : petits constats tirés des classements. */}
+        {isGlobal && anecdotes && (
+          <div className="tl-anecdotes">
+            <button type="button" className="hist-toggle" onClick={() => setShowAnec((s) => !s)}>
+              📊 Anecdotes
+              <span className={`hist-toggle-chev ${showAnec ? 'up' : ''}`}>▾</span>
+            </button>
+            {showAnec && (
+              <div className="tl-anec-body">
+                {anecdotes.divisive.length > 0 && (
+                  <div className="tl-anec-card">
+                    <h4>⚔️ Ça divise</h4>
+                    {anecdotes.divisive.map((d) => (
+                      <p key={d.name}>
+                        <b>{d.name}</b> — {d.hiTier} pour {d.hi.join(', ')} · {d.loTier} pour {d.lo.join(', ')}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {(anecdotes.adorés.length > 0 || anecdotes.boudés.length > 0) && (
+                  <div className="tl-anec-card">
+                    <h4>🤝 À l'unanimité</h4>
+                    {anecdotes.adorés.length > 0 && <p>❤️ Adorés : {anecdotes.adorés.map((u) => u.name).join(', ')}</p>}
+                    {anecdotes.boudés.length > 0 && <p>💤 Boudés : {anecdotes.boudés.map((u) => u.name).join(', ')}</p>}
+                  </div>
+                )}
+                {anecdotes.bold && (
+                  <div className="tl-anec-card">
+                    <h4>🌶️ L'avis le plus tranché</h4>
+                    <p>
+                      <b>{anecdotes.bold.player}</b> met <b>{anecdotes.bold.name}</b> en {anecdotes.bold.tier}, là où le groupe le voit plutôt en {anecdotes.bold.othersTier}.
+                    </p>
+                  </div>
+                )}
+                {(anecdotes.soulmates || anecdotes.opposites) && (
+                  <div className="tl-anec-card">
+                    <h4>👯 Les goûts</h4>
+                    {anecdotes.soulmates && <p>🫶 Les plus proches : <b>{anecdotes.soulmates.a}</b> & <b>{anecdotes.soulmates.b}</b></p>}
+                    {anecdotes.opposites && <p>🙃 Les plus opposés : <b>{anecdotes.opposites.a}</b> & <b>{anecdotes.opposites.b}</b></p>}
+                  </div>
+                )}
+                {anecdotes.divisive.length === 0 &&
+                  anecdotes.adorés.length === 0 &&
+                  anecdotes.boudés.length === 0 &&
+                  !anecdotes.bold &&
+                  !anecdotes.soulmates && (
+                    <p className="muted" style={{ padding: '4px 2px' }}>Pas encore assez de tierlists pour des anecdotes.</p>
+                  )}
+              </div>
             )}
           </div>
         )}
