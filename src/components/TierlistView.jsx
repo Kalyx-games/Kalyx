@@ -108,6 +108,10 @@ export default function TierlistView({
   // la ligne) ; `beforeId` null = à la fin. tier null = retour au bac (retiré de tout).
   // On repère la position par l'ID (pas par un index numérique) → reste correct même quand
   // un filtre masque certaines vignettes déjà classées.
+  // `latest` garde toujours le dernier {player, ranking}, même sans re-render (cas où un
+  // déplacement et la fermeture arrivent dans le même tick) → l'auto-save à la sortie est fiable.
+  const latest = useRef({ player: initialPlayer, ranking: initialRanking })
+  latest.current.player = player
   const moveGame = (id, tier, beforeId) =>
     setRanking((r) => {
       const next = {}
@@ -119,28 +123,44 @@ export default function TierlistView({
         const at = beforeId && arr.indexOf(beforeId) !== -1 ? arr.indexOf(beforeId) : arr.length
         arr.splice(at, 0, id)
       }
+      latest.current = { player: latest.current.player, ranking: next }
       return next
     })
 
-  // ---- Auto-save (édition) : sauvegarde peu après le dernier changement ----
-  const firstSave = useRef(true)
+  // ---- Auto-save (édition) : sauvegarde peu après le dernier changement, ET on FORCE la
+  // sauvegarde à la sortie du mode édition / à la fermeture (sinon un déplacement fait juste
+  // avant de sortir, dans la fenêtre des 800 ms, serait perdu). On compare des SNAPSHOTS
+  // (pas un flag `dirty`) : robuste même si React groupe le déplacement et la sortie. ----
+  const snapOf = (p, r) => JSON.stringify({ p: (p || '').trim(), r })
+  const savedSnap = useRef(snapOf(initialPlayer, initialRanking))
+  const doSave = async () => {
+    const { player: p, ranking: r } = latest.current
+    const snap = snapOf(p, r)
+    if (snap === savedSnap.current) return // rien de neuf
+    if (!online || !p.trim()) return // hors ligne ou pas encore de nom → on réessaiera
+    const prev = savedSnap.current
+    savedSnap.current = snap
+    try {
+      const row = await onSave({ id: idRef.current, player: p.trim(), ranking: r })
+      if (row && row.id) idRef.current = row.id
+    } catch {
+      savedSnap.current = prev // échec réseau → on pourra réessayer
+    }
+  }
+  const flushRef = useRef(doSave)
+  flushRef.current = doSave
+  // Débounce pendant l'édition.
   useEffect(() => {
     if (!editing) return
-    if (firstSave.current) {
-      firstSave.current = false
-      return
-    }
-    if (!online || !player.trim()) return
-    const t = setTimeout(async () => {
-      try {
-        const row = await onSave({ id: idRef.current, player: player.trim(), ranking })
-        if (row && row.id) idRef.current = row.id
-      } catch {
-        /* échec réseau : on réessaiera au prochain changement */
-      }
-    }, 800)
+    const t = setTimeout(() => flushRef.current(), 800)
     return () => clearTimeout(t)
-  }, [ranking, player, editing, online]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ranking, player, editing])
+  // Sortie du mode édition → sauvegarde immédiate de ce qui est en attente.
+  useEffect(() => {
+    if (!editing) flushRef.current()
+  }, [editing])
+  // Fermeture de la tierlist (démontage) → idem.
+  useEffect(() => () => flushRef.current(), [])
 
   // ---- Glisser-déposer tactile + souris (édition seulement) ----
   useEffect(() => {
