@@ -280,8 +280,8 @@ export function computeAnecdoteList(tierlists, gameIds, repById, nameById) {
   Object.entries(byPlayer).forEach(([player, m]) => {
     const sGames = Object.keys(m).filter((id) => m[id] === 6)
     const fGames = Object.keys(m).filter((id) => m[id] === 1)
-    if (sGames.length) items.push({ icon: '⭐', text: `Le coup de cœur de ${player} : ${gname(pick(sGames))} (S).` })
-    if (fGames.length) items.push({ icon: '😖', text: `La bête noire de ${player} : ${gname(pick(fGames))} (F).` })
+    if (sGames.length) items.push({ icon: '⭐', text: `Un coup de cœur de ${player} : ${gname(pick(sGames))} (S).` })
+    if (fGames.length) items.push({ icon: '😖', text: `Une bête noire de ${player} : ${gname(pick(fGames))} (F).` })
   })
 
   // 😇 Le plus enthousiaste / 😈 le plus sévère (plus de S / plus de F).
