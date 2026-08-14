@@ -3425,6 +3425,15 @@ body {
   padding: 8px 12px 0;
 }
 .tl-head { flex-shrink: 0; }
+/* Panneau de filtres dans une tierlist : `.tl-sheet` est en overflow:hidden (colonne
+   flex), donc un panneau trop haut serait clippé et impossible à scroller → on lui donne
+   sa propre zone défilante. */
+.tl-sheet .filters {
+  flex-shrink: 0;
+  max-height: 55vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .tl-head h2 { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tl-name-edit { flex: 1; min-width: 0; }
 .tl-name-edit .input { width: 100%; }

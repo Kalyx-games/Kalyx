@@ -1390,7 +1390,9 @@ export default function App() {
             initialRanking={tierlistView.ranking}
             unranked={tierlistView.unranked}
             initialPlayer={tierlistView.player}
-            initialFilters={filters}
+            filters={filters}
+            setFilters={setFilters}
+            onResetFilters={() => setFilters((f) => ({ ...EMPTY_FILTERS, owners: f.owners }))}
             savedId={tierlistView.id}
             games={collectionGames}
             allOwners={allOwners}

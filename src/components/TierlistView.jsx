@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { TIERS } from '../lib/tierlists'
-import { EMPTY_FILTERS, passesFilters } from '../lib/filtering'
+import { passesFilters } from '../lib/filtering'
 import Filters from './Filters'
 import NameField from './NameField'
 
@@ -45,7 +45,9 @@ export default function TierlistView({
   playerNames,
   online,
   initialPlayer = '',
-  initialFilters,
+  filters,
+  setFilters,
+  onResetFilters,
   savedId = null,
   onClose,
   onSave,
@@ -58,8 +60,8 @@ export default function TierlistView({
   const gameById = useMemo(() => new Map(games.map((g) => [g.id, g])), [games])
   const [ranking, setRanking] = useState(initialRanking)
   const [player, setPlayer] = useState(initialPlayer)
-  // On hérite des filtres actifs de la navigation (Collection/Wishlist/Stats) à l'ouverture.
-  const [filters, setFilters] = useState(() => ({ ...EMPTY_FILTERS, ...(initialFilters || {}) }))
+  // `filters`/`setFilters` viennent de l'App → le menu de filtres est PARTAGÉ et persistant
+  // entre toutes les vues (Collection/Wishlist/Stats/Tierlists).
   const [showFilters, setShowFilters] = useState(false)
   const [tip, setTip] = useState(null) // { name, x, y } — infobulle au tap
   const [focusedName, setFocusedName] = useState(null)
@@ -345,13 +347,14 @@ export default function TierlistView({
           setFilters={setFilters}
           showPrice={false}
           showTags
-          onReset={() => setFilters({ ...EMPTY_FILTERS })}
+          onReset={onResetFilters}
         />
       )}
 
-      {/* Les 7 lignes (drop-zones en édition). */}
+      {/* Les lignes (drop-zones en édition). La ligne « Pas d'avis » (score null) est
+          masquée dans la tierlist GLOBALE (elle n'entre pas dans la moyenne). */}
       <div className="tl-rows">
-        {TIERS.map((t) => {
+        {TIERS.filter((t) => !isGlobal || t.score != null).map((t) => {
           const list = gamesOf(ranking[t.key] || [], true)
           const shown = az ? [...list].sort((a, b) => a.name.localeCompare(b.name, 'fr')) : list
           // En lecture, toute la case-lettre bascule le tri A→Z de TOUTES les lignes (zone
