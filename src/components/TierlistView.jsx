@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { TIERS } from '../lib/tierlists'
 import { EMPTY_FILTERS, passesFilters } from '../lib/filtering'
-import { parseTags } from '../lib/games'
 import Filters from './Filters'
 import NameField from './NameField'
 
@@ -89,9 +88,11 @@ export default function TierlistView({
     filters.complexity.length
 
   // Déplace un jeu vers une ligne (ou le retire si tier === null → retour au bac).
-  // Déplace un jeu vers une ligne, à la POSITION `index` (pour trier librement dans la ligne) ;
-  // index null/omis = à la fin. tier null = retour au bac (retiré de tout).
-  const moveGame = (id, tier, index) =>
+  // Déplace un jeu vers une ligne, INSÉRÉ juste avant `beforeId` (pour trier librement dans
+  // la ligne) ; `beforeId` null = à la fin. tier null = retour au bac (retiré de tout).
+  // On repère la position par l'ID (pas par un index numérique) → reste correct même quand
+  // un filtre masque certaines vignettes déjà classées.
+  const moveGame = (id, tier, beforeId) =>
     setRanking((r) => {
       const next = {}
       TIERS.forEach((t) => {
@@ -99,7 +100,7 @@ export default function TierlistView({
       })
       if (tier && next[tier]) {
         const arr = next[tier]
-        const at = index == null ? arr.length : Math.max(0, Math.min(index, arr.length))
+        const at = beforeId && arr.indexOf(beforeId) !== -1 ? arr.indexOf(beforeId) : arr.length
         arr.splice(at, 0, id)
       }
       return next
@@ -215,19 +216,20 @@ export default function TierlistView({
         if (d.clone) d.clone.remove()
         root.querySelector(`[data-game="${CSS.escape(d.id)}"]`)?.classList.remove('tl-dragging')
         if (z && z.kind === 'tier') {
-          // Position d'insertion = avant la 1re vignette « après » le point de dépôt (dans
-          // l'ordre de lecture) → permet de trier librement au sein de la ligne.
+          // Insertion AVANT la 1re vignette « après » le point de dépôt (ordre de lecture) →
+          // tri libre dans la ligne. On repère par l'ID (robuste même si un filtre masque des
+          // vignettes déjà classées).
           const slots = z.el.querySelector('.tl-slots') || z.el
           const chips = [...slots.querySelectorAll('[data-game]')].filter((c) => c.dataset.game !== d.id)
-          let index = chips.length
+          let beforeId = null
           for (let i = 0; i < chips.length; i++) {
             const r = chips[i].getBoundingClientRect()
             if (y < r.top - 2 || (y <= r.bottom + 2 && x < r.left + r.width / 2)) {
-              index = i
+              beforeId = chips[i].dataset.game
               break
             }
           }
-          moveGame(d.id, z.key, index)
+          moveGame(d.id, z.key, beforeId)
         } else if (z) {
           moveGame(d.id, null) // lâché sur le bac → retour aux non-classés
         }
@@ -271,12 +273,9 @@ export default function TierlistView({
     if (chip) showTip(chip)
   }
 
-  // Filtre d'AFFICHAGE (consultation) : montre tous les jeux par défaut, et NARROW quand un
-  // filtre est actif (tags purement additifs — rien coché = tous). Différent du bac d'édition
-  // qui, lui, garde le comportement Collection (tags masqués par défaut).
-  const displayMatch = (g) =>
-    passesFilters(g, filters, '', false, false) &&
-    (!filters.tags.length || parseTags(g.tags).some((t) => filters.tags.includes(t)))
+  // Filtre d'AFFICHAGE (consultation) = MÊME système que la Collection / le bac d'édition :
+  // les jeux tagués sont masqués par défaut, et réapparaissent quand un de leurs tags est coché.
+  const displayMatch = (g) => passesFilters(g, filters, '', false)
   const gamesOf = (ids, filtered) => {
     const gs = ids.map((id) => gameById.get(id)).filter(Boolean)
     return filtered ? gs.filter(displayMatch) : gs
@@ -339,15 +338,28 @@ export default function TierlistView({
               {t.label}
             </div>
             <div className="tl-slots">
-              {gamesOf(ranking[t.key] || [], !editing).map((g) => (
+              {gamesOf(ranking[t.key] || [], true).map((g) => (
                 <Chip key={g.id} game={g} />
               ))}
             </div>
           </div>
         ))}
+
+        {/* Zone « Non classés » (tierlist globale) : À LA SUITE des lignes, dans le défilement
+            (pas un panneau épinglé) → on la voit en descendant, pas en permanence. */}
+        {mode === 'global' && unranked.length > 0 && (
+          <div className="tl-unranked">
+            <div className="tl-tray-title">Non classés <span className="muted">({unranked.length})</span></div>
+            <div className="tl-tray tl-tray-inline">
+              {gamesOf(unranked, true).map((g) => (
+                <Chip key={g.id} game={g} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Bac des jeux à classer (édition). */}
+      {/* Bac des jeux à classer (édition) : panneau épinglé en bas (pour glisser vers le haut). */}
       {editing && (
         <div className="tl-tray-wrap">
           <div className="tl-tray" data-tray>
@@ -356,18 +368,6 @@ export default function TierlistView({
             ) : (
               <p className="muted" style={{ padding: 12 }}>Tous les jeux sont classés 🎉</p>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Zone « Non classés » (tierlist globale : jeux que personne n'a notés). */}
-      {mode === 'global' && unranked.length > 0 && (
-        <div className="tl-tray-wrap">
-          <div className="tl-tray-title">Non classés <span className="muted">({unranked.length})</span></div>
-          <div className="tl-tray">
-            {gamesOf(unranked, true).map((g) => (
-              <Chip key={g.id} game={g} />
-            ))}
           </div>
         </div>
       )}

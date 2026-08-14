@@ -39,6 +39,50 @@ export function normalizeRanking(raw) {
   return r
 }
 
+// Mutualisation par NOM : un même jeu présent plusieurs fois dans la collection (ex.
+// Belote/Tarot en double chez des propriétaires différents) ne doit être classé qu'UNE
+// fois. On se base sur le nom STRICTEMENT identique. Le « représentant » d'un nom = le
+// 1er jeu rencontré avec ce nom ; toutes les tierlists n'utilisent que des représentants.
+
+// Un seul jeu par nom (les doublons sont retirés).
+export function dedupeByName(games) {
+  const seen = new Set()
+  return (games || []).filter((g) => {
+    if (seen.has(g.name)) return false
+    seen.add(g.name)
+    return true
+  })
+}
+
+// id de n'importe quel jeu → id de son représentant (même nom). Map.
+export function repIdMap(games) {
+  const repByName = new Map()
+  ;(games || []).forEach((g) => {
+    if (!repByName.has(g.name)) repByName.set(g.name, g.id)
+  })
+  const m = new Map()
+  ;(games || []).forEach((g) => m.set(g.id, repByName.get(g.name)))
+  return m
+}
+
+// Remappe un classement vers les ids représentants + dédoublonne (un jeu une seule fois,
+// à sa 1re position rencontrée) → un doublon classé sous un autre id est mutualisé.
+export function remapRanking(ranking, repById) {
+  const seen = new Set()
+  const out = {}
+  TIERS.forEach((t) => {
+    out[t.key] = []
+    ;(ranking?.[t.key] || []).forEach((id) => {
+      const rep = repById.get(id) || id
+      if (!seen.has(rep)) {
+        seen.add(rep)
+        out[t.key].push(rep)
+      }
+    })
+  })
+  return out
+}
+
 // Toutes les tierlists (sans filtre). null si la table n'existe pas encore.
 export async function fetchTierlists() {
   const { data, error } = await supabase
@@ -81,12 +125,14 @@ export async function deleteTierlist(id) {
 // Renvoie { ranking: {tier:[id...]}, unranked:[id...], avg: {id:number} } :
 //  - ranking : les jeux notés, rangés par tier (triés par moyenne décroissante) ;
 //  - unranked : les jeux qu'AUCUN joueur n'a notés (zone « Non classés »).
-export function computeGlobalTierlist(tierlists, gameIds) {
+export function computeGlobalTierlist(tierlists, gameIds, repById) {
   const valid = new Set(gameIds)
-  const sums = {} // id → { total, n }
+  const sums = {} // id (représentant) → { total, n }
   ;(tierlists || []).forEach((tl) => {
+    // Remappe vers les représentants (mutualise les doublons de nom) + dédoublonne par joueur.
+    const rk = repById ? remapRanking(tl.ranking, repById) : tl.ranking || {}
     SCORED_TIERS.forEach((t) => {
-      ;(tl.ranking?.[t.key] || []).forEach((id) => {
+      ;(rk[t.key] || []).forEach((id) => {
         if (!valid.has(id)) return
         const e = sums[id] || (sums[id] = { total: 0, n: 0 })
         e.total += t.score

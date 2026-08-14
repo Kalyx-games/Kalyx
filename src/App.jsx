@@ -8,7 +8,7 @@ import { downloadBackup, downloadCsv, parseBackup, importBackup, fetchBackups, c
 import { philibertSearchUrl } from './lib/philibert'
 import { EMPTY_FILTERS, PRICE_MIN, PRICE_MAX, norm, passesFilters } from './lib/filtering'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
-import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, emptyRanking } from './lib/tierlists'
+import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, emptyRanking, dedupeByName, repIdMap, remapRanking } from './lib/tierlists'
 import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayMeta, renameCategories, fetchPlayerRoster, fetchPlayerOverall, renamePlayer } from './lib/plays'
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
@@ -810,7 +810,12 @@ export default function App() {
   }
 
   // ---- Tierlists ----
-  const collectionGames = useMemo(() => (games ?? []).filter((g) => g.status !== 'wishlist'), [games])
+  // Jeux de la collection, MUTUALISÉS par nom (un même jeu en double → un seul chip). Les
+  // tierlists ne manipulent que ces « représentants ». `repById` mappe tout id (doublon
+  // compris) vers son représentant, pour remapper les classements enregistrés.
+  const nonWishlist = useMemo(() => (games ?? []).filter((g) => g.status !== 'wishlist'), [games])
+  const collectionGames = useMemo(() => dedupeByName(nonWishlist), [nonWishlist])
+  const repById = useMemo(() => repIdMap(nonWishlist), [nonWishlist])
   const reloadTierlists = () => fetchTierlists().then(setTierlists).catch(() => setTierlists(null))
   function handleOpenTierlists() {
     setTierlistHub(true)
@@ -818,11 +823,12 @@ export default function App() {
   }
   function handleOpenGlobalTierlist() {
     const ids = collectionGames.map((g) => g.id)
-    const { ranking, unranked } = computeGlobalTierlist(tierlists || [], ids)
+    const { ranking, unranked } = computeGlobalTierlist(tierlists || [], ids, repById)
     setTierlistView({ mode: 'global', title: '🌍 Tierlist globale', ranking, unranked, player: '', id: null })
   }
   function handleOpenTierlist(tl) {
-    setTierlistView({ mode: 'view', title: tl.player, ranking: tl.ranking, unranked: [], player: tl.player, id: tl.id })
+    // On remappe vers les représentants (mutualise les doublons de nom).
+    setTierlistView({ mode: 'view', title: tl.player, ranking: remapRanking(tl.ranking, repById), unranked: [], player: tl.player, id: tl.id })
   }
   function handleCreateTierlist() {
     setTierlistView({ mode: 'edit', title: '', ranking: emptyRanking(), unranked: [], player: '', id: null })

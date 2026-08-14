@@ -3512,6 +3512,9 @@ body {
   padding: 4px 2px calc(8px + env(safe-area-inset-bottom));
 }
 .tl-tray.tl-over { background: var(--accent-soft); border-radius: 8px; }
+/* Zone « Non classés » du GLOBAL : à la suite des lignes, dans le défilement (pas épinglée). */
+.tl-unranked { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+.tl-tray-inline { max-height: none; overflow: visible; }
 
 /* Une vignette de jeu. */
 .tl-chip {
