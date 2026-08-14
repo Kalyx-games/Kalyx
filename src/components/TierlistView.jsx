@@ -45,29 +45,27 @@ export default function TierlistView({
   playerNames,
   online,
   initialPlayer = '',
+  initialFilters,
   savedId = null,
   onClose,
-  onEdit,
   onSave,
   onDelete,
 }) {
-  const editing = mode === 'edit'
+  const isGlobal = mode === 'global'
+  // Le mode édition est LOCAL (on peut y entrer/sortir sans quitter la tierlist). `mode`
+  // ne fait que donner l'état de départ (édition à la création, lecture sinon).
+  const [editing, setEditing] = useState(mode === 'edit')
   const gameById = useMemo(() => new Map(games.map((g) => [g.id, g])), [games])
   const [ranking, setRanking] = useState(initialRanking)
   const [player, setPlayer] = useState(initialPlayer)
-  const [filters, setFilters] = useState({ ...EMPTY_FILTERS })
+  // On hérite des filtres actifs de la navigation (Collection/Wishlist/Stats) à l'ouverture.
+  const [filters, setFilters] = useState(() => ({ ...EMPTY_FILTERS, ...(initialFilters || {}) }))
   const [showFilters, setShowFilters] = useState(false)
   const [tip, setTip] = useState(null) // { name, x, y } — infobulle au tap
   const [focusedName, setFocusedName] = useState(null)
-  const [azTiers, setAzTiers] = useState(() => new Set()) // lignes triées A→Z (lecture seule)
+  const [az, setAz] = useState(false) // tri A→Z de TOUTES les lignes (lecture seule)
   const idRef = useRef(savedId)
   const rootRef = useRef(null)
-  const toggleAz = (key) =>
-    setAzTiers((s) => {
-      const n = new Set(s)
-      n.has(key) ? n.delete(key) : n.add(key)
-      return n
-    })
 
   // Jeux déjà placés (dans n'importe quelle ligne).
   const placed = useMemo(() => {
@@ -86,6 +84,15 @@ export default function TierlistView({
         .sort((a, b) => a.name.localeCompare(b.name, 'fr')),
     [games, placed, filters]
   )
+
+  // Jeux non classés à montrer EN BAS (dans le défilement) hors édition :
+  //  • global → la liste `unranked` fournie (jeux que personne n'a notés) ;
+  //  • consultation d'un joueur → les jeux de la collection qu'il n'a pas classés.
+  const readUnranked = useMemo(() => {
+    if (editing) return []
+    if (isGlobal) return unranked
+    return games.filter((g) => !placed.has(g.id)).map((g) => g.id)
+  }, [editing, isGlobal, unranked, games, placed])
 
   const activeFilterCount =
     filters.owners.length +
@@ -307,23 +314,28 @@ export default function TierlistView({
             />
           </div>
         ) : (
-          <h2>{title}</h2>
+          <h2>{isGlobal ? title : player.trim() || title}</h2>
         )}
-        {/* Actions à droite : filtre (tous modes), modifier (consultation), supprimer (existant). */}
+        {/* Actions à droite : filtre (tous modes), édition (entrer/sortir), supprimer (existant). */}
         <div className="tl-head-actions">
           <button type="button" className="filter-toggle tl-filter-btn" onClick={() => setShowFilters((s) => !s)} aria-label="Filtres">
             🔎
             {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
             <span className={`filter-chev ${showFilters ? 'up' : ''}`}>▾</span>
           </button>
-          {mode === 'view' && onEdit && (
-            <button type="button" className="tl-edit-btn" onClick={onEdit} disabled={!online} title={online ? 'Modifier' : 'Indisponible hors ligne'}>✏️</button>
-          )}
+          {!isGlobal &&
+            (editing ? (
+              // En édition : bouton pour EN SORTIR (feedback clair : vert « Terminé »).
+              <button type="button" className="tl-done-btn" onClick={() => setEditing(false)}>✓ Terminé</button>
+            ) : (
+              <button type="button" className="tl-edit-btn" onClick={() => setEditing(true)} disabled={!online} title={online ? 'Modifier' : 'Indisponible hors ligne'}>✏️</button>
+            ))}
           {savedId && onDelete && (
             <button type="button" className="tl-del-btn" onClick={onDelete} disabled={!online} title={online ? 'Supprimer' : 'Indisponible hors ligne'} aria-label="Supprimer la tierlist">🗑️</button>
           )}
         </div>
       </div>
+      {editing && <div className="tl-editing-banner">✏️ Mode édition — glisse les jeux pour les classer</div>}
 
       {showFilters && (
         <Filters
@@ -340,25 +352,21 @@ export default function TierlistView({
       {/* Les 7 lignes (drop-zones en édition). */}
       <div className="tl-rows">
         {TIERS.map((t) => {
-          const az = azTiers.has(t.key)
           const list = gamesOf(ranking[t.key] || [], true)
           const shown = az ? [...list].sort((a, b) => a.name.localeCompare(b.name, 'fr')) : list
+          // En lecture, toute la case-lettre bascule le tri A→Z de TOUTES les lignes (zone
+          // de clic large, une seule action pour tout trier).
+          const labelClick = !editing ? () => setAz((v) => !v) : undefined
           return (
             <div key={t.key} className="tl-row" data-tier={t.key}>
-              <div className="tl-label" style={{ background: t.color }} title={t.title || t.label}>
+              <div
+                className={`tl-label ${!editing ? 'tl-label-btn' : ''}`}
+                style={{ background: t.color }}
+                onClick={labelClick}
+                title={t.title || (editing ? t.label : az ? 'Ordre du créateur' : 'Trier de A à Z')}
+              >
                 <span className="tl-label-letter">{t.label}</span>
-                {/* En lecture : trier la ligne A→Z ou garder l'ordre du créateur (par défaut). */}
-                {!editing && (
-                  <button
-                    type="button"
-                    className={`tl-sort-btn ${az ? 'on' : ''}`}
-                    onClick={(e) => { e.stopPropagation(); toggleAz(t.key) }}
-                    title={az ? 'Ordre du créateur' : 'Trier de A à Z'}
-                    aria-label={az ? 'Ordre du créateur' : 'Trier de A à Z'}
-                  >
-                    A↓Z
-                  </button>
-                )}
+                {!editing && <span className={`tl-sort-ind ${az ? 'on' : ''}`}>A↓Z</span>}
               </div>
               <div className="tl-slots">
                 {shown.map((g) => (
@@ -369,16 +377,22 @@ export default function TierlistView({
           )
         })}
 
-        {/* Zone « Non classés » (tierlist globale) : À LA SUITE des lignes, dans le défilement
-            (pas un panneau épinglé) → on la voit en descendant, pas en permanence. */}
-        {mode === 'global' && unranked.length > 0 && (
+        {/* Zone « Non classés » EN LECTURE (consultation + global) : à la suite des lignes,
+            dans le défilement (pas épinglée). En édition c'est le bac épinglé qui gère ça. */}
+        {!editing && (
           <div className="tl-unranked">
-            <div className="tl-tray-title">Non classés <span className="muted">({unranked.length})</span></div>
-            <div className="tl-tray tl-tray-inline">
-              {gamesOf(unranked, true).map((g) => (
-                <Chip key={g.id} game={g} />
-              ))}
-            </div>
+            {readUnranked.length > 0 ? (
+              <>
+                <div className="tl-tray-title">Non classés <span className="muted">({readUnranked.length})</span></div>
+                <div className="tl-tray tl-tray-inline">
+                  {gamesOf(readUnranked, true).map((g) => (
+                    <Chip key={g.id} game={g} />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="muted" style={{ padding: '8px 2px' }}>Tous les jeux sont classés 🎉</p>
+            )}
           </div>
         )}
       </div>

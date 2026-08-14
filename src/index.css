@@ -3448,6 +3448,30 @@ body {
 .tl-del-btn { background: var(--danger-bg); }
 .tl-edit-btn:disabled,
 .tl-del-btn:disabled { opacity: 0.45; }
+/* Bouton « Terminé » (sortir de l'édition) : vert, feedback clair. */
+.tl-done-btn {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 10px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 9px 14px;
+  cursor: pointer;
+}
+/* Bandeau sous l'en-tête pendant l'édition. */
+.tl-editing-banner {
+  flex-shrink: 0;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
 /* Bouton Filtres compact (pas de libellé, juste 🔎 + badge). */
 .tl-filter-btn {
   flex-shrink: 0;
@@ -3487,14 +3511,15 @@ body {
   gap: 4px;
   color: #1a1a1a;
 }
+/* Toute la case-lettre est cliquable en lecture (tri A→Z de toutes les lignes). */
+.tl-label-btn { cursor: pointer; }
 .tl-label-letter {
   font-size: 1.5rem;
   font-weight: 800;
   text-shadow: 0 1px 1px rgba(255, 255, 255, 0.35);
 }
-/* Petit bouton de tri sous la lettre (lecture) : A→Z ou ordre du créateur. */
-.tl-sort-btn {
-  border: none;
+/* Indicateur de tri sous la lettre : surligné quand A→Z est actif. */
+.tl-sort-ind {
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.14);
   color: #1a1a1a;
@@ -3502,10 +3527,9 @@ body {
   font-weight: 800;
   letter-spacing: 0.3px;
   padding: 2px 4px;
-  cursor: pointer;
   line-height: 1;
 }
-.tl-sort-btn.on { background: rgba(0, 0, 0, 0.55); color: #fff; }
+.tl-sort-ind.on { background: rgba(0, 0, 0, 0.6); color: #fff; }
 .tl-slots {
   flex: 1;
   min-width: 0;

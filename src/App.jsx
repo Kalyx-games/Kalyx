@@ -1390,6 +1390,7 @@ export default function App() {
             initialRanking={tierlistView.ranking}
             unranked={tierlistView.unranked}
             initialPlayer={tierlistView.player}
+            initialFilters={filters}
             savedId={tierlistView.id}
             games={collectionGames}
             allOwners={allOwners}
@@ -1397,7 +1398,6 @@ export default function App() {
             playerNames={playerNames}
             online={online}
             onClose={() => setTierlistView(null)}
-            onEdit={() => setTierlistView((v) => ({ ...v, mode: 'edit', title: '' }))}
             onSave={handleSaveTierlist}
             onDelete={() => setConfirmingTierlist(true)}
           />
