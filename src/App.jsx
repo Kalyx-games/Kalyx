@@ -852,9 +852,13 @@ export default function App() {
       if (editingPlay) await updatePlay(editingPlay.id, play)
       else await savePlay(scoringGame.id, play)
       const g = scoringGame
+      // Toujours atterrir sur la page de stats DU JEU (jamais l'accueil), même quand la
+      // partie a été lancée depuis le menu de glissement d'une carte (historyGame était null).
+      const target = historyGame || g
       setScoringGame(null)
       setEditingPlay(null)
-      refreshHistory(historyGame || g)
+      setHistoryGame(target)
+      refreshHistory(target)
       setNotice(editingPlay ? 'Partie modifiée.' : 'Partie enregistrée.')
     } catch (e) {
       setError(e.message)

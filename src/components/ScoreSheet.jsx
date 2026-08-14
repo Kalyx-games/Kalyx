@@ -71,7 +71,9 @@ const makeTeamRow = (t = {}) => {
 export default function ScoreSheet({ game, template, initialPlay = null, playerNames = [], scenarioNames = [], onSavePlay, saving, onEdit, onClose }) {
   const win = template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive')
   const scoring = template?.scoring || 'high'
-  const wantScenario = !!template?.scenario
+  // Le « scénario » a été retiré de la création de fiche : on ne le demande plus à la
+  // saisie (même pour les anciennes fiches qui avaient l'option cochée — champ inerte).
+  const wantScenario = false
   const isCoop = win === 'coop'
   const noPoints = scoring === 'none' // = pas de table de score (branche « désignation »)
   const teamsCfg = template?.teams
@@ -154,10 +156,18 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // Coopératif
   const [outcome, setOutcome] = useState(ip?.outcome || null) // 'win' | 'loss'
 
-  // Score du groupe DÉTAILLÉ par catégorie (coop avec points). À l'édition, seul le
-  // total est stocké → on le remet dans la 1re catégorie pour le préserver.
+  // Score du groupe DÉTAILLÉ par catégorie (coop avec points). Le détail est conservé
+  // dans la partie (sur le 1er joueur, clé `groupScores` — ignorée des stats) → à la
+  // réouverture on retrouve la répartition exacte. Repli sur les anciennes parties
+  // (sans détail) : le total est remis dans la 1re catégorie.
   const [groupScores, setGroupScores] = useState(() => {
     if (!ip || ip.score == null) return {}
+    const stored = (ip.players || []).map((p) => p?.groupScores).find(Boolean)
+    if (stored) {
+      const out = {}
+      Object.entries(stored).forEach(([k, v]) => { out[k] = String(v) })
+      return out
+    }
     const actEx = ip.extensions || []
     const vis = cats.filter((c) => !c.ext || actEx.includes(c.ext))
     const first = (vis.length ? vis : [{ label: 'Points' }])[0]
@@ -305,6 +315,17 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const saveCoop = () => {
     if (!outcome) return
     const built = players.map((p, i) => withVariant({ name: nameOf(p, i) }, p))
+    // Coop avec points : on conserve le DÉTAIL par catégorie (sinon, à la réouverture,
+    // le total écrasait la répartition). Rangé sur le 1er joueur ; les stats l'ignorent
+    // (elles lisent `pl.scores`, pas `pl.groupScores`) et se basent sur `score` = total.
+    if (!noPoints && anyGroupScore && built[0]) {
+      const gs = {}
+      visibleCats.forEach((c) => {
+        const n = Number(groupScores[c.label])
+        gs[c.label] = Number.isFinite(n) ? n : 0
+      })
+      built[0].groupScores = gs
+    }
     onSavePlay({
       win: 'coop',
       players: built,

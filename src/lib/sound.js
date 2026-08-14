@@ -23,6 +23,25 @@ function makeImpulse(context, duration, decay) {
   return buf
 }
 
+// Soft-clip (courbe tanh) : borne MATHÉMATIQUEMENT le signal à ±1 → aucun « clipping »
+// dur n'est plus possible, quel que soit le volume qu'on pousse en amont. Les pics sont
+// arrondis en douceur (saturation musicale imperceptible) au lieu d'écrêter sec.
+// L'oversample 4× limite le repliement (aliasing) que produirait la non-linéarité.
+function makeSoftClip(context) {
+  const ws = context.createWaveShaper()
+  const n = 2048
+  const curve = new Float32Array(n)
+  const k = 2.2 // douceur du genou
+  const norm = Math.tanh(k)
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1
+    curve[i] = Math.tanh(k * x) / norm
+  }
+  ws.curve = curve
+  ws.oversample = '4x'
+  return ws
+}
+
 function ensure() {
   if (ctx) {
     if (ctx.state === 'suspended') ctx.resume()
@@ -32,18 +51,23 @@ function ensure() {
   if (!C) return null
   ctx = new C()
 
-  // Limiteur : on pousse le volume fort et il rattrape les pics près du plafond
-  // (0 dBFS) → beaucoup plus fort, mais sans « clipper »/saturer.
+  // Chaîne de sortie : limiteur (compresseur) → soft-clip → sortie.
+  // 1) le compresseur rattrape la dynamique et rapproche du plafond ;
+  // 2) le soft-clip garantit qu'AUCUN échantillon ne dépasse ±1 → jamais de saturation
+  //    dure, même quand on pousse le volume fort et que plusieurs doigts se superposent.
+  const shaper = makeSoftClip(ctx)
+  shaper.connect(ctx.destination)
+
   const comp = ctx.createDynamicsCompressor()
-  comp.threshold.value = -6
-  comp.knee.value = 4
+  comp.threshold.value = -10 // attrape plus tôt → plus fort et plus régulier
+  comp.knee.value = 6
   comp.ratio.value = 20
   comp.attack.value = 0.002
   comp.release.value = 0.14
-  comp.connect(ctx.destination)
+  comp.connect(shaper)
 
   master = ctx.createGain()
-  master.gain.value = 3.0 // fort (0.85 → 1.6 → 3.0) ; le limiteur ci-dessus tient le plafond
+  master.gain.value = 3.4 // fort ; limiteur + soft-clip tiennent le plafond sans écrêter
   master.connect(comp)
 
   const conv = ctx.createConvolver()
@@ -115,13 +139,14 @@ const C4 = 261.63
 const midi = (semi) => C4 * Math.pow(2, semi / 12)
 const PENTA = [0, 2, 4, 7, 9] // gamme pentatonique majeure
 
-// Doigt posé : note ronde et grave qui monte d'un cran à chaque doigt.
+// Doigt posé : note ronde et grave qui monte d'un cran à chaque doigt. Volume poussé
+// (le soft-clip de la chaîne empêche toute saturation dure).
 export function playFinger(index) {
   try {
     if (!ensure()) return
     const octave = Math.floor(index / PENTA.length)
     const semi = PENTA[index % PENTA.length] + 12 * octave - 12 // une octave SOUS le Do4 → grave
-    voice(midi(semi), { dur: 1.0, level: 0.95, bright: 1400, sub: 0.4, oct: 0.06 })
+    voice(midi(semi), { dur: 1.0, level: 1.7, bright: 1500, sub: 0.4, oct: 0.06, attack: 0.008 })
   } catch {
     /* pas de son : tant pis */
   }

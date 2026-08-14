@@ -313,6 +313,14 @@ export function playWinners(play) {
   return winnersOf(play?.players)
 }
 
+// Une partie NON coop gagnée par un déclencheur instantané (victoire directe) a des
+// scores incomplets/nuls (on a arrêté la partie sans finir de compter) → il ne faut PAS
+// les compter dans les moyennes/records/catégories, sinon ils faussent tout. La victoire,
+// elle, compte normalement. (En coop, le score du groupe reste pertinent → on le garde.)
+export function scoreCounts(play) {
+  return !(play?.trigger && !play?.outcome)
+}
+
 // Stats d'un ENSEMBLE de joueurs vu comme UNE entité (un joueur seul, les réguliers,
 // ou tout le monde) → sert au tableau comparatif. `names` = les joueurs à agréger.
 //  • games = nb de participations (pour un joueur seul : ses parties)
@@ -327,11 +335,13 @@ export function computeEntityStats(plays, scoring, names) {
   const catVals = {}
   ;(plays || []).forEach((p) => {
     const winners = new Set(playWinners(p))
+    const countScore = scoreCounts(p) // partie gagnée par déclencheur → scores ignorés
     ;(p.players || []).forEach((pl) => {
       const n = (pl?.name || '').trim()
       if (!set.has(n)) return
       games += 1
       if (winners.has(n)) wins += 1
+      if (!countScore) return
       const t = Number(pl?.total)
       if (Number.isFinite(t) && pl?.total !== undefined && pl?.total !== null) scores.push(t)
       Object.entries(pl?.scores || {}).forEach(([cat, v]) => {
@@ -375,6 +385,7 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
   list.forEach((p) => {
     const coop = !!p.outcome
     const isTeam = !coop && (p.players || []).some((pl) => pl && pl.team)
+    const countScore = scoreCounts(p) // victoire par déclencheur (hors coop) → scores ignorés
     if (coop) {
       coopTotal += 1
       if (p.outcome === 'win') coopWins += 1
@@ -383,7 +394,7 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
         scores.push(s)
         scoreRows.push({ name: null, value: s }) // coop : c'est le groupe, pas quelqu'un
       }
-    } else if (isTeam) {
+    } else if (isTeam && countScore) {
       // En équipes : le score est celui de l'équipe (dupliqué sur chaque membre) →
       // on ne le compte qu'une fois par équipe pour l'agrégat.
       const seen = new Set()
@@ -403,7 +414,7 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
       const n = (pl?.name || '').trim() || '—'
       games[n] = (games[n] || 0) + 1
       const t = Number(pl?.total)
-      if (Number.isFinite(t) && pl?.total !== undefined && pl?.total !== null) {
+      if (countScore && Number.isFinite(t) && pl?.total !== undefined && pl?.total !== null) {
         if (!coop && !isTeam && inShow(n)) {
           scores.push(t) // tuiles meilleur/moyen : joueurs affichés
           scoreRows.push({ name: n, value: t })
@@ -481,6 +492,7 @@ export function computePlayStats(plays, scoring = 'high', showPlayers = null) {
   // Stats par catégorie de score (moyenne / min / max / médiane), joueurs affichés.
   const catVals = {}
   list.forEach((p) => {
+    if (!scoreCounts(p)) return // partie gagnée par déclencheur → scores non comptés
     ;(p.players || []).forEach((pl) => {
       const n = (pl?.name || '').trim() || '—'
       if (!inShow(n)) return

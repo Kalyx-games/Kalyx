@@ -38,7 +38,6 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   // avec un score (compat : ancien scoring 'none' → pas de points implicite).
   const [instant, setInstant] = useState(() => template?.instant ?? template?.scoring === 'none')
   const [triggers, setTriggers] = useState(() => (template?.triggers || []).map((n) => mkTrigger(n)))
-  const [scenario, setScenario] = useState(() => !!template?.scenario)
   // Deux variantes indépendantes (nom + liste de valeurs), chacune optionnelle :
   //  · PAR JOUEUR (héros, faction… — Dice Throne) ; · POUR TOUTE LA PARTIE (carte, mission… — Toy Battle).
   // Rétrocompat : une ancienne fiche avec `variant.scope === 'play'` = variante de la partie.
@@ -257,7 +256,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
           scoring,
           instant,
           triggers: instant ? triggerNames : [],
-          scenario,
+          scenario: false, // paramètre retiré de l'app (voir ScoreSheet) — nettoyé à chaque enregistrement
           teams,
           notes: notes.trim(),
           categories,
@@ -324,13 +323,8 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
           </div>
         )}
 
-        <label className="filter-check" style={{ marginTop: 14 }}>
-          <input type="checkbox" checked={scenario} onChange={(e) => setScenario(e.target.checked)} />
-          <span>🎯 Demander un scénario / niveau de difficulté</span>
-        </label>
-
         {!isCoop && (
-          <label className="filter-check" style={{ marginTop: 8 }}>
+          <label className="filter-check" style={{ marginTop: 14 }}>
             <input type="checkbox" checked={teamsOn} onChange={(e) => setTeamsOn(e.target.checked)} />
             <span>🧑‍🤝‍🧑 En équipes</span>
           </label>
