@@ -203,7 +203,22 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   // revanche les autres filtres (période, extension…) → il part de `prePlayer`.
   const regularNames = useMemo(() => regulars.map((r) => r.name), [regulars])
   const allPlayerNames = useMemo(() => [...regulars, ...occasional].map((r) => r.name), [regulars, occasional])
+  const isGroup = (key) => key === ALL || key === REGULARS
   const entityNames = (key) => (key === ALL ? allPlayerNames : key === REGULARS ? regularNames : [key])
+  // Membres d'un côté de la comparaison. Si ce côté est un GROUPE et que l'AUTRE côté est
+  // un joueur seul qui en fait partie, on RETIRE ce joueur du groupe : comparer un joueur
+  // à un groupe qui le contient n'a aucun intérêt (le groupe est « gonflé » par ses propres
+  // résultats). → « Joueurs réguliers vs Nazim » compare Nazim aux AUTRES réguliers.
+  const membersFor = (key, otherKey) => {
+    if (!(isGroup(key) && !isGroup(otherKey))) return entityNames(key)
+    const filtered = entityNames(key).filter((n) => n !== otherKey)
+    return filtered.length ? filtered : entityNames(key) // ne jamais vider le groupe
+  }
+  // Joueur retiré d'un groupe (pour l'afficher « hors X »), sinon null.
+  const excludedFrom = (key, otherKey) =>
+    isGroup(key) && !isGroup(otherKey) && entityNames(key).includes(otherKey) && entityNames(key).length > 1
+      ? otherKey
+      : null
   const entityOptions = useMemo(
     () => [
       { value: ALL, label: 'Tout le monde' },
@@ -218,8 +233,10 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
   // Défaut : les réguliers (groupés) face au meilleur joueur.
   const cmpLeft = cmp.left ?? (regularNames.length > 1 ? REGULARS : ALL)
   const cmpRight = cmp.right ?? (bestPlayer || ALL)
-  const cmpA = useMemo(() => computeEntityStats(prePlayer, scoring, entityNames(cmpLeft)), [prePlayer, scoring, cmpLeft, allPlayerNames, regularNames])
-  const cmpB = useMemo(() => computeEntityStats(prePlayer, scoring, entityNames(cmpRight)), [prePlayer, scoring, cmpRight, allPlayerNames, regularNames])
+  const cmpA = useMemo(() => computeEntityStats(prePlayer, scoring, membersFor(cmpLeft, cmpRight)), [prePlayer, scoring, cmpLeft, cmpRight, allPlayerNames, regularNames])
+  const cmpB = useMemo(() => computeEntityStats(prePlayer, scoring, membersFor(cmpRight, cmpLeft)), [prePlayer, scoring, cmpLeft, cmpRight, allPlayerNames, regularNames])
+  const cmpAExcl = excludedFrom(cmpLeft, cmpRight)
+  const cmpBExcl = excludedFrom(cmpRight, cmpLeft)
   const showCmpScores = !noPoints && (cmpA.avg != null || cmpB.avg != null)
 
   // Catégories comparées : celles de la fiche (dans son ordre), hors valeur fixe (une
@@ -607,6 +624,13 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
                   arrows={false}
                 />
               </div>
+              {(cmpAExcl || cmpBExcl) && (
+                <div className="cmp-heads">
+                  <span className="cmp-excl">{cmpAExcl ? `hors ${cmpAExcl}` : ''}</span>
+                  <span className="cmp-vs" />
+                  <span className="cmp-excl">{cmpBExcl ? `hors ${cmpBExcl}` : ''}</span>
+                </div>
+              )}
               <div className="table-scroll">
               <table className="stat-table cmp-table">
                 <tbody>

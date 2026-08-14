@@ -90,8 +90,20 @@ function PlayerSection({ playerOverall }) {
     })
     return { games, wins, winRate: games ? Math.round((wins / games) * 100) : 0 }
   }
+  const isGroup = (key) => key === ALL || key === REGULARS
   const entityNames = (key) =>
     key === ALL ? all.map((p) => p.name) : key === REGULARS ? regulars.map((p) => p.name) : [key]
+  // Si un groupe est comparé à un joueur seul qui en fait partie, on le retire du groupe
+  // (comparer un joueur à un groupe qui le contient n'a aucun intérêt).
+  const membersFor = (key, otherKey) => {
+    if (!(isGroup(key) && !isGroup(otherKey))) return entityNames(key)
+    const filtered = entityNames(key).filter((n) => n !== otherKey)
+    return filtered.length ? filtered : entityNames(key) // ne jamais vider le groupe
+  }
+  const excludedFrom = (key, otherKey) =>
+    isGroup(key) && !isGroup(otherKey) && entityNames(key).includes(otherKey) && entityNames(key).length > 1
+      ? otherKey
+      : null
   const entityOptions = [
     { value: ALL, label: 'Tout le monde' },
     ...(regulars.length > 1 ? [{ value: REGULARS, label: 'Joueurs réguliers' }] : []),
@@ -100,8 +112,10 @@ function PlayerSection({ playerOverall }) {
   // Défaut : les réguliers face au joueur le plus assidu.
   const cmpLeft = cmp.left ?? (regulars.length > 1 ? REGULARS : ALL)
   const cmpRight = cmp.right ?? (list[0]?.name || ALL)
-  const A = aggregate(entityNames(cmpLeft))
-  const B = aggregate(entityNames(cmpRight))
+  const A = aggregate(membersFor(cmpLeft, cmpRight))
+  const B = aggregate(membersFor(cmpRight, cmpLeft))
+  const aExcl = excludedFrom(cmpLeft, cmpRight)
+  const bExcl = excludedFrom(cmpRight, cmpLeft)
   // aNum/bNum servent à COLORER (comparaison numérique) ; aTxt/bTxt à AFFICHER.
   const cmpRow = (label, aTxt, bTxt, aNum, bNum, colored) => {
     const [ca, cb] = colored ? cmpClasses(aNum, bNum) : ['cmp-tie', 'cmp-tie']
@@ -165,6 +179,13 @@ function PlayerSection({ playerOverall }) {
           arrows={false}
         />
       </div>
+      {(aExcl || bExcl) && (
+        <div className="cmp-heads">
+          <span className="cmp-excl">{aExcl ? `hors ${aExcl}` : ''}</span>
+          <span className="cmp-vs" />
+          <span className="cmp-excl">{bExcl ? `hors ${bExcl}` : ''}</span>
+        </div>
+      )}
       <table className="stat-table cmp-table">
         <tbody>
           {cmpRow('Taux de victoire', `${A.winRate} %`, `${B.winRate} %`, A.winRate, B.winRate, true)}

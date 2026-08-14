@@ -2170,6 +2170,17 @@ body {
   font-weight: 700;
   color: var(--muted);
 }
+/* 2e ligne facultative sous les menus : « hors X » quand un joueur est retiré du groupe. */
+.cmp-heads + .cmp-heads {
+  margin-top: -6px;
+}
+.cmp-excl {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
 .cmp-table {
   width: 100%;
   table-layout: fixed;
