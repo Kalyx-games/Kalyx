@@ -3584,7 +3584,7 @@ body {
 }
 .tl-anec-hero-main { display: flex; align-items: center; gap: 11px; }
 .tl-anec-hero-icon { font-size: 1.7rem; flex-shrink: 0; }
-.tl-anec-hero-text { font-size: 1.02rem; line-height: 1.4; color: var(--ink); font-style: italic; }
+.tl-anec-hero-text { font-size: 1.02rem; line-height: 1.4; color: var(--ink); font-weight: 500; }
 
 /* Une vignette de jeu. */
 .tl-chip {
