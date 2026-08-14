@@ -196,3 +196,23 @@ create policy "plays insertion"    on public.plays for insert with check (true);
 create policy "plays modification" on public.plays for update using (true) with check (true);
 create policy "plays suppression"  on public.plays for delete using (true);
 grant all on public.plays to anon, authenticated;
+
+-- 7. TIERLISTS : classement des jeux par joueur (S/A/B/C/D/F + « pas d'avis »).
+-- Stocke des IDENTIFIANTS de jeux (pas des images) → l'image suit si on la change.
+create table if not exists public.tierlists (
+  id         uuid primary key default gen_random_uuid(),
+  player     text not null unique,
+  ranking    jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.tierlists enable row level security;
+drop policy if exists "tierlists lecture"      on public.tierlists;
+drop policy if exists "tierlists insertion"    on public.tierlists;
+drop policy if exists "tierlists modification" on public.tierlists;
+drop policy if exists "tierlists suppression"  on public.tierlists;
+create policy "tierlists lecture"      on public.tierlists for select using (true);
+create policy "tierlists insertion"    on public.tierlists for insert with check (true);
+create policy "tierlists modification" on public.tierlists for update using (true) with check (true);
+create policy "tierlists suppression"  on public.tierlists for delete using (true);
+grant all on public.tierlists to anon, authenticated;

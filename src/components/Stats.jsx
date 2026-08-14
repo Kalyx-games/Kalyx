@@ -198,28 +198,38 @@ function PlayerSection({ playerOverall }) {
   )
 }
 
-export default function Stats({ games, ownerMap, hasCollection, playerOverall }) {
+export default function Stats({ games, ownerMap, hasCollection, playerOverall, onOpenTierlists }) {
   const s = useMemo(() => computeStats(games, ownerMap), [games, ownerMap])
 
   // Aucun jeu de collection à afficher : soit la collection est vraiment vide,
   // soit les filtres actifs excluent tout (message différent pour ne pas induire en erreur).
   const noCollectionShown = (games ?? []).every((g) => g.status === 'wishlist')
 
+  // Grand bouton d'accès aux tierlists (toujours en haut de l'onglet Stats).
+  const tierBtn = onOpenTierlists ? (
+    <button type="button" className="tl-open-btn" onClick={onOpenTierlists}>
+      🏆 Tierlists
+    </button>
+  ) : null
+
   if (noCollectionShown) {
     return (
-      <div className="empty stats-empty">
-        <p className="empty-emoji">📊</p>
-        {hasCollection ? (
-          <>
-            <p>Aucun jeu ne correspond à tes filtres.</p>
-            <p className="muted">Modifie ou réinitialise les filtres pour voir les statistiques.</p>
-          </>
-        ) : (
-          <>
-            <p>Ta collection est vide pour l'instant.</p>
-            <p className="muted">Ajoute des jeux : les statistiques apparaîtront ici.</p>
-          </>
-        )}
+      <div className="stats">
+        {tierBtn}
+        <div className="empty stats-empty">
+          <p className="empty-emoji">📊</p>
+          {hasCollection ? (
+            <>
+              <p>Aucun jeu ne correspond à tes filtres.</p>
+              <p className="muted">Modifie ou réinitialise les filtres pour voir les statistiques.</p>
+            </>
+          ) : (
+            <>
+              <p>Ta collection est vide pour l'instant.</p>
+              <p className="muted">Ajoute des jeux : les statistiques apparaîtront ici.</p>
+            </>
+          )}
+        </div>
       </div>
     )
   }
@@ -228,6 +238,7 @@ export default function Stats({ games, ownerMap, hasCollection, playerOverall })
 
   return (
     <div className="stats">
+      {tierBtn}
       <div className="stat-tiles">
         <Tile value={s.total} label={s.total > 1 ? 'jeux en collection' : 'jeu en collection'} />
         <Tile value={s.wishlistCount} label="en wishlist" />

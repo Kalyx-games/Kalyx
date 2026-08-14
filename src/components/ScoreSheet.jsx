@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { parseExtensions, effectivePlayersSet } from '../lib/games'
 import { resolveDefaultExts } from '../lib/scoresheets'
+import NameField from './NameField'
 
 // Fiche de saisie d'une partie. Le type de partie vient du template :
 //  • win     : 'competitive' | 'coop'
@@ -13,53 +14,6 @@ import { resolveDefaultExts } from '../lib/scoresheets'
 let pid = 0
 // `variant` = valeur de la variante par joueur (héros, faction…) choisie pour cette partie.
 const makePlayer = (name = '', variant = '') => ({ id: ++pid, name, scores: {}, variant })
-
-// Champ « nom de joueur » avec auto-complétion maison (le <datalist> natif ne
-// marche pas partout sur mobile). Partagé par tous les modes.
-function NameField({ id, value, onChange, onPick, placeholder, playerNames, focused, setFocused, className, style }) {
-  const v = (value || '').trim().toLowerCase()
-  // Propositions : celles qui COMMENCENT par ce qui est tapé d'abord, puis celles qui le
-  // contiennent ailleurs. Chaque groupe garde l'ordre reçu (les plus assidus en tête).
-  const suggestions = useMemo(() => {
-    if (focused !== id) return []
-    const hits = playerNames.filter((n) => n.toLowerCase() !== v && (v === '' || n.toLowerCase().includes(v)))
-    if (v === '') return hits.slice(0, 6)
-    const starts = hits.filter((n) => n.toLowerCase().startsWith(v))
-    const rest = hits.filter((n) => !n.toLowerCase().startsWith(v))
-    return [...starts, ...rest].slice(0, 6)
-  }, [focused, id, playerNames, v])
-  return (
-    <div className="sheet-name-wrap">
-      <input
-        className={className}
-        style={style}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setFocused(id)}
-        onBlur={() => setTimeout(() => setFocused((cur) => (cur === id ? null : cur)), 150)}
-        placeholder={placeholder}
-      />
-      {suggestions.length > 0 && (
-        <ul className="name-suggest">
-          {suggestions.map((n) => (
-            <li key={n}>
-              <button
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  onPick(n)
-                  setFocused(null)
-                }}
-              >
-                {n}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
 
 let tid = 0
 const makeTeamRow = (t = {}) => {
