@@ -67,13 +67,16 @@ export function repIdMap(games) {
 
 // Remappe un classement vers les ids représentants + dédoublonne (un jeu une seule fois,
 // à sa 1re position rencontrée) → un doublon classé sous un autre id est mutualisé.
-export function remapRanking(ranking, repById) {
+// `validIds` (facultatif) : si fourni, on RETIRE les ids absents (jeux supprimés de la
+// collection) → nettoyage des classements.
+export function remapRanking(ranking, repById, validIds) {
   const seen = new Set()
   const out = {}
   TIERS.forEach((t) => {
     out[t.key] = []
     ;(ranking?.[t.key] || []).forEach((id) => {
       const rep = repById.get(id) || id
+      if (validIds && !validIds.has(rep)) return // jeu supprimé de la collection → retiré
       if (!seen.has(rep)) {
         seen.add(rep)
         out[t.key].push(rep)
@@ -81,6 +84,16 @@ export function remapRanking(ranking, repById) {
     })
   })
   return out
+}
+
+// TOUTES les tierlists (colonnes brutes, pour les sauvegardes). [] si table absente.
+export async function fetchAllTierlists() {
+  const { data, error } = await supabase.from('tierlists').select('id, player, ranking, created_at, updated_at')
+  if (error) {
+    if (tableMissing(error)) return []
+    throw error
+  }
+  return data ?? []
 }
 
 // Toutes les tierlists (sans filtre). null si la table n'existe pas encore.

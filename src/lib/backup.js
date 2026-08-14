@@ -1,9 +1,10 @@
 import { supabase } from './supabase'
 import { fetchAllPlays } from './plays'
 import { fetchAllScoresheets } from './scoresheets'
+import { fetchAllTierlists } from './tierlists'
 
 // Sauvegarde / restauration de TOUTES les données (fichier JSON ou table `backups`).
-// Contenu d'une sauvegarde : jeux + propriétaires + tags + PARTIES + FICHES DE SCORE.
+// Contenu d'une sauvegarde : jeux + propriétaires + tags + PARTIES + FICHES + TIERLISTS.
 // Import = on ré-insère ce contenu (mise à jour de l'existant par identifiant, ajout du
 // reste), pour restaurer après une fausse manœuvre ou déménager vers une autre base.
 
@@ -18,6 +19,7 @@ const PLAY_COLS = [
   'outcome', 'scenario', 'score', 'notes', 'trigger', 'created_at',
 ]
 const SHEET_COLS = ['id', 'game_id', 'template', 'updated_at']
+const TIERLIST_COLS = ['id', 'player', 'ranking', 'created_at', 'updated_at']
 
 function pick(obj, cols) {
   const out = {}
@@ -35,7 +37,7 @@ function pickBubble(o) {
 // Construit l'objet de sauvegarde. `plays` et `scoresheets` viennent de la base
 // (ils ne sont pas tous chargés dans l'app) → voir collectSnapshot ci-dessous.
 // version 2 = contient les parties et les fiches ; version 1 = anciennes sauvegardes.
-export function buildBackup(games, owners, tags, plays, scoresheets, exportedAt) {
+export function buildBackup(games, owners, tags, plays, scoresheets, tierlists, exportedAt) {
   return {
     app: 'kalyx',
     version: 2,
@@ -45,14 +47,15 @@ export function buildBackup(games, owners, tags, plays, scoresheets, exportedAt)
     tags: (tags ?? []).map(pickBubble),
     plays: (plays ?? []).map((p) => pick(p, PLAY_COLS)),
     scoresheets: (scoresheets ?? []).map((s) => pick(s, SHEET_COLS)),
+    tierlists: (tierlists ?? []).map((t) => pick(t, TIERLIST_COLS)),
   }
 }
 
-// Instantané COMPLET : on relit les parties et les fiches en base (l'app n'en garde
+// Instantané COMPLET : on relit parties, fiches et tierlists en base (l'app n'en garde
 // qu'une partie en mémoire), puis on assemble la sauvegarde.
 export async function collectSnapshot(games, owners, tags, exportedAt) {
-  const [plays, scoresheets] = await Promise.all([fetchAllPlays(), fetchAllScoresheets()])
-  return buildBackup(games, owners, tags, plays, scoresheets, exportedAt)
+  const [plays, scoresheets, tierlists] = await Promise.all([fetchAllPlays(), fetchAllScoresheets(), fetchAllTierlists()])
+  return buildBackup(games, owners, tags, plays, scoresheets, tierlists, exportedAt)
 }
 
 // Déclenche le téléchargement du fichier de sauvegarde. Renvoie le détail des quantités.
@@ -67,7 +70,7 @@ export async function downloadBackup(games, owners, tags, dateStr) {
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
-  return { games: data.games.length, plays: data.plays.length, sheets: data.scoresheets.length }
+  return { games: data.games.length, plays: data.plays.length, sheets: data.scoresheets.length, tierlists: data.tierlists.length }
 }
 
 // ============================================================
@@ -177,7 +180,8 @@ export function parseBackup(text) {
   // et surtout on ne touchera à rien de ce côté-là à l'import.
   const plays = Array.isArray(obj.plays) ? obj.plays.filter((p) => p && p.id && p.game_id) : []
   const scoresheets = Array.isArray(obj.scoresheets) ? obj.scoresheets.filter((s) => s && s.game_id) : []
-  return { games, owners, tags, plays, scoresheets }
+  const tierlists = Array.isArray(obj.tierlists) ? obj.tierlists.filter((t) => t && t.player) : []
+  return { games, owners, tags, plays, scoresheets, tierlists }
 }
 
 // Insère/écrase une liste de bulles gérées (propriétaires ou tags) par nom.
@@ -207,7 +211,7 @@ async function upsertRows(table, rows, conflictCol) {
 // Applique une sauvegarde : propriétaires + tags (par nom), puis les jeux (par
 // identifiant), puis les parties et les fiches — DANS CET ORDRE : parties et fiches
 // pointent vers un jeu, celui-ci doit donc exister d'abord.
-export async function importBackup({ games, owners, tags, plays, scoresheets }) {
+export async function importBackup({ games, owners, tags, plays, scoresheets, tierlists }) {
   await upsertBubbles('owners', owners)
   await upsertBubbles('tags', tags)
 
@@ -237,12 +241,20 @@ export async function importBackup({ games, owners, tags, plays, scoresheets }) 
   const nPlays = await upsertRows('plays', playRows, 'id')
   const nSheets = await upsertRows('scoresheets', sheetRows, 'game_id')
 
+  // Tierlists : indépendantes des jeux (le classement stocke des ids dans un jsonb, pas de
+  // FK). On upsert par `player` (clé naturelle) SANS l'id (non signifiant entre bases).
+  const tierlistRows = (tierlists ?? [])
+    .map((t) => ({ player: String(t.player || '').trim(), ranking: t.ranking || {} }))
+    .filter((t) => t.player)
+  const nTierlists = await upsertRows('tierlists', tierlistRows, 'player')
+
   return {
     games: rows.length,
     owners: (owners && owners.length) || 0,
     tags: (tags && tags.length) || 0,
     plays: nPlays,
     scoresheets: nSheets,
+    tierlists: nTierlists,
   }
 }
 
@@ -390,13 +402,15 @@ export async function restoreBackup(backupId) {
   const tags = Array.isArray(snap.tags) ? snap.tags : []
   const plays = Array.isArray(snap.plays) ? snap.plays : []
   const scoresheets = Array.isArray(snap.scoresheets) ? snap.scoresheets : []
+  const tierlists = Array.isArray(snap.tierlists) ? snap.tierlists : []
 
-  // 1) ré-insère / met à jour tout ce qui est dans la sauvegarde (jeux d'abord)
-  const res = await importBackup({ games, owners, tags, plays, scoresheets })
+  // 1) ré-insère / met à jour tout ce qui est dans la sauvegarde (jeux d'abord). Les tierlists
+  //    sont ADDITIVES (comme les parties) : restaurer la collection n'efface pas une tierlist.
+  const res = await importBackup({ games, owners, tags, plays, scoresheets, tierlists })
   // 2) supprime les jeux / propriétaires / tags absents de la sauvegarde (retour arrière)
   await deleteExtra('games', 'id', new Set(games.map((g) => g.id).filter(Boolean)))
   await deleteExtra('owners', 'name', new Set(owners.map((o) => o.name)))
   await deleteExtra('tags', 'name', new Set(tags.map((t) => t.name)))
 
-  return { games: games.length, owners: owners.length, tags: tags.length, plays: res.plays, scoresheets: res.scoresheets }
+  return { games: games.length, owners: owners.length, tags: tags.length, plays: res.plays, scoresheets: res.scoresheets, tierlists: res.tierlists }
 }

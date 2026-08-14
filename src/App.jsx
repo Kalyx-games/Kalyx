@@ -574,7 +574,7 @@ export default function App() {
     try {
       // Relit les parties et les fiches en base → la sauvegarde contient TOUT.
       const n = await downloadBackup(games ?? [], ownersList ?? [], tagsList ?? [], dateStr)
-      setNotice(`Sauvegarde téléchargée : ${n.games} jeux, ${n.plays} parties, ${n.sheets} fiches de score.`)
+      setNotice(`Sauvegarde téléchargée : ${n.games} jeux, ${n.plays} parties, ${n.sheets} fiches, ${n.tierlists} tierlists.`)
     } catch (e) {
       setError(e.message)
     }
@@ -644,6 +644,7 @@ export default function App() {
       reloadTags()
       refreshHistory(historyGame)
       fetchScoresheets().then((m) => setScoresheets(m || {})).catch(() => {})
+      reloadTierlists()
       setImporting(null)
       const extra = res.plays ? ` et ${res.plays} partie${res.plays > 1 ? 's' : ''}` : ''
       setNotice(`Import réussi : ${res.games} jeu${res.games > 1 ? 'x' : ''}${extra}.`)
@@ -816,6 +817,8 @@ export default function App() {
   const nonWishlist = useMemo(() => (games ?? []).filter((g) => g.status !== 'wishlist'), [games])
   const collectionGames = useMemo(() => dedupeByName(nonWishlist), [nonWishlist])
   const repById = useMemo(() => repIdMap(nonWishlist), [nonWishlist])
+  // Ids de jeux valides (représentants) → sert à retirer des classements les jeux supprimés.
+  const validTlIds = useMemo(() => new Set(collectionGames.map((g) => g.id)), [collectionGames])
   const reloadTierlists = () => fetchTierlists().then(setTierlists).catch(() => setTierlists(null))
   function handleOpenTierlists() {
     setTierlistHub(true)
@@ -827,8 +830,8 @@ export default function App() {
     setTierlistView({ mode: 'global', title: '🌍 Tierlist globale', ranking, unranked, player: '', id: null })
   }
   function handleOpenTierlist(tl) {
-    // On remappe vers les représentants (mutualise les doublons de nom).
-    setTierlistView({ mode: 'view', title: tl.player, ranking: remapRanking(tl.ranking, repById), unranked: [], player: tl.player, id: tl.id })
+    // Remappe vers les représentants (mutualise les doublons de nom) + retire les jeux supprimés.
+    setTierlistView({ mode: 'view', title: tl.player, ranking: remapRanking(tl.ranking, repById, validTlIds), unranked: [], player: tl.player, id: tl.id })
   }
   function handleCreateTierlist() {
     setTierlistView({ mode: 'edit', title: '', ranking: emptyRanking(), unranked: [], player: '', id: null })
