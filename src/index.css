@@ -3367,16 +3367,17 @@ body {
 /* Grand bouton d'accès (haut de l'onglet Stats). */
 .tl-open-btn {
   width: 100%;
-  padding: 16px;
+  padding: 15px;
   margin-bottom: 16px;
   border: none;
   border-radius: 14px;
-  background: var(--accent);
+  /* Même dégradé primaire que le FAB / les boutons principaux → DA cohérente, lisible clair+sombre. */
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
   color: #fff;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.28);
 }
 .tl-open-btn:active { transform: scale(0.99); }
 
@@ -3462,6 +3463,9 @@ body {
   border-radius: 8px;
   overflow: hidden;
   min-height: 56px;
+  /* Ne pas compresser la ligne dans la colonne flex : elle garde la hauteur de son
+     contenu (les vignettes passent à la ligne), et c'est la zone .tl-rows qui défile. */
+  flex-shrink: 0;
 }
 .tl-label {
   flex-shrink: 0;
