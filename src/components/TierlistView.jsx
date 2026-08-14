@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { TIERS } from '../lib/tierlists'
 import { EMPTY_FILTERS, passesFilters } from '../lib/filtering'
+import { parseTags } from '../lib/games'
 import Filters from './Filters'
 import NameField from './NameField'
 
@@ -248,7 +249,16 @@ export default function TierlistView({
     if (chip) showTip(chip)
   }
 
-  const gamesOf = (ids) => ids.map((id) => gameById.get(id)).filter(Boolean)
+  // Filtre d'AFFICHAGE (consultation) : montre tous les jeux par défaut, et NARROW quand un
+  // filtre est actif (tags purement additifs — rien coché = tous). Différent du bac d'édition
+  // qui, lui, garde le comportement Collection (tags masqués par défaut).
+  const displayMatch = (g) =>
+    passesFilters(g, filters, '', false, false) &&
+    (!filters.tags.length || parseTags(g.tags).some((t) => filters.tags.includes(t)))
+  const gamesOf = (ids, filtered) => {
+    const gs = ids.map((id) => gameById.get(id)).filter(Boolean)
+    return filtered ? gs.filter(displayMatch) : gs
+  }
 
   return (
     <div className="sheet tl-sheet" ref={rootRef} onClick={onRootClick}>
@@ -271,19 +281,23 @@ export default function TierlistView({
         ) : (
           <h2>{title}</h2>
         )}
-        {editing && (
-          <button type="button" className="filter-toggle tl-filter-btn" onClick={() => setShowFilters((s) => !s)}>
+        {/* Actions à droite : filtre (tous modes), modifier (consultation), supprimer (existant). */}
+        <div className="tl-head-actions">
+          <button type="button" className="filter-toggle tl-filter-btn" onClick={() => setShowFilters((s) => !s)} aria-label="Filtres">
             🔎
             {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
             <span className={`filter-chev ${showFilters ? 'up' : ''}`}>▾</span>
           </button>
-        )}
-        {mode === 'view' && onEdit && (
-          <button type="button" className="tl-edit-btn" onClick={onEdit} disabled={!online} title={online ? 'Modifier' : 'Indisponible hors ligne'}>✏️</button>
-        )}
+          {mode === 'view' && onEdit && (
+            <button type="button" className="tl-edit-btn" onClick={onEdit} disabled={!online} title={online ? 'Modifier' : 'Indisponible hors ligne'}>✏️</button>
+          )}
+          {savedId && onDelete && (
+            <button type="button" className="tl-del-btn" onClick={onDelete} disabled={!online} title={online ? 'Supprimer' : 'Indisponible hors ligne'} aria-label="Supprimer la tierlist">🗑️</button>
+          )}
+        </div>
       </div>
 
-      {editing && showFilters && (
+      {showFilters && (
         <Filters
           owners={allOwners}
           tags={allTags}
@@ -303,7 +317,7 @@ export default function TierlistView({
               {t.label}
             </div>
             <div className="tl-slots">
-              {gamesOf(ranking[t.key] || []).map((g) => (
+              {gamesOf(ranking[t.key] || [], !editing).map((g) => (
                 <Chip key={g.id} game={g} />
               ))}
             </div>
@@ -329,18 +343,10 @@ export default function TierlistView({
         <div className="tl-tray-wrap">
           <div className="tl-tray-title">Non classés <span className="muted">({unranked.length})</span></div>
           <div className="tl-tray">
-            {gamesOf(unranked).map((g) => (
+            {gamesOf(unranked, true).map((g) => (
               <Chip key={g.id} game={g} />
             ))}
           </div>
-        </div>
-      )}
-
-      {editing && onDelete && savedId && (
-        <div className="tl-delete">
-          <button type="button" className="btn-danger" onClick={onDelete} disabled={!online}>
-            🗑️ Supprimer cette tierlist
-          </button>
         </div>
       )}
 

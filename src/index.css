@@ -3428,21 +3428,31 @@ body {
 .tl-head h2 { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tl-name-edit { flex: 1; min-width: 0; }
 .tl-name-edit .input { width: 100%; }
-.tl-edit-btn {
+/* Actions à droite de l'en-tête : filtre + modifier + supprimer. */
+.tl-head-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tl-edit-btn,
+.tl-del-btn {
   flex-shrink: 0;
   border: none;
   background: var(--soft);
   border-radius: 10px;
-  padding: 8px 12px;
+  padding: 8px 11px;
   font-size: 1.05rem;
   cursor: pointer;
 }
-.tl-edit-btn:disabled { opacity: 0.45; }
-/* Bouton Filtres compact, à droite du champ nom (pas de libellé, juste 🔎 + badge). */
+.tl-del-btn { background: var(--danger-bg); }
+.tl-edit-btn:disabled,
+.tl-del-btn:disabled { opacity: 0.45; }
+/* Bouton Filtres compact (pas de libellé, juste 🔎 + badge). */
 .tl-filter-btn {
   flex-shrink: 0;
   gap: 4px;
-  padding: 10px 12px;
+  padding: 10px 11px;
 }
 
 /* Les lignes de tiers (zone défilante). */

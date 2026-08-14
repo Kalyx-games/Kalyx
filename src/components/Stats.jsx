@@ -112,10 +112,16 @@ function PlayerSection({ playerOverall }) {
   // Défaut : les réguliers face au joueur le plus assidu.
   const cmpLeft = cmp.left ?? (regulars.length > 1 ? REGULARS : ALL)
   const cmpRight = cmp.right ?? (list[0]?.name || ALL)
-  const A = aggregate(membersFor(cmpLeft, cmpRight))
-  const B = aggregate(membersFor(cmpRight, cmpLeft))
+  const membersA = membersFor(cmpLeft, cmpRight)
+  const membersB = membersFor(cmpRight, cmpLeft)
+  const A = aggregate(membersA)
+  const B = aggregate(membersB)
   const aExcl = excludedFrom(cmpLeft, cmpRight)
   const bExcl = excludedFrom(cmpRight, cmpLeft)
+  // Pour un GROUPE, on affiche la MOYENNE par joueur (sinon le groupe a toujours des totaux
+  // plus gros → comparaison inutile). Pour un joueur seul, c'est son compte brut.
+  const anyGroup = membersA.length > 1 || membersB.length > 1
+  const avgVal = (sum, members) => (members.length > 1 ? Math.round((sum / members.length) * 10) / 10 : sum)
   // aNum/bNum servent à COLORER (comparaison numérique) ; aTxt/bTxt à AFFICHER.
   const cmpRow = (label, aTxt, bTxt, aNum, bNum, colored) => {
     const [ca, cb] = colored ? cmpClasses(aNum, bNum) : ['cmp-tie', 'cmp-tie']
@@ -189,9 +195,25 @@ function PlayerSection({ playerOverall }) {
       <table className="stat-table cmp-table">
         <tbody>
           {cmpRow('Taux de victoire', `${A.winRate} %`, `${B.winRate} %`, A.winRate, B.winRate, true)}
-          {/* Victoires/parties en gris : un groupe en a forcément plus, colorer n'aurait aucun sens. */}
-          {cmpRow('Victoires', A.wins, B.wins, A.wins, B.wins, false)}
-          {cmpRow('Parties', A.games, B.games, A.games, B.games, false)}
+          {/* Pour un groupe : MOYENNE par joueur (sinon le total du groupe est toujours plus gros).
+              En gris : victoires/parties dépendent surtout du nb de parties jouées → le taux de
+              victoire reste la seule comparaison colorée pertinente. */}
+          {cmpRow(
+            anyGroup ? 'Victoires (moy.)' : 'Victoires',
+            avgVal(A.wins, membersA),
+            avgVal(B.wins, membersB),
+            0,
+            0,
+            false
+          )}
+          {cmpRow(
+            anyGroup ? 'Parties (moy.)' : 'Parties',
+            avgVal(A.games, membersA),
+            avgVal(B.games, membersB),
+            0,
+            0,
+            false
+          )}
         </tbody>
       </table>
     </section>

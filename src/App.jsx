@@ -196,6 +196,7 @@ export default function App() {
   const [playMeta, setPlayMeta] = useState({}) // { game_id: { count, last } } (tris + cartes)
   const [savingPlay, setSavingPlay] = useState(false)
   const [confirmingPlay, setConfirmingPlay] = useState(null) // partie à supprimer | null
+  const [confirmingTierlist, setConfirmingTierlist] = useState(false) // suppression tierlist en attente
 
   // Charger les listes gérées (tables owners + tags + fiches de score).
   const reloadOwners = useCallback(() => {
@@ -262,14 +263,14 @@ export default function App() {
   // se ferme jamais : on remet toujours une entrée d'historique "piège".
   const viewHistoryRef = useRef([]) // vues précédentes (pour revenir en arrière)
   const uiRef = useRef({})
-  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, scanOpen, chwaziOpen, editingSheet, scoringGame, historyGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
+  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scanOpen, chwaziOpen, editingSheet, scoringGame, historyGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
   viewRef.current = view
 
   // Nombre de "couches" ouvertes (fenêtres/onglets superposés).
   const layerCount =
     (editing ? 1 : 0) + (confirming ? 1 : 0) + (moving ? 1 : 0) + (confirmingOwner ? 1 : 0) + (confirmingTag ? 1 : 0) +
-    (importing ? 1 : 0) + (restoring ? 1 : 0) + (confirmingPlay ? 1 : 0) + (scanOpen ? 1 : 0) + (chwaziOpen ? 1 : 0) +
+    (importing ? 1 : 0) + (restoring ? 1 : 0) + (confirmingPlay ? 1 : 0) + (confirmingTierlist ? 1 : 0) + (scanOpen ? 1 : 0) + (chwaziOpen ? 1 : 0) +
     (editingSheet ? 1 : 0) + (scoringGame ? 1 : 0) + (historyGame ? 1 : 0) + (statsOpen ? 1 : 0) +
     (tierlistView ? 1 : 0) + (tierlistHub ? 1 : 0) +
     (playersOpen ? 1 : 0) + (settingsOpen ? 1 : 0) + (zoomImage ? 1 : 0)
@@ -296,6 +297,7 @@ export default function App() {
     else if (s.importing) setImporting(null)
     else if (s.restoring) setRestoring(null)
     else if (s.confirmingPlay) setConfirmingPlay(null)
+    else if (s.confirmingTierlist) setConfirmingTierlist(false)
     else if (s.editing) setEditing(null)
     else if (s.scanOpen) setScanOpen(false)
     else if (s.chwaziOpen) setChwaziOpen(false)
@@ -830,15 +832,17 @@ export default function App() {
     reloadTierlists()
     return row
   }
-  async function handleDeleteTierlist() {
-    if (!tierlistView?.id) { setTierlistView(null); return }
+  async function handleConfirmDeleteTierlist() {
+    if (!tierlistView?.id) { setConfirmingTierlist(false); setTierlistView(null); return }
     try {
       await deleteTierlist(tierlistView.id)
+      setConfirmingTierlist(false)
       setTierlistView(null)
       reloadTierlists()
       setNotice('Tierlist supprimée.')
     } catch (e) {
       setError(e.message)
+      setConfirmingTierlist(false)
     }
   }
 
@@ -1303,6 +1307,16 @@ export default function App() {
         />
       )}
 
+      {confirmingTierlist && (
+        <ConfirmDialog
+          title="Supprimer cette tierlist ?"
+          message={<>La tierlist{tierlistView?.player ? <> de <b>{tierlistView.player}</b></> : ''} sera définitivement supprimée.</>}
+          confirmLabel="Supprimer"
+          onConfirm={handleConfirmDeleteTierlist}
+          onCancel={() => setConfirmingTierlist(false)}
+        />
+      )}
+
       <NavBar
         view={statsOpen ? 'stats' : settingsOpen ? null : view}
         onChange={(v) => {
@@ -1379,7 +1393,7 @@ export default function App() {
             onClose={() => setTierlistView(null)}
             onEdit={() => setTierlistView((v) => ({ ...v, mode: 'edit', title: '' }))}
             onSave={handleSaveTierlist}
-            onDelete={handleDeleteTierlist}
+            onDelete={() => setConfirmingTierlist(true)}
           />
         </Suspense>
       )}
