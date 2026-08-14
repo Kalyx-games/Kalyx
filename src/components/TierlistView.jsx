@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { TIERS } from '../lib/tierlists'
 import { EMPTY_FILTERS, passesFilters } from '../lib/filtering'
-import { parseTags } from '../lib/games'
 import Filters from './Filters'
 import NameField from './NameField'
 
@@ -71,18 +70,12 @@ export default function TierlistView({
   }, [ranking])
 
   // Le « bac » du bas : les jeux de la collection PAS encore placés, filtrés + triés.
-  // Ici TOUS les jeux doivent être disponibles (pas de « tags masqués par défaut » comme
-  // dans la Collection) → applyTags=false ; le filtre par tag reste possible mais purement
-  // additif (rien coché = tous les jeux ; un tag coché = seulement ceux qui l'ont).
+  // Même système de filtre que la Collection (les jeux tagués sont masqués par défaut,
+  // tant qu'aucun de leurs tags n'est coché).
   const tray = useMemo(
     () =>
       games
-        .filter((g) => {
-          if (placed.has(g.id)) return false
-          if (!passesFilters(g, filters, '', false, false)) return false
-          if (filters.tags.length && !parseTags(g.tags).some((t) => filters.tags.includes(t))) return false
-          return true
-        })
+        .filter((g) => !placed.has(g.id) && passesFilters(g, filters, '', false))
         .sort((a, b) => a.name.localeCompare(b.name, 'fr')),
     [games, placed, filters]
   )
@@ -278,21 +271,18 @@ export default function TierlistView({
         ) : (
           <h2>{title}</h2>
         )}
+        {editing && (
+          <button type="button" className="filter-toggle tl-filter-btn" onClick={() => setShowFilters((s) => !s)}>
+            🔎
+            {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
+            <span className={`filter-chev ${showFilters ? 'up' : ''}`}>▾</span>
+          </button>
+        )}
         {mode === 'view' && onEdit && (
           <button type="button" className="tl-edit-btn" onClick={onEdit} disabled={!online} title={online ? 'Modifier' : 'Indisponible hors ligne'}>✏️</button>
         )}
       </div>
 
-      {editing && (
-        <div className="tl-toolbar">
-          <button type="button" className="filter-toggle" onClick={() => setShowFilters((s) => !s)}>
-            🔎 Filtres
-            {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
-            <span className={`filter-chev ${showFilters ? 'up' : ''}`}>▾</span>
-          </button>
-          <span className="tl-save-hint">{online ? 'Enregistrement automatique' : 'Hors ligne : lecture seule'}</span>
-        </div>
-      )}
       {editing && showFilters && (
         <Filters
           owners={allOwners}
@@ -324,9 +314,6 @@ export default function TierlistView({
       {/* Bac des jeux à classer (édition). */}
       {editing && (
         <div className="tl-tray-wrap">
-          <div className="tl-tray-title">
-            À classer <span className="muted">({tray.length})</span> — maintiens puis glisse
-          </div>
           <div className="tl-tray" data-tray>
             {tray.length ? (
               tray.map((g) => <Chip key={g.id} game={g} />)

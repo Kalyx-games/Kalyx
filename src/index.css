@@ -3437,14 +3437,12 @@ body {
   cursor: pointer;
 }
 .tl-edit-btn:disabled { opacity: 0.45; }
-.tl-toolbar {
+/* Bouton Filtres compact, à droite du champ nom (pas de libellé, juste 🔎 + badge). */
+.tl-filter-btn {
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 6px 0 8px;
+  gap: 4px;
+  padding: 10px 12px;
 }
-.tl-save-hint { font-size: 0.78rem; color: var(--muted); }
 
 /* Les lignes de tiers (zone défilante). */
 .tl-rows {
