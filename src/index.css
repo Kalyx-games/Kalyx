@@ -3567,19 +3567,24 @@ body {
 .tl-unranked { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
 .tl-tray-inline { max-height: none; overflow: visible; }
 
-/* Anecdote « au hasard » sur le hub des tierlists. */
+/* Anecdote « au hasard » sur le hub : encadré ÉDITORIAL (barre à gauche + italique),
+   volontairement PAS un bouton (pas de fond plein, pas de contour, pas d'ombre). */
 .tl-anec-hero {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--accent-soft);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 14px 16px;
-  margin-bottom: 16px;
+  border-left: 3px solid var(--primary);
+  padding: 2px 4px 2px 14px;
+  margin: 6px 2px 20px;
 }
-.tl-anec-hero-icon { font-size: 1.6rem; flex-shrink: 0; }
-.tl-anec-hero-text { font-size: 0.95rem; color: var(--ink); line-height: 1.35; font-weight: 500; }
+.tl-anec-hero-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 7px;
+}
+.tl-anec-hero-main { display: flex; align-items: center; gap: 11px; }
+.tl-anec-hero-icon { font-size: 1.7rem; flex-shrink: 0; }
+.tl-anec-hero-text { font-size: 1.02rem; line-height: 1.4; color: var(--ink); font-style: italic; }
 
 /* Une vignette de jeu. */
 .tl-chip {

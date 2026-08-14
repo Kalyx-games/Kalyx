@@ -19,8 +19,11 @@ export default function TierlistHub({ tierlists, anecdote, online, onOpenGlobal,
           {/* Une anecdote au hasard (change à chaque passage sur cette page). */}
           {anecdote && (
             <div className="tl-anec-hero">
-              <span className="tl-anec-hero-icon">{anecdote.icon}</span>
-              <span className="tl-anec-hero-text">{anecdote.text}</span>
+              <div className="tl-anec-hero-label">💡 Le saviez-vous ?</div>
+              <div className="tl-anec-hero-main">
+                <span className="tl-anec-hero-icon">{anecdote.icon}</span>
+                <span className="tl-anec-hero-text">{anecdote.text}</span>
+              </div>
             </div>
           )}
 
