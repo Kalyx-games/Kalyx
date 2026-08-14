@@ -89,13 +89,19 @@ export default function TierlistView({
     filters.complexity.length
 
   // Déplace un jeu vers une ligne (ou le retire si tier === null → retour au bac).
-  const moveGame = (id, tier) =>
+  // Déplace un jeu vers une ligne, à la POSITION `index` (pour trier librement dans la ligne) ;
+  // index null/omis = à la fin. tier null = retour au bac (retiré de tout).
+  const moveGame = (id, tier, index) =>
     setRanking((r) => {
       const next = {}
       TIERS.forEach((t) => {
         next[t.key] = (r[t.key] || []).filter((x) => x !== id)
       })
-      if (tier && next[tier]) next[tier] = [...next[tier], id]
+      if (tier && next[tier]) {
+        const arr = next[tier]
+        const at = index == null ? arr.length : Math.max(0, Math.min(index, arr.length))
+        arr.splice(at, 0, id)
+      }
       return next
     })
 
@@ -208,7 +214,23 @@ export default function TierlistView({
         clearHighlight()
         if (d.clone) d.clone.remove()
         root.querySelector(`[data-game="${CSS.escape(d.id)}"]`)?.classList.remove('tl-dragging')
-        if (z) moveGame(d.id, z.kind === 'tier' ? z.key : null)
+        if (z && z.kind === 'tier') {
+          // Position d'insertion = avant la 1re vignette « après » le point de dépôt (dans
+          // l'ordre de lecture) → permet de trier librement au sein de la ligne.
+          const slots = z.el.querySelector('.tl-slots') || z.el
+          const chips = [...slots.querySelectorAll('[data-game]')].filter((c) => c.dataset.game !== d.id)
+          let index = chips.length
+          for (let i = 0; i < chips.length; i++) {
+            const r = chips[i].getBoundingClientRect()
+            if (y < r.top - 2 || (y <= r.bottom + 2 && x < r.left + r.width / 2)) {
+              index = i
+              break
+            }
+          }
+          moveGame(d.id, z.key, index)
+        } else if (z) {
+          moveGame(d.id, null) // lâché sur le bac → retour aux non-classés
+        }
       } else {
         // Pas de glissé = un tap → infobulle avec le nom du jeu.
         const chip = root.querySelector(`[data-game="${CSS.escape(d.id)}"]`)
