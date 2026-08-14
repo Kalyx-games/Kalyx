@@ -329,19 +329,22 @@ export function scoreCounts(play) {
 export function computeEntityStats(plays, scoring, names) {
   const set = new Set(names || [])
   const ext = (arr) => (scoring === 'low' ? Math.min(...arr) : Math.max(...arr))
-  let games = 0
-  let wins = 0
+  // On compte des PARTIES DISTINCTES, pas des apparitions : une partie où plusieurs
+  // membres du groupe jouaient (ex. les 2 joueurs d'un jeu à 2) ne compte QU'UNE fois.
+  // (Sinon « Joueurs réguliers » d'un jeu à 2 affichait ~2× le nombre réel de parties.)
+  // Pour un joueur seul, un membre par partie → inchangé.
+  let games = 0 // parties distinctes où au moins un membre a joué
+  let wins = 0 // parties distinctes gagnées par au moins un membre
   const scores = []
   const catVals = {}
   ;(plays || []).forEach((p) => {
+    const members = (p.players || []).filter((pl) => set.has((pl?.name || '').trim()))
+    if (!members.length) return
+    games += 1
     const winners = new Set(playWinners(p))
-    const countScore = scoreCounts(p) // partie gagnée par déclencheur → scores ignorés
-    ;(p.players || []).forEach((pl) => {
-      const n = (pl?.name || '').trim()
-      if (!set.has(n)) return
-      games += 1
-      if (winners.has(n)) wins += 1
-      if (!countScore) return
+    if (members.some((pl) => winners.has((pl?.name || '').trim()))) wins += 1
+    if (!scoreCounts(p)) return // partie gagnée par déclencheur → scores ignorés
+    members.forEach((pl) => {
       const t = Number(pl?.total)
       if (Number.isFinite(t) && pl?.total !== undefined && pl?.total !== null) scores.push(t)
       Object.entries(pl?.scores || {}).forEach(([cat, v]) => {
