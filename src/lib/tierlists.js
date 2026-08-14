@@ -127,18 +127,29 @@ export async function deleteTierlist(id) {
 //  - unranked : les jeux qu'AUCUN joueur n'a notés (zone « Non classés »).
 export function computeGlobalTierlist(tierlists, gameIds, repById) {
   const valid = new Set(gameIds)
-  const sums = {} // id (représentant) → { total, n }
+  const sums = {} // id (représentant) → { total, n } — pour la moyenne de SCORE (→ le tier)
+  const rankSum = {} // id → { total, n } — position MOYENNE dans les classements (→ l'ordre)
   ;(tierlists || []).forEach((tl) => {
     // Remappe vers les représentants (mutualise les doublons de nom) + dédoublonne par joueur.
     const rk = repById ? remapRanking(tl.ranking, repById) : tl.ranking || {}
+    let pos = 0 // position dans le classement aplati (S en haut → F en bas) de CE joueur
     SCORED_TIERS.forEach((t) => {
       ;(rk[t.key] || []).forEach((id) => {
         if (!valid.has(id)) return
         const e = sums[id] || (sums[id] = { total: 0, n: 0 })
         e.total += t.score
         e.n += 1
+        const rr = rankSum[id] || (rankSum[id] = { total: 0, n: 0 })
+        rr.total += pos
+        rr.n += 1
+        pos += 1
       })
     })
+  })
+  // Position moyenne (plus petite = classé plus haut en moyenne) → ordre au sein d'une ligne.
+  const avgRank = {}
+  Object.entries(rankSum).forEach(([id, e]) => {
+    avgRank[id] = e.total / e.n
   })
   const avg = {}
   Object.entries(sums).forEach(([id, e]) => {
@@ -156,8 +167,11 @@ export function computeGlobalTierlist(tierlists, gameIds, repById) {
     })
     ranking[best.key].push(id)
   })
-  // Tri interne : meilleure moyenne d'abord.
-  Object.keys(ranking).forEach((k) => ranking[k].sort((a, b) => avg[b] - avg[a]))
+  // Tri au sein d'une ligne = ORDRE MOYEN des utilisateurs (position moyenne croissante),
+  // avec la moyenne de score en départage.
+  Object.keys(ranking).forEach((k) =>
+    ranking[k].sort((a, b) => (avgRank[a] ?? 1e9) - (avgRank[b] ?? 1e9) || avg[b] - avg[a])
+  )
   const unranked = gameIds.filter((id) => avg[id] == null)
   return { ranking, unranked, avg }
 }

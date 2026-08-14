@@ -59,8 +59,15 @@ export default function TierlistView({
   const [showFilters, setShowFilters] = useState(false)
   const [tip, setTip] = useState(null) // { name, x, y } — infobulle au tap
   const [focusedName, setFocusedName] = useState(null)
+  const [azTiers, setAzTiers] = useState(() => new Set()) // lignes triées A→Z (lecture seule)
   const idRef = useRef(savedId)
   const rootRef = useRef(null)
+  const toggleAz = (key) =>
+    setAzTiers((s) => {
+      const n = new Set(s)
+      n.has(key) ? n.delete(key) : n.add(key)
+      return n
+    })
 
   // Jeux déjà placés (dans n'importe quelle ligne).
   const placed = useMemo(() => {
@@ -332,18 +339,35 @@ export default function TierlistView({
 
       {/* Les 7 lignes (drop-zones en édition). */}
       <div className="tl-rows">
-        {TIERS.map((t) => (
-          <div key={t.key} className="tl-row" data-tier={t.key}>
-            <div className="tl-label" style={{ background: t.color }} title={t.title || t.label}>
-              {t.label}
+        {TIERS.map((t) => {
+          const az = azTiers.has(t.key)
+          const list = gamesOf(ranking[t.key] || [], true)
+          const shown = az ? [...list].sort((a, b) => a.name.localeCompare(b.name, 'fr')) : list
+          return (
+            <div key={t.key} className="tl-row" data-tier={t.key}>
+              <div className="tl-label" style={{ background: t.color }} title={t.title || t.label}>
+                <span className="tl-label-letter">{t.label}</span>
+                {/* En lecture : trier la ligne A→Z ou garder l'ordre du créateur (par défaut). */}
+                {!editing && (
+                  <button
+                    type="button"
+                    className={`tl-sort-btn ${az ? 'on' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); toggleAz(t.key) }}
+                    title={az ? 'Ordre du créateur' : 'Trier de A à Z'}
+                    aria-label={az ? 'Ordre du créateur' : 'Trier de A à Z'}
+                  >
+                    A↓Z
+                  </button>
+                )}
+              </div>
+              <div className="tl-slots">
+                {shown.map((g) => (
+                  <Chip key={g.id} game={g} />
+                ))}
+              </div>
             </div>
-            <div className="tl-slots">
-              {gamesOf(ranking[t.key] || [], true).map((g) => (
-                <Chip key={g.id} game={g} />
-              ))}
-            </div>
-          </div>
-        ))}
+          )
+        })}
 
         {/* Zone « Non classés » (tierlist globale) : À LA SUITE des lignes, dans le défilement
             (pas un panneau épinglé) → on la voit en descendant, pas en permanence. */}
