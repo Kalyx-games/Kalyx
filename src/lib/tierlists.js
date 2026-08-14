@@ -279,3 +279,22 @@ export function computeGlobalAnecdotes(tierlists, gameIds, repById, nameById) {
 
   return { divisive, adorés, boudés, bold, soulmates, opposites }
 }
+
+// Liste PLATE d'anecdotes (une phrase chacune) → pour en afficher une au hasard.
+export function computeAnecdoteList(tierlists, gameIds, repById, nameById) {
+  const a = computeGlobalAnecdotes(tierlists, gameIds, repById, nameById)
+  const items = []
+  a.divisive.forEach((d) =>
+    items.push({ icon: '⚔️', text: `${d.name} divise : ${d.hiTier} pour ${d.hi.join(', ')}, ${d.loTier} pour ${d.lo.join(', ')}.` })
+  )
+  a.adorés.forEach((u) => items.push({ icon: '❤️', text: `Tout le monde adore ${u.name} (${u.tier}).` }))
+  a.boudés.forEach((u) => items.push({ icon: '💤', text: `Personne n'accroche à ${u.name} (${u.tier}).` }))
+  if (a.bold)
+    items.push({
+      icon: '🌶️',
+      text: `${a.bold.player} met ${a.bold.name} en ${a.bold.tier}, là où le groupe le voit plutôt en ${a.bold.othersTier}.`,
+    })
+  if (a.soulmates) items.push({ icon: '🫶', text: `${a.soulmates.a} et ${a.soulmates.b} ont les goûts les plus proches.` })
+  if (a.opposites) items.push({ icon: '🙃', text: `${a.opposites.a} et ${a.opposites.b} ont les goûts les plus opposés.` })
+  return items
+}

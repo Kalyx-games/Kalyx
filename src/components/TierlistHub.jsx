@@ -1,6 +1,6 @@
 // Menu des tierlists : la tierlist globale (moyenne), la liste des tierlists existantes
 // (par joueur), et le bouton pour créer la sienne.
-export default function TierlistHub({ tierlists, online, onOpenGlobal, onOpenTierlist, onCreate, onClose }) {
+export default function TierlistHub({ tierlists, anecdote, online, onOpenGlobal, onOpenTierlist, onCreate, onClose }) {
   const missing = tierlists === null // table pas encore créée (migration à lancer)
   const list = tierlists || []
   return (
@@ -16,6 +16,14 @@ export default function TierlistHub({ tierlists, online, onOpenGlobal, onOpenTie
         </p>
       ) : (
         <>
+          {/* Une anecdote au hasard (change à chaque passage sur cette page). */}
+          {anecdote && (
+            <div className="tl-anec-hero">
+              <span className="tl-anec-hero-icon">{anecdote.icon}</span>
+              <span className="tl-anec-hero-text">{anecdote.text}</span>
+            </div>
+          )}
+
           <button type="button" className="tl-global-btn" onClick={onOpenGlobal}>
             🌍 Tierlist globale <span className="tl-global-sub">moyenne de tous les joueurs</span>
           </button>

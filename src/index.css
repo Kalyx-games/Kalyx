@@ -3567,17 +3567,19 @@ body {
 .tl-unranked { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
 .tl-tray-inline { max-height: none; overflow: visible; }
 
-/* Encart « Anecdotes » du global (repliable). */
-.tl-anecdotes { margin-top: 12px; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
-.tl-anec-body { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
-.tl-anec-card {
-  background: var(--card);
+/* Anecdote « au hasard » sur le hub des tierlists. */
+.tl-anec-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--accent-soft);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 14px;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
 }
-.tl-anec-card h4 { font-size: 0.95rem; color: var(--ink); margin: 0 0 6px; }
-.tl-anec-card p { font-size: 0.9rem; color: var(--ink); margin: 4px 0; line-height: 1.35; }
+.tl-anec-hero-icon { font-size: 1.6rem; flex-shrink: 0; }
+.tl-anec-hero-text { font-size: 0.95rem; color: var(--ink); line-height: 1.35; font-weight: 500; }
 
 /* Une vignette de jeu. */
 .tl-chip {

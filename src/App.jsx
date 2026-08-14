@@ -8,7 +8,7 @@ import { downloadBackup, downloadCsv, parseBackup, importBackup, fetchBackups, c
 import { philibertSearchUrl } from './lib/philibert'
 import { EMPTY_FILTERS, PRICE_MIN, PRICE_MAX, norm, passesFilters } from './lib/filtering'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
-import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, computeGlobalAnecdotes, emptyRanking, dedupeByName, repIdMap, remapRanking } from './lib/tierlists'
+import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, computeAnecdoteList, emptyRanking, dedupeByName, repIdMap, remapRanking } from './lib/tierlists'
 import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayMeta, renameCategories, fetchPlayerRoster, fetchPlayerOverall, renamePlayer } from './lib/plays'
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
@@ -151,6 +151,7 @@ export default function App() {
   const [tierlistHub, setTierlistHub] = useState(false)
   const [tierlists, setTierlists] = useState(null) // [{id,player,ranking,updated_at}] | null (table absente/pas chargé)
   const [tierlistView, setTierlistView] = useState(null) // { mode, title, ranking, unranked, player, id } | null
+  const [anecShown, setAnecShown] = useState(null) // anecdote tirée au sort affichée sur le hub
   // On mémorise l'onglet (stats/collection/wishlist) pour y revenir après une actualisation.
   useEffect(() => {
     saveView(statsOpen ? 'stats' : view)
@@ -820,6 +821,19 @@ export default function App() {
   // Ids de jeux valides (représentants) → sert à retirer des classements les jeux supprimés.
   const validTlIds = useMemo(() => new Set(collectionGames.map((g) => g.id)), [collectionGames])
   const reloadTierlists = () => fetchTierlists().then(setTierlists).catch(() => setTierlists(null))
+  // Liste d'anecdotes (recalculée quand les tierlists ou la collection changent).
+  const anecList = useMemo(() => {
+    if (!tierlists || !tierlists.length) return []
+    const ids = collectionGames.map((g) => g.id)
+    const nameById = new Map(collectionGames.map((g) => [g.id, g.name]))
+    return computeAnecdoteList(tierlists, ids, repById, nameById)
+  }, [tierlists, collectionGames, repById])
+  // Une anecdote AU HASARD, retirée à chaque fois qu'on (re)vient sur le hub des tierlists.
+  useEffect(() => {
+    if (tierlistHub && !tierlistView) {
+      setAnecShown(anecList.length ? anecList[Math.floor(Math.random() * anecList.length)] : null)
+    }
+  }, [tierlistHub, tierlistView, anecList])
   function handleOpenTierlists() {
     setTierlistHub(true)
     reloadTierlists()
@@ -827,9 +841,7 @@ export default function App() {
   function handleOpenGlobalTierlist() {
     const ids = collectionGames.map((g) => g.id)
     const { ranking, unranked } = computeGlobalTierlist(tierlists || [], ids, repById)
-    const nameById = new Map(collectionGames.map((g) => [g.id, g.name]))
-    const anecdotes = computeGlobalAnecdotes(tierlists || [], ids, repById, nameById)
-    setTierlistView({ mode: 'global', title: '🌍 Tierlist globale', ranking, unranked, anecdotes, player: '', id: null })
+    setTierlistView({ mode: 'global', title: '🌍 Tierlist globale', ranking, unranked, player: '', id: null })
   }
   function handleOpenTierlist(tl) {
     // Remappe vers les représentants (mutualise les doublons de nom) + retire les jeux supprimés.
@@ -1377,6 +1389,7 @@ export default function App() {
         <Suspense fallback={null}>
           <TierlistHub
             tierlists={tierlists}
+            anecdote={anecShown}
             online={online}
             onOpenGlobal={handleOpenGlobalTierlist}
             onOpenTierlist={handleOpenTierlist}
@@ -1394,7 +1407,6 @@ export default function App() {
             title={tierlistView.title}
             initialRanking={tierlistView.ranking}
             unranked={tierlistView.unranked}
-            anecdotes={tierlistView.anecdotes}
             initialPlayer={tierlistView.player}
             filters={filters}
             setFilters={setFilters}
