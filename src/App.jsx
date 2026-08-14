@@ -821,19 +821,23 @@ export default function App() {
   // Ids de jeux valides (représentants) → sert à retirer des classements les jeux supprimés.
   const validTlIds = useMemo(() => new Set(collectionGames.map((g) => g.id)), [collectionGames])
   const reloadTierlists = () => fetchTierlists().then(setTierlists).catch(() => setTierlists(null))
-  // Liste d'anecdotes (recalculée quand les tierlists ou la collection changent).
-  const anecList = useMemo(() => {
+  // Anecdotes groupées par TYPE (recalculées quand les tierlists ou la collection changent).
+  const anecGroups = useMemo(() => {
     if (!tierlists || !tierlists.length) return []
     const ids = collectionGames.map((g) => g.id)
     const nameById = new Map(collectionGames.map((g) => [g.id, g.name]))
     return computeAnecdoteList(tierlists, ids, repById, nameById)
   }, [tierlists, collectionGames, repById])
-  // Une anecdote AU HASARD, retirée à chaque fois qu'on (re)vient sur le hub des tierlists.
+  // Une anecdote AU HASARD à chaque (re)venue sur le hub : on tire d'abord un TYPE (groupe) au
+  // hasard, puis une anecdote dedans → chaque type a la même chance de ressortir.
   useEffect(() => {
     if (tierlistHub && !tierlistView) {
-      setAnecShown(anecList.length ? anecList[Math.floor(Math.random() * anecList.length)] : null)
+      if (anecGroups.length) {
+        const g = anecGroups[Math.floor(Math.random() * anecGroups.length)]
+        setAnecShown(g[Math.floor(Math.random() * g.length)])
+      } else setAnecShown(null)
     }
-  }, [tierlistHub, tierlistView, anecList])
+  }, [tierlistHub, tierlistView, anecGroups])
   function handleOpenTierlists() {
     setTierlistHub(true)
     reloadTierlists()
