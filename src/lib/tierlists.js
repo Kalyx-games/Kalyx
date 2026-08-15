@@ -195,10 +195,12 @@ function tierOfScore(s) {
 }
 
 // Anecdotes tirées des classements de tous les joueurs, GROUPÉES par type (⚔️ divise, 🏆 chouchou,
-// 🫶 goûts proches…). Renvoie un tableau de groupes non vides ; le hub tire un groupe au hasard
-// puis une anecdote dedans → chance égale par type. Recalculée à chaque changement des tierlists,
-// donc les anecdotes ÉVOLUENT. `nameById` : id → nom de jeu.
-export function computeAnecdoteList(tierlists, gameIds, repById, nameById) {
+// 🫶 goûts proches…). Renvoie un tableau de groupes non vides ; le hub tire un groupe puis une
+// anecdote dedans → chance égale par type. `nameById` : id → nom de jeu.
+// `seed` : graine du tirage interne (choix d'un jeu au hasard parmi les S/F d'un joueur).
+// Une graine fixe (ex. la date du jour) rend le résultat identique pour tout le monde
+// → « anecdote du jour ». Recalculée quand les tierlists changent, donc elle ÉVOLUE aussi.
+export function computeAnecdoteList(tierlists, gameIds, repById, nameById, seed = 0) {
   const valid = new Set(gameIds)
   const gname = (id) => nameById.get(id) || '?'
   const tierOf = (s) => tierOfScore(s).label
@@ -213,7 +215,14 @@ export function computeAnecdoteList(tierlists, gameIds, repById, nameById) {
       })
     })
   })
-  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]
+  // Tirage DÉTERMINISTE (même graine → mêmes choix) : indispensable pour « l'anecdote du jour »
+  // (identique sur tous les appareils le même jour). LCG simple.
+  let _s = (seed >>> 0) || 1
+  const rnd = () => {
+    _s = (_s * 1664525 + 1013904223) >>> 0
+    return _s / 4294967296
+  }
+  const pick = (arr) => arr[Math.floor(rnd() * arr.length)]
   const nbPlayers = Object.keys(byPlayer).length
   // « Chouchou / mal-aimé du groupe » doit être noté par au moins la moitié des joueurs
   // (mini 2) pour être représentatif du groupe, pas d'un jeu que 2 personnes adorent.

@@ -156,7 +156,6 @@ export default function App() {
   const [tierlistHub, setTierlistHub] = useState(false)
   const [tierlists, setTierlists] = useState(null) // [{id,player,ranking,updated_at}] | null (table absente/pas chargé)
   const [tierlistView, setTierlistView] = useState(null) // { mode, title, ranking, unranked, player, id } | null
-  const [anecShown, setAnecShown] = useState(null) // anecdote tirée au sort affichée sur le hub
   // On mémorise l'onglet (stats/collection/wishlist) pour y revenir après une actualisation.
   useEffect(() => {
     saveView(statsOpen ? 'stats' : view)
@@ -836,23 +835,32 @@ export default function App() {
   // Ids de jeux valides (représentants) → sert à retirer des classements les jeux supprimés.
   const validTlIds = useMemo(() => new Set(collectionGames.map((g) => g.id)), [collectionGames])
   const reloadTierlists = () => fetchTierlists().then(setTierlists).catch(() => setTierlists(null))
-  // Anecdotes groupées par TYPE (recalculées quand les tierlists ou la collection changent).
+  // « Anecdote du jour » : une graine calculée à partir de la DATE (locale). Même jour →
+  // même graine pour tout le monde → même anecdote sur tous les appareils. Change chaque jour.
+  const daySeed = useMemo(() => {
+    const d = new Date()
+    const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+    let h = 2166136261 // FNV-1a
+    for (let i = 0; i < key.length; i++) {
+      h ^= key.charCodeAt(i)
+      h = Math.imul(h, 16777619)
+    }
+    return h >>> 0
+  }, [])
+  // Anecdotes groupées par TYPE (recalculées quand les tierlists/la collection/le jour changent).
   const anecGroups = useMemo(() => {
     if (!tierlists || !tierlists.length) return []
     const ids = collectionGames.map((g) => g.id)
     const nameById = new Map(collectionGames.map((g) => [g.id, g.name]))
-    return computeAnecdoteList(tierlists, ids, repById, nameById)
-  }, [tierlists, collectionGames, repById])
-  // Une anecdote AU HASARD à chaque (re)venue sur le hub : on tire d'abord un TYPE (groupe) au
-  // hasard, puis une anecdote dedans → chaque type a la même chance de ressortir.
-  useEffect(() => {
-    if (tierlistHub && !tierlistView) {
-      if (anecGroups.length) {
-        const g = anecGroups[Math.floor(Math.random() * anecGroups.length)]
-        setAnecShown(g[Math.floor(Math.random() * g.length)])
-      } else setAnecShown(null)
-    }
-  }, [tierlistHub, tierlistView, anecGroups])
+    return computeAnecdoteList(tierlists, ids, repById, nameById, daySeed)
+  }, [tierlists, collectionGames, repById, daySeed])
+  // L'anecdote du jour : choix DÉTERMINISTE (graine du jour) d'un TYPE (groupe) puis d'une
+  // anecdote dedans → chaque type a la même chance, et le résultat est identique pour tous.
+  const anecShown = useMemo(() => {
+    if (!anecGroups.length) return null
+    const g = anecGroups[daySeed % anecGroups.length]
+    return g[((daySeed >>> 7) % g.length + g.length) % g.length]
+  }, [anecGroups, daySeed])
   function handleOpenTierlists() {
     setTierlistHub(true)
     reloadTierlists()
