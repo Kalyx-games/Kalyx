@@ -40,22 +40,20 @@ export default async function handler(req, res) {
     return
   }
 
-  // Chemin capturé par la réécriture (?p=rest/v1/...) — doit viser l'API de données.
+  // Chemin capturé par la réécriture — doit viser l'API de données. Vercel fournit le chemin
+  // à la fois sous "p" (notre alias) ET "path" (nom de la source) → on ignore les deux.
   const q = req.query || {}
-  if (req.headers['x-debug'] === '1') {
-    res.status(200).json({ url: req.url, query: q })
-    return
-  }
-  const path = Array.isArray(q.p) ? q.p.join('/') : q.p || ''
+  const rawPath = q.p || q.path || ''
+  const path = Array.isArray(rawPath) ? rawPath.join('/') : rawPath
   if (!path.startsWith('rest/v1/')) {
     res.status(400).json({ error: 'Chemin non autorisé.' })
     return
   }
 
-  // Reconstitue la query PostgREST (tout sauf notre paramètre interne "p").
+  // Reconstitue la query PostgREST (tout sauf nos paramètres internes de routage).
   const params = new URLSearchParams()
   for (const [k, v] of Object.entries(q)) {
-    if (k === 'p') continue
+    if (k === 'p' || k === 'path') continue
     if (Array.isArray(v)) v.forEach((x) => params.append(k, x))
     else params.append(k, v)
   }
