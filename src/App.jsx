@@ -167,6 +167,9 @@ export default function App() {
   useEffect(() => {
     if (!statsOpen) return
     fetchPlayerOverall(games).then(setPlayerOverall).catch(() => setPlayerOverall([]))
+    // Les tierlists alimentent l'anecdote du jour affichée en haut des Stats → on les charge
+    // à l'ouverture de l'onglet (et pas seulement en ouvrant le hub Tierlists).
+    fetchTierlists().then(setTierlists).catch(() => setTierlists(null))
     // volontairement pas de dépendance sur `games` : on ne veut recharger qu'à l'ouverture
     // de l'onglet, pas à chaque modification de la collection.
     // eslint-disable-next-line react-hooks/exhaustive-deps
