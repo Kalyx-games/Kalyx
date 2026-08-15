@@ -1,4 +1,7 @@
 {
+  "rewrites": [
+    { "source": "/api/sb/:path*", "destination": "/api/sbproxy?p=:path*" }
+  ],
   "images": {
     "sizes": [128, 200, 256, 384, 640],
     "formats": ["image/webp"],

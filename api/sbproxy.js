@@ -6,9 +6,10 @@
 // Ainsi, même si un robot trouve l'appli et sa clé PUBLIQUE, cette clé est en LECTURE SEULE
 // (cf. verrouillage RLS) : il ne peut rien écrire ni supprimer.
 //
-// L'appli configure un 2e client supabase-js pointant sur /api/sb ; supabase-js construit
-// les requêtes REST habituelles (rest/v1/...), on ne fait que les relayer vers Supabase avec
-// la vraie clé secrète. On n'autorise QUE le chemin rest/v1/ (l'API de données).
+// Routage : vercel.json réécrit /api/sb/rest/v1/... → /api/sbproxy?p=rest/v1/... . L'appli
+// configure un 2e client supabase-js pointé sur /api/sb ; supabase-js construit les requêtes
+// REST habituelles, on ne fait que les relayer vers Supabase avec la vraie clé secrète.
+// On n'autorise QUE le chemin rest/v1/ (l'API de données).
 
 // Reconstitue le corps de la requête (JSON envoyé par supabase-js), quel que soit le mode.
 async function getBody(req) {
@@ -39,14 +40,23 @@ export default async function handler(req, res) {
     return
   }
 
-  // Chemin après /api/sb/ — doit viser l'API de données PostgREST uniquement.
-  const marker = '/api/sb/'
-  const i = req.url.indexOf(marker)
-  const rest = i >= 0 ? req.url.slice(i + marker.length) : ''
-  if (!rest.startsWith('rest/v1/')) {
+  // Chemin capturé par la réécriture (?p=rest/v1/...) — doit viser l'API de données.
+  const q = req.query || {}
+  const path = Array.isArray(q.p) ? q.p.join('/') : q.p || ''
+  if (!path.startsWith('rest/v1/')) {
     res.status(400).json({ error: 'Chemin non autorisé.' })
     return
   }
+
+  // Reconstitue la query PostgREST (tout sauf notre paramètre interne "p").
+  const params = new URLSearchParams()
+  for (const [k, v] of Object.entries(q)) {
+    if (k === 'p') continue
+    if (Array.isArray(v)) v.forEach((x) => params.append(k, x))
+    else params.append(k, v)
+  }
+  const qs = params.toString()
+  const target = `${SUPA}/${path}${qs ? '?' + qs : ''}`
 
   const headers = { apikey: SECRET, Authorization: `Bearer ${SECRET}` }
   ;['content-type', 'prefer', 'content-profile', 'accept-profile', 'accept', 'range'].forEach((h) => {
@@ -57,7 +67,7 @@ export default async function handler(req, res) {
   const body = method === 'GET' || method === 'HEAD' ? undefined : await getBody(req)
 
   try {
-    const r = await fetch(`${SUPA}/${rest}`, { method, headers, body })
+    const r = await fetch(target, { method, headers, body })
     const text = await r.text()
     const cr = r.headers.get('content-range')
     if (cr) res.setHeader('Content-Range', cr)
