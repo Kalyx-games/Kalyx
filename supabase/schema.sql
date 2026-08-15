@@ -1,9 +1,14 @@
 -- ============================================================
 --  Kalyx — SCHÉMA COMPLET de la base (un seul fichier)
 --
---  Ce fichier décrit la base telle qu'elle est AUJOURD'HUI : les 6 tables
---    games · owners · tags · backups · scoresheets · plays
+--  Ce fichier décrit la base telle qu'elle est AUJOURD'HUI : les 7 tables
+--    games · owners · tags · backups · scoresheets · plays · tierlists
 --  avec leurs colonnes, la sécurité (RLS) et les droits d'accès.
+--
+--  SÉCURITÉ : la clé PUBLIQUE de l'appli est en LECTURE SEULE (bloc « VERROUILLAGE »
+--    tout en bas). Les écritures passent par le proxy serveur /api/sb, qui utilise la
+--    clé SECRÈTE (variable Vercel SUPABASE_SECRET_KEY) et exige le code d'accès
+--    (APP_WRITE_SECRET). Ainsi un robot qui trouve l'appli ne peut rien casser.
 --
 --  ⚠️ BASE NEUVE : exécuter CE FICHIER, ET LUI SEUL. Il contient déjà tout.
 --     Les fichiers migration_*.sql à côté ne sont que l'historique des ajouts
@@ -216,3 +221,30 @@ create policy "tierlists insertion"    on public.tierlists for insert with check
 create policy "tierlists modification" on public.tierlists for update using (true) with check (true);
 create policy "tierlists suppression"  on public.tierlists for delete using (true);
 grant all on public.tierlists to anon, authenticated;
+
+
+-- ============================================================
+--  VERROUILLAGE : la clé PUBLIQUE devient LECTURE SEULE
+-- ============================================================
+--  Les blocs ci-dessus ouvrent la lecture ET l'écriture ; ce bloc final RETIRE l'écriture
+--  à la clé publique (anon) sur toutes les tables. Les écritures ne se font plus que via le
+--  proxy /api/sb (clé secrète + code d'accès). La clé secrète contourne la RLS → OK côté proxy.
+do $$
+declare
+  t text;
+  p record;
+  tables text[] := array['games', 'owners', 'tags', 'plays', 'scoresheets', 'backups', 'tierlists'];
+begin
+  foreach t in array tables loop
+    if to_regclass('public.' || t) is null then
+      continue;
+    end if;
+    for p in select policyname from pg_policies where schemaname = 'public' and tablename = t loop
+      execute format('drop policy if exists %I on public.%I', p.policyname, t);
+    end loop;
+    execute format('create policy "Lecture seule" on public.%I for select using (true)', t);
+    execute format('revoke insert, update, delete, truncate on public.%I from anon, authenticated', t);
+    execute format('grant select on public.%I to anon, authenticated', t);
+    execute format('alter table public.%I enable row level security', t);
+  end loop;
+end $$;
