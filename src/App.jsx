@@ -17,6 +17,7 @@ import SortMenu from './components/SortMenu'
 import Filters from './components/Filters'
 import ImageZoom from './components/ImageZoom'
 import CodeDialog from './components/CodeDialog'
+import ChangeCodeDialog from './components/ChangeCodeDialog'
 // Écrans lourds ou rarement ouverts : chargés à la demande (allège le bundle de départ ;
 // le scanner embarque ZXing, ~470 Ko, inutile tant qu'on ne scanne pas).
 const Settings = lazy(() => import('./components/Settings'))
@@ -128,6 +129,7 @@ export default function App() {
   // Sécurité : cet appareil est-il autorisé à écrire (code d'accès saisi une fois) ?
   const [authorized, setAuthorized] = useState(hasCode())
   const [codeAsk, setCodeAsk] = useState(false) // fenêtre de saisie du code ouverte ?
+  const [codeChange, setCodeChange] = useState(false) // fenêtre de CHANGEMENT du code ouverte ?
   const codeDismissedRef = useRef(false) // "Plus tard" cliqué → ne pas re-proposer tout seul
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('name')
@@ -1046,6 +1048,7 @@ export default function App() {
             }}
             onOpenPlayers={handleOpenPlayers}
             onEnterCode={() => setCodeAsk(true)}
+            onChangeCode={() => setCodeChange(true)}
             deviceAuthorized={authorized}
             online={online}
             onClose={() => setSettingsOpen(false)}
@@ -1126,7 +1129,7 @@ export default function App() {
 
       {statsOpen ? (
         <Suspense fallback={null}>
-          <Stats games={statsGames} ownerMap={ownerMap} hasCollection={hasCollection} playerOverall={playerOverall} onOpenTierlists={handleOpenTierlists} />
+          <Stats games={statsGames} ownerMap={ownerMap} hasCollection={hasCollection} playerOverall={playerOverall} onOpenTierlists={handleOpenTierlists} anecdote={anecShown} />
         </Suspense>
       ) : (
       <main className="list" ref={listRef}>
@@ -1418,7 +1421,6 @@ export default function App() {
         <Suspense fallback={null}>
           <TierlistHub
             tierlists={tierlists}
-            anecdote={anecShown}
             online={online}
             onOpenGlobal={handleOpenGlobalTierlist}
             onOpenTierlist={handleOpenTierlist}
@@ -1494,6 +1496,16 @@ export default function App() {
             codeDismissedRef.current = true
             setCodeAsk(false)
           }}
+        />
+      )}
+
+      {codeChange && (
+        <ChangeCodeDialog
+          onDone={() => {
+            setCodeChange(false)
+            setNotice('Code changé. Les autres appareils devront le re-saisir.')
+          }}
+          onClose={() => setCodeChange(false)}
         />
       )}
     </div>

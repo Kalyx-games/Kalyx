@@ -41,7 +41,7 @@ export default function Settings({
   onExport, onExportCsv, onImportFile,
   backupFreq, onSetBackupFreq, backups, backupBusy, onBackupNow, onRestore,
   onOpenPlayers,
-  onEnterCode, deviceAuthorized,
+  onEnterCode, onChangeCode, deviceAuthorized,
   online, onClose,
 }) {
   const fileRef = useRef(null)
@@ -106,9 +106,20 @@ export default function Settings({
             ? 'Cet appareil est autorisé à modifier la collection.'
             : "Cet appareil peut consulter mais pas modifier. Entre le code d'accès pour l'autoriser."}
         </p>
-        <button type="button" className="btn-ghost settings-open" onClick={onEnterCode}>
-          🔒 {deviceAuthorized ? "Changer le code d'accès" : 'Autoriser cet appareil'}
-        </button>
+        {deviceAuthorized ? (
+          <>
+            <button type="button" className="btn-ghost settings-open" onClick={onChangeCode} disabled={!online}>
+              🔒 Changer le code d'accès
+            </button>
+            <button type="button" className="settings-relink" onClick={onEnterCode}>
+              Ressaisir le code sur cet appareil
+            </button>
+          </>
+        ) : (
+          <button type="button" className="btn-ghost settings-open" onClick={onEnterCode}>
+            🔒 Autoriser cet appareil
+          </button>
+        )}
       </section>
 
       <BubbleListManager

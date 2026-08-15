@@ -11,6 +11,26 @@
 // REST habituelles, on ne fait que les relayer vers Supabase avec la vraie clé secrète.
 // On n'autorise QUE le chemin rest/v1/ (l'API de données).
 
+import crypto from 'node:crypto'
+
+const sha256 = (s) => crypto.createHash('sha256').update(String(s), 'utf8').digest('hex')
+
+// Hash du code d'accès stocké en base (table app_config), s'il existe. Permet de CHANGER le
+// code depuis l'appli : une fois un hash stocké, il fait foi ; sinon on se rabat sur la
+// variable Vercel APP_WRITE_SECRET (amorçage). null si pas de hash / table absente.
+async function storedCodeHash(SUPA, SECRET) {
+  try {
+    const r = await fetch(`${SUPA}/rest/v1/app_config?key=eq.write_code_hash&select=value`, {
+      headers: { apikey: SECRET, Authorization: `Bearer ${SECRET}` },
+    })
+    if (!r.ok) return null
+    const rows = await r.json()
+    return rows && rows[0] ? rows[0].value : null
+  } catch {
+    return null
+  }
+}
+
 // Reconstitue le corps de la requête (JSON envoyé par supabase-js), quel que soit le mode.
 async function getBody(req) {
   if (req.body !== undefined && req.body !== null) {
@@ -34,8 +54,11 @@ export default async function handler(req, res) {
   }
 
   // Le code d'accès est envoyé par l'appli comme "apikey" (et Authorization) — on le vérifie.
+  // Priorité au code stocké en base (modifiable depuis l'appli) ; repli sur la variable Vercel.
   const sent = req.headers['apikey'] || (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '')
-  if (sent !== CODE) {
+  const dbHash = await storedCodeHash(SUPA, SECRET)
+  const ok = dbHash ? sha256(sent) === dbHash : sent === CODE
+  if (!ok) {
     res.status(401).json({ error: "Code d'accès invalide." })
     return
   }

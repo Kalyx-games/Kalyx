@@ -1731,6 +1731,16 @@ body {
   font-size: 0.9rem;
   margin: -4px 0 12px;
 }
+.settings-relink {
+  display: block;
+  margin: 8px auto 0;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 /* ---- Écran Réglages ---- */
 .settings {

@@ -66,6 +66,32 @@ export function writeDb() {
   return _wc
 }
 
+// Calcule le SHA-256 (hex) d'une chaîne, côté navigateur (Web Crypto).
+async function sha256hex(s) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+// Change LE code d'accès (global, pour tous les appareils) : stocke le hash du nouveau code
+// dans la table app_config, via le proxy (donc autorisé par le code ACTUEL de cet appareil).
+// À appeler depuis un appareil déjà autorisé. Renvoie { error, unauthorized }.
+export async function setWriteCode(newCode) {
+  try {
+    const hash = await sha256hex(newCode)
+    const { error } = await writeDb()
+      .from('app_config')
+      .upsert({ key: 'write_code_hash', value: hash }, { onConflict: 'key' })
+    if (error) {
+      const msg = error.message || ''
+      const unauthorized = /invalide|401|permission|denied|jwt|code/i.test(msg)
+      return { error, unauthorized }
+    }
+    return { error: null }
+  } catch (e) {
+    return { error: e }
+  }
+}
+
 // Vérifie un code auprès du proxy (lecture légère via le chemin d'écriture).
 // Renvoie true si le code est accepté.
 export async function verifyCode(code) {

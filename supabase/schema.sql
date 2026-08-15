@@ -248,3 +248,17 @@ begin
     execute format('alter table public.%I enable row level security', t);
   end loop;
 end $$;
+
+
+-- ============================================================
+--  8) CONFIG INTERNE (clé/valeur) — pour changer le code d'accès depuis l'appli
+-- ============================================================
+--  Stocke le HASH du code d'accès (clé 'write_code_hash'). Lue par le proxy /api/sb via la
+--  clé SECRÈTE. AUCUN accès pour la clé publique (anon) → volontairement HORS du bloc de
+--  verrouillage ci-dessus (qui, lui, donne la lecture aux 7 tables de données).
+create table if not exists public.app_config (
+  key   text primary key,
+  value text
+);
+alter table public.app_config enable row level security;
+revoke all on public.app_config from anon, authenticated;

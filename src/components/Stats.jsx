@@ -220,12 +220,23 @@ function PlayerSection({ playerOverall }) {
   )
 }
 
-export default function Stats({ games, ownerMap, hasCollection, playerOverall, onOpenTierlists }) {
+export default function Stats({ games, ownerMap, hasCollection, playerOverall, onOpenTierlists, anecdote }) {
   const s = useMemo(() => computeStats(games, ownerMap), [games, ownerMap])
 
   // Aucun jeu de collection à afficher : soit la collection est vraiment vide,
   // soit les filtres actifs excluent tout (message différent pour ne pas induire en erreur).
   const noCollectionShown = (games ?? []).every((g) => g.status === 'wishlist')
+
+  // Anecdote du jour (issue des tierlists), tout en haut de l'onglet Stats.
+  const anecEl = anecdote ? (
+    <div className="tl-anec-hero">
+      <div className="tl-anec-hero-label">💡 Le saviez-vous ?</div>
+      <div className="tl-anec-hero-main">
+        <span className="tl-anec-hero-icon">{anecdote.icon}</span>
+        <span className="tl-anec-hero-text">{anecdote.text}</span>
+      </div>
+    </div>
+  ) : null
 
   // Grand bouton d'accès aux tierlists (toujours en haut de l'onglet Stats).
   const tierBtn = onOpenTierlists ? (
@@ -237,6 +248,7 @@ export default function Stats({ games, ownerMap, hasCollection, playerOverall, o
   if (noCollectionShown) {
     return (
       <div className="stats">
+        {anecEl}
         {tierBtn}
         <div className="empty stats-empty">
           <p className="empty-emoji">📊</p>
@@ -260,6 +272,7 @@ export default function Stats({ games, ownerMap, hasCollection, playerOverall, o
 
   return (
     <div className="stats">
+      {anecEl}
       {tierBtn}
       <div className="stat-tiles">
         <Tile value={s.total} label={s.total > 1 ? 'jeux en collection' : 'jeu en collection'} />
