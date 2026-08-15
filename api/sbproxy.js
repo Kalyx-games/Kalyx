@@ -42,6 +42,10 @@ export default async function handler(req, res) {
 
   // Chemin capturé par la réécriture (?p=rest/v1/...) — doit viser l'API de données.
   const q = req.query || {}
+  if (req.headers['x-debug'] === '1') {
+    res.status(200).json({ url: req.url, query: q })
+    return
+  }
   const path = Array.isArray(q.p) ? q.p.join('/') : q.p || ''
   if (!path.startsWith('rest/v1/')) {
     res.status(400).json({ error: 'Chemin non autorisé.' })
