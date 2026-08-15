@@ -1742,6 +1742,37 @@ body {
   cursor: pointer;
 }
 
+/* ---- Écran de secours (Error Boundary) ---- */
+.crash {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  padding: 32px 24px;
+  background: var(--bg);
+  color: var(--ink);
+}
+.crash-emoji {
+  font-size: 3rem;
+  margin: 0;
+}
+.crash-title {
+  font-size: 1.3rem;
+  margin: 0;
+}
+.crash-msg {
+  color: var(--muted);
+  max-width: 420px;
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+.crash .btn-primary {
+  padding: 13px 22px;
+}
+
 /* ---- Écran Réglages ---- */
 .settings {
   padding: 8px 16px 24px;

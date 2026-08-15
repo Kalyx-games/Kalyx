@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Suspense } from 'react'
+import lazyRetry from './lib/lazyRetry'
 import { isConfigured, hasCode } from './lib/supabase'
 import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwners, parseTags } from './lib/games'
 import { saveGamesCache, loadGamesCache } from './lib/cache'
@@ -20,16 +21,18 @@ import CodeDialog from './components/CodeDialog'
 import ChangeCodeDialog from './components/ChangeCodeDialog'
 // Écrans lourds ou rarement ouverts : chargés à la demande (allège le bundle de départ ;
 // le scanner embarque ZXing, ~470 Ko, inutile tant qu'on ne scanne pas).
-const Settings = lazy(() => import('./components/Settings'))
-const PlayersManager = lazy(() => import('./components/PlayersManager'))
-const Stats = lazy(() => import('./components/Stats'))
-const Chwazi = lazy(() => import('./components/Chwazi'))
-const BarcodeScanner = lazy(() => import('./components/BarcodeScanner'))
-const ScoreSheet = lazy(() => import('./components/ScoreSheet'))
-const ScoreSheetEditor = lazy(() => import('./components/ScoreSheetEditor'))
-const GameHistory = lazy(() => import('./components/GameHistory'))
-const TierlistHub = lazy(() => import('./components/TierlistHub'))
-const TierlistView = lazy(() => import('./components/TierlistView'))
+// lazyRetry : recharge la page si un morceau échoue à se télécharger (ancien chunk après
+// déploiement) → plus d'écran blanc « définitif » en changeant d'onglet.
+const Settings = lazyRetry(() => import('./components/Settings'))
+const PlayersManager = lazyRetry(() => import('./components/PlayersManager'))
+const Stats = lazyRetry(() => import('./components/Stats'))
+const Chwazi = lazyRetry(() => import('./components/Chwazi'))
+const BarcodeScanner = lazyRetry(() => import('./components/BarcodeScanner'))
+const ScoreSheet = lazyRetry(() => import('./components/ScoreSheet'))
+const ScoreSheetEditor = lazyRetry(() => import('./components/ScoreSheetEditor'))
+const GameHistory = lazyRetry(() => import('./components/GameHistory'))
+const TierlistHub = lazyRetry(() => import('./components/TierlistHub'))
+const TierlistView = lazyRetry(() => import('./components/TierlistView'))
 import SkeletonCard from './components/SkeletonCard'
 import { enterFullscreen } from './lib/fullscreen'
 import NavBar from './components/NavBar'
