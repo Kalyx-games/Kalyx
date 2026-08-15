@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import { hardReload } from '../lib/lazyRetry'
 
 // Filet de sécurité global : si un composant plante au rendu (ou si un morceau de code ne
 // se charge pas), au lieu d'un écran blanc « définitif », on affiche un message clair avec un
@@ -32,7 +33,8 @@ export default class ErrorBoundary extends Component {
       } catch {
         /* ignore */
       }
-      window.location.reload()
+      // Vide le SW + caches puis recharge → récupère à coup sûr la version à jour.
+      hardReload()
     }
 
     return (

@@ -419,14 +419,14 @@ export default function App() {
 
     // Tri
     if (sort === 'random') return [...list].sort((a, b) => shuffleRank(a.id, shuffleSeed) - shuffleRank(b.id, shuffleSeed))
-    if (sort === 'name') list = [...list].sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+    if (sort === 'name') list = [...list].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fr'))
     else if (sort === 'players') list = [...list].sort((a, b) => (a.players_min ?? 99) - (b.players_min ?? 99) || (a.players_max ?? 99) - (b.players_max ?? 99))
     else if (sort === 'complexity') list = [...list].sort((a, b) => (a.complexity ?? 99) - (b.complexity ?? 99))
     else if (sort === 'duration') list = [...list].sort((a, b) => (a.duration_max ?? a.duration_min ?? 9999) - (b.duration_max ?? b.duration_min ?? 9999))
     else if (sort === 'price') list = [...list].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity))
-    else if (sort === 'plays') list = [...list].sort((a, b) => (playMeta[a.id]?.count || 0) - (playMeta[b.id]?.count || 0) || a.name.localeCompare(b.name, 'fr'))
+    else if (sort === 'plays') list = [...list].sort((a, b) => (playMeta[a.id]?.count || 0) - (playMeta[b.id]?.count || 0) || (a.name || '').localeCompare(b.name || '', 'fr'))
     // Dernière partie : les jeux jamais joués (pas de date) en dernier (ordre croissant).
-    else if (sort === 'lastplayed') list = [...list].sort((a, b) => (playMeta[a.id]?.last || '').localeCompare(playMeta[b.id]?.last || '') || a.name.localeCompare(b.name, 'fr'))
+    else if (sort === 'lastplayed') list = [...list].sort((a, b) => (playMeta[a.id]?.last || '').localeCompare(playMeta[b.id]?.last || '') || (a.name || '').localeCompare(b.name || '', 'fr'))
     if (sortDir === 'desc') list.reverse()
     return list
   }, [games, search, sort, sortDir, shuffleSeed, filters, listStatus, view, playMeta])
@@ -1253,7 +1253,7 @@ export default function App() {
           message={(() => {
             // Les parties et la fiche sont supprimées en cascade par la base : on le dit.
             const n = playMeta[confirming.id]?.count || 0
-            const sheet = Boolean(scoresheets[confirming.id])
+            const sheet = Boolean(scoresheets?.[confirming.id])
             const plusieurs = n + (sheet ? 1 : 0) > 1 // « parties » et « fiche » sont féminins
             return (
               <>
