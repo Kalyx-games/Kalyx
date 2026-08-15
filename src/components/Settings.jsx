@@ -41,6 +41,7 @@ export default function Settings({
   onExport, onExportCsv, onImportFile,
   backupFreq, onSetBackupFreq, backups, backupBusy, onBackupNow, onRestore,
   onOpenPlayers,
+  onEnterCode, deviceAuthorized,
   online, onClose,
 }) {
   const fileRef = useRef(null)
@@ -96,6 +97,18 @@ export default function Settings({
             </button>
           ))}
         </div>
+      </section>
+
+      <section className="settings-card">
+        <h3>Accès de l'appareil</h3>
+        <p className="muted" style={{ margin: '0 0 10px' }}>
+          {deviceAuthorized
+            ? 'Cet appareil est autorisé à modifier la collection.'
+            : "Cet appareil peut consulter mais pas modifier. Entre le code d'accès pour l'autoriser."}
+        </p>
+        <button type="button" className="settings-open" onClick={onEnterCode}>
+          🔒 {deviceAuthorized ? "Changer le code d'accès" : 'Autoriser cet appareil'}
+        </button>
       </section>
 
       <BubbleListManager

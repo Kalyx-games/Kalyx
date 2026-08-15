@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, writeDb } from './supabase'
 
 // Tierlists : un classement des jeux par joueur. Le classement stocke des ID de jeux
 // (pas des images) → changer l'image d'un jeu la fait suivre dans les tierlists.
@@ -115,9 +115,9 @@ export async function upsertTierlist({ id, player, ranking }) {
   const row = { player: (player || '').trim(), ranking }
   let res
   if (id) {
-    res = await supabase.from('tierlists').update(row).eq('id', id).select('id, player, ranking, updated_at').single()
+    res = await writeDb().from('tierlists').update(row).eq('id', id).select('id, player, ranking, updated_at').single()
   } else {
-    res = await supabase
+    res = await writeDb()
       .from('tierlists')
       .upsert(row, { onConflict: 'player' })
       .select('id, player, ranking, updated_at')
@@ -128,7 +128,7 @@ export async function upsertTierlist({ id, player, ranking }) {
 }
 
 export async function deleteTierlist(id) {
-  const { error } = await supabase.from('tierlists').delete().eq('id', id)
+  const { error } = await writeDb().from('tierlists').delete().eq('id', id)
   if (error) throw error
 }
 

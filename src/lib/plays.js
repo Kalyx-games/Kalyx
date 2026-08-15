@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, writeDb } from './supabase'
 
 // Parties jouées (table `plays`). Une partie = un jeu + une date + des joueurs
 // avec leur score total (et le détail par catégorie) + le gagnant.
@@ -53,9 +53,9 @@ function playRows(play) {
 //  Coopératif : play = { players:[{name}], outcome:'win'|'loss', scenario, score, extensions, notes }
 export async function savePlay(gameId, play) {
   const rows = playRows(play).map((r) => ({ ...r, game_id: gameId }))
-  let res = await supabase.from('plays').insert(rows[0]).select('id').single()
+  let res = await writeDb().from('plays').insert(rows[0]).select('id').single()
   for (let i = 1; i < rows.length && res.error && missingCol(res.error); i++) {
-    res = await supabase.from('plays').insert(rows[i]).select('id').single()
+    res = await writeDb().from('plays').insert(rows[i]).select('id').single()
   }
   if (res.error) throw res.error
   return res.data
@@ -64,7 +64,7 @@ export async function savePlay(gameId, play) {
 // Met à jour une partie existante (édition). Même dégradation en cascade.
 export async function updatePlay(id, play) {
   const rows = playRows(play)
-  const upd = (row) => supabase.from('plays').update(row).eq('id', id)
+  const upd = (row) => writeDb().from('plays').update(row).eq('id', id)
   let { error } = await upd(rows[0])
   for (let i = 1; i < rows.length && error && missingCol(error); i++) {
     ;({ error } = await upd(rows[i]))
@@ -104,7 +104,7 @@ export async function renameCategories(gameId, renames) {
       return touched ? { ...pl, scores: next } : pl
     })
     if (!touched) continue
-    const { error: upErr } = await supabase.from('plays').update({ players }).eq('id', play.id)
+    const { error: upErr } = await writeDb().from('plays').update({ players }).eq('id', play.id)
     if (upErr) throw upErr
     changed += 1
   }
@@ -112,7 +112,7 @@ export async function renameCategories(gameId, renames) {
 }
 
 export async function deletePlay(id) {
-  const { error } = await supabase.from('plays').delete().eq('id', id)
+  const { error } = await writeDb().from('plays').delete().eq('id', id)
   if (error) throw error
 }
 
@@ -281,7 +281,7 @@ export async function renamePlayer(from, to) {
       // Dédoublonne : si le nouveau nom gagnait déjà cette partie, on ne le liste pas 2×.
       patch.winner = [...new Set(winners.map((w) => (w === oldName ? newName : w)))].join(', ')
     }
-    const { error: upErr } = await supabase.from('plays').update(patch).eq('id', play.id)
+    const { error: upErr } = await writeDb().from('plays').update(patch).eq('id', play.id)
     if (upErr) throw upErr
     changed += 1
   }

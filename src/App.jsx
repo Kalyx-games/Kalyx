@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
-import { isConfigured } from './lib/supabase'
+import { isConfigured, hasCode } from './lib/supabase'
 import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwners, parseTags } from './lib/games'
 import { saveGamesCache, loadGamesCache } from './lib/cache'
 import { fetchOwners, addOwner, updateOwner, deleteOwner } from './lib/owners'
@@ -16,6 +16,7 @@ import ConfirmDialog from './components/ConfirmDialog'
 import SortMenu from './components/SortMenu'
 import Filters from './components/Filters'
 import ImageZoom from './components/ImageZoom'
+import CodeDialog from './components/CodeDialog'
 // Écrans lourds ou rarement ouverts : chargés à la demande (allège le bundle de départ ;
 // le scanner embarque ZXing, ~470 Ko, inutile tant qu'on ne scanne pas).
 const Settings = lazy(() => import('./components/Settings'))
@@ -124,6 +125,10 @@ export default function App() {
   const [games, setGames] = useState(null) // null = en cours de chargement
   const [error, setError] = useState(null)
   const [online, setOnline] = useState(navigator.onLine)
+  // Sécurité : cet appareil est-il autorisé à écrire (code d'accès saisi une fois) ?
+  const [authorized, setAuthorized] = useState(hasCode())
+  const [codeAsk, setCodeAsk] = useState(false) // fenêtre de saisie du code ouverte ?
+  const codeDismissedRef = useRef(false) // "Plus tard" cliqué → ne pas re-proposer tout seul
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('name')
   const [shuffleSeed, setShuffleSeed] = useState(0) // change à chaque clic sur "Aléatoire"
@@ -690,6 +695,16 @@ export default function App() {
     })()
   }, [online, games, ownersList, tagsList, backupFreq, reloadBackups])
 
+  // Autorisation de l'appareil : à la 1re ouverture (en ligne), si aucun code n'est encore
+  // enregistré, on propose de saisir le code d'accès. La lecture marche sans, seules les
+  // écritures en ont besoin. On ne redemande pas si l'utilisateur a cliqué « Plus tard ».
+  const isLocalHost = /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
+  useEffect(() => {
+    if (isLocalHost || authorized || codeDismissedRef.current) return
+    if (!isConfigured || !online || games === null) return
+    setCodeAsk(true)
+  }, [online, games, authorized, isLocalHost])
+
   const handleSetBackupFreq = (v) => {
     setBackupFreq(v)
     saveBackupFreq(v)
@@ -1022,6 +1037,8 @@ export default function App() {
               restorePreview(b.id).then(setRestorePlan).catch(() => setRestorePlan({ games: 0, plays: 0, sheets: 0, names: [] }))
             }}
             onOpenPlayers={handleOpenPlayers}
+            onEnterCode={() => setCodeAsk(true)}
+            deviceAuthorized={authorized}
             online={online}
             onClose={() => setSettingsOpen(false)}
           />
@@ -1457,6 +1474,20 @@ export default function App() {
       )}
 
       {zoomImage && <ImageZoom src={zoomImage} onClose={() => setZoomImage(null)} />}
+
+      {codeAsk && (
+        <CodeDialog
+          onDone={() => {
+            setAuthorized(true)
+            setCodeAsk(false)
+            setNotice('Appareil autorisé.')
+          }}
+          onClose={() => {
+            codeDismissedRef.current = true
+            setCodeAsk(false)
+          }}
+        />
+      )}
     </div>
   )
 }

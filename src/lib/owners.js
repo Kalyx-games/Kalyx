@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, writeDb } from './supabase'
 
 // Liste gérée des propriétaires (table "owners"), éditée depuis les Réglages.
 
@@ -11,7 +11,7 @@ export async function fetchOwners() {
 }
 
 export async function addOwner(name, initials, color) {
-  const { data, error } = await supabase
+  const { data, error } = await writeDb()
     .from('owners')
     .insert({ name: name.trim(), initials: initials || null, color: color || null })
     .select()
@@ -21,7 +21,7 @@ export async function addOwner(name, initials, color) {
 }
 
 export async function updateOwner(id, patch) {
-  const { data, error } = await supabase.from('owners').update(patch).eq('id', id).select()
+  const { data, error } = await writeDb().from('owners').update(patch).eq('id', id).select()
   if (error) throw error
   // Si aucune ligne n'est revenue, la modification a été bloquée (ex. policy RLS
   // UPDATE manquante) : on le signale au lieu de faire croire que c'est enregistré.
@@ -31,6 +31,6 @@ export async function updateOwner(id, patch) {
 }
 
 export async function deleteOwner(id) {
-  const { error } = await supabase.from('owners').delete().eq('id', id)
+  const { error } = await writeDb().from('owners').delete().eq('id', id)
   if (error) throw error
 }

@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, writeDb } from './supabase'
 
 // Fiches de score par jeu (table `scoresheets`).
 // template = { categories: [{ label, hint, ext }], extensions: [noms] }
@@ -47,7 +47,7 @@ export async function fetchAllScoresheets() {
 // Enregistre (crée ou met à jour) la fiche d'un jeu. Renvoie le template sauvegardé.
 export async function saveScoresheet(gameId, template) {
   const row = { game_id: gameId, template, updated_at: new Date().toISOString() }
-  const { error } = await supabase.from('scoresheets').upsert(row, { onConflict: 'game_id' })
+  const { error } = await writeDb().from('scoresheets').upsert(row, { onConflict: 'game_id' })
   if (error) throw error
   return template
 }

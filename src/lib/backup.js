@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, writeDb } from './supabase'
 import { fetchAllPlays } from './plays'
 import { fetchAllScoresheets } from './scoresheets'
 import { fetchAllTierlists } from './tierlists'
@@ -193,14 +193,14 @@ async function upsertBubbles(table, list) {
     initials: o.initials ?? null,
     color: o.color ?? null,
   }))
-  const { error } = await supabase.from(table).upsert(rows, { onConflict: 'name' })
+  const { error } = await writeDb().from(table).upsert(rows, { onConflict: 'name' })
   if (error && !/does not exist|schema cache|relation/i.test(error.message || '')) throw error
 }
 
 // Ré-insère des lignes par identifiant, en ignorant la table si elle n'existe pas encore.
 async function upsertRows(table, rows, conflictCol) {
   if (!rows || !rows.length) return 0
-  const { error } = await supabase.from(table).upsert(rows, { onConflict: conflictCol })
+  const { error } = await writeDb().from(table).upsert(rows, { onConflict: conflictCol })
   if (error) {
     if (tableMissing(error)) return 0
     throw error
@@ -225,10 +225,10 @@ export async function importBackup({ games, owners, tags, plays, scoresheets, ti
     })
     .filter(Boolean)
   // Repli si la colonne "tags" n'existe pas encore (migration non lancée).
-  let { error } = await supabase.from('games').upsert(rows, { onConflict: 'id' })
+  let { error } = await writeDb().from('games').upsert(rows, { onConflict: 'id' })
   if (error && /\btags\b/i.test(error.message || '')) {
     rows.forEach((r) => delete r.tags)
-    ;({ error } = await supabase.from('games').upsert(rows, { onConflict: 'id' }))
+    ;({ error } = await writeDb().from('games').upsert(rows, { onConflict: 'id' }))
   }
   if (error) throw error
 
@@ -303,7 +303,7 @@ export async function createBackup(games, owners, tags, kind = 'auto') {
     tags_count: snapshot.tags.length,
     kind,
   }
-  const { error } = await supabase.from('backups').insert(row)
+  const { error } = await writeDb().from('backups').insert(row)
   if (error) {
     if (tableMissing(error)) return null
     throw error
@@ -318,7 +318,7 @@ export async function createBackup(games, owners, tags, kind = 'auto') {
     .order('created_at', { ascending: false })
   if (autos && autos.length > BACKUP_KEEP) {
     const toDelete = autos.slice(BACKUP_KEEP).map((b) => b.id)
-    await supabase.from('backups').delete().in('id', toDelete)
+    await writeDb().from('backups').delete().in('id', toDelete)
   }
   return true
 }
@@ -361,7 +361,7 @@ async function deleteExtra(table, keyCol, keep) {
   }
   const toDelete = (data ?? []).map((r) => r[keyCol]).filter((v) => v != null && !keep.has(v))
   if (toDelete.length) {
-    const { error: delErr } = await supabase.from(table).delete().in(keyCol, toDelete)
+    const { error: delErr } = await writeDb().from(table).delete().in(keyCol, toDelete)
     if (delErr) throw delErr
   }
 }

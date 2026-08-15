@@ -1707,6 +1707,31 @@ body {
   margin-bottom: 18px;
 }
 
+/* ---- Saisie du code d'accès (CodeDialog) ---- */
+.code-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--ink);
+  font-size: 1.05rem;
+  text-align: center;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+.code-input:focus {
+  outline: none;
+  border-color: var(--input-focus);
+}
+.code-err {
+  color: var(--danger-ink);
+  text-align: center;
+  font-size: 0.9rem;
+  margin: -4px 0 12px;
+}
+
 /* ---- Écran Réglages ---- */
 .settings {
   padding: 8px 16px 24px;

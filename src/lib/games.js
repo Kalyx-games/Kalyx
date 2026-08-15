@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, writeDb } from './supabase'
 
 // Toutes les fonctions qui parlent à la table "games" de Supabase.
 // Chacune lève une erreur en cas de problème (gérée plus haut dans l'app).
@@ -22,11 +22,11 @@ function missingOptionalCol(error, payload) {
 // Ajouter un jeu. Renvoie le jeu créé (avec son id).
 export async function addGame(game) {
   const payload = { ...game }
-  let { data, error } = await supabase.from('games').insert(payload).select().single()
+  let { data, error } = await writeDb().from('games').insert(payload).select().single()
   let col
   while ((col = missingOptionalCol(error, payload))) {
     delete payload[col]
-    ;({ data, error } = await supabase.from('games').insert(payload).select().single())
+    ;({ data, error } = await writeDb().from('games').insert(payload).select().single())
   }
   if (error) throw error
   return data
@@ -35,11 +35,11 @@ export async function addGame(game) {
 // Modifier un jeu existant. Renvoie le jeu mis à jour.
 export async function updateGame(id, changes) {
   const payload = { ...changes }
-  let { data, error } = await supabase.from('games').update(payload).eq('id', id).select().single()
+  let { data, error } = await writeDb().from('games').update(payload).eq('id', id).select().single()
   let col
   while ((col = missingOptionalCol(error, payload))) {
     delete payload[col]
-    ;({ data, error } = await supabase.from('games').update(payload).eq('id', id).select().single())
+    ;({ data, error } = await writeDb().from('games').update(payload).eq('id', id).select().single())
   }
   if (error) throw error
   return data
@@ -47,7 +47,7 @@ export async function updateGame(id, changes) {
 
 // Supprimer un jeu.
 export async function deleteGame(id) {
-  const { error } = await supabase.from('games').delete().eq('id', id)
+  const { error } = await writeDb().from('games').delete().eq('id', id)
   if (error) throw error
 }
 

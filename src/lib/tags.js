@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, writeDb } from './supabase'
 
 // Liste gérée des tags (table "tags"), éditée depuis les Réglages.
 // Même structure et même logique que les propriétaires (owners).
@@ -12,7 +12,7 @@ export async function fetchTags() {
 }
 
 export async function addTag(name, initials, color) {
-  const { data, error } = await supabase
+  const { data, error } = await writeDb()
     .from('tags')
     .insert({ name: name.trim(), initials: initials || null, color: color || null })
     .select()
@@ -22,7 +22,7 @@ export async function addTag(name, initials, color) {
 }
 
 export async function updateTag(id, patch) {
-  const { data, error } = await supabase.from('tags').update(patch).eq('id', id).select()
+  const { data, error } = await writeDb().from('tags').update(patch).eq('id', id).select()
   if (error) throw error
   if (!data || data.length === 0) {
     throw new Error('Modification impossible : lance la migration migration_tags.sql dans Supabase.')
@@ -30,6 +30,6 @@ export async function updateTag(id, patch) {
 }
 
 export async function deleteTag(id) {
-  const { error } = await supabase.from('tags').delete().eq('id', id)
+  const { error } = await writeDb().from('tags').delete().eq('id', id)
   if (error) throw error
 }
