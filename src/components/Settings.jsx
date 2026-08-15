@@ -106,7 +106,7 @@ export default function Settings({
             ? 'Cet appareil est autorisé à modifier la collection.'
             : "Cet appareil peut consulter mais pas modifier. Entre le code d'accès pour l'autoriser."}
         </p>
-        <button type="button" className="settings-open" onClick={onEnterCode}>
+        <button type="button" className="btn-ghost settings-open" onClick={onEnterCode}>
           🔒 {deviceAuthorized ? "Changer le code d'accès" : 'Autoriser cet appareil'}
         </button>
       </section>
