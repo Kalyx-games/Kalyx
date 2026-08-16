@@ -35,7 +35,7 @@ export default function ChangeCodeDialog({ onDone, onClose }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={busy ? undefined : onClose}>
       <div className="confirm" onClick={(e) => e.stopPropagation()}>
         <h2>🔒 Changer le code d'accès</h2>
         <p className="confirm-msg">

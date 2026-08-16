@@ -404,13 +404,17 @@ export async function restoreBackup(backupId) {
   const scoresheets = Array.isArray(snap.scoresheets) ? snap.scoresheets : []
   const tierlists = Array.isArray(snap.tierlists) ? snap.tierlists : []
 
+  // GARDE-FOU : une sauvegarde sans aucun jeu (données vides, ligne corrompue) effacerait
+  // TOUTE la collection via deleteExtra ci-dessous. On refuse plutôt que d'effacer.
+  if (!games.length) throw new Error('Sauvegarde vide ou illisible — restauration annulée.')
+
   // 1) ré-insère / met à jour tout ce qui est dans la sauvegarde (jeux d'abord). Les tierlists
   //    sont ADDITIVES (comme les parties) : restaurer la collection n'efface pas une tierlist.
   const res = await importBackup({ games, owners, tags, plays, scoresheets, tierlists })
   // 2) supprime les jeux / propriétaires / tags absents de la sauvegarde (retour arrière)
   await deleteExtra('games', 'id', new Set(games.map((g) => g.id).filter(Boolean)))
-  await deleteExtra('owners', 'name', new Set(owners.map((o) => o.name)))
-  await deleteExtra('tags', 'name', new Set(tags.map((t) => t.name)))
+  await deleteExtra('owners', 'name', new Set(owners.map((o) => String(o.name).trim())))
+  await deleteExtra('tags', 'name', new Set(tags.map((t) => String(t.name).trim())))
 
   return { games: games.length, owners: owners.length, tags: tags.length, plays: res.plays, scoresheets: res.scoresheets, tierlists: res.tierlists }
 }

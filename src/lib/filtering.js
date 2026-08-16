@@ -53,7 +53,9 @@ export function passesFilters(g, filters, q, includePrice, applyTags = true) {
   // Pour chaque filtre : un jeu SANS valeur dans ce champ reste TOUJOURS affiché.
   if (filters.players.length) {
     const set = filters.playerOptimal ? effectiveBestSet(g) : effectivePlayersSet(g)
-    if (!(set.length === 0 || set.some((v) => filters.players.includes(v)))) return false
+    // La case « 12 » du picker vaut « 12+ » : on plafonne à 12 pour matcher les jeux
+    // jouables uniquement au-delà (ex. 13-15), comme le fait déjà le graphe des Stats.
+    if (!(set.length === 0 || set.some((v) => filters.players.includes(Math.min(v, 12))))) return false
   }
   if (filters.duration != null) {
     const dur = g.duration_max ?? g.duration_min

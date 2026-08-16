@@ -220,8 +220,8 @@ function PlayerSection({ playerOverall }) {
   )
 }
 
-export default function Stats({ games, ownerMap, hasCollection, playerOverall, onOpenTierlists, anecdote }) {
-  const s = useMemo(() => computeStats(games, ownerMap), [games, ownerMap])
+export default function Stats({ games, hasCollection, playerOverall, onOpenTierlists, anecdote }) {
+  const s = useMemo(() => computeStats(games), [games])
 
   // Aucun jeu de collection à afficher : soit la collection est vraiment vide,
   // soit les filtres actifs excluent tout (message différent pour ne pas induire en erreur).

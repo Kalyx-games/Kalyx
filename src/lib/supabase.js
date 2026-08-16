@@ -99,7 +99,9 @@ export async function verifyCode(code) {
   try {
     const base = location.origin + '/api/sb'
     const client = createClient(base, code || 'sans-code', { auth: { persistSession: false } })
-    const { error } = await client.from('owners').select('id').limit(1)
+    // On sonde `games` (table cœur toujours présente), PAS `owners` (optionnelle) : sinon un
+    // bon code serait rejeté sur une base où la migration owners n'a pas été lancée.
+    const { error } = await client.from('games').select('id').limit(1)
     return !error
   } catch {
     return false

@@ -3,6 +3,8 @@
 // sur <html> ; 'auto' = pas d'attribut → le CSS suit prefers-color-scheme.
 
 const KEY = 'kalyx-theme'
+// ⚠️ Ces deux couleurs de barre doivent rester identiques au script anti-FOUC de index.html
+// (qui pose la couleur AVANT le chargement du bundle, on ne peut donc pas partager la constante).
 const DARK_BG = '#10151d'
 const LIGHT_BG = '#ffffff'
 
@@ -32,4 +34,16 @@ export function applyTheme(t) {
   }
   const meta = document.querySelector('meta[name="theme-color"]')
   if (meta) meta.setAttribute('content', resolved === 'dark' ? DARK_BG : LIGHT_BG)
+}
+
+// À appeler UNE fois au démarrage. En mode 'auto' (aucun attribut data-theme), si le téléphone
+// bascule clair/sombre pendant que l'app est ouverte, garde la couleur de la barre du navigateur
+// synchronisée (le CSS suit déjà prefers-color-scheme ; seule la meta theme-color restait figée).
+export function watchAutoThemeColor() {
+  if (!window.matchMedia) return
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (document.documentElement.hasAttribute('data-theme')) return // choix explicite : on ne suit pas l'OS
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', e.matches ? DARK_BG : LIGHT_BG)
+  })
 }

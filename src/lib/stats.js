@@ -1,4 +1,4 @@
-import { parseCounts, expandRange, parseOwners, ownerDisplay } from './games'
+import { parseCounts, expandRange } from './games'
 
 // Calcule toutes les statistiques affichées dans l'onglet Stats.
 // Les répartitions portent sur la COLLECTION (jeux possédés) ; la wishlist
@@ -36,8 +36,8 @@ const COMPLEXITY_BUCKETS = [
 // Répartition d'un ensemble de jeux par nombre de joueurs supportés (setOf =
 // playersSetOf pour "joueurs", ou parseCounts(players_best) pour "idéal").
 function playerDistribution(games, setOf) {
-  const rows = Array.from({ length: PLAYER_MAX - 1 }, (_, i) => {
-    const n = i + 2
+  const rows = Array.from({ length: PLAYER_MAX }, (_, i) => {
+    const n = i + 1 // commence à 1 (jeux solo) — la case "1" existe dans les filtres
     return { n, label: n >= PLAYER_MAX ? `${PLAYER_MAX}+` : String(n), count: 0 }
   })
   games.forEach((g) => {
@@ -47,10 +47,12 @@ function playerDistribution(games, setOf) {
       if (row) row.count++
     })
   })
-  // On enlève les grands nombres de joueurs vides en fin de liste (garde compact).
+  // On rogne les nombres de joueurs vides aux DEUX extrémités (garde un graphe compact).
+  let start = 0
+  while (start < rows.length - 1 && rows[start].count === 0) start++
   let end = rows.length
-  while (end > 1 && rows[end - 1].count === 0) end--
-  return rows.slice(0, end)
+  while (end > start + 1 && rows[end - 1].count === 0) end--
+  return rows.slice(start, end)
 }
 
 // Moyenne (arrondie via round) et médiane d'une liste de nombres.
@@ -67,7 +69,7 @@ function median(nums) {
 
 // `games` est déjà filtré en amont (mêmes filtres que la vue Collection).
 // On sépare simplement collection (jeux possédés) et wishlist.
-export function computeStats(games, ownerMap) {
+export function computeStats(games) {
   const all = games || []
   const collection = all.filter((g) => g.status !== 'wishlist')
   const wishlist = all.filter((g) => g.status === 'wishlist')
@@ -79,17 +81,6 @@ export function computeStats(games, ownerMap) {
   const medDuration = durations.length ? Math.round(median(durations)) : null
   const avgComplexity = mean(complexities)
   const medComplexity = median(complexities)
-
-  // Par propriétaire (un jeu multi-propriétaires compte pour chacun).
-  const ownerCounts = {}
-  collection.forEach((g) =>
-    parseOwners(g.owner).forEach((o) => {
-      ownerCounts[o] = (ownerCounts[o] || 0) + 1
-    })
-  )
-  const byOwner = Object.entries(ownerCounts)
-    .map(([name, count]) => ({ name, count, ...ownerDisplay(name, ownerMap) }))
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'fr'))
 
   // Par nombre de joueurs (combien de jeux jouables à N) et par nombre idéal.
   const byPlayers = playerDistribution(collection, playersSetOf)
@@ -116,12 +107,10 @@ export function computeStats(games, ownerMap) {
   return {
     total: collection.length,
     wishlistCount: wishlist.length,
-    ownersCount: byOwner.length,
     avgDuration,
     medDuration,
     avgComplexity,
     medComplexity,
-    byOwner,
     byPlayers,
     byOptimalPlayers,
     byDuration,

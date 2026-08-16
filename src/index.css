@@ -3699,5 +3699,3 @@ body {
   z-index: 3000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
-.tl-delete { flex-shrink: 0; padding: 10px 0 calc(12px + env(safe-area-inset-bottom)); }
-.tl-delete .btn-danger { width: 100%; }

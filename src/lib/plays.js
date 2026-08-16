@@ -94,7 +94,9 @@ export async function renameCategories(gameId, renames) {
       // On reconstruit l'objet pour préserver l'ordre des clés.
       Object.entries(scores).forEach(([cat, v]) => {
         const hit = list.find((r) => r.from === cat)
-        if (hit && !(hit.to in scores)) {
+        // On ne renomme que si la cible n'existe ni dans les scores d'origine ni déjà dans
+        // l'objet reconstruit (évite d'écraser silencieusement si deux catégories → même cible).
+        if (hit && !(hit.to in scores) && !(hit.to in next)) {
           next[hit.to] = v
           touched = true
         } else {
@@ -274,8 +276,18 @@ export async function renamePlayer(from, to) {
       typeof play.winner === 'string' ? play.winner.split(',').map((s) => s.trim()).filter(Boolean) : []
     const hasWinner = winners.includes(oldName)
     if (!hasPlayer && !hasWinner) continue
+    const renamed = (play.players || []).map((p) => ((p?.name || '').trim() === oldName ? { ...p, name: newName } : p))
+    // Fusion : si oldName ET newName figuraient dans la MÊME partie, on ne garde qu'une
+    // entrée pour newName (comme le dédoublonnage du champ winner ci-dessous) — sinon le
+    // joueur serait compté deux fois dans les stats.
+    let seenNew = false
     const patch = {
-      players: (play.players || []).map((p) => ((p?.name || '').trim() === oldName ? { ...p, name: newName } : p)),
+      players: renamed.filter((p) => {
+        if ((p?.name || '').trim() !== newName) return true
+        if (seenNew) return false
+        seenNew = true
+        return true
+      }),
     }
     if (hasWinner) {
       // Dédoublonne : si le nouveau nom gagnait déjà cette partie, on ne le liste pas 2×.

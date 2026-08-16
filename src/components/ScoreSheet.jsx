@@ -217,6 +217,9 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       n.delete(playerId)
       return n
     })
+    // Si ce joueur était désigné « victoire directe », on annule la désignation : sinon
+    // instantWinnerId pointe vers un joueur disparu (couronne fantôme + vainqueur faussé).
+    setInstantWinnerId((cur) => (cur === playerId ? null : cur))
     setPlayers((ps) => (ps.length > minP ? ps.filter((p) => p.id !== playerId) : ps))
   }
   const toggleWinner = (playerId) =>

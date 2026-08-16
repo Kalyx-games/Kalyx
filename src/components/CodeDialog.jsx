@@ -24,7 +24,7 @@ export default function CodeDialog({ onDone, onClose }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={busy ? undefined : onClose}>
       <div className="confirm" onClick={(e) => e.stopPropagation()}>
         <h2>🔒 Autoriser cet appareil</h2>
         <p className="confirm-msg">

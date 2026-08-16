@@ -68,7 +68,10 @@ export default async function handler(req, res) {
   const q = req.query || {}
   const rawPath = q.p || q.path || ''
   const path = Array.isArray(rawPath) ? rawPath.join('/') : rawPath
-  if (!path.startsWith('rest/v1/')) {
+  // On n'autorise QUE l'API de données. Le `..` est rejeté d'emblée : sans ça, un chemin comme
+  // rest/v1/../../auth/v1/... passerait ce test puis serait normalisé par fetch vers un
+  // endpoint hors périmètre (admin/storage) AVEC la clé secrète.
+  if (!path.startsWith('rest/v1/') || path.includes('..')) {
     res.status(400).json({ error: 'Chemin non autorisé.' })
     return
   }
@@ -82,6 +85,11 @@ export default async function handler(req, res) {
   }
   const qs = params.toString()
   const target = `${SUPA}/${path}${qs ? '?' + qs : ''}`
+  // Ceinture + bretelles : on vérifie le chemin RÉSOLU (fetch normalise ../ et %2e%2e).
+  if (!new URL(target).pathname.replace(/^\/+/, '').startsWith('rest/v1/')) {
+    res.status(400).json({ error: 'Chemin non autorisé.' })
+    return
+  }
 
   const headers = { apikey: SECRET, Authorization: `Bearer ${SECRET}` }
   ;['content-type', 'prefer', 'content-profile', 'accept-profile', 'accept', 'range'].forEach((h) => {

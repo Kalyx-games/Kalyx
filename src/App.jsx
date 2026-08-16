@@ -150,12 +150,13 @@ export default function App() {
   const [deletingBusy, setDeletingBusy] = useState(false)
   const [moving, setMoving] = useState(null) // jeu à transférer vers la collection | null
   const [movingBusy, setMovingBusy] = useState(false)
-  const [view, setView] = useState(() => (loadView() === 'wishlist' ? 'wishlist' : 'collection')) // 'collection' | 'wishlist'
+  const savedView = loadView() // onglet mémorisé (localStorage), lu une seule fois au montage
+  const [view, setView] = useState(savedView === 'wishlist' ? 'wishlist' : 'collection') // 'collection' | 'wishlist'
   const [settingsOpen, setSettingsOpen] = useState(false) // écran Réglages (engrenage en haut à droite)
   const [playersOpen, setPlayersOpen] = useState(false) // écran Joueurs (renommage global)
   const [playerRoster, setPlayerRoster] = useState(null) // [{name, games}] | null = en cours
   const [renamingPlayer, setRenamingPlayer] = useState(false)
-  const [statsOpen, setStatsOpen] = useState(() => loadView() === 'stats') // écran Stats
+  const [statsOpen, setStatsOpen] = useState(savedView === 'stats') // écran Stats
   const [playerOverall, setPlayerOverall] = useState(null) // [{name, games, wins, winRate}] tous jeux | null
   // Tierlists : menu (hub) + écran d'une tierlist (view/edit/global).
   const [tierlistHub, setTierlistHub] = useState(false)
@@ -199,6 +200,11 @@ export default function App() {
   const [zoomImage, setZoomImage] = useState(null) // image affichée en grand (lightbox)
   const [ownersList, setOwnersList] = useState(null) // lignes de la table owners, ou null si absente
   const [tagsList, setTagsList] = useState(null) // lignes de la table tags, ou null si absente
+  // « chargé » = le fetch a répondu (même si null car table absente). Sert de signal fiable
+  // à la sauvegarde auto : sinon, table owners/tags absente → liste null pour toujours → la
+  // sauvegarde auto ne se déclencherait JAMAIS (null = « en cours » ET « absente » sans ça).
+  const [ownersLoaded, setOwnersLoaded] = useState(false)
+  const [tagsLoaded, setTagsLoaded] = useState(false)
   const [scoresheets, setScoresheets] = useState(null) // { game_id: template }, ou null si table absente
   const [scoringGame, setScoringGame] = useState(null) // jeu en cours de notation (nouvelle partie OU édition) | null
   const [editingPlay, setEditingPlay] = useState(null) // partie en cours d'édition | null (= nouvelle partie)
@@ -213,10 +219,16 @@ export default function App() {
 
   // Charger les listes gérées (tables owners + tags + fiches de score).
   const reloadOwners = useCallback(() => {
-    fetchOwners().then(setOwnersList)
+    fetchOwners().then((v) => {
+      setOwnersList(v)
+      setOwnersLoaded(true)
+    })
   }, [])
   const reloadTags = useCallback(() => {
-    fetchTags().then(setTagsList)
+    fetchTags().then((v) => {
+      setTagsList(v)
+      setTagsLoaded(true)
+    })
   }, [])
   useEffect(() => {
     reloadOwners()
@@ -365,7 +377,9 @@ export default function App() {
   // Garde-fou : si le filtre propriétaire mémorisé référence un propriétaire qui
   // n'existe plus (supprimé), on le retire (évite une collection vide inexpliquée).
   useEffect(() => {
-    if (games === null) return
+    // On attend d'avoir des jeux chargés : avec 0 jeu (hors ligne sans cache), `allOwners`
+    // serait incomplet et on effacerait à tort le filtre propriétaire mémorisé.
+    if (games === null || games.length === 0) return
     setFilters((f) => {
       if (!f.owners.length) return f
       const valid = f.owners.filter((o) => allOwners.includes(o))
@@ -451,7 +465,9 @@ export default function App() {
     })
     // …puis on fixe la colonne à ce maximum (repli 1fr si liste vide).
     list.style.setProperty('--meta-left', max ? `${Math.ceil(max)}px` : 'minmax(0, 1fr)')
-  }, [games, listStatus])
+    // statsOpen/settingsOpen : le <main> est démonté puis remonté en fermant ces écrans →
+    // il faut recalculer, sinon la 1re colonne retombe sur son repli (colonne étirée).
+  }, [games, listStatus, statsOpen, settingsOpen])
 
   // Scénarios déjà utilisés pour ce jeu (auto-complétion du champ scénario).
   const scenarioNames = useMemo(
@@ -476,8 +492,11 @@ export default function App() {
     ((statsOpen || view !== 'wishlist') && filters.tags.length ? 1 : 0) +
     (filters.players.length ? 1 : 0) +
     (filters.duration != null ? 1 : 0) +
-    (view === 'wishlist' && (filters.priceRange[0] !== PRICE_MIN || filters.priceRange[1] !== PRICE_MAX) ? 1 : 0) +
+    (!statsOpen && view === 'wishlist' && (filters.priceRange[0] !== PRICE_MIN || filters.priceRange[1] !== PRICE_MAX) ? 1 : 0) +
     (filters.complexity.length ? 1 : 0)
+
+  // Réinitialise les filtres en gardant le propriétaire (utilisé par la liste ET les tierlists).
+  const resetFilters = useCallback(() => setFilters((f) => ({ ...EMPTY_FILTERS, owners: f.owners })), [])
 
   const currentCount = (games ?? []).filter((g) => g.status === listStatus).length
 
@@ -681,11 +700,13 @@ export default function App() {
   // Sauvegarde automatique au chargement (une fois), si le délai de la fréquence est écoulé.
   useEffect(() => {
     if (autoBackupRef.current) return
-    if (!online || games === null || ownersList === null || tagsList === null) return
+    // On attend que jeux + owners + tags aient répondu (owners/tags peuvent valoir null si
+    // la table est absente : on utilise donc les drapeaux « chargé », pas la valeur null).
+    if (!online || games === null || !ownersLoaded || !tagsLoaded) return
     autoBackupRef.current = true
     ;(async () => {
       try {
-        const res = await maybeAutoBackup(backupFreq, games, ownersList, tagsList)
+        const res = await maybeAutoBackup(backupFreq, games, ownersList ?? [], tagsList ?? [])
         // Garde-fou : chute brutale du nombre de jeux → sauvegarde refusée, on alerte.
         // Mieux vaut une sauvegarde ancienne mais saine qu'un instantané de l'accident.
         if (res && res.skipped === 'drop') {
@@ -700,7 +721,7 @@ export default function App() {
       }
       reloadBackups()
     })()
-  }, [online, games, ownersList, tagsList, backupFreq, reloadBackups])
+  }, [online, games, ownersLoaded, tagsLoaded, ownersList, tagsList, backupFreq, reloadBackups])
 
   // Autorisation de l'appareil : à la 1re ouverture (en ligne), si aucun code n'est encore
   // enregistré, on propose de saisir le code d'accès. La lecture marche sans, seules les
@@ -840,8 +861,9 @@ export default function App() {
   const nonWishlist = useMemo(() => (games ?? []).filter((g) => g.status !== 'wishlist'), [games])
   const collectionGames = useMemo(() => dedupeByName(nonWishlist), [nonWishlist])
   const repById = useMemo(() => repIdMap(nonWishlist), [nonWishlist])
+  const collectionIds = useMemo(() => collectionGames.map((g) => g.id), [collectionGames])
   // Ids de jeux valides (représentants) → sert à retirer des classements les jeux supprimés.
-  const validTlIds = useMemo(() => new Set(collectionGames.map((g) => g.id)), [collectionGames])
+  const validTlIds = useMemo(() => new Set(collectionIds), [collectionIds])
   const reloadTierlists = () => fetchTierlists().then(setTierlists).catch(() => setTierlists(null))
   // « Anecdote du jour » : une graine calculée à partir de la DATE (locale). Même jour →
   // même graine pour tout le monde → même anecdote sur tous les appareils. Change chaque jour.
@@ -858,10 +880,9 @@ export default function App() {
   // Anecdotes groupées par TYPE (recalculées quand les tierlists/la collection/le jour changent).
   const anecGroups = useMemo(() => {
     if (!tierlists || !tierlists.length) return []
-    const ids = collectionGames.map((g) => g.id)
     const nameById = new Map(collectionGames.map((g) => [g.id, g.name]))
-    return computeAnecdoteList(tierlists, ids, repById, nameById, daySeed)
-  }, [tierlists, collectionGames, repById, daySeed])
+    return computeAnecdoteList(tierlists, collectionIds, repById, nameById, daySeed)
+  }, [tierlists, collectionGames, collectionIds, repById, daySeed])
   // L'anecdote du jour : choix DÉTERMINISTE (graine du jour) d'un TYPE (groupe) puis d'une
   // anecdote dedans → chaque type a la même chance, et le résultat est identique pour tous.
   const anecShown = useMemo(() => {
@@ -874,8 +895,7 @@ export default function App() {
     reloadTierlists()
   }
   function handleOpenGlobalTierlist() {
-    const ids = collectionGames.map((g) => g.id)
-    const { ranking, unranked } = computeGlobalTierlist(tierlists || [], ids, repById)
+    const { ranking, unranked } = computeGlobalTierlist(tierlists || [], collectionIds, repById)
     setTierlistView({ mode: 'global', title: '🌍 Tierlist globale', ranking, unranked, player: '', id: null })
   }
   function handleOpenTierlist(tl) {
@@ -1129,13 +1149,13 @@ export default function App() {
           setFilters={setFilters}
           showPrice={!statsOpen && view === 'wishlist'}
           showTags={statsOpen || view !== 'wishlist'}
-          onReset={() => setFilters((f) => ({ ...EMPTY_FILTERS, owners: f.owners }))}
+          onReset={resetFilters}
         />
       )}
 
       {statsOpen ? (
         <Suspense fallback={null}>
-          <Stats games={statsGames} ownerMap={ownerMap} hasCollection={hasCollection} playerOverall={playerOverall} onOpenTierlists={handleOpenTierlists} anecdote={anecShown} />
+          <Stats games={statsGames} hasCollection={hasCollection} playerOverall={playerOverall} onOpenTierlists={handleOpenTierlists} anecdote={anecShown} />
         </Suspense>
       ) : (
       <main className="list" ref={listRef}>
@@ -1348,6 +1368,7 @@ export default function App() {
                   {restorePlan.names.length > 0 && <> ({restorePlan.names.slice(0, 5).join(', ')}{restorePlan.names.length > 5 ? '…' : ''})</>}
                 </>
               )}
+              {' '}Les propriétaires et tags absents de cette sauvegarde seront aussi retirés.
               {' '}Une sauvegarde de l'état actuel sera créée avant, pour pouvoir revenir en arrière.
             </>
           }
@@ -1447,7 +1468,7 @@ export default function App() {
             initialPlayer={tierlistView.player}
             filters={filters}
             setFilters={setFilters}
-            onResetFilters={() => setFilters((f) => ({ ...EMPTY_FILTERS, owners: f.owners }))}
+            onResetFilters={resetFilters}
             savedId={tierlistView.id}
             games={collectionGames}
             allOwners={allOwners}

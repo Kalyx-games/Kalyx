@@ -51,5 +51,3 @@ export async function saveScoresheet(gameId, template) {
   if (error) throw error
   return template
 }
-
-// Supprime la fiche d'un jeu.

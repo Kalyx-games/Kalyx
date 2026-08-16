@@ -60,11 +60,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
   const [dragY, setDragY] = useState(0)
   const [closing, setClosing] = useState(false)
   const draggingRef = useRef(false)
-  const dragYRef = useRef(0)
-  const setDrag = (v) => {
-    dragYRef.current = v
-    setDragY(v)
-  }
+  const setDrag = (v) => setDragY(v)
   const animateClose = (action) => {
     if (closing) return
     const reduce =

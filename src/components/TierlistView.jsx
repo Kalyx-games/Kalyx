@@ -65,6 +65,7 @@ export default function TierlistView({
   const [showFilters, setShowFilters] = useState(false)
   const [tip, setTip] = useState(null) // { name, x, y } — infobulle au tap
   const [focusedName, setFocusedName] = useState(null)
+  const [needName, setNeedName] = useState(false) // on a tenté « Terminé » sans nom alors que des jeux sont classés
   const [az, setAz] = useState(false) // tri A→Z de TOUTES les lignes (lecture seule)
   const idRef = useRef(savedId)
   const rootRef = useRef(null)
@@ -213,7 +214,7 @@ export default function TierlistView({
       if (!chip) return
       const isTouch = e.type === 'touchstart'
       const { x, y } = point(e)
-      drag = { id: chip.dataset.game, active: false, clone: null, startX: x, startY: y, hold: null, isTouch, moved: false }
+      drag = { id: chip.dataset.game, active: false, clone: null, startX: x, startY: y, hold: null, isTouch }
       if (isTouch) {
         // Appui maintenu ~160 ms → on saisit (sinon un swipe = défilement).
         drag.hold = setTimeout(() => begin(x, y), 160)
@@ -327,8 +328,14 @@ export default function TierlistView({
               id="tl-player"
               className="input"
               value={player}
-              onChange={setPlayer}
-              onPick={setPlayer}
+              onChange={(v) => {
+                setPlayer(v)
+                if (v.trim()) setNeedName(false)
+              }}
+              onPick={(v) => {
+                setPlayer(v)
+                if (v.trim()) setNeedName(false)
+              }}
               placeholder="Ton nom"
               playerNames={playerNames}
               focused={focusedName}
@@ -347,8 +354,22 @@ export default function TierlistView({
           </button>
           {!isGlobal &&
             (editing ? (
-              // En édition : bouton pour EN SORTIR (feedback clair : vert « Terminé »).
-              <button type="button" className="tl-done-btn" onClick={() => setEditing(false)}>✓ Terminé</button>
+              // En édition : bouton pour EN SORTIR (feedback clair : vert « Terminé »). Si des
+              // jeux sont classés sans nom saisi, on refuse de sortir (sinon rien n'est sauvé).
+              <button
+                type="button"
+                className="tl-done-btn"
+                onClick={() => {
+                  if (!player.trim() && placed.size > 0) {
+                    setNeedName(true)
+                    setFocusedName(true)
+                    return
+                  }
+                  setEditing(false)
+                }}
+              >
+                ✓ Terminé
+              </button>
             ) : (
               <button type="button" className="tl-edit-btn" onClick={() => setEditing(true)} disabled={!online} title={online ? 'Modifier' : 'Indisponible hors ligne'}>✏️</button>
             ))}
@@ -357,7 +378,11 @@ export default function TierlistView({
           )}
         </div>
       </div>
-      {editing && <div className="tl-editing-banner">✏️ Mode édition — glisse les jeux pour les classer</div>}
+      {editing && (
+        <div className="tl-editing-banner">
+          {needName ? '📝 Donne un nom à ta tierlist pour l’enregistrer, puis « Terminé ».' : '✏️ Mode édition — glisse les jeux pour les classer'}
+        </div>
+      )}
 
       {showFilters && (
         <Filters
