@@ -1,4 +1,5 @@
 import { supabase, writeDb } from './supabase'
+import { renameInGamesCsv } from './games'
 
 // Liste gérée des propriétaires (table "owners"), éditée depuis les Réglages.
 
@@ -33,4 +34,15 @@ export async function updateOwner(id, patch) {
 export async function deleteOwner(id) {
   const { error } = await writeDb().from('owners').delete().eq('id', id)
   if (error) throw error
+}
+
+// Renomme un propriétaire : met à jour la ligne owners (nom + initiales/couleur) ET propage
+// le nouveau nom dans la colonne games.owner de tous les jeux concernés. Renvoie le nb de jeux.
+export async function renameOwner(id, oldName, newName, patch = {}) {
+  const to = (newName || '').trim()
+  if (!to) throw new Error('Nom vide.')
+  const { data, error } = await writeDb().from('owners').update({ name: to, ...patch }).eq('id', id).select()
+  if (error) throw error
+  if (!data || data.length === 0) throw new Error('Modification impossible (base non prête ?).')
+  return renameInGamesCsv('owner', oldName, to)
 }

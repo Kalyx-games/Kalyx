@@ -1,4 +1,5 @@
-import { Fragment, useRef, useState } from 'react'
+import { Fragment, useMemo, useRef, useState } from 'react'
+import qrcode from 'qrcode-generator'
 import { getTheme, applyTheme } from '../lib/theme'
 import BubbleListManager from './BubbleListManager'
 import SortMenu from './SortMenu'
@@ -35,9 +36,27 @@ function backupDate(iso) {
   }
 }
 
+// Temps relatif court, ex. "il y a 2 h", "hier". Au-delà d'un mois → date absolue.
+function relativeTime(iso) {
+  try {
+    const diff = Date.now() - new Date(iso).getTime()
+    const min = Math.round(diff / 60000)
+    if (min < 1) return "à l'instant"
+    if (min < 60) return `il y a ${min} min`
+    const h = Math.round(min / 60)
+    if (h < 24) return `il y a ${h} h`
+    const j = Math.round(h / 24)
+    if (j === 1) return 'hier'
+    if (j < 30) return `il y a ${j} j`
+    return backupDate(iso)
+  } catch {
+    return iso
+  }
+}
+
 export default function Settings({
-  owners, onAddOwner, onUpdateOwner, onDeleteOwner,
-  tags, onAddTag, onUpdateTag, onDeleteTag,
+  owners, onAddOwner, onUpdateOwner, onRenameOwner, onDeleteOwner,
+  tags, onAddTag, onUpdateTag, onRenameTag, onDeleteTag,
   onExport, onExportCsv, onImportFile,
   backupFreq, onSetBackupFreq, backups, backupBusy, onBackupNow, onRestore,
   onOpenPlayers,
@@ -47,6 +66,18 @@ export default function Settings({
   const fileRef = useRef(null)
   const [theme, setThemeState] = useState(getTheme())
   const [copied, setCopied] = useState(false)
+
+  // QR code du lien de l'app (généré une fois, sans réseau ni service externe).
+  const qrDataUrl = useMemo(() => {
+    try {
+      const g = qrcode(0, 'M')
+      g.addData(APP_URL)
+      g.make()
+      return g.createDataURL(5, 2)
+    } catch {
+      return ''
+    }
+  }, [])
 
   // Copie le lien de l'app dans le presse-papiers (pour la partager).
   const copyAppLink = async () => {
@@ -76,6 +107,20 @@ export default function Settings({
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">←</button>
         <h2>Réglages</h2>
       </div>
+
+      <section className="settings-card share-card">
+        <h3>Partager Kalyx</h3>
+        <div className="share-row">
+          {qrDataUrl && <img className="share-qr" src={qrDataUrl} alt="QR code vers l'app Kalyx" width="118" height="118" />}
+          <div className="share-info">
+            <p className="muted share-hint">Scanne le QR ou copie le lien pour ajouter Kalyx sur un autre téléphone.</p>
+            <div className="share-link">{APP_URL.replace('https://', '')}</div>
+            <button type="button" className={`btn-ghost share-copy ${copied ? 'copied' : ''}`} onClick={copyAppLink}>
+              {copied ? 'Lien copié ✓' : '📋 Copier le lien'}
+            </button>
+          </div>
+        </div>
+      </section>
 
       <section className="settings-card">
         <h3>Apparence</h3>
@@ -131,6 +176,7 @@ export default function Settings({
         online={online}
         onAdd={onAddOwner}
         onUpdate={onUpdateOwner}
+        onRename={onRenameOwner}
         onDelete={onDeleteOwner}
       />
 
@@ -143,6 +189,7 @@ export default function Settings({
         online={online}
         onAdd={onAddTag}
         onUpdate={onUpdateTag}
+        onRename={onRenameTag}
         onDelete={onDeleteTag}
       />
 
@@ -154,24 +201,58 @@ export default function Settings({
         {!online && <p className="field-hint" style={{ marginTop: 8 }}>Hors ligne : lecture seule.</p>}
       </section>
 
-      {/* Une seule carte : sauvegarde automatique (fréquence + liste) ET fichier (export/import). */}
+      {/* Sauvegarde AUTOMATIQUE (dans le cloud) : fréquence + bouton + liste des sauvegardes. */}
       <section className="settings-card">
-        <h3>Sauvegarde</h3>
+        <h3>☁️ Sauvegarde automatique</h3>
 
         <div className="backup-freq-row">
           <span className="field-label">Fréquence</span>
           <SortMenu value={backupFreq} options={FREQ_OPTIONS} onChange={onSetBackupFreq} arrows={false} />
         </div>
 
-        {/* Sauvegarde en ligne (liée à la fréquence ci-dessus), sur sa propre ligne. */}
         <div className="save-actions" style={{ marginTop: 14 }}>
           <button type="button" className="btn-ghost save-now" onClick={onBackupNow} disabled={!online || backupBusy}>
             {backupBusy ? '…' : '💾 Sauvegarder maintenant'}
           </button>
         </div>
 
-        {/* Sauvegarde en fichier : le duo exporter / importer. */}
-        <div className="save-actions" style={{ marginTop: 10 }}>
+        {backups && backups.length > 0 && (
+          <ul className="backup-list">
+            {backups.map((b, i) => (
+              <li key={b.id} className={`backup-row ${i === 0 ? 'latest' : ''}`}>
+                <div className="backup-info">
+                  <span className="backup-when">
+                    {relativeTime(b.created_at)}
+                    {i === 0 && <span className="backup-badge">dernière</span>}
+                  </span>
+                  <span className="backup-meta">
+                    {backupDate(b.created_at)} · {b.games_count} jeu{b.games_count > 1 ? 'x' : ''}
+                    {b.kind === 'manual' ? ' · manuelle' : ''}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-ghost backup-restore"
+                  onClick={() => onRestore(b)}
+                  disabled={!online}
+                  title={online ? 'Restaurer cette sauvegarde' : 'Indisponible hors ligne'}
+                >
+                  ↩ Restaurer
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {backups && backups.length === 0 && (
+          <p className="field-hint" style={{ marginTop: 12 }}>Aucune sauvegarde pour l'instant.</p>
+        )}
+      </section>
+
+      {/* Sauvegarde en FICHIER : à garder sur l'appareil ou à ré-importer. */}
+      <section className="settings-card">
+        <h3>📄 Sauvegarde en fichier</h3>
+        <p className="field-hint" style={{ marginTop: 0 }}>Un fichier à garder chez toi, ou à ré-importer plus tard.</p>
+        <div className="save-actions">
           <button type="button" className="btn-ghost" onClick={onExport} title="Télécharger la sauvegarde complète (fichier .json)">
             ⬇️ Exporter
           </button>
@@ -199,41 +280,12 @@ export default function Settings({
             }}
           />
         </div>
-
-        {backups === null || backups.length === 0 ? (
-          backups && backups.length === 0 ? (
-            <p className="field-hint" style={{ marginTop: 12 }}>Aucune sauvegarde pour l'instant.</p>
-          ) : null
-        ) : (
-          <ul className="backup-list">
-            {backups.map((b) => (
-              <li key={b.id} className="backup-row">
-                <div className="backup-info">
-                  <span className="backup-when">{backupDate(b.created_at)}</span>
-                  <span className="backup-meta">
-                    {b.games_count} jeu{b.games_count > 1 ? 'x' : ''}
-                    {b.kind === 'manual' ? ' · manuelle' : ''}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className="btn-ghost backup-restore"
-                  onClick={() => onRestore(b)}
-                  disabled={!online}
-                  title={online ? 'Restaurer cette sauvegarde' : 'Indisponible hors ligne'}
-                >
-                  ↩ Restaurer
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
       </section>
 
       <section className="settings-card">
         <h3>Liens utiles</h3>
         <div className="links">
-          {LINKS.map((l, i) => (
+          {LINKS.map((l) => (
             <Fragment key={l.url}>
               {online ? (
                 <a className="link-row" href={l.url} target="_blank" rel="noreferrer">
@@ -267,14 +319,6 @@ export default function Settings({
                   <span className="link-label">{l.label}</span>
                   <span className="link-arrow">↗</span>
                 </span>
-              )}
-              {/* Bouton "Copier le lien" placé juste sous le premier lien (Melodice). */}
-              {i === 0 && (
-                <button type="button" className={`link-row link-copy ${copied ? 'copied' : ''}`} onClick={copyAppLink}>
-                  <span className="link-copy-icon" aria-hidden="true">🔗</span>
-                  <span className="link-label">{copied ? 'Lien copié ✓' : "Copier le lien de l'application"}</span>
-                  <span className="link-arrow">⧉</span>
-                </button>
               )}
             </Fragment>
           ))}

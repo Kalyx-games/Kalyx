@@ -236,6 +236,27 @@ export function ownersToText(arr) {
 export const parseTags = parseOwners
 export const tagsToText = ownersToText
 
+// Renomme un nom dans la colonne CSV `col` ('owner' ou 'tags') de TOUS les jeux concernés
+// (propagation d'un renommage de propriétaire/tag). Renvoie le nombre de jeux modifiés.
+export async function renameInGamesCsv(col, oldName, newName) {
+  const from = (oldName || '').trim()
+  const to = (newName || '').trim()
+  if (!from || !to || from === to) return 0
+  const { data, error } = await supabase.from('games').select(`id, ${col}`)
+  if (error) throw error
+  let changed = 0
+  for (const g of data ?? []) {
+    const list = parseOwners(g[col])
+    if (!list.includes(from)) continue
+    // Remplace + dédoublonne (si le nouveau nom existait déjà sur ce jeu).
+    const next = [...new Set(list.map((x) => (x === from ? to : x)))]
+    const { error: e2 } = await writeDb().from('games').update({ [col]: ownersToText(next) }).eq('id', g.id)
+    if (e2) throw e2
+    changed++
+  }
+  return changed
+}
+
 // Bulle propriétaire : 2 lettres + une couleur propre à chaque propriétaire.
 const OWNER_COLORS = [
   '#ef4444', '#f59e0b', '#16a34a', '#2f6df6', '#8b5cf6', '#ec4899',

@@ -3,8 +3,8 @@ import lazyRetry from './lib/lazyRetry'
 import { isConfigured, hasCode } from './lib/supabase'
 import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwners, parseTags } from './lib/games'
 import { saveGamesCache, loadGamesCache } from './lib/cache'
-import { fetchOwners, addOwner, updateOwner, deleteOwner } from './lib/owners'
-import { fetchTags, addTag, updateTag, deleteTag } from './lib/tags'
+import { fetchOwners, addOwner, updateOwner, renameOwner, deleteOwner } from './lib/owners'
+import { fetchTags, addTag, updateTag, renameTag, deleteTag } from './lib/tags'
 import { downloadBackup, downloadCsv, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup, restorePreview } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { EMPTY_FILTERS, PRICE_MIN, PRICE_MAX, norm, passesFilters } from './lib/filtering'
@@ -185,7 +185,14 @@ export default function App() {
   const [deletingTagBusy, setDeletingTagBusy] = useState(false)
   const [importing, setImporting] = useState(null) // sauvegarde à confirmer | null
   const [importBusy, setImportBusy] = useState(false)
-  const [notice, setNotice] = useState('') // message de confirmation (vert)
+  const [toast, setToast] = useState('') // message de confirmation éphémère (toast en bas)
+  const toastTimer = useRef(null)
+  // Affiche un toast qui disparaît tout seul (visible même par-dessus les overlays).
+  const showToast = useCallback((msg) => {
+    setToast(msg)
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    if (msg) toastTimer.current = setTimeout(() => setToast(''), 2800)
+  }, [])
   // Sauvegardes automatiques (table `backups` Supabase)
   const [backupFreq, setBackupFreq] = useState(loadBackupFreq)
   const [backupsList, setBackupsList] = useState(null) // liste des sauvegardes, ou null si table absente
@@ -585,6 +592,16 @@ export default function App() {
       setError(e.message)
     }
   }
+  async function handleRenameOwner(id, oldName, newName, patch) {
+    try {
+      const n = await renameOwner(id, oldName, newName, patch)
+      reloadOwners()
+      loadGames() // recharge les jeux : le nom propagé dans games.owner doit s'afficher
+      showToast(n ? `« ${newName} » : ${n} jeu${n > 1 ? 'x' : ''} mis à jour.` : `Renommé en « ${newName} ».`)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
   async function handleConfirmDeleteOwner() {
     if (!confirmingOwner) return
     setDeletingOwnerBusy(true)
@@ -617,6 +634,16 @@ export default function App() {
       setError(e.message)
     }
   }
+  async function handleRenameTag(id, oldName, newName, patch) {
+    try {
+      const n = await renameTag(id, oldName, newName, patch)
+      reloadTags()
+      loadGames() // recharge les jeux : le nom propagé dans games.tags doit s'afficher
+      showToast(n ? `« ${newName} » : ${n} jeu${n > 1 ? 'x' : ''} mis à jour.` : `Renommé en « ${newName} ».`)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
   async function handleConfirmDeleteTag() {
     if (!confirmingTag) return
     setDeletingTagBusy(true)
@@ -639,7 +666,7 @@ export default function App() {
     try {
       // Relit les parties et les fiches en base → la sauvegarde contient TOUT.
       const n = await downloadBackup(games ?? [], ownersList ?? [], tagsList ?? [], dateStr)
-      setNotice(`Sauvegarde téléchargée : ${n.games} jeux, ${n.plays} parties, ${n.sheets} fiches, ${n.tierlists} tierlists.`)
+      showToast(`Sauvegarde téléchargée : ${n.games} jeux, ${n.plays} parties, ${n.sheets} fiches, ${n.tierlists} tierlists.`)
     } catch (e) {
       setError(e.message)
     }
@@ -650,7 +677,7 @@ export default function App() {
     const dateStr = new Date().toISOString().slice(0, 10)
     try {
       const n = await downloadCsv(games ?? [], ownersList ?? [], tagsList ?? [], dateStr)
-      setNotice(`2 fichiers tableur téléchargés : ${n.games} jeux et ${n.lignesParties} lignes de parties.`)
+      showToast(`2 fichiers tableur téléchargés : ${n.games} jeux et ${n.lignesParties} lignes de parties.`)
     } catch (e) {
       setError(e.message)
     }
@@ -658,7 +685,7 @@ export default function App() {
 
   async function handleImportFile(file) {
     setError(null)
-    setNotice('')
+    showToast('')
     try {
       const text = await file.text()
       const parsed = parseBackup(text) // { games, owners }
@@ -681,14 +708,14 @@ export default function App() {
             image_url: data.image || '',
             price: data.price != null ? String(data.price) : '',
           })
-          setNotice('')
+          showToast('')
         } else {
           setScanPrefill(null)
-          setNotice('Jeu introuvable pour ce code — ajoute-le à la main.')
+          showToast('Jeu introuvable pour ce code — ajoute-le à la main.')
         }
       } catch {
         setScanPrefill(null)
-        setNotice('Recherche impossible — ajoute le jeu à la main.')
+        showToast('Recherche impossible — ajoute le jeu à la main.')
       } finally {
         setScanBusy(false)
         setScanOpen(false)
@@ -712,7 +739,7 @@ export default function App() {
       reloadTierlists()
       setImporting(null)
       const extra = res.plays ? ` et ${res.plays} partie${res.plays > 1 ? 's' : ''}` : ''
-      setNotice(`Import réussi : ${res.games} jeu${res.games > 1 ? 'x' : ''}${extra}.`)
+      showToast(`Import réussi : ${res.games} jeu${res.games > 1 ? 'x' : ''}${extra}.`)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -779,7 +806,7 @@ export default function App() {
       if (ok === null) setError("Lance d'abord la migration des sauvegardes (voir README).")
       else {
         await reloadBackups()
-        setNotice('Sauvegarde enregistrée.')
+        showToast('Sauvegarde enregistrée.')
       }
     } catch (e) {
       setError(e.message)
@@ -833,7 +860,7 @@ export default function App() {
       setPlayerRoster(await fetchPlayerRoster())
       fetchPlayerNames().then(setPlayerNames).catch(() => {})
       if (historyGame) refreshHistory(historyGame)
-      setNotice(n ? `« ${to} » : ${n} partie${n > 1 ? 's' : ''} mise${n > 1 ? 's' : ''} à jour.` : 'Aucune partie à mettre à jour.')
+      showToast(n ? `« ${to} » : ${n} partie${n > 1 ? 's' : ''} mise${n > 1 ? 's' : ''} à jour.` : 'Aucune partie à mettre à jour.')
     } catch (e) {
       setError(e.message)
     } finally {
@@ -850,7 +877,7 @@ export default function App() {
     if (renames && renames.length) {
       const n = await renameCategories(gameId, renames)
       if (n) {
-        setNotice(`Fiche enregistrée · ${n} partie${n > 1 ? 's' : ''} mise${n > 1 ? 's' : ''} à jour.`)
+        showToast(`Fiche enregistrée · ${n} partie${n > 1 ? 's' : ''} mise${n > 1 ? 's' : ''} à jour.`)
         if (historyGame && historyGame.id === gameId) refreshHistory(historyGame)
       }
     }
@@ -879,7 +906,7 @@ export default function App() {
       setEditingPlay(null)
       setHistoryGame(target)
       refreshHistory(target)
-      setNotice(editingPlay ? 'Partie modifiée.' : 'Partie enregistrée.')
+      showToast(editingPlay ? 'Partie modifiée.' : 'Partie enregistrée.')
     } catch (e) {
       setError(e.message)
     } finally {
@@ -950,7 +977,7 @@ export default function App() {
       setConfirmingTierlist(false)
       setTierlistView(null)
       reloadTierlists()
-      setNotice('Tierlist supprimée.')
+      showToast('Tierlist supprimée.')
     } catch (e) {
       setError(e.message)
       setConfirmingTierlist(false)
@@ -986,7 +1013,7 @@ export default function App() {
       fetchScoresheets().then((m) => setScoresheets(m || {})).catch(() => {})
       reloadBackups()
       setRestoring(null)
-      setNotice(`Sauvegarde restaurée : ${res.games} jeux, ${res.plays} parties. Une sauvegarde de l'état précédent a été créée.`)
+      showToast(`Sauvegarde restaurée : ${res.games} jeux, ${res.plays} parties. Une sauvegarde de l'état précédent a été créée.`)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -1068,7 +1095,11 @@ export default function App() {
         <p className="banner">📴 Hors ligne : lecture seule. Reconnecte-toi pour ajouter ou modifier.</p>
       )}
       {error && <p className="banner banner-err">⚠️ {error}</p>}
-      {notice && <p className="banner banner-ok" onClick={() => setNotice('')}>✅ {notice}</p>}
+      {toast && (
+        <div className="toast" role="status" onClick={() => setToast('')}>
+          <span className="toast-ico">✅</span> {toast}
+        </div>
+      )}
 
       {settingsOpen && playersOpen ? (
         <Suspense fallback={null}>
@@ -1086,10 +1117,12 @@ export default function App() {
             owners={ownersList}
             onAddOwner={handleAddOwner}
             onUpdateOwner={handleUpdateOwner}
+            onRenameOwner={handleRenameOwner}
             onDeleteOwner={(owner) => setConfirmingOwner(owner)}
             tags={tagsList}
             onAddTag={handleAddTag}
             onUpdateTag={handleUpdateTag}
+            onRenameTag={handleRenameTag}
             onDeleteTag={(tag) => setConfirmingTag(tag)}
             onExport={handleExport}
             onExportCsv={handleExportCsv}
@@ -1222,9 +1255,11 @@ export default function App() {
             playerOverall={playerOverall}
             onOpenTierlists={handleOpenTierlists}
             anecdote={anecShown}
-            onFilter={(patch) => {
+            onFilter={(patch, label) => {
+              // On applique le filtre SANS changer de vue (les Stats se mettent à jour d'elles-mêmes)
+              // et on confirme par un toast.
               setFilters((f) => ({ ...f, ...patch }))
-              setStatsOpen(false) // on revient à la liste pour voir le résultat filtré
+              showToast(label ? `Filtre appliqué : ${label}` : 'Filtre appliqué')
             }}
           />
         </Suspense>
@@ -1588,7 +1623,7 @@ export default function App() {
           onDone={() => {
             setAuthorized(true)
             setCodeAsk(false)
-            setNotice('Appareil autorisé.')
+            showToast('Appareil autorisé.')
           }}
           onClose={() => {
             codeDismissedRef.current = true
@@ -1601,7 +1636,7 @@ export default function App() {
         <ChangeCodeDialog
           onDone={() => {
             setCodeChange(false)
-            setNotice('Code changé. Les autres appareils devront le re-saisir.')
+            showToast('Code changé. Les autres appareils devront le re-saisir.')
           }}
           onClose={() => setCodeChange(false)}
         />

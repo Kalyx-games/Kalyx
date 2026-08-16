@@ -1,4 +1,5 @@
 import { supabase, writeDb } from './supabase'
+import { renameInGamesCsv } from './games'
 
 // Liste gérée des tags (table "tags"), éditée depuis les Réglages.
 // Même structure et même logique que les propriétaires (owners).
@@ -32,4 +33,15 @@ export async function updateTag(id, patch) {
 export async function deleteTag(id) {
   const { error } = await writeDb().from('tags').delete().eq('id', id)
   if (error) throw error
+}
+
+// Renomme un tag : met à jour la ligne tags (nom + initiales/couleur) ET propage le nouveau
+// nom dans la colonne games.tags de tous les jeux concernés. Renvoie le nb de jeux modifiés.
+export async function renameTag(id, oldName, newName, patch = {}) {
+  const to = (newName || '').trim()
+  if (!to) throw new Error('Nom vide.')
+  const { data, error } = await writeDb().from('tags').update({ name: to, ...patch }).eq('id', id).select()
+  if (error) throw error
+  if (!data || data.length === 0) throw new Error('Modification impossible (base non prête ?).')
+  return renameInGamesCsv('tags', oldName, to)
 }

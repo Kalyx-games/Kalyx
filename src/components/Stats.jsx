@@ -323,7 +323,7 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
         color={PLAYERS_COLOR}
         empty="Aucune donnée de joueurs."
         rows={s.byPlayers.map((r) => ({ key: r.n, label: r.label, count: r.count }))}
-        onPick={onFilter ? (r) => onFilter({ players: [r.key], playerOptimal: false }) : undefined}
+        onPick={onFilter ? (r) => onFilter({ players: [r.key], playerOptimal: false }, `${r.label} joueurs`) : undefined}
       />
 
       <BarBlock
@@ -331,7 +331,7 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
         color={OPTIMAL_COLOR}
         empty="Aucun nombre idéal renseigné."
         rows={s.byOptimalPlayers.map((r) => ({ key: r.n, label: r.label, count: r.count }))}
-        onPick={onFilter ? (r) => onFilter({ players: [r.key], playerOptimal: true }) : undefined}
+        onPick={onFilter ? (r) => onFilter({ players: [r.key], playerOptimal: true }, `${r.label} joueurs (idéal)`) : undefined}
       />
 
       <BarBlock
@@ -346,7 +346,7 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
         color={COMPLEXITY_COLOR}
         empty="Aucune complexité renseignée."
         rows={s.byComplexity.map((r) => ({ key: r.label, label: r.label, sub: r.hint, count: r.count, bucket: CX_LABEL_TO_BUCKET[r.label] }))}
-        onPick={onFilter ? (r) => onFilter({ complexity: [r.bucket] }) : undefined}
+        onPick={onFilter ? (r) => onFilter({ complexity: [r.bucket] }, r.label) : undefined}
       />
 
       {/* Séparateur : au-dessus les stats sur les JEUX, en dessous les stats sur les JOUEURS. */}

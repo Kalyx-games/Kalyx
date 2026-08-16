@@ -1,10 +1,17 @@
 import { memo, useEffect, useRef, useState } from 'react'
-import { parseOwners, parseTags, ownerDisplay, parseExtensions, basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText } from '../lib/games'
+import { parseOwners, parseTags, ownerDisplay, ownerColor, parseExtensions, basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText } from '../lib/games'
 import { CollectionIcon } from './icons'
 
 // Une carte compacte représentant un jeu dans la liste.
 // Toutes les infos (joueurs, idéal, complexité, durée, propriétaire) sont dans
 // un seul flux qui passe à la ligne tout seul quand c'est long (responsive).
+
+// Monogramme d'un jeu sans image : initiales des 2 premiers mots (sinon 2 lettres).
+function monogram(name) {
+  const words = (name || '').trim().split(/\s+/).filter(Boolean)
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase()
+  return (name || '?').trim().slice(0, 2).toUpperCase()
+}
 
 function formatPrice(p) {
   const n = Number(p)
@@ -278,7 +285,10 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
                 onClick={onImageClick ? (e) => { e.stopPropagation(); if (gRef.current.justSwiped) return; onImageClick(fullImg) } : undefined}
               />
             ) : (
-              <span className="game-thumb-fallback">🎲</span>
+              // Pas d'image : monogramme coloré (initiales du jeu) plutôt qu'un dé générique.
+              <span className="game-thumb-fallback" style={{ background: ownerColor(game.name || '?') }}>
+                {monogram(game.name)}
+              </span>
             )}
           </div>
           {/* Bulles empilées en bas à gauche : la 1re (propriétaire) est à cheval sur le

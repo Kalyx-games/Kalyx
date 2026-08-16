@@ -820,8 +820,8 @@ body {
   right: 7px;
   top: 50%;
   transform: translateY(-50%);
-  width: 27px;
-  height: 27px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
   background: var(--soft);
@@ -1122,7 +1122,15 @@ body {
   }
 }
 .game-thumb-fallback {
-  font-size: 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 .game-img.zoomable {
   cursor: zoom-in;
@@ -1581,8 +1589,8 @@ body {
   right: 0;
   top: 50%;
   transform: translateY(-50%);
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--danger-bg);
@@ -1788,8 +1796,8 @@ body {
   margin: 6px 0 14px;
 }
 .back-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--card);
@@ -1846,8 +1854,8 @@ body {
   white-space: nowrap;
 }
 .owner-del {
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
   border: none;
   background: transparent;
@@ -1860,8 +1868,8 @@ body {
   color: var(--danger);
 }
 .owner-edit {
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
   border: none;
   background: transparent;
@@ -3821,3 +3829,73 @@ body {
   line-height: 1.4;
 }
 .bgg-hint b { color: var(--ink); font-weight: 650; }
+
+/* Toasts : confirmations éphémères, visibles même par-dessus les overlays */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 3000;
+  max-width: min(92vw, 460px);
+  background: var(--ink);
+  color: var(--card);
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  animation: kx-toast-in 0.22s ease;
+}
+.toast-ico { color: #4ade80; }
+@keyframes kx-toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+/* Indice sous le champ nom d'une bulle quand on la renomme */
+.oe-rename-hint {
+  margin: -4px 0 6px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Carte « Partager Kalyx » (lien + QR) en haut des Réglages */
+.share-row { display: flex; gap: 14px; align-items: center; }
+.share-qr {
+  flex-shrink: 0;
+  width: 118px;
+  height: 118px;
+  background: #fff;
+  padding: 6px;
+  border-radius: 10px;
+  image-rendering: pixelated; /* QR net, pas flou */
+}
+.share-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.share-hint { margin: 0; font-size: 0.85rem; }
+.share-link {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  color: var(--ink);
+  word-break: break-all;
+}
+.share-copy { align-self: flex-start; }
+.share-copy.copied { color: #16a34a; }
+
+/* Sauvegardes : mise en avant de la plus récente */
+.backup-row.latest { background: var(--accent-soft); border-radius: 10px; padding-left: 8px; padding-right: 8px; }
+.backup-badge {
+  margin-left: 8px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  padding: 1px 6px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
