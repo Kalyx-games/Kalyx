@@ -2701,8 +2701,10 @@ body {
 .poll-seg.poll-best { background: #eab308; } /* jaune (idéal), assorti à l'étoile */
 .poll-seg.poll-rec { background: #2f6df6; }
 .poll-seg.poll-not { background: #d1495b; }
-/* Pourcentages sous la barre, dans le même ordre que les segments (idéal · recommandé · déconseillé). */
-.poll-pcts { display: flex; gap: 12px; font-size: 0.72rem; font-weight: 700; }
+/* Pourcentages sous la barre : 3 colonnes FIXES (idéal · recommandé · déconseillé) → chaque
+   type est aligné verticalement d'une ligne à l'autre (lecture en tableau, pas en vrac). */
+.poll-pcts { display: grid; grid-template-columns: repeat(3, 44px); gap: 8px; font-size: 0.72rem; font-weight: 700; }
+.poll-pct { text-align: right; font-variant-numeric: tabular-nums; }
 .poll-pct-best { color: #c99000; } /* or plus foncé → lisible sur fond clair ET sombre */
 .poll-pct-rec { color: #2f6df6; }
 .poll-pct-not { color: #d1495b; }
