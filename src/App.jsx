@@ -1294,19 +1294,20 @@ export default function App() {
       </main>
       )}
 
-      {/* Filtre : accessible partout où filtrer a un sens (liste ET stats). Marche hors ligne. */}
+      {/* Filtre = bouton principal en bas (partout où filtrer a un sens : liste ET stats). Marche hors ligne. */}
       <button
-        className={`fab fab-filter ${statsOpen ? '' : 'fab-above'}`}
+        className="fab fab-filter"
         onClick={() => setShowFilters(true)}
         title="Filtrer les jeux"
         aria-label="Filtrer les jeux"
       >
-        <FilterIcon size={21} color="currentColor" />
+        <FilterIcon size={22} color="currentColor" />
         {activeFilterCount > 0 && <span className="fab-badge">{activeFilterCount}</span>}
       </button>
+      {/* Ajouter = bouton plus petit, au-dessus du filtre (liste seulement). */}
       {!statsOpen && (
         <button
-          className="fab"
+          className="fab fab-add-above"
           onClick={() => setEditing('new')}
           disabled={!online || games === null}
           title={online ? 'Ajouter un jeu' : 'Indisponible hors ligne'}

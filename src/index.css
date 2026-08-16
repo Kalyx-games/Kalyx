@@ -1400,15 +1400,18 @@ body {
   box-shadow: none;
   cursor: not-allowed;
 }
-/* Bouton flottant « Filtrer » : au-dessus du + sur la liste (fab-above), seul en bas sur les stats. */
-.fab-above {
-  bottom: calc(148px + env(safe-area-inset-bottom));
-}
+/* Bouton flottant « Filtrer » = bouton PRINCIPAL en bas (taille de .fab, couleur de l'ancien
+   bouton scan = sarcelle). Le « + » (fab-add-above) est plus petit et se place au-dessus. */
 .fab-filter {
-  background: var(--card);
-  color: var(--primary);
-  border: 1.5px solid var(--line);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+  background: linear-gradient(135deg, #0d9488, #14b8a6);
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(13, 148, 136, 0.42);
+}
+.fab-add-above {
+  bottom: calc(146px + env(safe-area-inset-bottom));
+  width: 52px;
+  height: 52px;
+  font-size: 1.7rem;
 }
 .fab-badge {
   position: absolute;
