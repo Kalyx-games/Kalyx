@@ -161,14 +161,14 @@ export default function GameDetail({
             🗳️ Nombre de joueurs
             {poll.total ? <span className="detail-poll-total"> · {poll.total} votes</span> : null}
           </div>
-          {/* Tableau : une ligne par nombre de joueurs ; barre visuelle + 3 colonnes de %
-              alignées sous des en-têtes colorés (qui servent aussi de légende). */}
+          {/* Légende en toutes lettres (pas d'abréviation ambiguë), puis le tableau :
+              une ligne par nombre de joueurs, barre visuelle + 3 colonnes de % alignées. */}
+          <div className="poll-legend">
+            <span className="poll-key"><span className="poll-dot poll-best" />Idéal</span>
+            <span className="poll-key"><span className="poll-dot poll-rec" />Recommandé</span>
+            <span className="poll-key"><span className="poll-dot poll-not" />Déconseillé</span>
+          </div>
           <div className="poll-grid">
-            <span className="poll-h" aria-hidden="true" />
-            <span className="poll-h" aria-hidden="true" />
-            <span className="poll-h poll-pct-best">Idéal</span>
-            <span className="poll-h poll-pct-rec">Recom.</span>
-            <span className="poll-h poll-pct-not">Décon.</span>
             {poll.rows.map((r) => {
               const best = r.best || 0
               const rec = r.rec || 0

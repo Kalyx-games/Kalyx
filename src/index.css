@@ -2685,17 +2685,23 @@ body {
   border-radius: 12px;
   padding: 12px 14px;
 }
-.detail-poll-head { font-weight: 600; font-size: 0.95rem; margin-bottom: 10px; }
+.detail-poll-head { font-weight: 600; font-size: 0.95rem; margin-bottom: 8px; }
 .detail-poll-total { color: var(--muted); font-weight: 400; }
-/* Tableau du sondage : nb de joueurs · barre · 3 colonnes de % alignées (avec en-têtes
-   colorés qui font office de légende). Une seule grille → tout s'aligne, en-tête compris. */
+/* Légende en toutes lettres (dot coloré + mot) → pas d'abréviation ambiguë. */
+.poll-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 10px; font-size: 0.78rem; color: var(--muted); }
+.poll-key { display: inline-flex; align-items: center; gap: 5px; }
+.poll-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.poll-dot.poll-best { background: #eab308; }
+.poll-dot.poll-rec { background: #2f6df6; }
+.poll-dot.poll-not { background: #d1495b; }
+/* Tableau du sondage : nb de joueurs · barre · 3 colonnes de % alignées (la légende
+   ci-dessus donne la signification des couleurs). Une seule grille → tout s'aligne. */
 .poll-grid {
   display: grid;
   grid-template-columns: auto minmax(70px, 1fr) 46px 46px 46px;
   align-items: center;
   gap: 7px 8px;
 }
-.poll-h { font-size: 0.72rem; font-weight: 700; text-align: right; }
 .poll-n { font-weight: 600; font-size: 0.9rem; text-align: right; }
 .poll-bar { height: 12px; border-radius: 6px; overflow: hidden; display: flex; background: var(--soft); }
 .poll-seg { height: 100%; }
