@@ -1,0 +1,312 @@
+<title>Pistes UI Kalyx</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --ground: #f5f6fb;
+    --surface: #ffffff;
+    --surface-2: #eef0f7;
+    --ink: #191d2b;
+    --muted: #5b6472;
+    --hair: #e4e7f0;
+    --accent: #4f46e5;
+    --accent-soft: #ebe9fd;
+    --violet: #7c5cfc;
+    --violet-soft: #efe9ff;
+    --gold: #b7830a;
+    --gold-soft: #fbf1d6;
+    --danger: #c0392b;
+    --danger-soft: #fbe7e3;
+    --shadow: 0 1px 2px rgba(20, 24, 40, 0.05), 0 6px 20px rgba(20, 24, 40, 0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0f141c;
+      --surface: #171d28;
+      --surface-2: #1e2532;
+      --ink: #e7ecf4;
+      --muted: #95a1b4;
+      --hair: #28313f;
+      --accent: #8b86ff;
+      --accent-soft: #262a4d;
+      --violet: #a78bfa;
+      --violet-soft: #2a2450;
+      --gold: #eab308;
+      --gold-soft: #33290c;
+      --danger: #f0776a;
+      --danger-soft: #3a201c;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0f141c;
+    --surface: #171d28;
+    --surface-2: #1e2532;
+    --ink: #e7ecf4;
+    --muted: #95a1b4;
+    --hair: #28313f;
+    --accent: #8b86ff;
+    --accent-soft: #262a4d;
+    --violet: #a78bfa;
+    --violet-soft: #2a2450;
+    --gold: #eab308;
+    --gold-soft: #33290c;
+    --danger: #f0776a;
+    --danger-soft: #3a201c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 28px 18px 72px;
+  }
+
+  /* ---- Header ---- */
+  header { margin-bottom: 26px; }
+  .kicker {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+  h1 {
+    font-size: clamp(1.7rem, 6vw, 2.4rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin: 0 0 10px;
+    font-weight: 800;
+  }
+  .lede {
+    color: var(--muted);
+    font-size: 1.02rem;
+    max-width: 60ch;
+    margin: 0;
+  }
+
+  /* ---- Legend ---- */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: center;
+    margin-top: 18px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    border-radius: 12px;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+  .legend b { color: var(--ink); font-weight: 650; }
+
+  /* ---- Chips ---- */
+  .chips { display: inline-flex; gap: 6px; flex-shrink: 0; }
+  .chip {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.02em;
+    padding: 3px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .imp-fort { background: var(--accent); color: #fff; }
+  .imp-moyen { background: var(--accent-soft); color: var(--accent); }
+  .imp-faible { background: transparent; color: var(--muted); border: 1px solid var(--hair); }
+  .eff { background: var(--surface-2); color: var(--muted); }
+
+  /* ---- Sections ---- */
+  section { margin-top: 30px; }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 4px;
+  }
+  .sec-head h2 {
+    font-size: 1.18rem;
+    letter-spacing: -0.01em;
+    margin: 0;
+    font-weight: 750;
+  }
+  .sec-num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .sec-sub { color: var(--muted); font-size: 0.9rem; margin: 0 0 14px; }
+
+  /* ---- Idea list ---- */
+  .ideas { display: flex; flex-direction: column; gap: 10px; }
+  .idea {
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    border-radius: 13px;
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .idea-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 5px;
+  }
+  .idea-title { font-weight: 680; font-size: 1rem; letter-spacing: -0.01em; }
+  .idea-body { color: var(--muted); font-size: 0.92rem; margin: 0; }
+
+  /* quick-win + bold rails */
+  .idea.qw { border-left: 3px solid var(--gold); }
+  .idea.bold { border-left: 3px solid var(--violet); }
+  .tag {
+    display: inline-block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 6px;
+    vertical-align: middle;
+    margin-right: 7px;
+  }
+  .tag-qw { background: var(--gold-soft); color: var(--gold); }
+
+  /* ---- Bug callout ---- */
+  .bug {
+    background: var(--danger-soft);
+    border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-top: 22px;
+  }
+  .bug h2 { margin: 0 0 6px; font-size: 1.08rem; color: var(--danger); display: flex; align-items: center; gap: 8px; }
+  .bug p { margin: 0; color: var(--ink); font-size: 0.94rem; }
+  .bug .chips { margin-top: 12px; }
+
+  .foot {
+    margin-top: 40px;
+    padding-top: 18px;
+    border-top: 1px solid var(--hair);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .foot b { color: var(--ink); }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="kicker">Kalyx · ergonomie mobile</p>
+    <h1>Pistes pour améliorer l'interface</h1>
+    <p class="lede">Une sélection issue d'un audit écran par écran, pensée pour l'usage principal : le téléphone, à une main. Classée par thème, avec pour chaque idée son <b>impact</b> et l'<b>effort</b> à prévoir.</p>
+    <div class="legend">
+      <span>Impact&nbsp;: <span class="chip imp-fort">Fort</span> <span class="chip imp-moyen">Moyen</span> <span class="chip imp-faible">Faible</span></span>
+      <span>Effort&nbsp;: <span class="chip eff">Rapide</span> <span class="chip eff">Moyen</span> <span class="chip eff">Gros</span></span>
+      <span><span class="tag tag-qw">⚡ Gain rapide</span> fort impact, peu d'effort</span>
+    </div>
+  </header>
+
+  <div class="bug">
+    <h2>🐞 À corriger d'abord — un vrai défaut visuel</h2>
+    <p>Deux couleurs du thème (<code>--accent</code> et <code>--border</code>) sont utilisées un peu partout mais <b>jamais définies</b>. Résultat : certains éléments retombent sur la couleur du texte au lieu de l'accent — la case à cocher des fiches de score, la ligne « parties jouées » sous les cartes, les bordures du menu Tierlists, la zone où l'on dépose un jeu, le champ du code d'accès. Correctif : ~6 lignes de CSS, sans risque.</p>
+    <div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Rapide</span></div>
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2>⚡ Gains rapides</h2></div>
+    <p class="sec-sub">Fort impact, peu d'effort — à faire en priorité.</p>
+    <div class="ideas">
+      <div class="idea qw"><div class="idea-top"><span class="idea-title">Statut en haut du formulaire</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Rapide</span></div></div><p class="idea-body">Mettre « Collection / Wishlist » juste sous le nom. Les champs qui en dépendent (prix, tags, extensions) ne se réorganisent plus en bas de la saisie — fini l'aller-retour de défilement.</p></div>
+      <div class="idea qw"><div class="idea-top"><span class="idea-title">Sens du tri lisible</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Remplacer la flèche ↑/↓ (dont le sens est invisible au doigt) par un libellé clair selon le tri : « A→Z », « Court→long », « Simple→corsé »…</p></div>
+      <div class="idea qw"><div class="idea-top"><span class="idea-title">Recherche élargie</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Rapide</span></div></div><p class="idea-body">Chercher aussi dans les tags et les propriétaires, pas seulement le nom du jeu.</p></div>
+      <div class="idea qw"><div class="idea-top"><span class="idea-title">Entrée = recherche BGG</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Rapide</span></div></div><p class="idea-body">Dans le champ Nom, la touche Entrée lance directement la recherche BoardGameGeek.</p></div>
+      <div class="idea qw"><div class="idea-top"><span class="idea-title">Chargement BGG visible</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Rapide</span></div></div><p class="idea-body">Un indicateur pendant l'ouverture d'une fiche BGG (aujourd'hui rien ne bouge, on croit que ça a planté).</p></div>
+      <div class="idea qw"><div class="idea-top"><span class="idea-title">Complexité en toutes lettres</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Rapide</span></div></div><p class="idea-body">Afficher « Moyen » à côté du « 1.9 » dans les Stats — plus parlant qu'un chiffre nu.</p></div>
+      <div class="idea qw"><div class="idea-top"><span class="idea-title">Croix « effacer » propre</span><div class="chips"><span class="chip imp-faible">Faible</span><span class="chip eff">Rapide</span></div></div><p class="idea-body">N'afficher la croix de la barre de recherche que lorsqu'il y a du texte (elle est présente en permanence aujourd'hui).</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">02</span><h2>🔎 Filtrer & trouver un jeu</h2></div>
+    <p class="sec-sub">Le cœur d'un catalogue partagé : voir vite ce qui filtre, et choisir pour ce soir.</p>
+    <div class="ideas">
+      <div class="idea"><div class="idea-top"><span class="idea-title">Puces de filtres actifs</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Sous la recherche, des puces « Claire ✕ », « ≤ 30 min ✕ » quand des filtres sont posés. On voit <em>ce qui</em> filtre et on l'enlève d'un tap, sans rouvrir le panneau — fini la « liste courte inexpliquée ».</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">Propriétaire toujours à portée</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Une rangée de propriétaires directement sous la recherche : filtrer « les jeux de Claire & Nazim » devient un seul tap, pas trois.</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">Stats cliquables</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Taper une barre du graphe (ex. « 4 joueurs ») applique le filtre correspondant à la Collection.</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">« Réinitialiser » + « Voir les N jeux »</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Accessibles en haut du panneau de filtres, sans devoir le faire défiler jusqu'en bas.</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">Filtre durée pour jeux longs</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Rapide</span></div></div><p class="idea-body">Ajouter « ≤ 90 min » et « + de 90 min » (les seuils s'arrêtent aujourd'hui à 60).</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">03</span><h2>🎲 Saisie des parties & scores</h2></div>
+    <p class="sec-sub">Le parcours le plus dense — c'est là qu'on gagne le plus en confort au doigt.</p>
+    <div class="ideas">
+      <div class="idea"><div class="idea-top"><span class="idea-title">Colonne & Total figés</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Garder la colonne des catégories et la ligne Total visibles quand on fait défiler les joueurs sur le côté.</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">Barre d'enregistrement collante</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Toujours visible en bas, avec le meneur affiché en direct pendant qu'on saisit.</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">Pavé −/+ sur la cellule</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Incrémenter un score au doigt, sans sortir le clavier à chaque case.</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">🔁 Rejouer avec les mêmes joueurs</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Relancer une partie avec la même tablée en un tap, au lieu de re-saisir les noms.</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">Parties d'abord, stats repliées</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Remonter l'historique des parties en haut, replier les graphes par défaut : on cherche surtout « qui a gagné la dernière fois ».</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">Confirmer avant de fermer</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Rapide</span></div></div><p class="idea-body">Éviter de perdre une saisie en cours si on ferme la fiche par mégarde.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2>🏆 Tierlists</h2></div>
+    <p class="sec-sub">Rendre le classement plus tolérant au doigt.</p>
+    <div class="ideas">
+      <div class="idea"><div class="idea-top"><span class="idea-title">Annuler le dernier déplacement</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Un « Annuler » après un glissé raté (petit bandeau en bas).</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">Noms visibles en lecture</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Voir les titres des jeux sans devoir taper chaque vignette pour l'infobulle.</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">Classer au tap</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Gros</span></div></div><p class="idea-body">Choisir le tier via un petit menu, en plus du glisser-déposer — plus facile pour beaucoup de jeux.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">05</span><h2>⚙️ Réglages & partage</h2></div>
+    <p class="sec-sub">Ce qu'on fait rarement mais qui doit être limpide.</p>
+    <div class="ideas">
+      <div class="idea"><div class="idea-top"><span class="idea-title">Renommer un propriétaire / tag</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Avec propagation sur tous les jeux concernés (impossible aujourd'hui — il faut recréer).</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">« Partager Kalyx » en évidence</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Lien + QR code en haut des Réglages, pour ajouter facilement l'app sur le téléphone d'un proche.</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">Sauvegardes plus claires</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Rapide</span></div></div><p class="idea-body">Dates relatives (« il y a 2 h »), dernière sauvegarde mise en avant, et séparer nettement « Automatique » (dans le cloud) et « Fichier » (export/import).</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">06</span><h2>✨ Finitions</h2></div>
+    <p class="sec-sub">Petits détails qui donnent une impression « soignée ».</p>
+    <div class="ideas">
+      <div class="idea"><div class="idea-top"><span class="idea-title">Zones tactiles ≥ 44 px</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Agrandir les petits boutons (croix, ✏️, chevrons) pour viser juste au pouce.</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">Vignette de repli distinctive</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Rapide</span></div></div><p class="idea-body">Un monogramme coloré (initiales du jeu) au lieu du même dé générique quand il n'y a pas d'image.</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">Messages en « toasts »</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Petits messages en bas qui s'effacent seuls, visibles même par-dessus une fenêtre.</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">Vibration discrète</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Un léger retour haptique sur les gestes clés (déjà présent au Chwazi, à généraliser).</p></div>
+      <div class="idea"><div class="idea-top"><span class="idea-title">Focus clavier visible</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Rapide</span></div></div><p class="idea-body">Un contour net quand on navigue au clavier (accessibilité, aujourd'hui absent).</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">07</span><h2>💡 Idées plus audacieuses</h2></div>
+    <p class="sec-sub">Des évolutions d'interface plus ambitieuses — à discuter, chacune avec ses compromis.</p>
+    <div class="ideas">
+      <div class="idea bold"><div class="idea-top"><span class="idea-title">Une vraie « fiche jeu »</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Gros</span></div></div><p class="idea-body">Taper une carte ouvrirait une page détaillée (grande image, toutes les infos, historique, boutons d'action) au lieu de partir directement sur BGG/Philibert. Le point d'ancrage naturel de toute l'app.</p></div>
+      <div class="idea bold"><div class="idea-top"><span class="idea-title">Écran « pour ce soir »</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Gros</span></div></div><p class="idea-body">« On est 4, on a 45 min » → suggestions filtrées automatiquement. Passer d'un catalogue à un véritable aide-au-choix.</p></div>
+      <div class="idea bold"><div class="idea-top"><span class="idea-title">Une fiche par joueur (saisie)</span><div class="chips"><span class="chip imp-fort">Fort</span><span class="chip eff">Gros</span></div></div><p class="idea-body">Pour compter les points : une carte plein écran par joueur, qu'on fait défiler — zéro scroll horizontal, gros chiffres.</p></div>
+      <div class="idea bold"><div class="idea-top"><span class="idea-title">Bascule Confortable / Compact</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Un mode compact pour voir beaucoup plus de jeux d'un coup dans une grande collection.</p></div>
+      <div class="idea bold"><div class="idea-top"><span class="idea-title">Épingler des favoris</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Moyen</span></div></div><p class="idea-body">Remonter ses jeux préférés en tête de liste (mémorisé par appareil).</p></div>
+      <div class="idea bold"><div class="idea-top"><span class="idea-title">Repères A→Z</span><div class="chips"><span class="chip imp-moyen">Moyen</span><span class="chip eff">Gros</span></div></div><p class="idea-body">Séparateurs de lettres collants + saut alphabétique quand on trie par nom (utile passé ~100 jeux).</p></div>
+    </div>
+  </section>
+
+  <p class="foot">Sélection de <b>36 pistes</b> tirées d'un audit de <b>89 idées</b> (écran par écran). Dis-moi lesquelles tu veux que j'implémente — je peux commencer par le correctif + les ⚡ gains rapides en un lot, puis avancer thème par thème.</p>
+</div>

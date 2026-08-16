@@ -10,6 +10,10 @@
   --line: #e5e9f0;
   --primary: #4f46e5;
   --primary-2: #7c3aed;
+  /* Alias utilisés dans le CSS : résolus paresseusement → suivent le thème courant
+     (car --primary et --line sont redéfinis dans les blocs sombres, sur :root aussi). */
+  --accent: var(--primary);
+  --border: var(--line);
   --players: #2f6df6;
   --gold: #eab308;
   --bar-on: #6366f1;
