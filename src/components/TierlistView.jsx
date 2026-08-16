@@ -453,12 +453,13 @@ export default function TierlistView({
         </div>
       )}
 
-      {/* Bouton flottant des filtres. En édition, il monte au-dessus du bac (`tl-fab-above`)
-          pour ne pas cacher les vignettes à glisser. Masqué pendant qu'on glisse un jeu. */}
+      {/* Bouton flottant des filtres : TOUJOURS en bas à droite (même en édition, pour une
+          position stable). Le bac réserve un espace en bas (`.tl-tray` padding) pour que ses
+          vignettes ne passent jamais sous le bouton. Masqué quand le menu de filtre est ouvert. */}
       {!showFilters && (
         <button
           type="button"
-          className={`fab fab-filter tl-fab-filter ${editing ? 'tl-fab-above' : ''}`}
+          className="fab fab-filter tl-fab-filter"
           onClick={() => setShowFilters(true)}
           aria-label="Filtres"
         >

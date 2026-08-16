@@ -202,6 +202,7 @@ export default function Chwazi({ onClose }) {
     usedHuesRef.current = [...usedHuesRef.current, hue]
     const color = colorForHue(hue)
     playFinger(Object.keys(pointersRef.current).length)
+    vibrate(18) // petit retour haptique DANS le geste (le plus fiable) quand un doigt se pose
     setPointers((prev) => ({ ...prev, [e.pointerId]: { x: e.clientX, y: e.clientY, color } }))
   }
   const movePointer = (e) => {
