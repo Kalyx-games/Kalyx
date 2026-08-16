@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { TIERS } from '../lib/tierlists'
 import { passesFilters } from '../lib/filtering'
-import Filters from './Filters'
+import FilterSheet from './FilterSheet'
+import { FilterIcon } from './icons'
 import NameField from './NameField'
 
 // Miniature optimisée (même image que les cartes, via l'optimiseur Vercel).
@@ -97,12 +98,15 @@ export default function TierlistView({
     return games.filter((g) => !placed.has(g.id)).map((g) => g.id)
   }, [editing, isGlobal, unranked, games, placed])
 
+  // Compté par GROUPE (comme la collection) → le badge du bouton flottant est cohérent
+  // entre les deux vues, et le compteur de « Réinitialiser » (qui exclut le propriétaire,
+  // conservé au reset) peut bien redescendre à 0.
   const activeFilterCount =
-    filters.owners.length +
+    (filters.owners.length ? 1 : 0) +
     (filters.tags.length ? 1 : 0) +
     (filters.players.length ? 1 : 0) +
     (filters.duration != null ? 1 : 0) +
-    filters.complexity.length
+    (filters.complexity.length ? 1 : 0)
 
   // Déplace un jeu vers une ligne (ou le retire si tier === null → retour au bac).
   // Déplace un jeu vers une ligne, INSÉRÉ juste avant `beforeId` (pour trier librement dans
@@ -187,7 +191,7 @@ export default function TierlistView({
     const begin = (x, y) => {
       if (!drag) return
       drag.active = true
-      try { navigator.vibrate?.(12) } catch { /* ignore */ } // léger retour haptique à la prise
+      try { navigator.vibrate?.(40) } catch { /* ignore */ } // retour haptique à la prise (Android ; iOS n'a pas l'API)
       const src = root.querySelector(`[data-game="${CSS.escape(drag.id)}"]`)
       const clone = document.createElement('div')
       clone.className = 'tl-drag'
@@ -345,13 +349,9 @@ export default function TierlistView({
         ) : (
           <h2>{isGlobal ? title : player.trim() || title}</h2>
         )}
-        {/* Actions à droite : filtre (tous modes), édition (entrer/sortir), supprimer (existant). */}
+        {/* Actions à droite : édition (entrer/sortir), supprimer (existant). Le filtre est
+            désormais un bouton flottant (comme la collection) → il ne mange plus l'en-tête. */}
         <div className="tl-head-actions">
-          <button type="button" className="filter-toggle tl-filter-btn" onClick={() => setShowFilters((s) => !s)} aria-label="Filtres">
-            🔎
-            {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
-            <span className={`filter-chev ${showFilters ? 'up' : ''}`}>▾</span>
-          </button>
           {!isGlobal &&
             (editing ? (
               // En édition : bouton pour EN SORTIR (feedback clair : vert « Terminé »). Si des
@@ -382,18 +382,6 @@ export default function TierlistView({
         <div className="tl-editing-banner">
           {needName ? '📝 Donne un nom à ta tierlist pour l’enregistrer, puis « Terminé ».' : '✏️ Mode édition — glisse les jeux pour les classer'}
         </div>
-      )}
-
-      {showFilters && (
-        <Filters
-          owners={allOwners}
-          tags={allTags}
-          filters={filters}
-          setFilters={setFilters}
-          showPrice={false}
-          showTags
-          onReset={onResetFilters}
-        />
       )}
 
       {/* Les lignes (drop-zones en édition). La ligne « Pas d'avis » (score null) est
@@ -463,6 +451,34 @@ export default function TierlistView({
         <div className="tl-tip" style={{ left: tip.x, top: tip.y }}>
           {tip.name}
         </div>
+      )}
+
+      {/* Bouton flottant des filtres. En édition, il monte au-dessus du bac (`tl-fab-above`)
+          pour ne pas cacher les vignettes à glisser. Masqué pendant qu'on glisse un jeu. */}
+      {!showFilters && (
+        <button
+          type="button"
+          className={`fab fab-filter tl-fab-filter ${editing ? 'tl-fab-above' : ''}`}
+          onClick={() => setShowFilters(true)}
+          aria-label="Filtres"
+        >
+          <FilterIcon size={22} color="currentColor" />
+          {activeFilterCount > 0 && <span className="fab-badge">{activeFilterCount}</span>}
+        </button>
+      )}
+
+      {showFilters && (
+        <FilterSheet
+          owners={allOwners}
+          tags={allTags}
+          filters={filters}
+          setFilters={setFilters}
+          showPrice={false}
+          showTags
+          resetCount={activeFilterCount - (filters.owners.length ? 1 : 0)}
+          onReset={onResetFilters}
+          onClose={() => setShowFilters(false)}
+        />
       )}
     </div>
   )

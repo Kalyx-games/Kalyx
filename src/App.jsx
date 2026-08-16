@@ -15,7 +15,7 @@ import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
 import ConfirmDialog from './components/ConfirmDialog'
 import SortMenu from './components/SortMenu'
-import Filters from './components/Filters'
+import FilterSheet from './components/FilterSheet'
 import ImageZoom from './components/ImageZoom'
 import CodeDialog from './components/CodeDialog'
 import ChangeCodeDialog from './components/ChangeCodeDialog'
@@ -1112,6 +1112,8 @@ export default function App() {
         </Suspense>
       ) : (
         <>
+      {/* Ligne 1 : recherche + tri côte à côte. Le tri est à DROITE de la recherche pour
+          libérer toute la ligne 2 aux puces de filtres (qui doivent toutes rester visibles). */}
       <div className="controls">
         <div className="input-clear search-wrap">
           <input
@@ -1133,87 +1135,75 @@ export default function App() {
             <button type="button" className="clear-btn" onClick={() => setSearch('')} aria-label="Effacer la recherche">×</button>
           )}
         </div>
-      </div>
-
-      {/* Ligne 2 : les puces de filtres actifs (à gauche, défilables) + le tri (à droite).
-          Le bouton « Filtres » a disparu d'ici → il est désormais un bouton flottant. */}
-      {(!statsOpen || activeChips.length > 0) && (
-        <div className="controls-row2">
-          <div className="row2-left">
-            {activeChips.length > 0 ? (
-              <div className="active-filters">
-                {activeChips.map((c) => (
-                  <button key={c.key} type="button" className="active-chip" onClick={c.remove} aria-label={`Retirer le filtre ${c.label}`}>
-                    <span>{c.label}</span>
-                    <span className="active-chip-x">×</span>
-                  </button>
-                ))}
-              </div>
+        {!statsOpen && (
+          <div className="sortwrap">
+            <SortMenu
+              value={sort}
+              options={sortOptions}
+              onChange={(v) => {
+                setSort(v)
+                if (v === 'random') setShuffleSeed((s) => s + 1) // reclic sur "Aléatoire" → nouveau mélange
+              }}
+            />
+            {sort === 'random' ? (
+              // En tri aléatoire : le bouton devient un dé pour re-mélanger à volonté.
+              <button
+                type="button"
+                className="sortdir sortdir-die"
+                onClick={() => setShuffleSeed((s) => s + 1)}
+                title="Re-mélanger"
+                aria-label="Re-mélanger"
+              >
+                🎲
+              </button>
             ) : (
-              !statsOpen && <span className="count">{games === null ? '' : countLabel}</span>
+              <button
+                type="button"
+                className="sortdir"
+                onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                title={sortDir === 'asc' ? 'Croissant (cliquer pour décroissant)' : 'Décroissant (cliquer pour croissant)'}
+                aria-label="Sens du tri"
+              >
+                {sortDir === 'asc' ? '↑' : '↓'}
+              </button>
             )}
           </div>
-          {!statsOpen && (
-            <div className="sortwrap">
-              <SortMenu
-                value={sort}
-                options={sortOptions}
-                onChange={(v) => {
-                  setSort(v)
-                  if (v === 'random') setShuffleSeed((s) => s + 1) // reclic sur "Aléatoire" → nouveau mélange
-                }}
-              />
-              {sort === 'random' ? (
-                // En tri aléatoire : le bouton devient un dé pour re-mélanger à volonté.
-                <button
-                  type="button"
-                  className="sortdir sortdir-die"
-                  onClick={() => setShuffleSeed((s) => s + 1)}
-                  title="Re-mélanger"
-                  aria-label="Re-mélanger"
-                >
-                  🎲
+        )}
+      </div>
+
+      {/* Ligne 2 : les puces de filtres actifs (toutes visibles, elles passent à la ligne),
+          ou le compteur de jeux s'il n'y a aucun filtre actif. */}
+      {(!statsOpen || activeChips.length > 0) && (
+        <div className="controls-row2">
+          {activeChips.length > 0 ? (
+            <div className="active-filters">
+              {activeChips.map((c) => (
+                <button key={c.key} type="button" className="active-chip" onClick={c.remove} aria-label={`Retirer le filtre ${c.label}`}>
+                  <span>{c.label}</span>
+                  <span className="active-chip-x">×</span>
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  className="sortdir"
-                  onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
-                  title={sortDir === 'asc' ? 'Croissant (cliquer pour décroissant)' : 'Décroissant (cliquer pour croissant)'}
-                  aria-label="Sens du tri"
-                >
-                  {sortDir === 'asc' ? '↑' : '↓'}
-                </button>
-              )}
+              ))}
             </div>
+          ) : (
+            !statsOpen && <span className="count">{games === null ? '' : countLabel}</span>
           )}
         </div>
       )}
 
       {/* Filtres en MENU FLOTTANT (ouvert par le bouton flottant) : bloque l'arrière-plan. */}
       {showFilters && (
-        <div className="modal-backdrop filter-backdrop" onClick={() => setShowFilters(false)}>
-          <div className="filter-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="filter-sheet-head">
-              <h2>Filtres</h2>
-              <button type="button" className="filter-sheet-close" onClick={() => setShowFilters(false)} aria-label="Fermer les filtres">×</button>
-            </div>
-            <div className="filter-sheet-body">
-              <Filters
-                owners={allOwners}
-                tags={allTags}
-                filters={filters}
-                setFilters={setFilters}
-                showPrice={!statsOpen && view === 'wishlist'}
-                showTags={statsOpen || view !== 'wishlist'}
-                resetCount={activeFilterCount - (filters.owners.length ? 1 : 0)}
-                visibleCount={statsOpen ? statsGames.length : visible.length}
-                onReset={resetFilters}
-                onClose={() => setShowFilters(false)}
-              />
-            </div>
-          </div>
-        </div>
+        <FilterSheet
+          owners={allOwners}
+          tags={allTags}
+          filters={filters}
+          setFilters={setFilters}
+          showPrice={!statsOpen && view === 'wishlist'}
+          showTags={statsOpen || view !== 'wishlist'}
+          resetCount={activeFilterCount - (filters.owners.length ? 1 : 0)}
+          visibleCount={statsOpen ? statsGames.length : visible.length}
+          onReset={resetFilters}
+          onClose={() => setShowFilters(false)}
+        />
       )}
 
       {statsOpen ? (

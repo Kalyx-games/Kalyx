@@ -414,8 +414,7 @@ body {
 /* ---- Ligne 2 : compteur + tri + sens ---- */
 .controls-row2 {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
   gap: 10px;
   padding: 6px 16px 2px;
 }
@@ -450,13 +449,6 @@ body {
 }
 
 /* ---- Bouton Filtres + panneau ---- */
-.row2-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  flex: 1; /* prend la place à gauche du tri (pour les puces de filtres) */
-}
 .filter-toggle {
   display: inline-flex;
   align-items: center;
@@ -1429,6 +1421,20 @@ body {
   align-items: center;
   justify-content: center;
   border: 2px solid var(--bg);
+}
+/* Bouton flottant des filtres DANS une tierlist (overlay plein écran sans barre de nav) :
+   plus petit, collé en bas à droite. z-index élevé pour passer au-dessus du contenu de la
+   tierlist (`.sheet` crée un contexte d'empilement à z-1000). */
+.tl-fab-filter {
+  width: 52px;
+  height: 52px;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 1100;
+}
+/* En édition, le bac des jeux à classer occupe le bas (jusqu'à 34vh) → on monte le bouton
+   au-dessus pour ne JAMAIS cacher les vignettes à glisser. */
+.tl-fab-above {
+  bottom: calc(34vh + 16px + env(safe-area-inset-bottom));
 }
 
 /* ---- Fenêtres modales ---- */
@@ -3419,15 +3425,6 @@ body {
   padding: 8px 12px 0;
 }
 .tl-head { flex-shrink: 0; }
-/* Panneau de filtres dans une tierlist : `.tl-sheet` est en overflow:hidden (colonne
-   flex), donc un panneau trop haut serait clippé et impossible à scroller → on lui donne
-   sa propre zone défilante. */
-.tl-sheet .filters {
-  flex-shrink: 0;
-  max-height: 55vh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
 .tl-head h2 { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tl-name-edit { flex: 1; min-width: 0; }
 .tl-name-edit .input { width: 100%; }
@@ -3474,12 +3471,6 @@ body {
   padding: 6px 10px;
   border-radius: 8px;
   margin-bottom: 8px;
-}
-/* Bouton Filtres compact (pas de libellé, juste 🔎 + badge). */
-.tl-filter-btn {
-  flex-shrink: 0;
-  gap: 4px;
-  padding: 10px 11px;
 }
 
 /* Les lignes de tiers (zone défilante). */
@@ -3636,14 +3627,11 @@ body {
 .active-filters {
   display: flex;
   gap: 8px;
-  overflow-x: auto;
+  flex-wrap: wrap; /* toutes les puces restent visibles : elles passent à la ligne */
   flex: 1;
-  min-width: 0; /* les puces défilent à gauche du tri sans le pousser hors écran */
+  min-width: 0;
   padding-bottom: 2px;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
 }
-.active-filters::-webkit-scrollbar { display: none; }
 .active-chip {
   flex-shrink: 0;
   display: inline-flex;
@@ -3664,13 +3652,6 @@ body {
 /* Barre du haut du panneau de filtres : Réinitialiser + Voir les N jeux */
 /* Barre d'actions du panneau : volontairement distincte des chips de filtres
    (bord net, plus haute, séparateur en dessous). */
-.filters-top {
-  display: flex;
-  gap: 10px;
-  margin: 0 0 14px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--line);
-}
 .filters-reset-top,
 .filters-see {
   flex: 1;
@@ -3830,34 +3811,20 @@ body {
   animation: kx-sheet-up 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (prefers-reduced-motion: reduce) { .filter-sheet { animation: none; } }
-.filter-sheet-head {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px 8px;
-}
-.filter-sheet-head h2 { margin: 0; font-size: 1.2rem; }
-.filter-sheet-close {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: var(--soft);
-  color: var(--muted);
-  font-size: 1.3rem;
-  cursor: pointer;
-}
+/* Corps défilant (les groupes de filtres). Pas d'en-tête → on gagne de la place. */
 .filter-sheet-body {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 0 16px 16px;
+  padding: 12px 16px 8px;
   -webkit-overflow-scrolling: touch;
 }
-/* Dans le menu flottant, la barre du haut des filtres colle en haut au défilement. */
-.filter-sheet-body .filters-top {
-  position: sticky;
-  top: 0;
+/* Actions collées EN BAS (près du pouce) : Réinitialiser + Voir les N jeux. */
+.filter-sheet-actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
   background: var(--bg);
-  z-index: 1;
-  padding-top: 6px;
 }

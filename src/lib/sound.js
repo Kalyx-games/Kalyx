@@ -176,15 +176,22 @@ export function playReveal() {
     // Accord OUVERT avec une NEUVIÈME (add9, sans tierce) → couleur flottante,
     // en suspension (ne se referme pas), pas une cadence conclusive.
     // [demi-ton, when (décalage d'éclosion), dur, level, brillance, sous-octave]
+    // Niveaux volontairement BAS : 5 voix qui se superposent → leur somme doit rester SOUS le
+    // seuil du limiteur, sinon il compresse fort et ça « sature ». Décalage d'éclosion + niveaux
+    // faibles = accord grand et propre, jamais écrêté.
+    // Onsets bien étalés (0 → 0.20 s) + niveaux BAS + sous-octaves allégées : la somme des
+    // 5 voix reste largement SOUS le seuil du limiteur (~0.84) → aucune compression, donc
+    // aucune saturation. Le côté « grand » vient de la durée (~2.9 s) et de la réverb,
+    // pas du volume brut.
     const notes = [
-      [-12, 0.0, 2.9, 0.46, 1500, 0.5], // fondamentale grave (poids)
-      [0, 0.03, 2.9, 0.42, 2000, 0.28], // fondamentale
-      [7, 0.06, 2.8, 0.34, 2400, 0.15], // quinte
-      [14, 0.1, 2.8, 0.32, 3000, 0.0], // NEUVIÈME → suspension/flottement
-      [26, 0.15, 2.3, 0.14, 4600, 0.0], // neuvième aiguë → scintillement aérien
+      [-12, 0.0, 2.9, 0.13, 1500, 0.18], // fondamentale grave (poids, sous-octave allégée)
+      [0, 0.05, 2.9, 0.11, 2000, 0.1], // fondamentale
+      [7, 0.1, 2.8, 0.09, 2400, 0.06], // quinte
+      [14, 0.15, 2.8, 0.07, 3000, 0.0], // NEUVIÈME → suspension/flottement
+      [26, 0.2, 2.3, 0.04, 4600, 0.0], // neuvième aiguë → scintillement aérien
     ]
     notes.forEach(([semi, when, dur, level, bright, sub]) =>
-      voice(midi(semi), { when, dur, level, bright, sub, oct: 0.14 })
+      voice(midi(semi), { when, dur, level, bright, sub, oct: 0.07 })
     )
   } catch {
     /* rien */

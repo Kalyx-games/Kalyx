@@ -118,7 +118,7 @@ export default function Chwazi({ onClose }) {
       for (let i = 0; i < t; i++) hues.push(nextHue(hues))
       setResult({ type: 'teams', assign, colors: hues.map(colorForHue) })
     }
-    vibrate([0, 130, 70, 130]) // révélation du/des choisi(s) — vibration un peu plus marquée
+    vibrate([120, 60, 260]) // révélation : buzz court puis long (Android ; iOS n'a pas l'API vibration)
     playReveal()
   }
 
