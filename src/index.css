@@ -2627,12 +2627,12 @@ body {
 /* ---- Fiche jeu (page détaillée, ouverte en tapant une carte de la collection) ---- */
 .detail-sheet { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
 .detail-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detail-hero-wrap { position: relative; margin: 4px 0 12px; }
 .detail-hero {
   display: block;
   width: 100%;
   border: 0;
   padding: 0;
-  margin: 4px 0 12px;
   background: var(--soft);
   border-radius: 14px;
   overflow: hidden;
@@ -2647,7 +2647,16 @@ body {
   font-size: 3rem;
   cursor: default;
 }
-.detail-bubbles { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+/* Bulles propriétaires/tags superposées en bas à gauche de l'image, empilées vers le HAUT. */
+.detail-bubbles {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+}
+.detail-bubbles .owner-bubble { box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.35); }
 .detail-infos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
 .detail-info {
   background: var(--card);

@@ -215,6 +215,7 @@ export default function App() {
   const [historyGame, setHistoryGame] = useState(null) // jeu dont on regarde l'historique | null
   const [detailGame, setDetailGame] = useState(null) // jeu dont on affiche la « fiche jeu » | null
   const [gamePlays, setGamePlays] = useState(null) // parties du jeu affiché (null = chargement)
+  const [historyPlaysOpen, setHistoryPlaysOpen] = useState(false) // ouvrir l'historique direct sur la liste des parties
   const [playerNames, setPlayerNames] = useState([]) // noms déjà utilisés (auto-complétion)
   const [playMeta, setPlayMeta] = useState({}) // { game_id: { count, last } } (tris + cartes)
   const [savingPlay, setSavingPlay] = useState(false)
@@ -791,10 +792,12 @@ export default function App() {
     }
   }
 
-  // Clic sur une carte : ouvre l'historique des parties si le jeu a une fiche,
-  // sinon l'éditeur (pour créer la fiche d'abord).
-  function handleGameClick(g) {
+  // Ouvre l'écran Historique/Stats d'un jeu (si fiche de score), sinon l'éditeur pour créer
+  // la fiche. `showPlays` = ouvrir directement sur la LISTE des parties (bouton « Historique »)
+  // plutôt que sur les stats (bouton « Statistiques »).
+  function openHistory(g, showPlays = false) {
     if (scoresheets && scoresheets[g.id]) {
+      setHistoryPlaysOpen(showPlays)
       setHistoryGame(g)
       setGamePlays(null)
       fetchPlays(g.id).then((p) => setGamePlays(p || [])).catch(() => setGamePlays([]))
@@ -1334,8 +1337,8 @@ export default function App() {
           tagMap={tagMap}
           onClose={() => setDetailGame(null)}
           onZoomImage={(url) => setZoomImage(url)}
-          onNewPlay={() => handleNewPlayFromCard(detailGameLive)}
-          onHistory={() => handleGameClick(detailGameLive)}
+          onStats={() => openHistory(detailGameLive, false)}
+          onHistory={() => openHistory(detailGameLive, true)}
           onCreateSheet={() => setEditingSheet(detailGameLive)}
           onEdit={() => setEditing(detailGameLive)}
           onBgg={detailGameLive.bgg_id && online ? () => window.open(`https://boardgamegeek.com/boardgame/${detailGameLive.bgg_id}`, '_blank', 'noopener') : undefined}
@@ -1521,6 +1524,7 @@ export default function App() {
             plays={gamePlays}
             template={scoresheets?.[historyGame.id]}
             online={online}
+            initialShowPlays={historyPlaysOpen}
             onNewPlay={() => { setEditingPlay(null); setScoringGame(historyGame) }}
             onEditPlay={online ? handleEditPlay : undefined}
             onEditSheet={() => setEditingSheet(historyGame)}

@@ -59,7 +59,7 @@ function Tile({ value, label, holder }) {
   )
 }
 
-export default function GameHistory({ game, plays, template, online, onNewPlay, onEditPlay, onEditSheet, onDeletePlay, onClose }) {
+export default function GameHistory({ game, plays, template, online, initialShowPlays = false, onNewPlay, onEditPlay, onEditSheet, onDeletePlay, onClose }) {
   const win = template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive')
   const scoring = template?.scoring || 'high'
   const isCoop = win === 'coop'
@@ -74,7 +74,7 @@ export default function GameHistory({ game, plays, template, online, onNewPlay, 
     (legacyPlay ? (pl.players || []).map((p) => p?.variant).find(Boolean) : '') ||
     ''
   const loading = plays == null
-  const [showPlays, setShowPlays] = useState(false) // liste des parties repliée par défaut
+  const [showPlays, setShowPlays] = useState(initialShowPlays) // liste des parties (dépliée si ouvert via « Historique »)
 
   // --- Filtres des stats (joueur / période / extension / scénario) ---
   // RIEN n'est coché par défaut → toutes les parties comptent (une sélection vide = pas

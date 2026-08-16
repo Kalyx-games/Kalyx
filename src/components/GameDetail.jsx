@@ -24,7 +24,7 @@ const complexityWord = (n) => (n == null ? '' : n < 2 ? 'Simple' : n < 3 ? 'Moye
 export default function GameDetail({
   game, online, hasSheet, playCount = 0, lastPlayedLabel,
   ownerMap, tagMap,
-  onClose, onZoomImage, onNewPlay, onHistory, onCreateSheet, onEdit, onBgg,
+  onClose, onZoomImage, onStats, onHistory, onCreateSheet, onEdit, onBgg,
 }) {
   const basePlayers = basePlayersSet(game)
   const extraPlayers = effectivePlayersSet(game).filter((n) => !basePlayers.includes(n))
@@ -58,34 +58,36 @@ export default function GameDetail({
         <h2 className="detail-title">{game.name}</h2>
       </div>
 
-      {showImg ? (
-        <button type="button" className="detail-hero" onClick={() => onZoomImage(fullImg)} aria-label="Agrandir l'image">
-          <img
-            src={thumbSrc(fullImg, 512)}
-            alt=""
-            onError={(e) => {
-              // 1er échec (optimiseur) → tente l'image brute ; 2e échec → repli sur le dé.
-              if (e.currentTarget.src !== fullImg) e.currentTarget.src = fullImg
-              else setImgBroken(true)
-            }}
-          />
-        </button>
-      ) : (
-        <div className="detail-hero detail-hero-empty" aria-hidden="true">🎲</div>
-      )}
-
-      {(owners.length > 0 || tags.length > 0) && (
-        <div className="detail-bubbles">
-          {owners.map((o) => {
-            const d = ownerDisplay(o, ownerMap)
-            return <span key={`o-${o}`} className="owner-bubble" style={{ background: d.color }} title={o}>{d.initials}</span>
-          })}
-          {tags.map((t) => {
-            const d = ownerDisplay(t, tagMap)
-            return <span key={`t-${t}`} className="owner-bubble" style={{ background: d.color }} title={t}>{d.initials}</span>
-          })}
-        </div>
-      )}
+      <div className="detail-hero-wrap">
+        {showImg ? (
+          <button type="button" className="detail-hero" onClick={() => onZoomImage(fullImg)} aria-label="Agrandir l'image">
+            <img
+              src={thumbSrc(fullImg, 512)}
+              alt=""
+              onError={(e) => {
+                // 1er échec (optimiseur) → tente l'image brute ; 2e échec → repli sur le dé.
+                if (e.currentTarget.src !== fullImg) e.currentTarget.src = fullImg
+                else setImgBroken(true)
+              }}
+            />
+          </button>
+        ) : (
+          <div className="detail-hero detail-hero-empty" aria-hidden="true">🎲</div>
+        )}
+        {/* Propriétaires + tags empilés en bas à gauche de l'image (comme les cartes) → gain de place. */}
+        {(owners.length > 0 || tags.length > 0) && (
+          <div className="detail-bubbles" onClick={(e) => e.stopPropagation()}>
+            {owners.map((o) => {
+              const d = ownerDisplay(o, ownerMap)
+              return <span key={`o-${o}`} className="owner-bubble" style={{ background: d.color }} title={o}>{d.initials}</span>
+            })}
+            {tags.map((t) => {
+              const d = ownerDisplay(t, tagMap)
+              return <span key={`t-${t}`} className="owner-bubble" style={{ background: d.color }} title={t}>{d.initials}</span>
+            })}
+          </div>
+        )}
+      </div>
 
       <div className="detail-infos">
         <div className="detail-info"><span className="detail-info-k">👥 Joueurs</span><span className="detail-info-v">{playersText}</span></div>
@@ -108,20 +110,19 @@ export default function GameDetail({
 
       <div className="detail-actions">
         {hasSheet ? (
-          <>
-            <button type="button" className="btn-primary detail-primary" onClick={onNewPlay} disabled={!online}>🎲 Nouvelle partie</button>
-            <div className="detail-grid">
-              <button type="button" className="btn-ghost" onClick={onHistory} disabled={!online}>📚 Historique et stats</button>
-              <button type="button" className="btn-ghost" onClick={onEdit} disabled={!online}>✏️ Modifier</button>
-              {onBgg && <button type="button" className="btn-ghost" onClick={onBgg}>Fiche BGG ↗</button>}
-            </div>
-          </>
+          // Ordre demandé : Statistiques · Historique · Modifier le jeu · BGG (grille 2×2).
+          <div className="detail-grid">
+            <button type="button" className="btn-ghost" onClick={onStats} disabled={!online}>📊 Statistiques</button>
+            <button type="button" className="btn-ghost" onClick={onHistory} disabled={!online}>📚 Historique</button>
+            <button type="button" className="btn-ghost" onClick={onEdit} disabled={!online}>✏️ Modifier le jeu</button>
+            {onBgg && <button type="button" className="btn-ghost" onClick={onBgg}>BGG ↗</button>}
+          </div>
         ) : (
           <>
             <button type="button" className="btn-primary detail-primary" onClick={onCreateSheet} disabled={!online}>🧮 Créer la fiche de score</button>
             <div className="detail-grid">
-              <button type="button" className="btn-ghost" onClick={onEdit} disabled={!online}>✏️ Modifier</button>
-              {onBgg && <button type="button" className="btn-ghost" onClick={onBgg}>Fiche BGG ↗</button>}
+              <button type="button" className="btn-ghost" onClick={onEdit} disabled={!online}>✏️ Modifier le jeu</button>
+              {onBgg && <button type="button" className="btn-ghost" onClick={onBgg}>BGG ↗</button>}
             </div>
           </>
         )}
