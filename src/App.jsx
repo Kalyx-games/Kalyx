@@ -1207,7 +1207,7 @@ export default function App() {
           setFilters={setFilters}
           showPrice={!statsOpen && view === 'wishlist'}
           showTags={statsOpen || view !== 'wishlist'}
-          activeCount={activeFilterCount}
+          resetCount={activeFilterCount - (filters.owners.length ? 1 : 0)}
           visibleCount={statsOpen ? statsGames.length : visible.length}
           onReset={resetFilters}
           onClose={() => setShowFilters(false)}

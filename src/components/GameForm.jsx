@@ -363,23 +363,11 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
             </p>
           )}
 
-          {/* Statut d'abord : il commande l'affichage des champs conditionnels (prix / tags / extensions). */}
-          <div className="field">
-            <span className="field-label">Statut</span>
-            <div className="chips">
-              <button type="button" className={`fchip icon-chip ${form.status === 'collection' ? 'on' : ''}`} onClick={() => setForm((f) => ({ ...f, status: 'collection' }))}>
-                <CollectionIcon size={17} /> Collection
-              </button>
-              <button type="button" className={`fchip icon-chip ${form.status === 'wishlist' ? 'on' : ''}`} onClick={() => setForm((f) => ({ ...f, status: 'wishlist' }))}>
-                <WishlistIcon size={17} /> Wishlist
-              </button>
-            </div>
-          </div>
-
           <div className="autofill">
-            <button type="button" className="price-btn bgg-btn" onClick={searchBgg} disabled={!form.name.trim() || bggLoading}>
-              🎲 {bggLoading && !bggResults && !bggFilled ? 'Recherche…' : 'Chercher sur BoardGameGeek'}
-            </button>
+            <p className="bgg-hint">🎲 Tape le nom puis <b>Entrée</b> pour chercher sur BoardGameGeek.</p>
+            {bggLoading && !bggResults && !bggFilled && (
+              <div className="price-found"><span>🔎 Recherche sur BoardGameGeek…</span></div>
+            )}
             {bggResults && bggResults.length > 0 && (
               <div className="bgg-results">
                 {bggResults.map((res) => (
@@ -562,6 +550,18 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
               </button>
             </div>
           )}
+
+          <div className="field">
+            <span className="field-label">Statut</span>
+            <div className="chips">
+              <button type="button" className={`fchip icon-chip ${form.status === 'collection' ? 'on' : ''}`} onClick={() => setForm((f) => ({ ...f, status: 'collection' }))}>
+                <CollectionIcon size={17} /> Collection
+              </button>
+              <button type="button" className={`fchip icon-chip ${form.status === 'wishlist' ? 'on' : ''}`} onClick={() => setForm((f) => ({ ...f, status: 'wishlist' }))}>
+                <WishlistIcon size={17} /> Wishlist
+              </button>
+            </div>
+          </div>
 
           </div>
 
