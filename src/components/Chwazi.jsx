@@ -118,13 +118,12 @@ export default function Chwazi({ onClose }) {
       for (let i = 0; i < t; i++) hues.push(nextHue(hues))
       setResult({ type: 'teams', assign, colors: hues.map(colorForHue) })
     }
-    vibrate([120, 60, 260]) // révélation : buzz court puis long (Android ; iOS n'a pas l'API vibration)
-    playReveal()
+    playReveal() // la révélation reste SONORE ; la vibration est réservée au poser d'un doigt
   }
 
   // Décompte (invisible) : démarre dès qu'il y a ≥ 2 doigts et repart de zéro si un
-  // doigt est ajouté ou retiré. Le chiffre n'est plus affiché ; seul l'uplifter et la
-  // vibration marquent l'attente.
+  // doigt est ajouté ou retiré. Le chiffre n'est plus affiché ; seul l'uplifter (son)
+  // marque l'attente (la vibration est réservée au POSER d'un doigt).
   useEffect(() => {
     if (result || count < minFingers) return
     let n = COUNTDOWN_START
@@ -134,8 +133,6 @@ export default function Chwazi({ onClose }) {
       if (n <= 0) {
         clearInterval(iv)
         runPick()
-      } else {
-        vibrate(35)
       }
     }, 1000)
     return () => {
@@ -194,15 +191,17 @@ export default function Chwazi({ onClose }) {
   }, [])
 
   const addPointer = (e) => {
+    if (result) return // pendant l'affichage du résultat, on n'ajoute plus (ni vibration)
+    // (La sélection est remise à zéro quand l'écran redevient vide, cf. useEffect.)
+    // Vibration EN PREMIER (avant le plein écran et le son) → latence minimale : le retour
+    // haptique se déclenche à l'instant précis où le doigt se pose.
+    vibrate(18)
     enterFullscreen() // 1er doigt (geste utilisateur) → masque la barre système
     setMenuOpen(false)
-    if (result) return // pendant l'affichage du résultat, on n'ajoute plus
-    // (La sélection est remise à zéro quand l'écran redevient vide, cf. useEffect.)
     const hue = nextHue(usedHuesRef.current)
     usedHuesRef.current = [...usedHuesRef.current, hue]
     const color = colorForHue(hue)
     playFinger(Object.keys(pointersRef.current).length)
-    vibrate(18) // petit retour haptique DANS le geste (le plus fiable) quand un doigt se pose
     setPointers((prev) => ({ ...prev, [e.pointerId]: { x: e.clientX, y: e.clientY, color } }))
   }
   const movePointer = (e) => {

@@ -364,7 +364,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
           )}
 
           <div className="autofill">
-            <p className="bgg-hint">🎲 Tape le nom puis <b>Entrée</b> pour chercher sur BoardGameGeek.</p>
+            <p className="bgg-hint">Tape le nom puis <b>Entrée</b>.</p>
             {bggLoading && !bggResults && !bggFilled && (
               <div className="price-found"><span>🔎 Recherche sur BoardGameGeek…</span></div>
             )}

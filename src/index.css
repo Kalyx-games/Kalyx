@@ -223,9 +223,10 @@ body {
 .brand img {
   border-radius: 10px;
 }
-/* Écran étroit (téléphone en portrait) : on masque le nom « Kalyx » (le logo suffit) pour
-   désencombrer le bandeau du haut (indicateur en ligne + Chwazi + Réglages respirent). */
-@media (max-width: 400px) {
+/* Téléphone ÉTROIT seulement (≤360px : Galaxy base, vieux modèles) : on masque le nom
+   « Kalyx » (le logo suffit) pour désencombrer le bandeau. Les téléphones plus larges
+   gardent le nom (Pixel 9a ≈412px, Galaxy S25+ ≈480px, iPhones 375–430px). */
+@media (max-width: 360px) {
   .brand span { display: none; }
 }
 

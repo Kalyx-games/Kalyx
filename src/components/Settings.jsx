@@ -66,23 +66,6 @@ export default function Settings({
   const fileRef = useRef(null)
   const [theme, setThemeState] = useState(getTheme())
   const [copied, setCopied] = useState(false)
-  const [vibeMsg, setVibeMsg] = useState('')
-
-  // Test de vibration : appelé DANS le geste (le plus fiable). ⚠️ On ne peut pas savoir en JS
-  // si le téléphone a VRAIMENT vibré : Firefox Android, par ex., expose l'API et renvoie
-  // « true » mais ne vibre pas (désactivée volontairement). Donc on demande à l'utilisateur.
-  const testVibration = () => {
-    if (!('vibrate' in navigator)) {
-      setVibeMsg("Ton navigateur ne propose pas la vibration. Essaie Chrome ou Samsung Internet.")
-      return
-    }
-    try {
-      navigator.vibrate([150, 80, 150, 80, 400]) // motif long et net, impossible à rater
-    } catch {
-      /* ignore */
-    }
-    setVibeMsg("Tu as senti une vibration ? Sinon : Firefox Android la bloque (essaie Chrome), ou vérifie Paramètres → Sons et vibration → Intensité des vibrations (« Interaction tactile » et « Système » au max) et désactive l'économie d'énergie.")
-  }
 
   // QR code du lien de l'app (généré une fois, sans réseau ni service externe).
   const qrDataUrl = useMemo(() => {
@@ -159,14 +142,6 @@ export default function Settings({
             </button>
           ))}
         </div>
-      </section>
-
-      <section className="settings-card">
-        <h3>Vibration</h3>
-        <button type="button" className="btn-ghost settings-open" onClick={testVibration}>
-          📳 Tester la vibration
-        </button>
-        {vibeMsg && <p className="muted" style={{ margin: '10px 0 0' }}>{vibeMsg}</p>}
       </section>
 
       <section className="settings-card">
