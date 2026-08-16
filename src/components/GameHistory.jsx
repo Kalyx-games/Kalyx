@@ -59,7 +59,9 @@ function Tile({ value, label, holder }) {
   )
 }
 
-export default function GameHistory({ game, plays, template, online, initialShowPlays = false, onNewPlay, onEditPlay, onEditSheet, onDeletePlay, onClose }) {
+// `view` : 'stats' (uniquement les statistiques du jeu) | 'plays' (uniquement la liste
+// des parties). Le bouton « Nouvelle partie » n'est PLUS ici (il est sur la fiche jeu).
+export default function GameHistory({ game, plays, template, online, view = 'stats', onEditPlay, onEditSheet, onDeletePlay, onClose }) {
   const win = template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive')
   const scoring = template?.scoring || 'high'
   const isCoop = win === 'coop'
@@ -74,7 +76,7 @@ export default function GameHistory({ game, plays, template, online, initialShow
     (legacyPlay ? (pl.players || []).map((p) => p?.variant).find(Boolean) : '') ||
     ''
   const loading = plays == null
-  const [showPlays, setShowPlays] = useState(initialShowPlays) // liste des parties (dépliée si ouvert via « Historique »)
+  const isPlaysView = view === 'plays' // 'plays' = écran Historique (liste seule) ; 'stats' = écran Statistiques
 
   // --- Filtres des stats (joueur / période / extension / scénario) ---
   // RIEN n'est coché par défaut → toutes les parties comptent (une sélection vide = pas
@@ -302,16 +304,10 @@ export default function GameHistory({ game, plays, template, online, initialShow
     <div className="sheet hist-sheet">
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">←</button>
-        <h2 className="sheet-title">📚 {game?.name}</h2>
+        <h2 className="sheet-title">{isPlaysView ? '🗓️' : '📊'} {game?.name}</h2>
         {onEditSheet && (
-          <button type="button" className="back-btn sheet-edit-btn" onClick={onEditSheet} disabled={!online} title={online ? 'Modifier la fiche' : 'Indisponible hors ligne'} aria-label="Modifier la fiche">✏️</button>
+          <button type="button" className="back-btn sheet-edit-btn" onClick={onEditSheet} disabled={!online} title={online ? 'Modifier la fiche de score' : 'Indisponible hors ligne'} aria-label="Modifier la fiche de score">✏️</button>
         )}
-      </div>
-
-      <div className="hist-newplay">
-        <button type="button" className="btn-primary" onClick={onNewPlay} disabled={!online}>
-          🎲 Nouvelle partie
-        </button>
       </div>
 
       {loading ? (
@@ -431,8 +427,10 @@ export default function GameHistory({ game, plays, template, online, initialShow
             <p className="empty" style={{ padding: 24 }}>Aucune partie ne correspond aux filtres.</p>
           ) : (
           <>
+          {!isPlaysView && (
+          <>
           <div className="stat-tiles">
-            {/* Pas de tuile « parties jouées » : le bouton dépliant en bas l'indique déjà. */}
+            {/* Écran « Statistiques » : uniquement les stats (pas la liste des parties). */}
             {isCoop && (
               <Tile value={stats.winRate != null ? `${stats.winRate} %` : '—'} label="taux de victoire" />
             )}
@@ -656,12 +654,9 @@ export default function GameHistory({ game, plays, template, online, initialShow
             </section>
           )}
 
-          <section className="stat-block">
-            <button type="button" className="hist-toggle" onClick={() => setShowPlays((v) => !v)} aria-expanded={showPlays}>
-              <span>🗓️ {showPlays ? 'Masquer' : 'Voir'} les {stats.total} partie{stats.total > 1 ? 's' : ''}</span>
-              <span className={`hist-toggle-chev ${showPlays ? 'up' : ''}`}>▾</span>
-            </button>
-            {showPlays && (
+          </>
+          )}
+          {isPlaysView && (
             <div className="hist-list">
               {filtered.map((pl) => {
                 const coop = !!pl.outcome
@@ -785,8 +780,7 @@ export default function GameHistory({ game, plays, template, online, initialShow
                 )
               })}
             </div>
-            )}
-          </section>
+          )}
           </>
           )}
         </>

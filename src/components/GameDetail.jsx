@@ -24,7 +24,7 @@ const complexityWord = (n) => (n == null ? '' : n < 2 ? 'Simple' : n < 3 ? 'Moye
 export default function GameDetail({
   game, online, hasSheet, playCount = 0, lastPlayedLabel,
   ownerMap, tagMap,
-  onClose, onZoomImage, onStats, onHistory, onCreateSheet, onEdit, onBgg,
+  onClose, onZoomImage, onNewPlay, onStats, onHistory, onCreateSheet, onEdit, onBgg,
 }) {
   const basePlayers = basePlayersSet(game)
   const extraPlayers = effectivePlayersSet(game).filter((n) => !basePlayers.includes(n))
@@ -113,12 +113,14 @@ export default function GameDetail({
 
       <div className="detail-actions">
         {hasSheet ? (
-          // Ordre demandé : Statistiques · Historique · Modifier le jeu · BGG (grille 2×2).
-          <div className="detail-grid">
-            <button type="button" className="btn-ghost" onClick={onStats} disabled={!online}>📊 Statistiques</button>
-            <button type="button" className="btn-ghost" onClick={onHistory} disabled={!online}>📚 Historique</button>
-            <button type="button" className="btn-ghost" onClick={onEdit} disabled={!online}>✏️ Modifier le jeu</button>
-            {onBgg && (
+          <>
+            {/* Gros bouton « Nouvelle partie » en tête, puis les 4 boutons (grille 2×2). */}
+            <button type="button" className="btn-primary detail-primary" onClick={onNewPlay} disabled={!online}>🎲 Nouvelle partie</button>
+            <div className="detail-grid">
+              <button type="button" className="btn-ghost" onClick={onStats} disabled={!online}>📊 Statistiques</button>
+              <button type="button" className="btn-ghost" onClick={onHistory} disabled={!online}>📚 Historique</button>
+              <button type="button" className="btn-ghost" onClick={onEdit} disabled={!online}>✏️ Modifier le jeu</button>
+              {onBgg && (
               <button type="button" className="btn-ghost detail-bgg-btn" onClick={onBgg}>
                 <img
                   className="bgg-logo"
@@ -131,7 +133,8 @@ export default function GameDetail({
                 BGG ↗
               </button>
             )}
-          </div>
+            </div>
+          </>
         ) : (
           <>
             <button type="button" className="btn-primary detail-primary" onClick={onCreateSheet} disabled={!online}>🧮 Créer la fiche de score</button>

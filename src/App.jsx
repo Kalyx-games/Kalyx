@@ -215,7 +215,7 @@ export default function App() {
   const [historyGame, setHistoryGame] = useState(null) // jeu dont on regarde l'historique | null
   const [detailGame, setDetailGame] = useState(null) // jeu dont on affiche la « fiche jeu » | null
   const [gamePlays, setGamePlays] = useState(null) // parties du jeu affiché (null = chargement)
-  const [historyPlaysOpen, setHistoryPlaysOpen] = useState(false) // ouvrir l'historique direct sur la liste des parties
+  const [historyView, setHistoryView] = useState('stats') // 'stats' (écran Statistiques) | 'plays' (écran Historique)
   const [playerNames, setPlayerNames] = useState([]) // noms déjà utilisés (auto-complétion)
   const [playMeta, setPlayMeta] = useState({}) // { game_id: { count, last } } (tris + cartes)
   const [savingPlay, setSavingPlay] = useState(false)
@@ -792,12 +792,11 @@ export default function App() {
     }
   }
 
-  // Ouvre l'écran Historique/Stats d'un jeu (si fiche de score), sinon l'éditeur pour créer
-  // la fiche. `showPlays` = ouvrir directement sur la LISTE des parties (bouton « Historique »)
-  // plutôt que sur les stats (bouton « Statistiques »).
-  function openHistory(g, showPlays = false) {
+  // Ouvre l'écran d'un jeu (si fiche de score existe) : `view` = 'stats' (Statistiques) ou
+  // 'plays' (Historique des parties). Sinon → éditeur pour créer la fiche d'abord.
+  function openHistory(g, view = 'stats') {
     if (scoresheets && scoresheets[g.id]) {
-      setHistoryPlaysOpen(showPlays)
+      setHistoryView(view)
       setHistoryGame(g)
       setGamePlays(null)
       fetchPlays(g.id).then((p) => setGamePlays(p || [])).catch(() => setGamePlays([]))
@@ -1276,8 +1275,7 @@ export default function App() {
                   : () => setDetailGame(g) // collection → la « fiche jeu » (hub : partie, historique, édition, BGG…)
               }
               onImageClick={(url) => setZoomImage(url)}
-              // « Nouvelle partie » depuis le menu de glissement (collection en ligne).
-              onNewPlay={online && view !== 'wishlist' ? () => handleNewPlayFromCard(g) : undefined}
+              // « Nouvelle partie » RETIRÉ du menu de glissement → uniquement sur la fiche jeu.
               // Quand on trie par une info absente des cartes, on l'affiche dessus.
               metaLine={
                 sort === 'lastplayed'
@@ -1337,8 +1335,9 @@ export default function App() {
           tagMap={tagMap}
           onClose={() => setDetailGame(null)}
           onZoomImage={(url) => setZoomImage(url)}
-          onStats={() => openHistory(detailGameLive, false)}
-          onHistory={() => openHistory(detailGameLive, true)}
+          onNewPlay={() => handleNewPlayFromCard(detailGameLive)}
+          onStats={() => openHistory(detailGameLive, 'stats')}
+          onHistory={() => openHistory(detailGameLive, 'plays')}
           onCreateSheet={() => setEditingSheet(detailGameLive)}
           onEdit={() => setEditing(detailGameLive)}
           onBgg={detailGameLive.bgg_id && online ? () => window.open(`https://boardgamegeek.com/boardgame/${detailGameLive.bgg_id}`, '_blank', 'noopener') : undefined}
@@ -1524,8 +1523,7 @@ export default function App() {
             plays={gamePlays}
             template={scoresheets?.[historyGame.id]}
             online={online}
-            initialShowPlays={historyPlaysOpen}
-            onNewPlay={() => { setEditingPlay(null); setScoringGame(historyGame) }}
+            view={historyView}
             onEditPlay={online ? handleEditPlay : undefined}
             onEditSheet={() => setEditingSheet(historyGame)}
             onDeletePlay={(pl) => setConfirmingPlay(pl)}

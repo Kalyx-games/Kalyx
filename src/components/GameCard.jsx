@@ -42,7 +42,7 @@ function durationLabel(g) {
 // dernière ouverte pour la refermer quand une autre s'ouvre.
 let openCard = null // { close: () => void }
 
-function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick, onImageClick, metaLine, ownerMap, tagMap, index = 0 }) {
+function GameCard({ game, online, onEdit, onMove, onBgg, onCardClick, onImageClick, metaLine, ownerMap, tagMap, index = 0 }) {
   const complexity = game.complexity ? Number(game.complexity) : null
   // Complexité sur 3 barres : plafonnée à 3, arrondie au demi près (remplissage partiel possible).
   const cx = complexity ? Math.min(3, complexity) : 0
@@ -159,8 +159,8 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
       bg: '#475569',
       run: onBgg,
     })
-  // Actions « tout à droite » (les plus accessibles au pouce), une par vue :
-  if (onNewPlay) actions.push({ key: 'play', label: 'Partie', ico: '🎲', bg: '#0d9488', run: onNewPlay })
+  // Action « tout à droite » (la plus accessible au pouce) en wishlist :
+  // (« Nouvelle partie » n'est plus au swipe → uniquement sur la fiche jeu.)
   if (onMove) actions.push({ key: 'move', label: 'Vers collection', node: <CollectionIcon size={20} color="#fff" />, bg: '#16a34a', run: onMove })
   const menuW = actions.length * ACTION_W
   const OPEN = -menuW
