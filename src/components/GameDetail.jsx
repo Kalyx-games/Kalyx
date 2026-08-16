@@ -47,7 +47,6 @@ export default function GameDetail({
 
   // Sondage BGG « nombre de joueurs » (si stocké) : { total, rows:[{n,best,rec,notRec}] }.
   const poll = game.bgg_poll && Array.isArray(game.bgg_poll.rows) && game.bgg_poll.rows.length ? game.bgg_poll : null
-  const pct = (v, sum) => (sum > 0 ? `${Math.round((v / sum) * 100)}%` : '0%')
 
   // Repli si l'image ne charge pas (optimiseur ET image brute en échec) → on montre le dé
   // au lieu d'une icône d'image cassée (cohérent avec la carte).
@@ -168,15 +167,29 @@ export default function GameDetail({
             <span className="poll-key"><span className="poll-dot poll-not" />Déconseillé</span>
           </div>
           {poll.rows.map((r) => {
-            const sum = (r.best || 0) + (r.rec || 0) + (r.notRec || 0)
+            const best = r.best || 0
+            const rec = r.rec || 0
+            const notRec = r.notRec || 0
+            const sum = best + rec + notRec
+            const p = (v) => (sum > 0 ? Math.round((v / sum) * 100) : 0)
+            const pb = p(best)
+            const pr = p(rec)
+            const pn = p(notRec)
             return (
               <div className="poll-row" key={r.n}>
                 <span className="poll-n">{r.n}</span>
-                <span className="poll-bar" title={`Idéal ${r.best} · Recommandé ${r.rec} · Déconseillé ${r.notRec}`}>
-                  <span className="poll-seg poll-best" style={{ width: pct(r.best || 0, sum) }} />
-                  <span className="poll-seg poll-rec" style={{ width: pct(r.rec || 0, sum) }} />
-                  <span className="poll-seg poll-not" style={{ width: pct(r.notRec || 0, sum) }} />
-                </span>
+                <div className="poll-rowbody">
+                  <span className="poll-bar">
+                    <span className="poll-seg poll-best" style={{ width: `${pb}%` }} />
+                    <span className="poll-seg poll-rec" style={{ width: `${pr}%` }} />
+                    <span className="poll-seg poll-not" style={{ width: `${pn}%` }} />
+                  </span>
+                  <span className="poll-pcts">
+                    <span className="poll-pct poll-pct-best">{pb}%</span>
+                    <span className="poll-pct poll-pct-rec">{pr}%</span>
+                    <span className="poll-pct poll-pct-not">{pn}%</span>
+                  </span>
+                </div>
                 <span className="poll-votes">{sum}</span>
               </div>
             )

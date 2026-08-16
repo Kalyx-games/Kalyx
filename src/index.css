@@ -2693,13 +2693,19 @@ body {
 .poll-best { background: #eab308; } /* jaune, comme l'étoile ⭐ « idéal » */
 .poll-rec { background: #2f6df6; }
 .poll-not { background: #d1495b; }
-.poll-row { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
+.poll-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
 .poll-n { width: 30px; flex-shrink: 0; font-weight: 600; font-size: 0.9rem; text-align: right; }
-.poll-bar { flex: 1; min-width: 0; height: 14px; border-radius: 7px; overflow: hidden; display: flex; background: var(--soft); }
+.poll-rowbody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.poll-bar { width: 100%; height: 12px; border-radius: 6px; overflow: hidden; display: flex; background: var(--soft); }
 .poll-seg { height: 100%; }
 .poll-seg.poll-best { background: #eab308; } /* jaune (idéal), assorti à l'étoile */
 .poll-seg.poll-rec { background: #2f6df6; }
 .poll-seg.poll-not { background: #d1495b; }
+/* Pourcentages sous la barre, dans le même ordre que les segments (idéal · recommandé · déconseillé). */
+.poll-pcts { display: flex; gap: 12px; font-size: 0.72rem; font-weight: 700; }
+.poll-pct-best { color: #c99000; } /* or plus foncé → lisible sur fond clair ET sombre */
+.poll-pct-rec { color: #2f6df6; }
+.poll-pct-not { color: #d1495b; }
 .poll-votes { width: 30px; flex-shrink: 0; text-align: right; font-size: 0.8rem; color: var(--muted); }
 .sheet-title {
   font-size: 1.3rem;
