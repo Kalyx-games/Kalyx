@@ -455,6 +455,7 @@ body {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  flex: 1; /* prend la place à gauche du tri (pour les puces de filtres) */
 }
 .filter-toggle {
   display: inline-flex;
@@ -1399,120 +1400,32 @@ body {
   box-shadow: none;
   cursor: not-allowed;
 }
-/* Bouton scan : au-dessus du + */
-.fab-scan {
-  bottom: calc(146px + env(safe-area-inset-bottom));
-  width: 52px;
-  height: 52px;
-  background: linear-gradient(135deg, #0d9488, #14b8a6);
-  box-shadow: 0 12px 26px rgba(13, 148, 136, 0.42);
+/* Bouton flottant « Filtrer » : au-dessus du + sur la liste (fab-above), seul en bas sur les stats. */
+.fab-above {
+  bottom: calc(148px + env(safe-area-inset-bottom));
 }
-
-/* ---- Scanner de code-barres ---- */
-.scanner {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: #111013;
-  color: #fff;
-  display: flex;
-  flex-direction: column;
+.fab-filter {
+  background: var(--card);
+  color: var(--primary);
+  border: 1.5px solid var(--line);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
 }
-.scanner-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  padding-top: max(14px, env(safe-area-inset-top));
-}
-.scanner-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-}
-.scanner-close {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
-  font-size: 1.1rem;
-  cursor: pointer;
-}
-.scanner-video-wrap {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  background: #000;
-}
-.scanner-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.scanner-frame {
+.fab-badge {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 74%;
-  height: 34%;
-  border: 3px solid rgba(255, 255, 255, 0.9);
-  border-radius: 14px;
-  box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.35);
-}
-.scanner-busy {
-  position: absolute;
-  inset: 0;
+  top: -2px;
+  right: -2px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-.scanner-error {
-  text-align: center;
-  padding: 12px 20px;
-  color: #fca5a5;
-  font-size: 0.9rem;
-}
-.scanner-manual {
-  display: flex;
-  gap: 8px;
-  padding: 14px 16px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom));
-}
-.scanner-manual input {
-  flex: 1;
-  min-width: 0;
-  height: 46px;
-  padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  font-size: 1rem;
-}
-.scanner-manual input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
-}
-.scanner-manual button {
-  flex-shrink: 0;
-  padding: 0 22px;
-  height: 46px;
-  border-radius: 10px;
-  border: none;
-  background: #fff;
-  color: #111013;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-.scanner-manual button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+  border: 2px solid var(--bg);
 }
 
 /* ---- Fenêtres modales ---- */
@@ -3721,8 +3634,9 @@ body {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  margin-top: 8px;
-  padding: 0 16px 2px; /* aligne les puces sur la recherche/les cartes (inset 16px) */
+  flex: 1;
+  min-width: 0; /* les puces défilent à gauche du tri sans le pousser hors écran */
+  padding-bottom: 2px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -3898,4 +3812,49 @@ body {
   padding: 1px 6px;
   border-radius: 999px;
   vertical-align: middle;
+}
+
+/* ---- Menu flottant des filtres (ouvert par le bouton flottant) ---- */
+.filter-sheet {
+  width: 100%;
+  max-width: var(--app-w);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-radius: 18px 18px 0 0;
+  overflow: hidden;
+  animation: kx-sheet-up 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) { .filter-sheet { animation: none; } }
+.filter-sheet-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 8px;
+}
+.filter-sheet-head h2 { margin: 0; font-size: 1.2rem; }
+.filter-sheet-close {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+.filter-sheet-body {
+  overflow-y: auto;
+  padding: 0 16px 16px;
+  -webkit-overflow-scrolling: touch;
+}
+/* Dans le menu flottant, la barre du haut des filtres colle en haut au défilement. */
+.filter-sheet-body .filters-top {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 1;
+  padding-top: 6px;
 }

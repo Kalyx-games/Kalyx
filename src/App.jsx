@@ -19,15 +19,13 @@ import Filters from './components/Filters'
 import ImageZoom from './components/ImageZoom'
 import CodeDialog from './components/CodeDialog'
 import ChangeCodeDialog from './components/ChangeCodeDialog'
-// Écrans lourds ou rarement ouverts : chargés à la demande (allège le bundle de départ ;
-// le scanner embarque ZXing, ~470 Ko, inutile tant qu'on ne scanne pas).
+// Écrans lourds ou rarement ouverts : chargés à la demande (allège le bundle de départ).
 // lazyRetry : recharge la page si un morceau échoue à se télécharger (ancien chunk après
 // déploiement) → plus d'écran blanc « définitif » en changeant d'onglet.
 const Settings = lazyRetry(() => import('./components/Settings'))
 const PlayersManager = lazyRetry(() => import('./components/PlayersManager'))
 const Stats = lazyRetry(() => import('./components/Stats'))
 const Chwazi = lazyRetry(() => import('./components/Chwazi'))
-const BarcodeScanner = lazyRetry(() => import('./components/BarcodeScanner'))
 const ScoreSheet = lazyRetry(() => import('./components/ScoreSheet'))
 const ScoreSheetEditor = lazyRetry(() => import('./components/ScoreSheetEditor'))
 const GameHistory = lazyRetry(() => import('./components/GameHistory'))
@@ -36,7 +34,7 @@ const TierlistView = lazyRetry(() => import('./components/TierlistView'))
 import SkeletonCard from './components/SkeletonCard'
 import { enterFullscreen } from './lib/fullscreen'
 import NavBar from './components/NavBar'
-import { SettingsIcon, ChwaziIcon, BarcodeIcon } from './components/icons'
+import { SettingsIcon, ChwaziIcon, FilterIcon } from './components/icons'
 
 
 // Le filtre propriétaire est PERSISTANT (un seul propriétaire regarde en général ses
@@ -201,9 +199,6 @@ export default function App() {
   const [restoreBusy, setRestoreBusy] = useState(false)
   const [backupBusy, setBackupBusy] = useState(false)
   const autoBackupRef = useRef(false) // pour ne lancer la sauvegarde auto qu'une fois par chargement
-  const [scanOpen, setScanOpen] = useState(false) // scanner de code-barres
-  const [scanBusy, setScanBusy] = useState(false)
-  const [scanPrefill, setScanPrefill] = useState(null) // champs pré-remplis après un scan
   const [zoomImage, setZoomImage] = useState(null) // image affichée en grand (lightbox)
   const [ownersList, setOwnersList] = useState(null) // lignes de la table owners, ou null si absente
   const [tagsList, setTagsList] = useState(null) // lignes de la table tags, ou null si absente
@@ -295,14 +290,14 @@ export default function App() {
   // se ferme jamais : on remet toujours une entrée d'historique "piège".
   const viewHistoryRef = useRef([]) // vues précédentes (pour revenir en arrière)
   const uiRef = useRef({})
-  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scanOpen, chwaziOpen, editingSheet, scoringGame, historyGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
+  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
   viewRef.current = view
 
   // Nombre de "couches" ouvertes (fenêtres/onglets superposés).
   const layerCount =
     (editing ? 1 : 0) + (confirming ? 1 : 0) + (moving ? 1 : 0) + (confirmingOwner ? 1 : 0) + (confirmingTag ? 1 : 0) +
-    (importing ? 1 : 0) + (restoring ? 1 : 0) + (confirmingPlay ? 1 : 0) + (confirmingTierlist ? 1 : 0) + (scanOpen ? 1 : 0) + (chwaziOpen ? 1 : 0) +
+    (importing ? 1 : 0) + (restoring ? 1 : 0) + (confirmingPlay ? 1 : 0) + (confirmingTierlist ? 1 : 0) + (showFilters ? 1 : 0) + (chwaziOpen ? 1 : 0) +
     (editingSheet ? 1 : 0) + (scoringGame ? 1 : 0) + (historyGame ? 1 : 0) + (statsOpen ? 1 : 0) +
     (tierlistView ? 1 : 0) + (tierlistHub ? 1 : 0) +
     (playersOpen ? 1 : 0) + (settingsOpen ? 1 : 0) + (zoomImage ? 1 : 0)
@@ -331,7 +326,7 @@ export default function App() {
     else if (s.confirmingPlay) setConfirmingPlay(null)
     else if (s.confirmingTierlist) setConfirmingTierlist(false)
     else if (s.editing) setEditing(null)
-    else if (s.scanOpen) setScanOpen(false)
+    else if (s.showFilters) setShowFilters(false)
     else if (s.chwaziOpen) setChwaziOpen(false)
     else if (s.editingSheet) setEditingSheet(null)
     else if (s.scoringGame) { setScoringGame(null); setEditingPlay(null) }
@@ -694,37 +689,6 @@ export default function App() {
       setError(e.message)
     }
   }
-  // Code-barres détecté → on cherche le jeu sur Philibert puis on ouvre le formulaire pré-rempli.
-  const handleDetected = useCallback(
-    async (code) => {
-      setScanBusy(true)
-      setError(null)
-      try {
-        const r = await fetch(`/api/price?name=${encodeURIComponent(code)}`)
-        const data = await r.json()
-        if (data && data.found && (data.name || data.image)) {
-          setScanPrefill({
-            name: data.name || '',
-            image_url: data.image || '',
-            price: data.price != null ? String(data.price) : '',
-          })
-          showToast('')
-        } else {
-          setScanPrefill(null)
-          showToast('Jeu introuvable pour ce code — ajoute-le à la main.')
-        }
-      } catch {
-        setScanPrefill(null)
-        showToast('Recherche impossible — ajoute le jeu à la main.')
-      } finally {
-        setScanBusy(false)
-        setScanOpen(false)
-        setEditing('new')
-      }
-    },
-    []
-  )
-
   async function handleConfirmImport() {
     if (!importing) return
     setImportBusy(true)
@@ -1171,80 +1135,85 @@ export default function App() {
         </div>
       </div>
 
-      <div className="controls-row2">
-        <div className="row2-left">
-          <button
-            type="button"
-            className={`filter-toggle ${activeFilterCount ? 'active' : ''}`}
-            onClick={() => setShowFilters((s) => !s)}
-            aria-expanded={showFilters}
-          >
-            Filtres
-            {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
-            <span className={`filter-chev ${showFilters ? 'up' : ''}`}>▾</span>
-          </button>
-          {!statsOpen && <span className="count">{games === null ? '' : countLabel}</span>}
-        </div>
-        {!statsOpen && (
-          <div className="sortwrap">
-            <SortMenu
-              value={sort}
-              options={sortOptions}
-              onChange={(v) => {
-                setSort(v)
-                if (v === 'random') setShuffleSeed((s) => s + 1) // reclic sur "Aléatoire" → nouveau mélange
-              }}
-            />
-            {sort === 'random' ? (
-              // En tri aléatoire : le bouton devient un dé pour re-mélanger à volonté.
-              <button
-                type="button"
-                className="sortdir sortdir-die"
-                onClick={() => setShuffleSeed((s) => s + 1)}
-                title="Re-mélanger"
-                aria-label="Re-mélanger"
-              >
-                🎲
-              </button>
+      {/* Ligne 2 : les puces de filtres actifs (à gauche, défilables) + le tri (à droite).
+          Le bouton « Filtres » a disparu d'ici → il est désormais un bouton flottant. */}
+      {(!statsOpen || activeChips.length > 0) && (
+        <div className="controls-row2">
+          <div className="row2-left">
+            {activeChips.length > 0 ? (
+              <div className="active-filters">
+                {activeChips.map((c) => (
+                  <button key={c.key} type="button" className="active-chip" onClick={c.remove} aria-label={`Retirer le filtre ${c.label}`}>
+                    <span>{c.label}</span>
+                    <span className="active-chip-x">×</span>
+                  </button>
+                ))}
+              </div>
             ) : (
-              <button
-                type="button"
-                className="sortdir"
-                onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
-                title={sortDir === 'asc' ? 'Croissant (cliquer pour décroissant)' : 'Décroissant (cliquer pour croissant)'}
-                aria-label="Sens du tri"
-              >
-                {sortDir === 'asc' ? '↑' : '↓'}
-              </button>
+              !statsOpen && <span className="count">{games === null ? '' : countLabel}</span>
             )}
           </div>
-        )}
-      </div>
-
-      {activeChips.length > 0 && (
-        <div className="active-filters">
-          {activeChips.map((c) => (
-            <button key={c.key} type="button" className="active-chip" onClick={c.remove} aria-label={`Retirer le filtre ${c.label}`}>
-              <span>{c.label}</span>
-              <span className="active-chip-x">×</span>
-            </button>
-          ))}
+          {!statsOpen && (
+            <div className="sortwrap">
+              <SortMenu
+                value={sort}
+                options={sortOptions}
+                onChange={(v) => {
+                  setSort(v)
+                  if (v === 'random') setShuffleSeed((s) => s + 1) // reclic sur "Aléatoire" → nouveau mélange
+                }}
+              />
+              {sort === 'random' ? (
+                // En tri aléatoire : le bouton devient un dé pour re-mélanger à volonté.
+                <button
+                  type="button"
+                  className="sortdir sortdir-die"
+                  onClick={() => setShuffleSeed((s) => s + 1)}
+                  title="Re-mélanger"
+                  aria-label="Re-mélanger"
+                >
+                  🎲
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="sortdir"
+                  onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                  title={sortDir === 'asc' ? 'Croissant (cliquer pour décroissant)' : 'Décroissant (cliquer pour croissant)'}
+                  aria-label="Sens du tri"
+                >
+                  {sortDir === 'asc' ? '↑' : '↓'}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
+      {/* Filtres en MENU FLOTTANT (ouvert par le bouton flottant) : bloque l'arrière-plan. */}
       {showFilters && (
-        <Filters
-          owners={allOwners}
-          tags={allTags}
-          filters={filters}
-          setFilters={setFilters}
-          showPrice={!statsOpen && view === 'wishlist'}
-          showTags={statsOpen || view !== 'wishlist'}
-          resetCount={activeFilterCount - (filters.owners.length ? 1 : 0)}
-          visibleCount={statsOpen ? statsGames.length : visible.length}
-          onReset={resetFilters}
-          onClose={() => setShowFilters(false)}
-        />
+        <div className="modal-backdrop filter-backdrop" onClick={() => setShowFilters(false)}>
+          <div className="filter-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="filter-sheet-head">
+              <h2>Filtres</h2>
+              <button type="button" className="filter-sheet-close" onClick={() => setShowFilters(false)} aria-label="Fermer les filtres">×</button>
+            </div>
+            <div className="filter-sheet-body">
+              <Filters
+                owners={allOwners}
+                tags={allTags}
+                filters={filters}
+                setFilters={setFilters}
+                showPrice={!statsOpen && view === 'wishlist'}
+                showTags={statsOpen || view !== 'wishlist'}
+                resetCount={activeFilterCount - (filters.owners.length ? 1 : 0)}
+                visibleCount={statsOpen ? statsGames.length : visible.length}
+                onReset={resetFilters}
+                onClose={() => setShowFilters(false)}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {statsOpen ? (
@@ -1325,29 +1294,26 @@ export default function App() {
       </main>
       )}
 
+      {/* Filtre : accessible partout où filtrer a un sens (liste ET stats). Marche hors ligne. */}
+      <button
+        className={`fab fab-filter ${statsOpen ? '' : 'fab-above'}`}
+        onClick={() => setShowFilters(true)}
+        title="Filtrer les jeux"
+        aria-label="Filtrer les jeux"
+      >
+        <FilterIcon size={21} color="currentColor" />
+        {activeFilterCount > 0 && <span className="fab-badge">{activeFilterCount}</span>}
+      </button>
       {!statsOpen && (
-        <>
-          <button
-            className="fab fab-scan"
-            onClick={() => setScanOpen(true)}
-            disabled={!online || games === null}
-            title={online ? 'Scanner un code-barres' : 'Indisponible hors ligne'}
-            aria-label="Scanner un code-barres"
-          >
-            <BarcodeIcon size={22} />
-          </button>
-          <button
-            className="fab"
-            onClick={() => {
-              setScanPrefill(null)
-              setEditing('new')
-            }}
-            disabled={!online || games === null}
-            title={online ? 'Ajouter un jeu' : 'Indisponible hors ligne'}
-          >
-            +
-          </button>
-        </>
+        <button
+          className="fab"
+          onClick={() => setEditing('new')}
+          disabled={!online || games === null}
+          title={online ? 'Ajouter un jeu' : 'Indisponible hors ligne'}
+          aria-label="Ajouter un jeu"
+        >
+          +
+        </button>
       )}
         </>
       )}
@@ -1360,17 +1326,10 @@ export default function App() {
           existingGames={games ?? []}
           saving={saving}
           defaultStatus={listStatus}
-          prefill={editing === 'new' ? scanPrefill : null}
           onSave={handleSave}
           onCancel={() => setEditing(null)}
           onDelete={editing !== 'new' ? () => setConfirming(editing) : undefined}
         />
-      )}
-
-      {scanOpen && (
-        <Suspense fallback={null}>
-          <BarcodeScanner busy={scanBusy} onDetected={handleDetected} onClose={() => setScanOpen(false)} />
-        </Suspense>
       )}
 
       {confirming && (

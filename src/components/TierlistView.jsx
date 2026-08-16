@@ -187,6 +187,7 @@ export default function TierlistView({
     const begin = (x, y) => {
       if (!drag) return
       drag.active = true
+      try { navigator.vibrate?.(12) } catch { /* ignore */ } // léger retour haptique à la prise
       const src = root.querySelector(`[data-game="${CSS.escape(drag.id)}"]`)
       const clone = document.createElement('div')
       clone.className = 'tl-drag'

@@ -38,18 +38,11 @@ export function StatsIcon({ size = 20 }) {
   )
 }
 
-// Code-barres (bouton scan).
-export function BarcodeIcon({ size = 22 }) {
+// Entonnoir (bouton flottant « Filtrer »).
+export function FilterIcon({ size = 22, color = '#fff' }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false">
-      <g fill="#fff">
-        <rect x="3" y="5" width="1.6" height="14" />
-        <rect x="6" y="5" width="2.6" height="14" />
-        <rect x="10" y="5" width="1.4" height="14" />
-        <rect x="13" y="5" width="2.6" height="14" />
-        <rect x="17" y="5" width="1.4" height="14" />
-        <rect x="19.6" y="5" width="1.4" height="14" />
-      </g>
+      <path fill={color} d="M3.5 5.2c0-.66.54-1.2 1.2-1.2h14.6c.66 0 1.2.54 1.2 1.2 0 .3-.11.58-.3.8L14.8 12.5v5.1c0 .43-.23.82-.6 1.03l-2.9 1.62c-.53.3-1.2-.08-1.2-.7v-7.05L3.8 6c-.19-.22-.3-.5-.3-.8z" />
     </svg>
   )
 }
