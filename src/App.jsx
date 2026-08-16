@@ -13,6 +13,7 @@ import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, 
 import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayMeta, renameCategories, fetchPlayerRoster, fetchPlayerOverall, renamePlayer } from './lib/plays'
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
+import GameDetail from './components/GameDetail'
 import ConfirmDialog from './components/ConfirmDialog'
 import SortMenu from './components/SortMenu'
 import FilterSheet from './components/FilterSheet'
@@ -212,6 +213,7 @@ export default function App() {
   const [editingPlay, setEditingPlay] = useState(null) // partie en cours d'édition | null (= nouvelle partie)
   const [editingSheet, setEditingSheet] = useState(null) // jeu dont on édite/crée la fiche | null
   const [historyGame, setHistoryGame] = useState(null) // jeu dont on regarde l'historique | null
+  const [detailGame, setDetailGame] = useState(null) // jeu dont on affiche la « fiche jeu » | null
   const [gamePlays, setGamePlays] = useState(null) // parties du jeu affiché (null = chargement)
   const [playerNames, setPlayerNames] = useState([]) // noms déjà utilisés (auto-complétion)
   const [playMeta, setPlayMeta] = useState({}) // { game_id: { count, last } } (tris + cartes)
@@ -290,7 +292,7 @@ export default function App() {
   // se ferme jamais : on remet toujours une entrée d'historique "piège".
   const viewHistoryRef = useRef([]) // vues précédentes (pour revenir en arrière)
   const uiRef = useRef({})
-  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
+  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
   viewRef.current = view
 
@@ -298,7 +300,7 @@ export default function App() {
   const layerCount =
     (editing ? 1 : 0) + (confirming ? 1 : 0) + (moving ? 1 : 0) + (confirmingOwner ? 1 : 0) + (confirmingTag ? 1 : 0) +
     (importing ? 1 : 0) + (restoring ? 1 : 0) + (confirmingPlay ? 1 : 0) + (confirmingTierlist ? 1 : 0) + (showFilters ? 1 : 0) + (chwaziOpen ? 1 : 0) +
-    (editingSheet ? 1 : 0) + (scoringGame ? 1 : 0) + (historyGame ? 1 : 0) + (statsOpen ? 1 : 0) +
+    (editingSheet ? 1 : 0) + (scoringGame ? 1 : 0) + (historyGame ? 1 : 0) + (detailGame ? 1 : 0) + (statsOpen ? 1 : 0) +
     (tierlistView ? 1 : 0) + (tierlistHub ? 1 : 0) +
     (playersOpen ? 1 : 0) + (settingsOpen ? 1 : 0) + (zoomImage ? 1 : 0)
   const layerRef = useRef(0)
@@ -331,6 +333,7 @@ export default function App() {
     else if (s.editingSheet) setEditingSheet(null)
     else if (s.scoringGame) { setScoringGame(null); setEditingPlay(null) }
     else if (s.historyGame) { setHistoryGame(null); setGamePlays(null) }
+    else if (s.detailGame) setDetailGame(null) // la fiche jeu : les sous-écrans (ci-dessus) se ferment d'abord
     else if (s.tierlistView) setTierlistView(null) // une tierlist s'ouvre PAR-DESSUS le menu
     else if (s.tierlistHub) setTierlistHub(false)
     else if (s.statsOpen) setStatsOpen(false)
@@ -411,6 +414,14 @@ export default function App() {
     })
     return m
   }, [tagsList])
+
+  // Jeu affiché dans la fiche : TOUJOURS dérivé du tableau `games` (pas un instantané figé)
+  // → la fiche reflète les modifications (nom, image, joueurs…) faites depuis « Modifier ».
+  // Repli sur l'instantané le temps d'un rendu transitoire (la suppression ferme la fiche).
+  const detailGameLive = useMemo(
+    () => (detailGame ? (games ?? []).find((g) => g.id === detailGame.id) || detailGame : null),
+    [detailGame, games]
+  )
 
   // Statut affiché selon l'onglet (Collection ou Wishlist).
   const listStatus = view === 'wishlist' ? 'wishlist' : 'collection'
@@ -564,6 +575,7 @@ export default function App() {
       setGames((gs) => (gs ?? []).filter((g) => g.id !== confirming.id))
       setConfirming(null)
       setEditing(null) // ferme aussi le formulaire d'édition si ouvert
+      setDetailGame((d) => (d && d.id === confirming.id ? null : d)) // ferme la fiche du jeu supprimé
     } catch (e) {
       setError(e.message)
     } finally {
@@ -1258,7 +1270,7 @@ export default function App() {
                   ? undefined
                   : view === 'wishlist'
                   ? () => window.open(philibertSearchUrl(g.name), '_blank', 'noopener')
-                  : () => handleGameClick(g)
+                  : () => setDetailGame(g) // collection → la « fiche jeu » (hub : partie, historique, édition, BGG…)
               }
               onImageClick={(url) => setZoomImage(url)}
               // « Nouvelle partie » depuis le menu de glissement (collection en ligne).
@@ -1307,6 +1319,27 @@ export default function App() {
         </button>
       )}
         </>
+      )}
+
+      {/* Fiche jeu (hub) : rendue AVANT les sous-écrans (form, historique, saisie, zoom) pour
+          qu'ils s'empilent au-dessus (même z-index → l'ordre du DOM décide). */}
+      {detailGameLive && (
+        <GameDetail
+          game={detailGameLive}
+          online={online}
+          hasSheet={Boolean(scoresheets?.[detailGameLive.id])}
+          playCount={playMeta[detailGameLive.id]?.count ?? 0}
+          lastPlayedLabel={playMeta[detailGameLive.id]?.last ? formatDay(playMeta[detailGameLive.id].last) : null}
+          ownerMap={ownerMap}
+          tagMap={tagMap}
+          onClose={() => setDetailGame(null)}
+          onZoomImage={(url) => setZoomImage(url)}
+          onNewPlay={() => handleNewPlayFromCard(detailGameLive)}
+          onHistory={() => handleGameClick(detailGameLive)}
+          onCreateSheet={() => setEditingSheet(detailGameLive)}
+          onEdit={() => setEditing(detailGameLive)}
+          onBgg={detailGameLive.bgg_id && online ? () => window.open(`https://boardgamegeek.com/boardgame/${detailGameLive.bgg_id}`, '_blank', 'noopener') : undefined}
+        />
       )}
 
       {editing && (
