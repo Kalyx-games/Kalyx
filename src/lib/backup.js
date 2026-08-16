@@ -12,7 +12,7 @@ import { fetchAllTierlists } from './tierlists'
 // base doit être ajoutée ici, sinon elle sera silencieusement absente des sauvegardes.
 const GAME_COLS = [
   'id', 'bgg_id', 'name', 'players', 'players_min', 'players_max', 'players_best',
-  'duration_min', 'duration_max', 'complexity', 'price', 'image_url', 'owner', 'tags', 'status', 'extensions', 'created_at',
+  'duration_min', 'duration_max', 'complexity', 'price', 'image_url', 'owner', 'tags', 'status', 'extensions', 'bgg_poll', 'created_at',
 ]
 const PLAY_COLS = [
   'id', 'game_id', 'played_at', 'players', 'winner', 'extensions',
@@ -224,10 +224,16 @@ export async function importBackup({ games, owners, tags, plays, scoresheets, ti
       return row.name ? row : null
     })
     .filter(Boolean)
-  // Repli si la colonne "tags" n'existe pas encore (migration non lancée).
+  // Repli si une colonne optionnelle n'existe pas encore sur la base cible (migration non
+  // lancée / base plus ancienne) : on retire la colonne fautive et on réessaie, sinon
+  // TOUTE la restauration échouerait. Couvre tags / extensions / bgg_poll.
+  const OPTIONAL_GAME_COLS = ['tags', 'extensions', 'bgg_poll']
   let { error } = await writeDb().from('games').upsert(rows, { onConflict: 'id' })
-  if (error && /\btags\b/i.test(error.message || '')) {
-    rows.forEach((r) => delete r.tags)
+  let guard = 0
+  while (error && guard++ < OPTIONAL_GAME_COLS.length) {
+    const miss = OPTIONAL_GAME_COLS.find((c) => new RegExp(`\\b${c}\\b`, 'i').test(error.message || ''))
+    if (!miss) break
+    rows.forEach((r) => delete r[miss])
     ;({ error } = await writeDb().from('games').upsert(rows, { onConflict: 'id' }))
   }
   if (error) throw error

@@ -77,6 +77,31 @@ function bestPlayers(xml) {
   return best
 }
 
+// Sondage COMPLET « nombre de joueurs » : par nombre de joueurs, les votes Best /
+// Recommended / Not Recommended (+ total de votants). Renvoie { total, rows:[{n,best,rec,notRec}] }
+// ou null. Sert à l'affichage détaillé dans la fiche jeu.
+function playerPoll(xml) {
+  const pollM = xml.match(/<poll name="suggested_numplayers"[^>]*>[\s\S]*?<\/poll>/i)
+  if (!pollM) return null
+  const totalM = pollM[0].match(/totalvotes="(\d+)"/i)
+  const total = totalM ? Number(totalM[1]) : 0
+  const rows = []
+  const re = /<results numplayers="([^"]+)">([\s\S]*?)<\/results>/gi
+  let m
+  while ((m = re.exec(pollM[0]))) {
+    const body = m[2]
+    const g = (label) => {
+      const v = body.match(new RegExp(`value="${label}" numvotes="(\\d+)"`, 'i'))
+      return v ? Number(v[1]) : 0
+    }
+    const best = g('Best')
+    const rec = g('Recommended')
+    const notRec = g('Not Recommended')
+    if (best + rec + notRec > 0) rows.push({ n: m[1], best, rec, notRec })
+  }
+  return rows.length ? { total, rows } : null
+}
+
 export default async function handler(req, res) {
   const token = process.env.BGG_TOKEN
   if (!token) {
@@ -154,6 +179,7 @@ export default async function handler(req, res) {
         players_min: num(tagValue(doc, 'minplayers')),
         players_max: num(tagValue(doc, 'maxplayers')),
         players_best: bestPlayers(doc),
+        players_poll: playerPoll(doc), // sondage complet (Best/Recommended/Not Recommended + votes)
         duration,
         complexity,
         minage: num(tagValue(doc, 'minage')),

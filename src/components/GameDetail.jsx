@@ -45,6 +45,10 @@ export default function GameDetail({
   const tags = parseTags(game.tags)
   const fullImg = game.image_url
 
+  // Sondage BGG « nombre de joueurs » (si stocké) : { total, rows:[{n,best,rec,notRec}] }.
+  const poll = game.bgg_poll && Array.isArray(game.bgg_poll.rows) && game.bgg_poll.rows.length ? game.bgg_poll : null
+  const pct = (v, sum) => (sum > 0 ? `${Math.round((v / sum) * 100)}%` : '0%')
+
   // Repli si l'image ne charge pas (optimiseur ET image brute en échec) → on montre le dé
   // au lieu d'une icône d'image cassée (cohérent avec la carte).
   const [imgBroken, setImgBroken] = useState(false)
@@ -115,18 +119,70 @@ export default function GameDetail({
             <button type="button" className="btn-ghost" onClick={onStats} disabled={!online}>📊 Statistiques</button>
             <button type="button" className="btn-ghost" onClick={onHistory} disabled={!online}>📚 Historique</button>
             <button type="button" className="btn-ghost" onClick={onEdit} disabled={!online}>✏️ Modifier le jeu</button>
-            {onBgg && <button type="button" className="btn-ghost" onClick={onBgg}>BGG ↗</button>}
+            {onBgg && (
+              <button type="button" className="btn-ghost detail-bgg-btn" onClick={onBgg}>
+                <img
+                  className="bgg-logo"
+                  src="https://www.google.com/s2/favicons?domain=boardgamegeek.com&sz=64"
+                  alt=""
+                  width="18"
+                  height="18"
+                  onError={(e) => { e.currentTarget.style.display = 'none' }}
+                />
+                BGG ↗
+              </button>
+            )}
           </div>
         ) : (
           <>
             <button type="button" className="btn-primary detail-primary" onClick={onCreateSheet} disabled={!online}>🧮 Créer la fiche de score</button>
             <div className="detail-grid">
               <button type="button" className="btn-ghost" onClick={onEdit} disabled={!online}>✏️ Modifier le jeu</button>
-              {onBgg && <button type="button" className="btn-ghost" onClick={onBgg}>BGG ↗</button>}
+              {onBgg && (
+              <button type="button" className="btn-ghost detail-bgg-btn" onClick={onBgg}>
+                <img
+                  className="bgg-logo"
+                  src="https://www.google.com/s2/favicons?domain=boardgamegeek.com&sz=64"
+                  alt=""
+                  width="18"
+                  height="18"
+                  onError={(e) => { e.currentTarget.style.display = 'none' }}
+                />
+                BGG ↗
+              </button>
+            )}
             </div>
           </>
         )}
       </div>
+
+      {poll && (
+        <div className="detail-poll">
+          <div className="detail-poll-head">
+            🗳️ Nombre de joueurs
+            {poll.total ? <span className="detail-poll-total"> · {poll.total} votes</span> : null}
+          </div>
+          <div className="poll-legend">
+            <span className="poll-key"><span className="poll-dot poll-best" />Idéal</span>
+            <span className="poll-key"><span className="poll-dot poll-rec" />Recommandé</span>
+            <span className="poll-key"><span className="poll-dot poll-not" />Déconseillé</span>
+          </div>
+          {poll.rows.map((r) => {
+            const sum = (r.best || 0) + (r.rec || 0) + (r.notRec || 0)
+            return (
+              <div className="poll-row" key={r.n}>
+                <span className="poll-n">{r.n}</span>
+                <span className="poll-bar" title={`Idéal ${r.best} · Recommandé ${r.rec} · Déconseillé ${r.notRec}`}>
+                  <span className="poll-seg poll-best" style={{ width: pct(r.best || 0, sum) }} />
+                  <span className="poll-seg poll-rec" style={{ width: pct(r.rec || 0, sum) }} />
+                  <span className="poll-seg poll-not" style={{ width: pct(r.notRec || 0, sum) }} />
+                </span>
+                <span className="poll-votes">{sum}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

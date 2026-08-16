@@ -53,6 +53,7 @@ alter table public.games add column if not exists players_best text;
 alter table public.games add column if not exists price        numeric;
 alter table public.games add column if not exists tags         text;
 alter table public.games add column if not exists extensions   text;
+alter table public.games add column if not exists bgg_poll     jsonb;   -- sondage BGG "nb de joueurs" { total, rows:[{n,best,rec,notRec}] }
 -- NB : une colonne thumb_url a existé un temps (miniatures BGG) puis a été abandonnée
 -- au profit de l'optimiseur d'images Vercel. Si elle existe encore en base, elle est
 -- simplement ignorée (inutile de la supprimer).

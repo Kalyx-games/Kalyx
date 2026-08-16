@@ -13,7 +13,7 @@ export async function fetchGames() {
 // Colonnes optionnelles qui peuvent manquer si une migration n'a pas été lancée.
 // Si l'insert/update échoue à cause d'une de ces colonnes, on la retire et on réessaie
 // → le reste du jeu s'enregistre quand même (rien ne casse avant la migration).
-const OPTIONAL_COLS = ['tags', 'extensions']
+const OPTIONAL_COLS = ['tags', 'extensions', 'bgg_poll']
 function missingOptionalCol(error, payload) {
   if (!error) return null
   return OPTIONAL_COLS.find((c) => payload[c] !== undefined && new RegExp(`\\b${c}\\b`, 'i').test(error.message || ''))
@@ -80,6 +80,7 @@ export function cleanGameInput(form) {
     bgg_id: num(form.bgg_id),
     extensions: txt(form.extensions), // liste d'extensions (une par ligne)
     tags: txt(form.tags), // tags (noms séparés par des virgules, comme owner)
+    bgg_poll: form.bgg_poll ?? null, // sondage BGG "nb de joueurs" (objet jsonb), rempli à l'import BGG
   }
 }
 

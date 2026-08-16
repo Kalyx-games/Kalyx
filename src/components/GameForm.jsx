@@ -8,7 +8,7 @@ import { philibertSearchUrl } from '../lib/philibert'
 // Propriétaires : cases multi-sélection (un jeu peut en avoir plusieurs) + ajout.
 // Nombre de joueurs / idéal : cases à cocher. Statut : cases (Collection / Wishlist).
 
-const EMPTY = { name: '', status: 'collection', duration: '', complexity: '', price: '', image_url: '', bgg_id: '' }
+const EMPTY = { name: '', status: 'collection', duration: '', complexity: '', price: '', image_url: '', bgg_id: '', bgg_poll: null }
 
 function toForm(game, defaultStatus, prefill) {
   if (!game) return { ...EMPTY, status: defaultStatus || 'collection', ...(prefill || {}) }
@@ -18,6 +18,7 @@ function toForm(game, defaultStatus, prefill) {
     // Une seule durée par jeu : on affiche le maximum existant (les jeux importés ont min = max).
     duration: s(game.duration_max ?? game.duration_min),
     complexity: s(game.complexity), price: s(game.price), image_url: s(game.image_url), bgg_id: s(game.bgg_id),
+    bgg_poll: game.bgg_poll ?? null, // conservé tel quel (objet) → une édition manuelle ne l'efface pas
   }
 }
 
@@ -257,6 +258,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
           complexity: d.complexity != null ? String(d.complexity) : f.complexity,
           duration: d.duration != null ? String(d.duration) : f.duration,
           bgg_id: d.bgg_id != null ? String(d.bgg_id) : f.bgg_id,
+          bgg_poll: d.players_poll ?? f.bgg_poll, // sondage complet (nb de joueurs) capturé à l'import
         }))
         if (d.players_min || d.players_max) setPlayersSet(expandRange(d.players_min, d.players_max))
         if (d.players_best) setBestSet(parseCounts(d.players_best))

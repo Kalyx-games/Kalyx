@@ -2675,6 +2675,32 @@ body {
 .detail-primary { width: 100%; height: 46px; font-size: 1rem; }
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .detail-grid .btn-ghost { height: 44px; }
+.detail-bgg-btn { gap: 7px; }
+
+/* Sondage BGG « nombre de joueurs » (idéal / recommandé / déconseillé + votes). */
+.detail-poll {
+  margin-top: 18px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.detail-poll-head { font-weight: 600; font-size: 0.95rem; }
+.detail-poll-total { color: var(--muted); font-weight: 400; }
+.poll-legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 8px 0 10px; font-size: 0.78rem; color: var(--muted); }
+.poll-key { display: inline-flex; align-items: center; gap: 5px; }
+.poll-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.poll-best { background: #eab308; } /* jaune, comme l'étoile ⭐ « idéal » */
+.poll-rec { background: #2f6df6; }
+.poll-not { background: #d1495b; }
+.poll-row { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
+.poll-n { width: 30px; flex-shrink: 0; font-weight: 600; font-size: 0.9rem; text-align: right; }
+.poll-bar { flex: 1; min-width: 0; height: 14px; border-radius: 7px; overflow: hidden; display: flex; background: var(--soft); }
+.poll-seg { height: 100%; }
+.poll-seg.poll-best { background: #eab308; } /* jaune (idéal), assorti à l'étoile */
+.poll-seg.poll-rec { background: #2f6df6; }
+.poll-seg.poll-not { background: #d1495b; }
+.poll-votes { width: 30px; flex-shrink: 0; text-align: right; font-size: 0.8rem; color: var(--muted); }
 .sheet-title {
   font-size: 1.3rem;
   color: var(--ink);
