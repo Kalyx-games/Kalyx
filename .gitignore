@@ -12,3 +12,6 @@ dev-dist
 !.env.example
 deploy_url.txt
 .claude/settings.local.json
+
+# fichiers de travail temporaires (artifacts, brouillons)
+scratchpad/
