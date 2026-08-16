@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import {
   parseOwners, parseTags, ownerDisplay, parseExtensions,
   basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText,
@@ -161,39 +161,38 @@ export default function GameDetail({
             🗳️ Nombre de joueurs
             {poll.total ? <span className="detail-poll-total"> · {poll.total} votes</span> : null}
           </div>
-          <div className="poll-legend">
-            <span className="poll-key"><span className="poll-dot poll-best" />Idéal</span>
-            <span className="poll-key"><span className="poll-dot poll-rec" />Recommandé</span>
-            <span className="poll-key"><span className="poll-dot poll-not" />Déconseillé</span>
-          </div>
-          {poll.rows.map((r) => {
-            const best = r.best || 0
-            const rec = r.rec || 0
-            const notRec = r.notRec || 0
-            const sum = best + rec + notRec
-            const p = (v) => (sum > 0 ? Math.round((v / sum) * 100) : 0)
-            const pb = p(best)
-            const pr = p(rec)
-            const pn = p(notRec)
-            return (
-              <div className="poll-row" key={r.n}>
-                <span className="poll-n">{r.n}</span>
-                <div className="poll-rowbody">
+          {/* Tableau : une ligne par nombre de joueurs ; barre visuelle + 3 colonnes de %
+              alignées sous des en-têtes colorés (qui servent aussi de légende). */}
+          <div className="poll-grid">
+            <span className="poll-h" aria-hidden="true" />
+            <span className="poll-h" aria-hidden="true" />
+            <span className="poll-h poll-pct-best">Idéal</span>
+            <span className="poll-h poll-pct-rec">Recom.</span>
+            <span className="poll-h poll-pct-not">Décon.</span>
+            {poll.rows.map((r) => {
+              const best = r.best || 0
+              const rec = r.rec || 0
+              const notRec = r.notRec || 0
+              const sum = best + rec + notRec
+              const p = (v) => (sum > 0 ? Math.round((v / sum) * 100) : 0)
+              const pb = p(best)
+              const pr = p(rec)
+              const pn = p(notRec)
+              return (
+                <Fragment key={r.n}>
+                  <span className="poll-n">{r.n}</span>
                   <span className="poll-bar">
                     <span className="poll-seg poll-best" style={{ width: `${pb}%` }} />
                     <span className="poll-seg poll-rec" style={{ width: `${pr}%` }} />
                     <span className="poll-seg poll-not" style={{ width: `${pn}%` }} />
                   </span>
-                  <span className="poll-pcts">
-                    <span className="poll-pct poll-pct-best">{pb}%</span>
-                    <span className="poll-pct poll-pct-rec">{pr}%</span>
-                    <span className="poll-pct poll-pct-not">{pn}%</span>
-                  </span>
-                </div>
-                <span className="poll-votes">{sum}</span>
-              </div>
-            )
-          })}
+                  <span className="poll-pct poll-pct-best">{pb}%</span>
+                  <span className="poll-pct poll-pct-rec">{pr}%</span>
+                  <span className="poll-pct poll-pct-not">{pn}%</span>
+                </Fragment>
+              )
+            })}
+          </div>
         </div>
       )}
     </div>

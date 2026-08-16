@@ -2685,30 +2685,27 @@ body {
   border-radius: 12px;
   padding: 12px 14px;
 }
-.detail-poll-head { font-weight: 600; font-size: 0.95rem; }
+.detail-poll-head { font-weight: 600; font-size: 0.95rem; margin-bottom: 10px; }
 .detail-poll-total { color: var(--muted); font-weight: 400; }
-.poll-legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 8px 0 10px; font-size: 0.78rem; color: var(--muted); }
-.poll-key { display: inline-flex; align-items: center; gap: 5px; }
-.poll-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
-.poll-best { background: #eab308; } /* jaune, comme l'étoile ⭐ « idéal » */
-.poll-rec { background: #2f6df6; }
-.poll-not { background: #d1495b; }
-.poll-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
-.poll-n { width: 30px; flex-shrink: 0; font-weight: 600; font-size: 0.9rem; text-align: right; }
-.poll-rowbody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.poll-bar { width: 100%; height: 12px; border-radius: 6px; overflow: hidden; display: flex; background: var(--soft); }
+/* Tableau du sondage : nb de joueurs · barre · 3 colonnes de % alignées (avec en-têtes
+   colorés qui font office de légende). Une seule grille → tout s'aligne, en-tête compris. */
+.poll-grid {
+  display: grid;
+  grid-template-columns: auto minmax(70px, 1fr) 46px 46px 46px;
+  align-items: center;
+  gap: 7px 8px;
+}
+.poll-h { font-size: 0.72rem; font-weight: 700; text-align: right; }
+.poll-n { font-weight: 600; font-size: 0.9rem; text-align: right; }
+.poll-bar { height: 12px; border-radius: 6px; overflow: hidden; display: flex; background: var(--soft); }
 .poll-seg { height: 100%; }
-.poll-seg.poll-best { background: #eab308; } /* jaune (idéal), assorti à l'étoile */
+.poll-seg.poll-best { background: #eab308; } /* jaune (idéal), assorti à l'étoile ⭐ */
 .poll-seg.poll-rec { background: #2f6df6; }
 .poll-seg.poll-not { background: #d1495b; }
-/* Pourcentages sous la barre : 3 colonnes FIXES (idéal · recommandé · déconseillé) → chaque
-   type est aligné verticalement d'une ligne à l'autre (lecture en tableau, pas en vrac). */
-.poll-pcts { display: grid; grid-template-columns: repeat(3, 44px); gap: 8px; font-size: 0.72rem; font-weight: 700; }
-.poll-pct { text-align: right; font-variant-numeric: tabular-nums; }
+.poll-pct { text-align: right; font-size: 0.78rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .poll-pct-best { color: #c99000; } /* or plus foncé → lisible sur fond clair ET sombre */
 .poll-pct-rec { color: #2f6df6; }
 .poll-pct-not { color: #d1495b; }
-.poll-votes { width: 30px; flex-shrink: 0; text-align: right; font-size: 0.8rem; color: var(--muted); }
 .sheet-title {
   font-size: 1.3rem;
   color: var(--ink);
