@@ -498,6 +498,39 @@ export default function App() {
   // Réinitialise les filtres en gardant le propriétaire (utilisé par la liste ET les tierlists).
   const resetFilters = useCallback(() => setFilters((f) => ({ ...EMPTY_FILTERS, owners: f.owners })), [])
 
+  // Puces des filtres ACTIFS (sous la recherche) : on voit ce qui filtre et on l'enlève d'un tap.
+  const activeChips = useMemo(() => {
+    const chips = []
+    filters.owners.forEach((o) =>
+      chips.push({ key: 'o:' + o, label: o, remove: () => setFilters((f) => ({ ...f, owners: f.owners.filter((x) => x !== o) })) })
+    )
+    if (statsOpen || view !== 'wishlist') {
+      filters.tags.forEach((t) =>
+        chips.push({ key: 't:' + t, label: '🏷️ ' + t, remove: () => setFilters((f) => ({ ...f, tags: f.tags.filter((x) => x !== t) })) })
+      )
+    }
+    if (filters.players.length) {
+      const list = [...filters.players].sort((a, b) => a - b).map((n) => (n >= 12 ? '12+' : n)).join(', ')
+      chips.push({
+        key: 'pl',
+        label: `${filters.playerOptimal ? '⭐' : '👥'} ${list}`,
+        remove: () => setFilters((f) => ({ ...f, players: [], playerOptimal: false })),
+      })
+    }
+    if (filters.duration != null) {
+      chips.push({ key: 'dur', label: `🕑 ≤ ${filters.duration} min`, remove: () => setFilters((f) => ({ ...f, duration: null })) })
+    }
+    filters.complexity.forEach((b) => {
+      const lbl = b === 'simple' ? 'Simple' : b === 'moyen' ? 'Moyen' : 'Corsé'
+      chips.push({ key: 'c:' + b, label: '🧠 ' + lbl, remove: () => setFilters((f) => ({ ...f, complexity: f.complexity.filter((x) => x !== b) })) })
+    })
+    if (!statsOpen && view === 'wishlist' && (filters.priceRange[0] !== PRICE_MIN || filters.priceRange[1] !== PRICE_MAX)) {
+      const [lo, hi] = filters.priceRange
+      chips.push({ key: 'price', label: `💶 ${lo}–${hi >= PRICE_MAX ? '150+' : hi} €`, remove: () => setFilters((f) => ({ ...f, priceRange: [PRICE_MIN, PRICE_MAX] })) })
+    }
+    return chips
+  }, [filters, statsOpen, view])
+
   const currentCount = (games ?? []).filter((g) => g.status === listStatus).length
 
   async function handleSave(formValues) {
@@ -1099,7 +1132,9 @@ export default function App() {
               }
             }}
           />
-          <button type="button" className="clear-btn" onClick={() => setSearch('')} aria-label="Effacer la recherche">×</button>
+          {search && (
+            <button type="button" className="clear-btn" onClick={() => setSearch('')} aria-label="Effacer la recherche">×</button>
+          )}
         </div>
       </div>
 
@@ -1127,19 +1162,42 @@ export default function App() {
                 if (v === 'random') setShuffleSeed((s) => s + 1) // reclic sur "Aléatoire" → nouveau mélange
               }}
             />
-            <button
-              type="button"
-              className="sortdir"
-              onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
-              disabled={sort === 'random'}
-              title={sortDir === 'asc' ? 'Croissant (cliquer pour décroissant)' : 'Décroissant (cliquer pour croissant)'}
-              aria-label="Sens du tri"
-            >
-              {sortDir === 'asc' ? '↑' : '↓'}
-            </button>
+            {sort === 'random' ? (
+              // En tri aléatoire : le bouton devient un dé pour re-mélanger à volonté.
+              <button
+                type="button"
+                className="sortdir sortdir-die"
+                onClick={() => setShuffleSeed((s) => s + 1)}
+                title="Re-mélanger"
+                aria-label="Re-mélanger"
+              >
+                🎲
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="sortdir"
+                onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                title={sortDir === 'asc' ? 'Croissant (cliquer pour décroissant)' : 'Décroissant (cliquer pour croissant)'}
+                aria-label="Sens du tri"
+              >
+                {sortDir === 'asc' ? '↑' : '↓'}
+              </button>
+            )}
           </div>
         )}
       </div>
+
+      {activeChips.length > 0 && (
+        <div className="active-filters">
+          {activeChips.map((c) => (
+            <button key={c.key} type="button" className="active-chip" onClick={c.remove} aria-label={`Retirer le filtre ${c.label}`}>
+              <span>{c.label}</span>
+              <span className="active-chip-x">×</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {showFilters && (
         <Filters
@@ -1149,13 +1207,26 @@ export default function App() {
           setFilters={setFilters}
           showPrice={!statsOpen && view === 'wishlist'}
           showTags={statsOpen || view !== 'wishlist'}
+          activeCount={activeFilterCount}
+          visibleCount={statsOpen ? statsGames.length : visible.length}
           onReset={resetFilters}
+          onClose={() => setShowFilters(false)}
         />
       )}
 
       {statsOpen ? (
         <Suspense fallback={null}>
-          <Stats games={statsGames} hasCollection={hasCollection} playerOverall={playerOverall} onOpenTierlists={handleOpenTierlists} anecdote={anecShown} />
+          <Stats
+            games={statsGames}
+            hasCollection={hasCollection}
+            playerOverall={playerOverall}
+            onOpenTierlists={handleOpenTierlists}
+            anecdote={anecShown}
+            onFilter={(patch) => {
+              setFilters((f) => ({ ...f, ...patch }))
+              setStatsOpen(false) // on revient à la liste pour voir le résultat filtré
+            }}
+          />
         </Suspense>
       ) : (
       <main className="list" ref={listRef}>

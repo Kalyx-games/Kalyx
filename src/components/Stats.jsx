@@ -12,10 +12,10 @@ const DURATION_COLOR = '#0d9488' // sarcelle
 const COMPLEXITY_COLOR = '#6366f1' // indigo (cohérent avec 🧠 sur les cartes)
 
 // Une ligne de barre horizontale : libellé · piste remplie · valeur.
-function BarRow({ label, sub, count, max, color }) {
+function BarRow({ label, sub, count, max, color, onClick }) {
   const pct = max > 0 ? (count / max) * 100 : 0
-  return (
-    <div className="bar-row">
+  const inner = (
+    <>
       <div className="bar-label">
         {label}
         {sub ? <span className="bar-sub"> {sub}</span> : null}
@@ -24,12 +24,21 @@ function BarRow({ label, sub, count, max, color }) {
         <div className="bar-fill" style={{ width: `${pct}%`, background: color }} />
       </div>
       <div className="bar-val">{count}</div>
-    </div>
+    </>
+  )
+  // Barre cliquable → applique le filtre correspondant à la Collection.
+  return onClick ? (
+    <button type="button" className="bar-row bar-row-btn" onClick={onClick} aria-label={`Filtrer : ${label}`}>
+      {inner}
+    </button>
+  ) : (
+    <div className="bar-row">{inner}</div>
   )
 }
 
 // Un bloc « carte » contenant un titre et une liste de barres.
-function BarBlock({ title, rows, color, empty }) {
+// `onPick(row)` (optionnel) rend chaque barre non vide cliquable.
+function BarBlock({ title, rows, color, empty, onPick }) {
   const max = Math.max(1, ...rows.map((r) => r.count))
   const anyData = rows.some((r) => r.count > 0)
   return (
@@ -38,7 +47,15 @@ function BarBlock({ title, rows, color, empty }) {
       {anyData ? (
         <div className="bars">
           {rows.map((r) => (
-            <BarRow key={r.key} label={r.label} sub={r.sub} count={r.count} max={max} color={r.color || color} />
+            <BarRow
+              key={r.key}
+              label={r.label}
+              sub={r.sub}
+              count={r.count}
+              max={max}
+              color={r.color || color}
+              onClick={onPick && r.count > 0 ? () => onPick(r) : undefined}
+            />
           ))}
         </div>
       ) : (
@@ -47,6 +64,10 @@ function BarBlock({ title, rows, color, empty }) {
     </section>
   )
 }
+
+// Libellé de complexité (à côté de la moyenne chiffrée).
+const complexityWord = (n) => (n == null ? '' : n < 2 ? 'Simple' : n < 3 ? 'Moyen' : 'Corsé')
+const CX_LABEL_TO_BUCKET = { Simple: 'simple', Moyen: 'moyen', Corsé: 'complexe' }
 
 function Tile({ value, label, sub }) {
   return (
@@ -220,7 +241,7 @@ function PlayerSection({ playerOverall }) {
   )
 }
 
-export default function Stats({ games, hasCollection, playerOverall, onOpenTierlists, anecdote }) {
+export default function Stats({ games, hasCollection, playerOverall, onOpenTierlists, anecdote, onFilter }) {
   const s = useMemo(() => computeStats(games), [games])
 
   // Aucun jeu de collection à afficher : soit la collection est vraiment vide,
@@ -283,7 +304,15 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
           sub={s.medDuration != null ? `médiane ${s.medDuration} min` : null}
         />
         <Tile
-          value={fmt1(s.avgComplexity)}
+          value={
+            s.avgComplexity == null ? (
+              '—'
+            ) : (
+              <>
+                {fmt1(s.avgComplexity)} <span className="tile-word">{complexityWord(s.avgComplexity)}</span>
+              </>
+            )
+          }
           label="complexité moyenne"
           sub={s.medComplexity != null ? `médiane ${fmt1(s.medComplexity)}` : null}
         />
@@ -294,6 +323,7 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
         color={PLAYERS_COLOR}
         empty="Aucune donnée de joueurs."
         rows={s.byPlayers.map((r) => ({ key: r.n, label: r.label, count: r.count }))}
+        onPick={onFilter ? (r) => onFilter({ players: [r.key], playerOptimal: false }) : undefined}
       />
 
       <BarBlock
@@ -301,6 +331,7 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
         color={OPTIMAL_COLOR}
         empty="Aucun nombre idéal renseigné."
         rows={s.byOptimalPlayers.map((r) => ({ key: r.n, label: r.label, count: r.count }))}
+        onPick={onFilter ? (r) => onFilter({ players: [r.key], playerOptimal: true }) : undefined}
       />
 
       <BarBlock
@@ -314,7 +345,8 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
         title="🧠 Par complexité"
         color={COMPLEXITY_COLOR}
         empty="Aucune complexité renseignée."
-        rows={s.byComplexity.map((r) => ({ key: r.label, label: r.label, sub: r.hint, count: r.count }))}
+        rows={s.byComplexity.map((r) => ({ key: r.label, label: r.label, sub: r.hint, count: r.count, bucket: CX_LABEL_TO_BUCKET[r.label] }))}
+        onPick={onFilter ? (r) => onFilter({ complexity: [r.bucket] }) : undefined}
       />
 
       {/* Séparateur : au-dessus les stats sur les JEUX, en dessous les stats sur les JOUEURS. */}

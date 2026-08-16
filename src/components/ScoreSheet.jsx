@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { parseExtensions, effectivePlayersSet } from '../lib/games'
 import { resolveDefaultExts } from '../lib/scoresheets'
 import NameField from './NameField'
+import ConfirmDialog from './ConfirmDialog'
 
 // Fiche de saisie d'une partie. Le type de partie vient du template :
 //  • win     : 'competitive' | 'coop'
@@ -248,6 +249,12 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
   const nameOf = (p, i) => (p.name || '').trim() || `Joueur ${i + 1}`
   const namesOf = () => players.map(nameOf)
+
+  // Fermer une NOUVELLE partie déjà commencée (score saisi ou joueur nommé) demande
+  // confirmation, pour ne pas perdre la saisie par mégarde (bouton ←).
+  const [confirmClose, setConfirmClose] = useState(false)
+  const dirtyEntry = !initialPlay && (anyScore || players.some((p) => (p.name || '').trim() !== ''))
+  const requestClose = () => (dirtyEntry ? setConfirmClose(true) : onClose())
   const scenarioVal = () => (wantScenario ? scenario.trim() || null : null)
   // La note voyage avec la partie ; App la persiste sur la fiche si elle a changé.
   const notesVal = () => notes
@@ -396,8 +403,17 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
   const head = (
     <>
+      {confirmClose && (
+        <ConfirmDialog
+          title="Quitter sans enregistrer ?"
+          message="La partie en cours de saisie sera perdue."
+          confirmLabel="Quitter"
+          onConfirm={onClose}
+          onCancel={() => setConfirmClose(false)}
+        />
+      )}
       <div className="settings-head">
-        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">←</button>
+        <button type="button" className="back-btn" onClick={requestClose} aria-label="Retour">←</button>
         <h2 className="sheet-title">📚 {game?.name}{isEdit ? ' — modifier' : ''}</h2>
         {onEdit && !isEdit && (
           <button type="button" className="back-btn sheet-edit-btn" onClick={onEdit} title="Modifier la fiche" aria-label="Modifier la fiche">✏️</button>
@@ -888,7 +904,18 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       <div className="coop-form">{notesField}</div>
 
       {onSavePlay && visibleCats.length > 0 && (
-        <div className="sheet-editor-actions">
+        <div className="sheet-editor-actions sheet-save-bar">
+          {anyScore &&
+            (() => {
+              const leaders = players.filter((p) => isTopWinner(p))
+              if (!leaders.length) return null
+              const total = totals[players.indexOf(leaders[0])]
+              return (
+                <div className="sheet-leader">
+                  🏆 {leaders.map((p) => nameOf(p, players.indexOf(p))).join(', ')} · <b>{total}</b>
+                </div>
+              )
+            })()}
           <button type="button" className="btn-primary" onClick={saveScored} disabled={saving || (!anyScore && !instantWinnerId)}>
             {saving ? '…' : saveLabel}
           </button>

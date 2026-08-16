@@ -20,7 +20,7 @@ const DURATIONS = [
 
 const fmtPrice = (v) => (v >= 150 ? '150 €+' : `${v} €`)
 
-export default function Filters({ owners, tags, filters, setFilters, showPrice, showTags = true, onReset }) {
+export default function Filters({ owners, tags, filters, setFilters, showPrice, showTags = true, onReset, onClose, activeCount = 0, visibleCount }) {
   const toggleOwner = (o) =>
     setFilters((f) => ({ ...f, owners: f.owners.includes(o) ? f.owners.filter((x) => x !== o) : [...f.owners, o] }))
   const toggleTag = (t) =>
@@ -36,6 +36,18 @@ export default function Filters({ owners, tags, filters, setFilters, showPrice, 
 
   return (
     <div className="filters">
+      {/* Barre du haut : réinitialiser (sans scroller) + fermer en voyant le nombre de résultats. */}
+      <div className="filters-top">
+        <button type="button" className="filters-reset-top" onClick={onReset} disabled={!activeCount}>
+          Réinitialiser{activeCount ? ` (${activeCount})` : ''}
+        </button>
+        {typeof visibleCount === 'number' && onClose && (
+          <button type="button" className="filters-see" onClick={onClose}>
+            Voir les {visibleCount} jeu{visibleCount > 1 ? 'x' : ''}
+          </button>
+        )}
+      </div>
+
       {owners.length > 0 && (
         <div className="filter-group">
           <span className="filter-label">Propriétaire</span>
@@ -104,9 +116,6 @@ export default function Filters({ owners, tags, filters, setFilters, showPrice, 
         </div>
       )}
 
-      <button type="button" className="filter-reset" onClick={onReset}>
-        Réinitialiser les filtres
-      </button>
     </div>
   )
 }

@@ -339,7 +339,22 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
 
           <label>
             Nom du jeu *
-            <input value={form.name} onChange={set('name')} required placeholder="ex. Terraforming Mars" />
+            <input
+              value={form.name}
+              onChange={set('name')}
+              required
+              placeholder="ex. Terraforming Mars"
+              enterKeyHint="search"
+              onKeyDown={(e) => {
+                // Entrée dans le champ Nom → lance la recherche BoardGameGeek (et masque le clavier).
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  e.currentTarget.blur()
+                  if (form.name.trim() && !bggLoading) searchBgg()
+                }
+              }}
+            />
           </label>
 
           {duplicate && (
@@ -347,6 +362,19 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
               « {duplicate.name} » est déjà dans ta {duplicate.status === 'wishlist' ? 'wishlist' : 'collection'}. Tu peux quand même l'ajouter.
             </p>
           )}
+
+          {/* Statut d'abord : il commande l'affichage des champs conditionnels (prix / tags / extensions). */}
+          <div className="field">
+            <span className="field-label">Statut</span>
+            <div className="chips">
+              <button type="button" className={`fchip icon-chip ${form.status === 'collection' ? 'on' : ''}`} onClick={() => setForm((f) => ({ ...f, status: 'collection' }))}>
+                <CollectionIcon size={17} /> Collection
+              </button>
+              <button type="button" className={`fchip icon-chip ${form.status === 'wishlist' ? 'on' : ''}`} onClick={() => setForm((f) => ({ ...f, status: 'wishlist' }))}>
+                <WishlistIcon size={17} /> Wishlist
+              </button>
+            </div>
+          </div>
 
           <div className="autofill">
             <button type="button" className="price-btn bgg-btn" onClick={searchBgg} disabled={!form.name.trim() || bggLoading}>
@@ -361,6 +389,9 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                   </button>
                 ))}
               </div>
+            )}
+            {bggLoading && bggResults && bggResults.length > 0 && (
+              <div className="price-found"><span>⏳ Import de la fiche…</span></div>
             )}
             {bggError && (
               <div className="price-found price-none"><span>{bggError}</span></div>
@@ -531,18 +562,6 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
               </button>
             </div>
           )}
-
-          <div className="field">
-            <span className="field-label">Statut</span>
-            <div className="chips">
-              <button type="button" className={`fchip icon-chip ${form.status === 'collection' ? 'on' : ''}`} onClick={() => setForm((f) => ({ ...f, status: 'collection' }))}>
-                <CollectionIcon size={17} /> Collection
-              </button>
-              <button type="button" className={`fchip icon-chip ${form.status === 'wishlist' ? 'on' : ''}`} onClick={() => setForm((f) => ({ ...f, status: 'wishlist' }))}>
-                <WishlistIcon size={17} /> Wishlist
-              </button>
-            </div>
-          </div>
 
           </div>
 
