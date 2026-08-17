@@ -148,6 +148,20 @@ const SORT_OPTIONS = [
   { value: 'duration', label: 'Durée' },
 ]
 
+// Onglet SORTANT figé (clone DOM) qui glisse dehors par-dessus le nouveau, positionné exactement là
+// où était le contenu (top/left/width mesurés avant la bascule). z-index sous la barre du bas / le FAB.
+function LeavingPane({ node, dir, top, left, width }) {
+  const hostRef = useRef(null)
+  useEffect(() => {
+    const host = hostRef.current
+    if (host && node) host.appendChild(node)
+    return () => {
+      if (host && node && node.parentNode === host) host.removeChild(node)
+    }
+  }, [node])
+  return <div ref={hostRef} className="view-leaving" data-dir={dir} aria-hidden="true" style={{ top, left, width }} />
+}
+
 export default function App() {
   const [games, setGames] = useState(null) // null = en cours de chargement
   const [error, setError] = useState(null)
@@ -545,15 +559,26 @@ export default function App() {
   const scoringLayer = useExitLayer(scoringGame)
   const editSheetLayer = useExitLayer(editingSheet)
 
-  // Sens du glissé entre les onglets de l'accueil : Stats(0) · Collection(1) · Wishlist(2). Aller vers
-  // la droite (index plus grand) → le contenu entre par la droite ; vers la gauche → par la gauche.
+  // Glissé PLEIN ÉCRAN entre les onglets de l'accueil (Stats · Collection · Wishlist) : on prend un
+  // instantané (clone DOM figé) de l'onglet SORTANT et on le fait GLISSER dehors par-dessus le nouveau
+  // (bord net via l'ombre) → on voit vraiment un écran remplacer l'autre. Le nouvel onglet est en place
+  // dessous (remonté par `key={tabKey}`), révélé au fur et à mesure.
   const tabKey = statsOpen ? 'stats' : view
-  const tabIndex = statsOpen ? 0 : view === 'wishlist' ? 2 : 1
-  const tabIdxRef = useRef(tabIndex)
-  const tabDir = tabIndex > tabIdxRef.current ? 1 : tabIndex < tabIdxRef.current ? -1 : 0
-  useEffect(() => {
-    tabIdxRef.current = tabIndex
-  }, [tabIndex])
+  const contentRef = useRef(null)
+  const [tabLeaving, setTabLeaving] = useState(null) // { node, dir, top, left, width } | null
+  const tabLeaveTimer = useRef(null)
+  const slideTabs = (dir) => {
+    const el = contentRef.current
+    if (!el || dir === 0) return
+    // Remonte en haut d'abord → le clone sortant et le nouvel onglet sont alignés (pas de décalage
+    // vertical), puis on fige l'instantané exactement là où il est.
+    window.scrollTo(0, 0)
+    const rect = el.getBoundingClientRect()
+    const clone = el.cloneNode(true)
+    clearTimeout(tabLeaveTimer.current)
+    setTabLeaving({ node: clone, dir, top: rect.top, left: rect.left, width: rect.width })
+    tabLeaveTimer.current = setTimeout(() => setTabLeaving(null), 320)
+  }
 
   // Statut affiché selon l'onglet (Collection ou Wishlist).
   const listStatus = view === 'wishlist' ? 'wishlist' : 'collection'
@@ -1362,7 +1387,7 @@ export default function App() {
         </FilterSheet>
       )}
 
-      <div className="view-swap" data-dir={tabDir} key={tabKey}>
+      <div className="view-swap" ref={contentRef} key={tabKey}>
       {statsOpen ? (
         <Suspense fallback={null}>
           <Stats
@@ -1440,6 +1465,10 @@ export default function App() {
       </main>
       )}
       </div>
+
+      {tabLeaving && (
+        <LeavingPane node={tabLeaving.node} dir={tabLeaving.dir} top={tabLeaving.top} left={tabLeaving.left} width={tabLeaving.width} />
+      )}
 
       {/* Filtre = bouton principal en bas (partout où filtrer a un sens : liste ET stats). Marche hors ligne. */}
       <button
@@ -1640,12 +1669,18 @@ export default function App() {
       <NavBar
         view={statsOpen ? 'stats' : settingsOpen ? null : view}
         onChange={(v) => {
+          const targetIdx = v === 'stats' ? 0 : v === 'wishlist' ? 2 : 1
+          const overlayOpen = statsOpen || settingsOpen
+          // Onglet actuel (null si on est dans les Réglages → pas de glissé depuis là).
+          const curIdx = settingsOpen ? null : statsOpen ? 0 : view === 'wishlist' ? 2 : 1
+          // Glissé plein écran seulement entre onglets, et seulement si on change vraiment d'onglet.
+          if (curIdx != null && targetIdx !== curIdx) slideTabs(targetIdx > curIdx ? 1 : -1)
+
           if (v === 'stats') {
             setStatsOpen(true)
             setSettingsOpen(false)
             return
           }
-          const overlayOpen = statsOpen || settingsOpen
           setSettingsOpen(false)
           setStatsOpen(false)
           if (v === view) {

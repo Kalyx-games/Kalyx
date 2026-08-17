@@ -2594,8 +2594,12 @@ body {
   /* Pas de padding-bas : la barre d'actions sticky se colle au vrai bas de l'écran
      (elle gère elle-même la safe-area). L'historique (sans barre) rajoute son padding. */
   padding: 8px 16px 0;
-  /* Ouverture d'une page : glisse depuis la droite (effet « swipe vers la gauche »). */
-  animation: kx-page-in 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  /* Ombre sur le BORD GAUCHE (le bord qui « avance ») : hors écran quand la page est en place
+     (bord à gauche = x0), mais bien visible pendant le glissé → on voit un vrai écran passer
+     PAR-DESSUS celui du dessous (séparation nette, comme une transition d'appli native). */
+  box-shadow: -16px 0 34px rgba(0, 0, 0, 0.32);
+  /* Ouverture d'une page : glisse en PLEIN depuis la droite (recouvre l'écran du dessous). */
+  animation: kx-page-in 0.3s cubic-bezier(0.32, 0.72, 0, 1);
 }
 @keyframes kx-page-in {
   from { transform: translateX(100%); }
@@ -2608,23 +2612,35 @@ body {
   to { transform: translateX(100%); }
 }
 .sheet.closing {
-  animation: kx-page-out 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: kx-page-out 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .sheet, .sheet.closing { animation: none; }
 }
 
-/* Glissé entre les onglets de l'accueil (Stats · Collection · Wishlist) : le contenu entre par la
-   DROITE quand on va vers un onglet plus à droite, par la GAUCHE sinon (data-dir posé par App). */
-@keyframes kx-view-in-r { from { opacity: 0.35; transform: translateX(26px); } to { opacity: 1; transform: none; } }
-@keyframes kx-view-in-l { from { opacity: 0.35; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
-/* clip horizontal : le contenu qui glisse (±26px) ne doit pas créer de débordement latéral. */
+/* Onglets de l'accueil (Stats · Collection · Wishlist) : le nouvel onglet est en place (dessous), et
+   l'ONGLET SORTANT — un clone figé positionné exactement là où il était — GLISSE dehors PAR-DESSUS,
+   plein écran, avec une ombre nette sur son bord → on voit un vrai écran remplacer l'autre. */
 .view-swap { overflow-x: clip; }
-.view-swap[data-dir='1'] { animation: kx-view-in-r 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
-.view-swap[data-dir='-1'] { animation: kx-view-in-l 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
+.view-leaving {
+  position: fixed;
+  bottom: 0; /* le clone remplit jusqu'en bas (fond opaque) même si l'onglet sortant est court */
+  z-index: 15; /* au-dessus de la liste, SOUS le FAB (20) et la barre du bas (30) */
+  background: var(--bg);
+  overflow: hidden; /* clippe un onglet plus grand que l'écran au lieu de déborder */
+  pointer-events: none;
+  will-change: transform;
+}
+/* fige l'instantané : aucune anim/cascade ne doit rejouer à l'insertion du clone. */
+.view-leaving * { animation: none !important; transition: none !important; }
+/* aller vers un onglet à DROITE → l'ancien sort par la GAUCHE (ombre à droite, sur le nouveau). */
+.view-leaving[data-dir='1'] { box-shadow: 20px 0 40px rgba(0, 0, 0, 0.34); animation: kx-tab-out-l 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+.view-leaving[data-dir='-1'] { box-shadow: -20px 0 40px rgba(0, 0, 0, 0.34); animation: kx-tab-out-r 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+@keyframes kx-tab-out-l { to { transform: translateX(-100%); } }
+@keyframes kx-tab-out-r { to { transform: translateX(100%); } }
 @media (prefers-reduced-motion: reduce) {
-  .view-swap[data-dir] { animation: none; }
+  .view-leaving { display: none; }
 }
 
 /* ---- Retour visuel d'appui (feedback tactile partout) ----
