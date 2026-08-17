@@ -79,7 +79,10 @@ export default function GameDetail({
       const clone = el.cloneNode(true)
       clearTimeout(leaveTimer.current)
       setBodyLeaving({ node: clone, dir, top: rect.top, left: rect.left, width: rect.width })
-      leaveTimer.current = setTimeout(() => setBodyLeaving(null), 300)
+      // Filet de sécurité : normalement l'instantané est retiré par onAnimationEnd (synchronisé pile à
+      // la fin de l'anim → pas de « bande figée » qui traîne). Ce timeout (plus long) ne sert qu'au cas
+      // où animationend ne se déclenche pas (reduced-motion, anim interrompue).
+      leaveTimer.current = setTimeout(() => setBodyLeaving(null), 600)
     }
     navDirRef.current = dir
     if (sheetRef.current) sheetRef.current.scrollTop = 0 // nouveau jeu en haut, aligné avec l'instantané
@@ -130,6 +133,7 @@ export default function GameDetail({
           node={bodyLeaving.node}
           className={`detail-body-leaving dir-${bodyLeaving.dir}`}
           style={{ top: bodyLeaving.top, left: bodyLeaving.left, width: bodyLeaving.width }}
+          onAnimationEnd={() => { clearTimeout(leaveTimer.current); setBodyLeaving(null) }}
         />
       )}
       <div className="detail-body" key={game.id} data-dir={navDirRef.current} ref={bodyRef}>

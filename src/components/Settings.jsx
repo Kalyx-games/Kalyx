@@ -1,3 +1,4 @@
+/* global __APP_VERSION__ */
 import { Fragment, useMemo, useRef, useState } from 'react'
 import { BackIcon } from './icons'
 import qrcode from 'qrcode-generator'
@@ -325,6 +326,8 @@ export default function Settings({
           ))}
         </div>
       </section>
+
+      <p className="app-version">Version {__APP_VERSION__}</p>
     </div>
   )
 }

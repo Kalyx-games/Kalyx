@@ -2665,6 +2665,14 @@ button { transition: transform 0.12s ease; }
 }
 
 /* ---- Fiche jeu (page détaillée, ouverte en tapant une carte de la collection) ---- */
+.app-version {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin: 18px 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Le corps de la fiche est PLEINE LARGEUR (marge de 16px déplacée dans la tête + le corps) → au
    swipe entre fiches, un translateX de 100% = toute la largeur de l'écran ⇒ l'ancienne fiche sort
    COMPLÈTEMENT (plus de bande figée à gauche). */
@@ -2679,8 +2687,10 @@ button { transition: transform 0.12s ease; }
    TOUJOURS complètement, même si la largeur mesurée du corps est décalée d'un pixel sur un appareil. */
 @keyframes kx-detail-in-r { from { transform: translateX(100vw); } to { transform: translateX(0); } }
 @keyframes kx-detail-in-l { from { transform: translateX(-100vw); } to { transform: translateX(0); } }
-@keyframes kx-detail-out-l { to { transform: translateX(-100vw); } }
-@keyframes kx-detail-out-r { to { transform: translateX(100vw); } }
+/* La sortie se termine à opacity 0 : même si l'instantané est retiré une frame trop tard, son état
+   final (bord + ombre) est INVISIBLE → plus de « bande avec ombre » qui traîne. */
+@keyframes kx-detail-out-l { from { transform: translateX(0); opacity: 1; } 80% { opacity: 1; } to { transform: translateX(-100vw); opacity: 0; } }
+@keyframes kx-detail-out-r { from { transform: translateX(0); opacity: 1; } 80% { opacity: 1; } to { transform: translateX(100vw); opacity: 0; } }
 .detail-body[data-dir='1'] { animation: kx-detail-in-r 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
 .detail-body[data-dir='-1'] { animation: kx-detail-in-l 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
 .detail-body-leaving {

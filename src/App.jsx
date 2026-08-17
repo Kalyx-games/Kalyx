@@ -148,6 +148,18 @@ const SORT_OPTIONS = [
   { value: 'duration', label: 'Durée' },
 ]
 
+// Type de chargement : « reload » = actualisation (pull-to-refresh / F5) → on restaure l'écran ouvert
+// (cf. loadPage). Sinon (DÉMARRAGE À FROID : Kalyx fermée puis rouverte) → on repart PROPREMENT en haut
+// de la Collection, comme demandé (« quitter et revenir »). Défaut prudent : cold start si type inconnu.
+const isReload = (() => {
+  try {
+    const nav = performance.getEntriesByType('navigation')[0]
+    return !!nav && nav.type === 'reload'
+  } catch {
+    return false
+  }
+})()
+
 export default function App() {
   const [games, setGames] = useState(null) // null = en cours de chargement
   const [error, setError] = useState(null)
@@ -173,7 +185,8 @@ export default function App() {
   const [deletingBusy, setDeletingBusy] = useState(false)
   const [moving, setMoving] = useState(null) // jeu à transférer vers la collection | null
   const [movingBusy, setMovingBusy] = useState(false)
-  const savedView = loadView() // onglet mémorisé (localStorage), lu une seule fois au montage
+  // Au démarrage à froid, on ignore l'onglet mémorisé → on repart sur la Collection (cf. isReload).
+  const savedView = isReload ? loadView() : 'collection'
   const [view, setView] = useState(savedView === 'wishlist' ? 'wishlist' : 'collection') // 'collection' | 'wishlist'
   const [settingsOpen, setSettingsOpen] = useState(false) // écran Réglages (engrenage en haut à droite)
   const [playersOpen, setPlayersOpen] = useState(false) // écran Joueurs (renommage global)
@@ -437,13 +450,16 @@ export default function App() {
   // `booting` = true tant qu'un écran mémorisé n'a pas été réappliqué → on masque la collection
   // pendant ce court instant (sinon flash de l'accueil avant que la fiche/l'écran ne recouvre).
   const [booting, setBooting] = useState(() => {
+    if (!isReload) return false // démarrage à froid → Collection direct, pas de restauration d'écran
     const p = loadPage()
     return !!(p && (p.detail || p.history || p.settings || p.players || p.tierlistHub))
   })
   useEffect(() => {
     if (restoredRef.current || games === null) return
     restoredRef.current = true
-    const page = loadPage()
+    // On ne restaure l'écran ouvert QU'À l'actualisation ; au démarrage à froid (« quitter et revenir »)
+    // on reste sur la Collection en haut.
+    const page = isReload ? loadPage() : null
     if (page) {
       if (page.detail) { const g = games.find((x) => x.id === page.detail); if (g) setDetailGame(g) }
       if (page.settings) setSettingsOpen(true)
