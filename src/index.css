@@ -2619,29 +2619,9 @@ body {
   .sheet, .sheet.closing { animation: none; }
 }
 
-/* Onglets de l'accueil (Stats · Collection · Wishlist) : le nouvel onglet est en place (dessous), et
-   l'ONGLET SORTANT — un clone figé positionné exactement là où il était — GLISSE dehors PAR-DESSUS,
-   plein écran, avec une ombre nette sur son bord → on voit un vrai écran remplacer l'autre. */
+/* Changement d'onglet de l'accueil : le contenu est remonté (key) → sur Collection/Wishlist les cartes
+   rejouent leur arrivée (petit mouvement vers le haut). Pas de glissé plein écran (l'user préférait sans). */
 .view-swap { overflow-x: clip; }
-.view-leaving {
-  position: fixed;
-  bottom: 0; /* le clone remplit jusqu'en bas (fond opaque) même si l'onglet sortant est court */
-  z-index: 15; /* au-dessus de la liste, SOUS le FAB (20) et la barre du bas (30) */
-  background: var(--bg);
-  overflow: hidden; /* clippe un onglet plus grand que l'écran au lieu de déborder */
-  pointer-events: none;
-  will-change: transform;
-}
-/* fige l'instantané : aucune anim/cascade ne doit rejouer à l'insertion du clone. */
-.view-leaving * { animation: none !important; transition: none !important; }
-/* aller vers un onglet à DROITE → l'ancien sort par la GAUCHE (ombre à droite, sur le nouveau). */
-.view-leaving[data-dir='1'] { box-shadow: 20px 0 40px rgba(0, 0, 0, 0.34); animation: kx-tab-out-l 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
-.view-leaving[data-dir='-1'] { box-shadow: -20px 0 40px rgba(0, 0, 0, 0.34); animation: kx-tab-out-r 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
-@keyframes kx-tab-out-l { to { transform: translateX(-100%); } }
-@keyframes kx-tab-out-r { to { transform: translateX(100%); } }
-@media (prefers-reduced-motion: reduce) {
-  .view-leaving { display: none; }
-}
 
 /* ---- Retour visuel d'appui (feedback tactile partout) ----
    1) DOUCEUR : chaque bouton anime son enfoncement → lisse aussi les :active déjà présents
@@ -2685,21 +2665,32 @@ button { transition: transform 0.12s ease; }
 }
 
 /* ---- Fiche jeu (page détaillée, ouverte en tapant une carte de la collection) ---- */
-.detail-sheet { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+.detail-sheet { padding-bottom: calc(28px + env(safe-area-inset-bottom)); overflow-x: hidden; }
 .detail-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Changement de jeu au glissé : la fiche ACTUELLE part dans le sens du geste (data-leaving), puis la
-   NOUVELLE entre depuis le côté opposé (data-dir) → on voit l'ancienne disparaître, la nouvelle arriver. */
-@keyframes kx-detail-in-r { from { opacity: 0; transform: translateX(44px); } to { opacity: 1; transform: none; } }
-@keyframes kx-detail-in-l { from { opacity: 0; transform: translateX(-44px); } to { opacity: 1; transform: none; } }
-@keyframes kx-detail-out-l { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-44px); } }
-@keyframes kx-detail-out-r { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(44px); } }
-.detail-body[data-dir='1'] { animation: kx-detail-in-r 0.2s ease; }
-.detail-body[data-dir='-1'] { animation: kx-detail-in-l 0.2s ease; }
-/* Sortie (prioritaire pendant la transition) — forwards : reste sortie jusqu'à la bascule. */
-.detail-body[data-leaving='1'] { animation: kx-detail-out-l 0.16s ease forwards; }
-.detail-body[data-leaving='-1'] { animation: kx-detail-out-r 0.16s ease forwards; }
+/* Changement de jeu au glissé = pager PLEIN ÉCRAN : le corps du NOUVEAU jeu entre en plein depuis un
+   bord PENDANT que l'ancien (instantané figé `.detail-body-leaving`) sort par l'autre bord, avec une
+   ombre nette entre les deux → on voit vraiment une fiche remplacer l'autre. */
+@keyframes kx-detail-in-r { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes kx-detail-in-l { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes kx-detail-out-l { to { transform: translateX(-100%); } }
+@keyframes kx-detail-out-r { to { transform: translateX(100%); } }
+.detail-body[data-dir='1'] { animation: kx-detail-in-r 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+.detail-body[data-dir='-1'] { animation: kx-detail-in-l 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+.detail-body-leaving {
+  position: fixed;
+  bottom: 0;
+  z-index: 3; /* au-dessus du nouveau corps, sous la tête fixe de la fiche */
+  background: var(--bg);
+  overflow: hidden;
+  pointer-events: none;
+  will-change: transform;
+}
+.detail-body-leaving * { animation: none !important; transition: none !important; } /* fige l'instantané */
+.detail-body-leaving.dir-1 { box-shadow: 20px 0 40px rgba(0, 0, 0, 0.34); animation: kx-detail-out-l 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+.detail-body-leaving.dir--1 { box-shadow: -20px 0 40px rgba(0, 0, 0, 0.34); animation: kx-detail-out-r 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
 @media (prefers-reduced-motion: reduce) {
-  .detail-body[data-dir], .detail-body[data-leaving] { animation: none; }
+  .detail-body[data-dir] { animation: none; }
+  .detail-body-leaving { display: none; }
 }
 
 .detail-hero-wrap { position: relative; margin: 4px 0 12px; }
@@ -3700,6 +3691,17 @@ button { transition: transform 0.12s ease; }
   border-left: 3px solid var(--primary);
   padding: 2px 4px 2px 14px;
   margin: 6px 2px 20px;
+  /* Dépliage à l'arrivée sur l'onglet Stats (repère « on a changé d'onglet », comme le petit
+     mouvement des cartes sur Collection/Wishlist) : l'anecdote se déroule de haut en bas. */
+  animation: kx-anec-unfold 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes kx-anec-unfold {
+  from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translateY(-7px); }
+  60% { opacity: 1; }
+  to { opacity: 1; clip-path: inset(0 0 0 0); transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tl-anec-hero { animation: none; }
 }
 .tl-anec-hero-label {
   font-size: 0.72rem;

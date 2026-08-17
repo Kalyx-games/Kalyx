@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 // n'impose PAS le contenu — on lui passe les groupes de filtres en `children`. Pas d'en-tête
 // (gain de place) ; POIGNÉE en haut + glissé vers le bas pour fermer (comme l'ajout d'un jeu) ;
 // actions « Réinitialiser » / « Voir les N … » collées EN BAS ; arrière-plan figé quand ouvert.
-export default function FilterSheet({ children, resetCount = 0, visibleLabel, onReset, onClose }) {
+export default function FilterSheet({ children, resetCount = 0, visibleLabel, onReset, onClose, closeRef }) {
   const [dragY, setDragY] = useState(0)
   const [closing, setClosing] = useState(false)
   const draggingRef = useRef(false)
@@ -29,6 +29,13 @@ export default function FilterSheet({ children, resetCount = 0, visibleLabel, on
     setTimeout(() => onClose(), 260)
   }
   const requestClose = () => requestCloseRef.current()
+  // Le bouton RETOUR d'Android (géré par App) doit fermer AVEC l'animation (glissé vers le bas).
+  // Effet sans deps = ré-exposé à chaque rendu, remis à null au démontage (robuste StrictMode).
+  useEffect(() => {
+    if (!closeRef) return
+    closeRef.current = requestCloseRef.current
+    return () => { closeRef.current = null }
+  })
 
   // Verrouille le défilement de la page tant que le menu est ouvert.
   useEffect(() => {

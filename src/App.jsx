@@ -148,20 +148,6 @@ const SORT_OPTIONS = [
   { value: 'duration', label: 'Durée' },
 ]
 
-// Onglet SORTANT figé (clone DOM) qui glisse dehors par-dessus le nouveau, positionné exactement là
-// où était le contenu (top/left/width mesurés avant la bascule). z-index sous la barre du bas / le FAB.
-function LeavingPane({ node, dir, top, left, width }) {
-  const hostRef = useRef(null)
-  useEffect(() => {
-    const host = hostRef.current
-    if (host && node) host.appendChild(node)
-    return () => {
-      if (host && node && node.parentNode === host) host.removeChild(node)
-    }
-  }, [node])
-  return <div ref={hostRef} className="view-leaving" data-dir={dir} aria-hidden="true" style={{ top, left, width }} />
-}
-
 export default function App() {
   const [games, setGames] = useState(null) // null = en cours de chargement
   const [error, setError] = useState(null)
@@ -332,6 +318,10 @@ export default function App() {
   // plus haute à la plus basse (fenêtre → onglet ouvert → vue précédente). L'app ne
   // se ferme jamais : on remet toujours une entrée d'historique "piège".
   const viewHistoryRef = useRef([]) // vues précédentes (pour revenir en arrière)
+  // Fermetures ANIMÉES exposées par les feuilles à poignée (formulaire, menu de filtres) : le bouton
+  // retour Android passe par elles pour fermer AVEC l'animation (glissé vers le bas) au lieu de couper net.
+  const formCloseRef = useRef(null)
+  const filterCloseRef = useRef(null)
   const uiRef = useRef({})
   uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scoreExitConfirm, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
@@ -400,8 +390,8 @@ export default function App() {
     else if (s.restoring) setRestoring(null)
     else if (s.confirmingPlay) setConfirmingPlay(null)
     else if (s.confirmingTierlist) setConfirmingTierlist(false)
-    else if (s.editing) setEditing(null)
-    else if (s.showFilters) setShowFilters(false)
+    else if (s.editing) { if (formCloseRef.current) formCloseRef.current(); else setEditing(null) } // ferme AVEC l'anim (glissé bas)
+    else if (s.showFilters) { if (filterCloseRef.current) filterCloseRef.current(); else setShowFilters(false) }
     else if (s.chwaziOpen) setChwaziOpen(false)
     else if (s.editingSheet) setEditingSheet(null)
     else if (s.scoreExitConfirm) setScoreExitConfirm(false) // retour pendant le garde → on referme le garde (on reste dans la saisie)
@@ -559,26 +549,10 @@ export default function App() {
   const scoringLayer = useExitLayer(scoringGame)
   const editSheetLayer = useExitLayer(editingSheet)
 
-  // Glissé PLEIN ÉCRAN entre les onglets de l'accueil (Stats · Collection · Wishlist) : on prend un
-  // instantané (clone DOM figé) de l'onglet SORTANT et on le fait GLISSER dehors par-dessus le nouveau
-  // (bord net via l'ombre) → on voit vraiment un écran remplacer l'autre. Le nouvel onglet est en place
-  // dessous (remonté par `key={tabKey}`), révélé au fur et à mesure.
+  // Changement d'onglet de l'accueil : `key={tabKey}` remonte le contenu → sur Collection/Wishlist les
+  // cartes rejouent leur petite arrivée (léger mouvement vers le haut) = repère « on a changé d'onglet ».
+  // (Stats a son propre repère : l'anecdote du jour se déplie — cf. Stats.jsx.)
   const tabKey = statsOpen ? 'stats' : view
-  const contentRef = useRef(null)
-  const [tabLeaving, setTabLeaving] = useState(null) // { node, dir, top, left, width } | null
-  const tabLeaveTimer = useRef(null)
-  const slideTabs = (dir) => {
-    const el = contentRef.current
-    if (!el || dir === 0) return
-    // Remonte en haut d'abord → le clone sortant et le nouvel onglet sont alignés (pas de décalage
-    // vertical), puis on fige l'instantané exactement là où il est.
-    window.scrollTo(0, 0)
-    const rect = el.getBoundingClientRect()
-    const clone = el.cloneNode(true)
-    clearTimeout(tabLeaveTimer.current)
-    setTabLeaving({ node: clone, dir, top: rect.top, left: rect.left, width: rect.width })
-    tabLeaveTimer.current = setTimeout(() => setTabLeaving(null), 320)
-  }
 
   // Statut affiché selon l'onglet (Collection ou Wishlist).
   const listStatus = view === 'wishlist' ? 'wishlist' : 'collection'
@@ -1375,6 +1349,7 @@ export default function App() {
           visibleLabel={`Voir les ${statsOpen ? statsGames.length : visible.length} jeu${(statsOpen ? statsGames.length : visible.length) > 1 ? 'x' : ''}`}
           onReset={resetFilters}
           onClose={() => setShowFilters(false)}
+          closeRef={filterCloseRef}
         >
           <Filters
             owners={allOwners}
@@ -1387,7 +1362,7 @@ export default function App() {
         </FilterSheet>
       )}
 
-      <div className="view-swap" ref={contentRef} key={tabKey}>
+      <div className="view-swap" key={tabKey}>
       {statsOpen ? (
         <Suspense fallback={null}>
           <Stats
@@ -1466,10 +1441,6 @@ export default function App() {
       )}
       </div>
 
-      {tabLeaving && (
-        <LeavingPane node={tabLeaving.node} dir={tabLeaving.dir} top={tabLeaving.top} left={tabLeaving.left} width={tabLeaving.width} />
-      )}
-
       {/* Filtre = bouton principal en bas (partout où filtrer a un sens : liste ET stats). Marche hors ligne. */}
       <button
         className="fab fab-filter"
@@ -1531,6 +1502,7 @@ export default function App() {
           onSave={handleSave}
           onCancel={() => setEditing(null)}
           onDelete={editing !== 'new' ? () => setConfirming(editing) : undefined}
+          closeRef={formCloseRef}
         />
       )}
 
@@ -1669,13 +1641,7 @@ export default function App() {
       <NavBar
         view={statsOpen ? 'stats' : settingsOpen ? null : view}
         onChange={(v) => {
-          const targetIdx = v === 'stats' ? 0 : v === 'wishlist' ? 2 : 1
           const overlayOpen = statsOpen || settingsOpen
-          // Onglet actuel (null si on est dans les Réglages → pas de glissé depuis là).
-          const curIdx = settingsOpen ? null : statsOpen ? 0 : view === 'wishlist' ? 2 : 1
-          // Glissé plein écran seulement entre onglets, et seulement si on change vraiment d'onglet.
-          if (curIdx != null && targetIdx !== curIdx) slideTabs(targetIdx > curIdx ? 1 : -1)
-
           if (v === 'stats') {
             setStatsOpen(true)
             setSettingsOpen(false)

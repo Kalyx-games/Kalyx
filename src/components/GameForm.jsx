@@ -26,7 +26,7 @@ function toForm(game, defaultStatus, prefill) {
 const DIACRITICS = new RegExp('[\\u0300-\\u036f]', 'g')
 const normName = (s) => (s || '').normalize('NFD').replace(DIACRITICS, '').toLowerCase().trim()
 
-export default function GameForm({ game, owners, tags, existingGames = [], saving, onSave, onCancel, onDelete, defaultStatus, prefill }) {
+export default function GameForm({ game, owners, tags, existingGames = [], saving, onSave, onCancel, onDelete, defaultStatus, prefill, closeRef }) {
   const [form, setForm] = useState(() => toForm(game, defaultStatus, prefill))
   const [playersSet, setPlayersSet] = useState(() =>
     game?.players ? parseCounts(game.players) : expandRange(game?.players_min, game?.players_max)
@@ -85,6 +85,14 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
   const modalRef = useRef(null)
   const requestCloseRef = useRef(null)
   requestCloseRef.current = () => animateClose(onCancel)
+  // Le bouton RETOUR d'Android (géré par App) doit fermer AVEC l'animation (glissé vers le bas), pas
+  // couper net → on expose la fermeture animée à App via closeRef (effet sans deps = ré-exposé à chaque
+  // rendu, remis à null au démontage ; robuste au double-montage StrictMode en dev).
+  useEffect(() => {
+    if (!closeRef) return
+    closeRef.current = requestCloseRef.current
+    return () => { closeRef.current = null }
+  })
   useEffect(() => {
     const el = modalRef.current
     if (!el) return

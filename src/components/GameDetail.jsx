@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { BackIcon } from './icons'
+import SnapshotPane from './SnapshotPane'
 import {
   parseOwners, parseTags, ownerDisplay, parseExtensions,
   basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText,
@@ -64,24 +65,28 @@ export default function GameDetail({
   const sheetRef = useRef(null)
   const swipeRef = useRef({ x: 0, y: 0, dragging: false })
   const navDirRef = useRef(0) // sens du dernier changement de jeu (0 = ouverture, 1 = suivant, -1 = précédent)
-  // Transition en 2 temps : la fiche actuelle SORT (dans le sens du geste), puis la nouvelle ENTRE
-  // → on « voit » l'ancienne partir et la nouvelle arriver.
-  const [pendingNav, setPendingNav] = useState(null) // { game, dir } | null
+  // Transition PLEIN ÉCRAN (pager) : on fige un instantané du corps ACTUEL qui glisse dehors PENDANT
+  // que le corps du NOUVEAU jeu glisse dedans → on voit vraiment une fiche remplacer l'autre.
+  const bodyRef = useRef(null)
+  const [bodyLeaving, setBodyLeaving] = useState(null) // { node, dir, top, left, width } | null
+  const leaveTimer = useRef(null)
   const startNav = (dir) => {
     const next = idx + dir
-    if (pendingNav || !onNavigate || idx < 0 || next < 0 || next >= siblings.length) return
+    if (!onNavigate || idx < 0 || next < 0 || next >= siblings.length) return
+    const el = bodyRef.current
+    if (el) {
+      const rect = el.getBoundingClientRect()
+      const clone = el.cloneNode(true)
+      clearTimeout(leaveTimer.current)
+      setBodyLeaving({ node: clone, dir, top: rect.top, left: rect.left, width: rect.width })
+      leaveTimer.current = setTimeout(() => setBodyLeaving(null), 300)
+    }
     navDirRef.current = dir
-    setPendingNav({ game: siblings[next], dir }) // déclenche la sortie de la fiche actuelle
+    if (sheetRef.current) sheetRef.current.scrollTop = 0 // nouveau jeu en haut, aligné avec l'instantané
+    onNavigate(siblings[next]) // bascule immédiate → le nouveau corps glisse en entrée
   }
   const navRef = useRef({})
   navRef.current = { startNav }
-  // Une fois la sortie jouée (~160 ms), on bascule sur le nouveau jeu → il glisse en entrée.
-  useEffect(() => {
-    if (!pendingNav) return
-    const t = setTimeout(() => { onNavigate(pendingNav.game); setPendingNav(null) }, 160)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingNav])
   useEffect(() => {
     const el = sheetRef.current
     if (!el) return
@@ -118,9 +123,16 @@ export default function GameDetail({
         <h2 className="detail-title">{game.name}</h2>
       </div>
 
-      {/* key={game.id} → le corps se re-monte au changement de jeu. data-leaving = sortie de la fiche
-          actuelle (avant bascule) ; data-dir = entrée de la nouvelle. */}
-      <div className="detail-body" key={game.id} data-dir={navDirRef.current} data-leaving={pendingNav ? pendingNav.dir : undefined}>
+      {/* Corps du nouveau jeu qui GLISSE en entrée (plein écran). L'ancien corps (instantané figé)
+          glisse dehors en même temps → cf. SnapshotPane plus bas. key={game.id} → re-montage. */}
+      {bodyLeaving && (
+        <SnapshotPane
+          node={bodyLeaving.node}
+          className={`detail-body-leaving dir-${bodyLeaving.dir}`}
+          style={{ top: bodyLeaving.top, left: bodyLeaving.left, width: bodyLeaving.width }}
+        />
+      )}
+      <div className="detail-body" key={game.id} data-dir={navDirRef.current} ref={bodyRef}>
       <div className="detail-hero-wrap">
         {showImg ? (
           <button type="button" className="detail-hero" onClick={() => onZoomImage(fullImg)} aria-label="Agrandir l'image">
