@@ -234,6 +234,8 @@ export default function App() {
   const [tagsLoaded, setTagsLoaded] = useState(false)
   const [scoresheets, setScoresheets] = useState(null) // { game_id: template }, ou null si table absente
   const [scoringGame, setScoringGame] = useState(null) // jeu en cours de notation (nouvelle partie OU édition) | null
+  const [scoreExitConfirm, setScoreExitConfirm] = useState(false) // confirmation « quitter la saisie ? » (garde anti-perte)
+  const scoringDirtyRef = useRef(false) // la saisie en cours a-t-elle du contenu non enregistré ? (rapporté par ScoreSheet)
   const [editingPlay, setEditingPlay] = useState(null) // partie en cours d'édition | null (= nouvelle partie)
   const [editingSheet, setEditingSheet] = useState(null) // jeu dont on édite/crée la fiche | null
   const [historyGame, setHistoryGame] = useState(null) // jeu dont on regarde l'historique | null
@@ -317,7 +319,7 @@ export default function App() {
   // se ferme jamais : on remet toujours une entrée d'historique "piège".
   const viewHistoryRef = useRef([]) // vues précédentes (pour revenir en arrière)
   const uiRef = useRef({})
-  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
+  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scoreExitConfirm, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
   viewRef.current = view
 
@@ -328,10 +330,15 @@ export default function App() {
   // couche ouverte, poussée dans l'effet qui SUIT le tap d'ouverture (l'activation utilisateur est
   // encore « fraîche » → entrée respectée) ; chaque retour ferme UNE couche ; l'historique reste
   // équilibré (1 ouverture = 1 entrée = 1 retour). À la racine, le retour laisse quitter (normal Android).
-  const layerCount = Object.values(uiRef.current).filter(Boolean).length
+  // scoreExitConfirm est un garde ANTI-PERTE, pas une vraie couche : on l'EXCLUT du compte (sinon
+  // « Quitter » fermerait 2 couches d'un coup → go(-2), qui n'émet qu'UN popstate et déséquilibre
+  // ignoreBackRef). L'entrée consommée par le retour qui a affiché le garde est gérée à part
+  // (scoringEntryConsumedRef) : restaurée si on reste (Annuler), ou « déjà consommée » si on quitte.
+  const layerCount = Object.entries(uiRef.current).filter(([k, v]) => v && k !== 'scoreExitConfirm').length
   const depthRef = useRef(0) // nb d'entrées d'historique poussées pour les couches ouvertes
   const ignoreBackRef = useRef(0) // popstate synthétiques (resynchro) à ignorer
   const backClosingRef = useRef(false) // la baisse de layerCount en cours vient d'un « retour »
+  const scoringEntryConsumedRef = useRef(false) // le retour qui a ouvert le garde a déjà consommé l'entrée de la saisie
 
   // Synchronise le nb d'entrées d'historique avec le nb de couches ouvertes.
   useEffect(() => {
@@ -358,6 +365,14 @@ export default function App() {
   }, [])
 
   // Ferme la couche du dessus (ordre de priorité). Renvoie true si quelque chose a été fermé.
+  // Fermeture d'une saisie de partie : si elle est EN COURS (contenu non enregistré), on demande
+  // confirmation au lieu de fermer — pour ne rien perdre. Sinon on ferme directement. Appelé aussi
+  // bien par le bouton ← (dans ScoreSheet) que par le bouton RETOUR d'Android (via closeTopLayer).
+  const requestCloseScoring = useCallback(() => {
+    if (scoringDirtyRef.current) setScoreExitConfirm(true)
+    else setScoringGame(null)
+  }, [])
+
   const closeTopLayer = useCallback(() => {
     const s = uiRef.current
     // L'image en grand est au-dessus de tout → on la ferme en premier.
@@ -375,7 +390,14 @@ export default function App() {
     else if (s.showFilters) setShowFilters(false)
     else if (s.chwaziOpen) setChwaziOpen(false)
     else if (s.editingSheet) setEditingSheet(null)
-    else if (s.scoringGame) setScoringGame(null) // editingPlay laissé tel quel (réinitialisé à l'ouverture) → pas de flicker pendant la fermeture animée
+    else if (s.scoreExitConfirm) setScoreExitConfirm(false) // retour pendant le garde → on referme le garde (on reste dans la saisie)
+    else if (s.scoringGame) {
+      // Saisie EN COURS → on affiche le garde au lieu de fermer. Ce retour a consommé l'entrée de la
+      // saisie ; on le note pour rééquilibrer à la résolution (Annuler = restaure ; Quitter = déjà consommée).
+      if (scoringDirtyRef.current) { setScoreExitConfirm(true); scoringEntryConsumedRef.current = true }
+      else setScoringGame(null)
+    }
+
     else if (s.historyGame) setHistoryGame(null) // gamePlays idem (rechargé à l'ouverture)
     else if (s.detailGame) setDetailGame(null) // la fiche jeu : les sous-écrans (ci-dessus) se ferment d'abord
     else if (s.tierlistView) setTierlistView(null) // une tierlist s'ouvre PAR-DESSUS le menu
@@ -522,6 +544,16 @@ export default function App() {
   const tlViewLayer = useExitLayer(tierlistView)
   const scoringLayer = useExitLayer(scoringGame)
   const editSheetLayer = useExitLayer(editingSheet)
+
+  // Sens du glissé entre les onglets de l'accueil : Stats(0) · Collection(1) · Wishlist(2). Aller vers
+  // la droite (index plus grand) → le contenu entre par la droite ; vers la gauche → par la gauche.
+  const tabKey = statsOpen ? 'stats' : view
+  const tabIndex = statsOpen ? 0 : view === 'wishlist' ? 2 : 1
+  const tabIdxRef = useRef(tabIndex)
+  const tabDir = tabIndex > tabIdxRef.current ? 1 : tabIndex < tabIdxRef.current ? -1 : 0
+  useEffect(() => {
+    tabIdxRef.current = tabIndex
+  }, [tabIndex])
 
   // Statut affiché selon l'onglet (Collection ou Wishlist).
   const listStatus = view === 'wishlist' ? 'wishlist' : 'collection'
@@ -1330,6 +1362,7 @@ export default function App() {
         </FilterSheet>
       )}
 
+      <div className="view-swap" data-dir={tabDir} key={tabKey}>
       {statsOpen ? (
         <Suspense fallback={null}>
           <Stats
@@ -1406,6 +1439,7 @@ export default function App() {
         )}
       </main>
       )}
+      </div>
 
       {/* Filtre = bouton principal en bas (partout où filtrer a un sens : liste ET stats). Marche hors ligne. */}
       <button
@@ -1697,12 +1731,34 @@ export default function App() {
             initialPlay={editingPlay}
             playerNames={playerNames}
             scenarioNames={scenarioNames}
+            dirtyRef={scoringDirtyRef}
             saving={savingPlay}
             onSavePlay={handleSavePlay}
             onEdit={() => setEditingSheet(scoringLayer.value)}
-            onClose={() => setScoringGame(null)}
+            onClose={requestCloseScoring}
           />
         </Suspense>
+      )}
+
+      {scoreExitConfirm && (
+        <ConfirmDialog
+          title="Quitter sans enregistrer ?"
+          message="La partie en cours de saisie sera perdue."
+          confirmLabel="Quitter"
+          onConfirm={() => {
+            setScoreExitConfirm(false)
+            setScoringGame(null)
+            // Si le garde a été ouvert par le RETOUR Android, l'entrée de la saisie a déjà été consommée
+            // → on marque « fermé par retour » pour que la synchro ne re-consomme pas l'entrée de la fiche dessous.
+            if (scoringEntryConsumedRef.current) { backClosingRef.current = true; scoringEntryConsumedRef.current = false }
+          }}
+          onCancel={() => {
+            setScoreExitConfirm(false)
+            // On RESTE dans la saisie : si le retour avait consommé l'entrée, on la restaure (sur ce TAP →
+            // activation présente → entrée respectée par Chrome), pour que le prochain retour reprotège la saisie.
+            if (scoringEntryConsumedRef.current) { window.history.pushState({ kalyx: 'scoring' }, ''); scoringEntryConsumedRef.current = false }
+          }}
+        />
       )}
 
       {editSheetLayer.mounted && (

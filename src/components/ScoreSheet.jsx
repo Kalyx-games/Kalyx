@@ -3,7 +3,6 @@ import { BackIcon } from './icons'
 import { parseExtensions, effectivePlayersSet } from '../lib/games'
 import { resolveDefaultExts } from '../lib/scoresheets'
 import NameField from './NameField'
-import ConfirmDialog from './ConfirmDialog'
 
 // Fiche de saisie d'une partie. Le type de partie vient du template :
 //  • win     : 'competitive' | 'coop'
@@ -24,7 +23,7 @@ const makeTeamRow = (t = {}) => {
   return { id: ++tid, name: t.name || '', size, players: Array.from({ length: n }, () => makePlayer()), score: '', win: false }
 }
 
-export default function ScoreSheet({ game, template, initialPlay = null, playerNames = [], scenarioNames = [], closing = false, onSavePlay, saving, onEdit, onClose }) {
+export default function ScoreSheet({ game, template, initialPlay = null, playerNames = [], scenarioNames = [], closing = false, dirtyRef, onSavePlay, saving, onEdit, onClose }) {
   const win = template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive')
   const scoring = template?.scoring || 'high'
   // Le « scénario » a été retiré de la création de fiche : on ne le demande plus à la
@@ -266,11 +265,17 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const nameOf = (p, i) => (p.name || '').trim() || `Joueur ${i + 1}`
   const namesOf = () => players.map(nameOf)
 
-  // Fermer une NOUVELLE partie déjà commencée (score saisi ou joueur nommé) demande
-  // confirmation, pour ne pas perdre la saisie par mégarde (bouton ←).
-  const [confirmClose, setConfirmClose] = useState(false)
+  // Une NOUVELLE partie commencée (score saisi ou joueur nommé) est « en cours » : la fermer — que ce
+  // soit par le bouton ← OU par le bouton RETOUR d'Android — doit demander confirmation pour ne pas la
+  // perdre. Le garde est géré par App (pour couvrir aussi le retour Android) ; on lui signale l'état
+  // « en cours » via dirtyRef, et le ← appelle simplement onClose (App décide de confirmer ou fermer).
   const dirtyEntry = !initialPlay && (anyScore || players.some((p) => (p.name || '').trim() !== ''))
-  const requestClose = () => (dirtyEntry ? setConfirmClose(true) : onClose())
+  useEffect(() => {
+    if (dirtyRef) dirtyRef.current = dirtyEntry
+    return () => {
+      if (dirtyRef) dirtyRef.current = false
+    }
+  }, [dirtyEntry, dirtyRef])
   const scenarioVal = () => (wantScenario ? scenario.trim() || null : null)
   // La note voyage avec la partie ; App la persiste sur la fiche si elle a changé.
   const notesVal = () => notes
@@ -419,17 +424,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
   const titleHead = (
     <>
-      {confirmClose && (
-        <ConfirmDialog
-          title="Quitter sans enregistrer ?"
-          message="La partie en cours de saisie sera perdue."
-          confirmLabel="Quitter"
-          onConfirm={onClose}
-          onCancel={() => setConfirmClose(false)}
-        />
-      )}
       <div className="settings-head">
-        <button type="button" className="back-btn" onClick={requestClose} aria-label="Retour"><BackIcon /></button>
+        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2 className="sheet-title">{game?.name}{isEdit ? ' — modifier' : ''}</h2>
         {onEdit && !isEdit && (
           <button type="button" className="back-btn sheet-edit-btn" onClick={onEdit} title="Modifier la fiche" aria-label="Modifier la fiche">✏️</button>

@@ -2615,6 +2615,18 @@ body {
   .sheet, .sheet.closing { animation: none; }
 }
 
+/* Glissé entre les onglets de l'accueil (Stats · Collection · Wishlist) : le contenu entre par la
+   DROITE quand on va vers un onglet plus à droite, par la GAUCHE sinon (data-dir posé par App). */
+@keyframes kx-view-in-r { from { opacity: 0.35; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+@keyframes kx-view-in-l { from { opacity: 0.35; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
+/* clip horizontal : le contenu qui glisse (±26px) ne doit pas créer de débordement latéral. */
+.view-swap { overflow-x: clip; }
+.view-swap[data-dir='1'] { animation: kx-view-in-r 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
+.view-swap[data-dir='-1'] { animation: kx-view-in-l 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .view-swap[data-dir] { animation: none; }
+}
+
 /* ---- Retour visuel d'appui (feedback tactile partout) ----
    1) DOUCEUR : chaque bouton anime son enfoncement → lisse aussi les :active déjà présents
       (fab, navtab, fchip, icon-btn…) qui « claquaient ». transform seul = aucun risque de saut. */
