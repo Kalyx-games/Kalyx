@@ -296,6 +296,16 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
     (filters.extensions.length ? 1 : 0) +
     (filters.players.length ? 1 : 0)
   const resetFilters = () => setFilters({ ...EMPTY_HFILTERS })
+  // Étiquettes des filtres actifs (retirables d'un tap), affichées en haut — comme la collection.
+  const activeChips = useMemo(() => {
+    const chips = []
+    filters.players.forEach((n) => chips.push({ key: 'p:' + n, label: '👤 ' + n, remove: () => setFilters((f) => ({ ...f, players: f.players.filter((x) => x !== n) })) }))
+    if (filters.period !== 'all') chips.push({ key: 'period', label: filters.period === 'month' ? '📅 Ce mois-ci' : '📅 Cette année', remove: () => setFilters((f) => ({ ...f, period: 'all' })) })
+    filters.extensions.forEach((e) => chips.push({ key: 'e:' + e, label: '🧩 ' + e, remove: () => setFilters((f) => ({ ...f, extensions: f.extensions.filter((x) => x !== e) })) }))
+    filters.scenarios.forEach((s) => chips.push({ key: 's:' + s, label: '🎯 ' + s, remove: () => setFilters((f) => ({ ...f, scenarios: f.scenarios.filter((x) => x !== s) })) }))
+    filters.counts.forEach((c) => chips.push({ key: 'c:' + c, label: '👥 ' + c, remove: () => setFilters((f) => ({ ...f, counts: f.counts.filter((x) => x !== c) })) }))
+    return chips
+  }, [filters])
   // Chips extension = celles réellement utilisées dans les parties (filtrer sur une
   // extension jamais jouée ne renverrait rien).
   const extChips = allExts
@@ -311,6 +321,17 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
           <button type="button" className="back-btn sheet-edit-btn" onClick={onEditSheet} disabled={!online} title={online ? 'Modifier la fiche de score' : 'Indisponible hors ligne'} aria-label="Modifier la fiche de score">✏️</button>
         )}
       </div>
+
+      {activeChips.length > 0 && (
+        <div className="active-filters hist-active-filters">
+          {activeChips.map((c) => (
+            <button key={c.key} type="button" className="active-chip" onClick={c.remove} aria-label={`Retirer le filtre ${c.label}`}>
+              <span>{c.label}</span>
+              <span className="active-chip-x">×</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <p className="field-hint" style={{ padding: 16 }}>Chargement…</p>

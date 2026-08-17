@@ -1028,7 +1028,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           )}
         </div>
         <div className="sheet-editor-actions">
-          <button type="button" className="btn-primary" onClick={() => { setCardIndex(0); navDirRef.current = 1; setStep(2) }}>Suivant · saisir les scores →</button>
+          <button type="button" className="btn-primary sheet-cta" onClick={() => { setCardIndex(0); navDirRef.current = 1; setStep(2) }}>Saisir les scores →</button>
         </div>
       </div>
     )
@@ -1111,7 +1111,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         {walkPage}
         <div className="pcard-nav">
           <button type="button" className="pcard-navbtn" onClick={goPrev}>← {prevLabel}</button>
-          <button type="button" className="pcard-navbtn pcard-navbtn-next" onClick={goNext}>{nextLabel} →</button>
+          <button type="button" className={`pcard-navbtn ${idx === pageCount - 1 ? 'pcard-navbtn-recap' : ''}`} onClick={goNext}>{nextLabel} →</button>
         </div>
       </div>
     </div>

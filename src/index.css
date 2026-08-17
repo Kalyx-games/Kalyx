@@ -4,6 +4,7 @@
   --soft: #eef1f6; /* surface neutre discrète (bannières, code, hovers) */
   --btn-ghost-bg: #ffffff; /* fond des boutons secondaires (.btn-ghost) — blanc, ressort sur le fond #eef1f6 */
   --btn-ghost-border: #d5dce8;
+  --cta-glow: rgba(79, 70, 229, 0.3); /* halo des boutons « jalon » */
   --input-bg: #f7f8fb;
   --input-focus: #ffffff;
   --accent-soft: #eef0ff; /* fond teinté primaire (boutons doux) */
@@ -40,6 +41,7 @@
     --soft: #232b3a;
     --btn-ghost-bg: #2b3546;
     --btn-ghost-border: #3a4557;
+    --cta-glow: rgba(139, 134, 255, 0.45);
     --input-bg: #232b3a;
     --input-focus: #2c3547;
     --accent-soft: #2a2f52;
@@ -69,6 +71,7 @@
   --soft: #232b3a;
   --btn-ghost-bg: #2b3546;
   --btn-ghost-border: #3a4557;
+  --cta-glow: rgba(139, 134, 255, 0.45);
   --input-bg: #232b3a;
   --input-focus: #2c3547;
   --accent-soft: #2a2f52;
@@ -2623,7 +2626,7 @@ body {
   overflow: hidden;
   cursor: zoom-in;
 }
-.detail-hero img { display: block; width: 100%; max-height: 240px; object-fit: contain; }
+.detail-hero img { display: block; width: 100%; max-height: 240px; object-fit: contain; border-radius: 14px; }
 .detail-hero-empty {
   height: 150px;
   display: flex;
@@ -3682,6 +3685,8 @@ body {
   min-width: 0;
   padding-bottom: 2px;
 }
+/* Puces de filtres actifs en haut de l'historique/stats d'un jeu (contexte feuille). */
+.hist-active-filters { flex: none; margin: 2px 0 10px; }
 .active-chip {
   flex-shrink: 0;
   display: inline-flex;
@@ -3982,12 +3987,18 @@ body {
   overflow-wrap: anywhere;
 }
 .pcard-navbtn:disabled { opacity: 0.4; cursor: default; }
-/* Le bouton « avance » (item suivant / récap) est mis en avant : dégradé primaire. */
-.pcard-navbtn-next {
+/* Boutons « jalon » (passer à la saisie / au récap) = plus accrocheurs : dégradé primaire + halo.
+   Les boutons de navigation entre items restent discrets (ghost) pour les différencier. */
+.pcard-navbtn-recap,
+.sheet-cta {
   background: linear-gradient(135deg, var(--primary), var(--primary-2));
   color: #fff;
   border-color: transparent;
+  font-weight: 800;
+  box-shadow: 0 4px 16px var(--cta-glow);
 }
+.pcard-navbtn-recap:disabled,
+.sheet-cta:disabled { box-shadow: none; }
 
 /* Indice discret sous le champ Nom (recherche BGG à la touche Entrée) */
 .bgg-hint {

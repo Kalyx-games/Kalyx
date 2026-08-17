@@ -320,20 +320,11 @@ export default function App() {
   const viewRef = useRef(view)
   viewRef.current = view
 
-  // Nombre de "couches" ouvertes (fenêtres/onglets superposés).
-  const layerCount =
-    (editing ? 1 : 0) + (confirming ? 1 : 0) + (moving ? 1 : 0) + (confirmingOwner ? 1 : 0) + (confirmingTag ? 1 : 0) +
-    (importing ? 1 : 0) + (restoring ? 1 : 0) + (confirmingPlay ? 1 : 0) + (confirmingTierlist ? 1 : 0) + (showFilters ? 1 : 0) + (chwaziOpen ? 1 : 0) +
-    (editingSheet ? 1 : 0) + (scoringGame ? 1 : 0) + (historyGame ? 1 : 0) + (detailGame ? 1 : 0) + (statsOpen ? 1 : 0) +
-    (tierlistView ? 1 : 0) + (tierlistHub ? 1 : 0) +
-    (playersOpen ? 1 : 0) + (settingsOpen ? 1 : 0) + (zoomImage ? 1 : 0)
-  const layerRef = useRef(0)
-
-  // Change de vue en mémorisant la vue actuelle + une entrée d'historique (pour le retour).
+  // Change de vue en mémorisant la vue actuelle (pour le retour). Pas de pushState ici :
+  // la sentinelle du bouton retour (plus bas) capte chaque retour et rejoue la vue précédente.
   const goToView = useCallback((v) => {
     if (v === viewRef.current) return
     viewHistoryRef.current.push(viewRef.current)
-    window.history.pushState({ kalyx: 'view' }, '')
     setView(v)
   }, [])
 
@@ -367,24 +358,20 @@ export default function App() {
     return true
   }, [])
 
-  // À l'OUVERTURE d'une couche, on ajoute UNE entrée d'historique (consommée par le retour).
-  // On ne pousse qu'à l'ouverture (pas à chaque retour) → évite le throttle pushState de Firefox.
+  // Bouton "retour" du téléphone — trappe ROBUSTE : UNE entrée sentinelle en avant, toujours
+  // ré-armée après chaque retour. Chaque « retour » ferme donc au plus UNE couche (ou rejoue la
+  // vue précédente), et à la racine on reste dans l'app (jamais de sortie). Ré-armer 1 sentinelle
+  // par retour reste au rythme humain → aucun throttle pushState (contrairement à l'ancien système
+  // « une poussée par couche » qui, après une actualisation, se désynchronisait — retour redondant
+  // voire sortie de l'app).
   useEffect(() => {
-    for (let i = layerRef.current; i < layerCount; i++) window.history.pushState({ kalyx: 'layer' }, '')
-    layerRef.current = layerCount
-  }, [layerCount])
-
-  // Bouton "retour" du téléphone : ferme la couche du dessus, sinon revient à la vue
-  // précédente ; à la racine on remet une entrée pour ne jamais quitter l'app.
-  useEffect(() => {
-    window.history.pushState({ kalyx: 'guard' }, '')
+    window.history.pushState({ kalyx: 'sentinel' }, '')
     const onPop = () => {
-      if (closeTopLayer()) return // couche fermée : l'entrée poussée à l'ouverture est consommée
-      if (viewHistoryRef.current.length > 0) {
+      if (!closeTopLayer() && viewHistoryRef.current.length > 0) {
         setView(viewHistoryRef.current.pop())
-        return // l'entrée de vue est consommée
       }
-      window.history.pushState({ kalyx: 'guard' }, '') // racine : on ne quitte pas
+      // Toujours ré-armer une sentinelle en avant → le prochain retour est capté, jamais de sortie.
+      window.history.pushState({ kalyx: 'sentinel' }, '')
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
