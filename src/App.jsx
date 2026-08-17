@@ -14,6 +14,7 @@ import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPl
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
 import GameDetail from './components/GameDetail'
+import Filters from './components/Filters'
 import ConfirmDialog from './components/ConfirmDialog'
 import SortMenu from './components/SortMenu'
 import FilterSheet from './components/FilterSheet'
@@ -1207,17 +1208,20 @@ export default function App() {
       {/* Filtres en MENU FLOTTANT (ouvert par le bouton flottant) : bloque l'arrière-plan. */}
       {showFilters && (
         <FilterSheet
-          owners={allOwners}
-          tags={allTags}
-          filters={filters}
-          setFilters={setFilters}
-          showPrice={!statsOpen && view === 'wishlist'}
-          showTags={statsOpen || view !== 'wishlist'}
           resetCount={activeFilterCount - (filters.owners.length ? 1 : 0)}
-          visibleCount={statsOpen ? statsGames.length : visible.length}
+          visibleLabel={`Voir les ${statsOpen ? statsGames.length : visible.length} jeu${(statsOpen ? statsGames.length : visible.length) > 1 ? 'x' : ''}`}
           onReset={resetFilters}
           onClose={() => setShowFilters(false)}
-        />
+        >
+          <Filters
+            owners={allOwners}
+            tags={allTags}
+            filters={filters}
+            setFilters={setFilters}
+            showPrice={!statsOpen && view === 'wishlist'}
+            showTags={statsOpen || view !== 'wishlist'}
+          />
+        </FilterSheet>
       )}
 
       {statsOpen ? (

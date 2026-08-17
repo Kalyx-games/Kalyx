@@ -1,15 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import Filters from './Filters'
 
-// Menu FLOTTANT des filtres (bottom sheet), ouvert par le bouton flottant. Partagé par la
-// liste/les stats ET les tierlists. Pas d'en-tête (on gagne de la place) ; une POIGNÉE en
-// haut + glissé vers le bas pour fermer (comme l'ajout d'un jeu). Les actions « Réinitialiser »
-// / « Voir les N jeux » sont collées EN BAS (près du pouce). Tant qu'il est ouvert,
-// l'arrière-plan ne défile plus (verrouillage du scroll de la page).
-export default function FilterSheet({
-  owners, tags, filters, setFilters, showPrice, showTags,
-  resetCount = 0, visibleCount, onReset, onClose,
-}) {
+// Menu FLOTTANT des filtres (bottom sheet), ouvert par le bouton flottant. CHROME générique
+// partagé par la collection/les stats, les tierlists ET l'historique/stats d'un jeu : il
+// n'impose PAS le contenu — on lui passe les groupes de filtres en `children`. Pas d'en-tête
+// (gain de place) ; POIGNÉE en haut + glissé vers le bas pour fermer (comme l'ajout d'un jeu) ;
+// actions « Réinitialiser » / « Voir les N … » collées EN BAS ; arrière-plan figé quand ouvert.
+export default function FilterSheet({ children, resetCount = 0, visibleLabel, onReset, onClose }) {
   const [dragY, setDragY] = useState(0)
   const [closing, setClosing] = useState(false)
   const draggingRef = useRef(false)
@@ -125,16 +121,14 @@ export default function FilterSheet({
       >
         <div className="modal-grip" aria-hidden="true" />
         <div className="filter-sheet-body" ref={scrollRef}>
-          <Filters owners={owners} tags={tags} filters={filters} setFilters={setFilters} showPrice={showPrice} showTags={showTags} />
+          {children}
         </div>
         <div className="filter-sheet-actions">
           <button type="button" className="filters-reset-top" onClick={onReset} disabled={!resetCount}>
             ↺ Réinitialiser{resetCount ? ` (${resetCount})` : ''}
           </button>
           <button type="button" className="filters-see" onClick={requestClose}>
-            {typeof visibleCount === 'number'
-              ? `Voir les ${visibleCount} jeu${visibleCount > 1 ? 'x' : ''}`
-              : 'Fermer'}
+            {visibleLabel || 'Fermer'}
           </button>
         </div>
       </div>

@@ -454,40 +454,8 @@ body {
   transform: scale(0.94);
 }
 
-/* ---- Bouton Filtres + panneau ---- */
-.filter-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 46px;
-  padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--card);
-  color: var(--ink);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-}
-.filter-toggle.active {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: var(--accent-soft);
-}
-.filter-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--primary);
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
+/* ---- Panneau de filtres (contenu du menu flottant) ---- */
+/* Chevron d'un repli (utilisé par « Joueurs occasionnels » dans les filtres de l'historique). */
 .filter-chev {
   color: var(--muted);
   font-size: 0.7rem;
@@ -557,21 +525,6 @@ body {
   width: 18px;
   height: 18px;
   accent-color: var(--primary);
-}
-.filter-reset {
-  width: 100%;
-  margin-top: 4px;
-  padding: 11px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--input-bg);
-  color: var(--muted);
-  font-size: 0.92rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-.filter-reset:active {
-  transform: scale(0.99);
 }
 
 /* ---- Double slider (min–max), tactile ---- */
@@ -1428,10 +1381,11 @@ body {
   justify-content: center;
   border: 2px solid var(--bg);
 }
-/* Bouton flottant des filtres DANS une tierlist (overlay plein écran sans barre de nav) :
-   plus petit, collé en bas à droite. z-index élevé pour passer au-dessus du contenu de la
-   tierlist (`.sheet` crée un contexte d'empilement à z-1000). */
-.tl-fab-filter {
+/* Bouton flottant des filtres DANS un écran plein écran (tierlist, historique/stats d'un jeu) :
+   plus petit, collé en bas à droite. z-index élevé pour passer au-dessus du contenu (`.sheet`
+   crée un contexte d'empilement à z-1000) mais sous le menu flottant (backdrop z-1500). */
+.tl-fab-filter,
+.hist-fab-filter {
   width: 52px;
   height: 52px;
   bottom: calc(18px + env(safe-area-inset-bottom));
@@ -2619,9 +2573,10 @@ body {
      (elle gère elle-même la safe-area). L'historique (sans barre) rajoute son padding. */
   padding: 8px 16px 0;
 }
-/* Historique : pas de barre d'actions → on redonne un espace en bas. */
+/* Historique/Stats : espace en bas pour que le contenu défilé passe au-dessus du bouton
+   flottant des filtres (fixé en bas à droite). */
 .hist-sheet {
-  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
 }
 
 /* ---- Fiche jeu (page détaillée, ouverte en tapant une carte de la collection) ---- */
@@ -3058,13 +3013,6 @@ body {
 }
 
 /* ---- Historique des parties (page par jeu) ---- */
-/* Filtres des stats des parties (réutilise .filters/.filter-* de la collection). */
-.hist-filters {
-  margin-bottom: 12px;
-}
-.hist-filters .filters {
-  margin-top: 10px;
-}
 /* Repli « Joueurs occasionnels ». */
 .occ-toggle {
   display: inline-flex;
@@ -3888,8 +3836,8 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 /* Dans le menu flottant, les filtres occupent TOUTE la largeur (pas de carte insérée dans
-   la carte). On neutralise le style « carte » de `.filters` — qui reste utilisé tel quel,
-   en panneau, dans l'historique des parties (GameHistory). */
+   la carte). On neutralise le style « carte » de `.filters` (le conteneur `.filters` est
+   maintenant TOUJOURS dans un menu flottant : collection, tierlists et historique/stats). */
 .filter-sheet-body .filters {
   margin: 0;
   padding: 0;

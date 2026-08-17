@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { computePlayStats, computeEntityStats, playWinners } from '../lib/plays'
 import { effectivePlayersSet } from '../lib/games'
 import SortMenu from './SortMenu'
+import FilterSheet from './FilterSheet'
+import { FilterIcon } from './icons'
 
 // Filtres des stats des parties (vide = tout).
 const EMPTY_HFILTERS = { players: [], period: 'all', extensions: [], scenarios: [], counts: [] }
@@ -318,20 +320,20 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
         </p>
       ) : (
         <>
-          {/* Bouton + panneau de filtres. */}
-          {(regulars.length + occasional.length > 0 || allExts.length > 0 || allScenarios.length > 0) && (
-            <div className="hist-filters">
-              <button
-                type="button"
-                className={`filter-toggle ${activeFilters ? 'active' : ''}`}
-                onClick={() => setShowFilters((s) => !s)}
-                aria-expanded={showFilters}
-              >
-                Filtres
-                {activeFilters > 0 && <span className="filter-badge">{activeFilters}</span>}
-                <span className={`filter-chev ${showFilters ? 'up' : ''}`}>▾</span>
-              </button>
-              {showFilters && (
+          {/* Filtres : bouton FLOTTANT + menu flottant (même mécanique que le reste de l'appli). */}
+          {!showFilters && (
+            <button type="button" className="fab fab-filter hist-fab-filter" onClick={() => setShowFilters(true)} aria-label="Filtres">
+              <FilterIcon size={22} color="currentColor" />
+              {activeFilters > 0 && <span className="fab-badge">{activeFilters}</span>}
+            </button>
+          )}
+          {showFilters && (
+            <FilterSheet
+              resetCount={activeFilters}
+              visibleLabel={`Voir les ${filtered.length} partie${filtered.length > 1 ? 's' : ''}`}
+              onReset={resetFilters}
+              onClose={() => setShowFilters(false)}
+            >
                 <div className="filters">
                   {regulars.length + occasional.length > 0 && (
                     <div className="filter-group">
@@ -415,12 +417,8 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                       </div>
                     </div>
                   )}
-                  {activeFilters > 0 && (
-                    <button type="button" className="filter-reset" onClick={resetFilters}>Réinitialiser les filtres</button>
-                  )}
                 </div>
-              )}
-            </div>
+            </FilterSheet>
           )}
 
           {filtered.length === 0 ? (

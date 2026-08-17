@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { TIERS } from '../lib/tierlists'
 import { passesFilters } from '../lib/filtering'
 import FilterSheet from './FilterSheet'
+import Filters from './Filters'
 import { FilterIcon } from './icons'
 import NameField from './NameField'
 
@@ -470,16 +471,19 @@ export default function TierlistView({
 
       {showFilters && (
         <FilterSheet
-          owners={allOwners}
-          tags={allTags}
-          filters={filters}
-          setFilters={setFilters}
-          showPrice={false}
-          showTags
           resetCount={activeFilterCount - (filters.owners.length ? 1 : 0)}
           onReset={onResetFilters}
           onClose={() => setShowFilters(false)}
-        />
+        >
+          <Filters
+            owners={allOwners}
+            tags={allTags}
+            filters={filters}
+            setFilters={setFilters}
+            showPrice={false}
+            showTags
+          />
+        </FilterSheet>
       )}
     </div>
   )
