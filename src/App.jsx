@@ -390,26 +390,36 @@ export default function App() {
     return () => window.removeEventListener('popstate', onPop)
   }, [closeTopLayer])
 
-  // Restaure l'écran ouvert avant l'actualisation (fiche jeu / historique / réglages / joueurs / hub).
-  // On attend que les jeux soient chargés (fiche/historique référencés par id) ; l'historique attend
-  // aussi les fiches de score (il lui faut le template). Ne s'exécute qu'une fois.
+  // Restaure l'écran ouvert avant l'actualisation (fiche jeu / réglages / joueurs / hub) dès que les
+  // jeux sont chargés. On marque restauré TOUT DE SUITE (→ la mémorisation repart) sans attendre
+  // l'historique : celui-ci a besoin des fiches de score et est différé plus bas, pour ne jamais
+  // bloquer le reste ni la mémorisation (cas table absente / hors ligne où scoresheets reste null).
   const restoredRef = useRef(false)
+  const pendingHistoryRef = useRef(null)
   useEffect(() => {
     if (restoredRef.current || games === null) return
-    const page = loadPage()
-    if (!page) { restoredRef.current = true; return }
-    if (page.history && scoresheets === null) return // besoin des fiches de score → on réessaie après
     restoredRef.current = true
+    const page = loadPage()
+    if (!page) return
     if (page.detail) { const g = games.find((x) => x.id === page.detail); if (g) setDetailGame(g) }
     if (page.settings) setSettingsOpen(true)
     if (page.players) { setSettingsOpen(true); handleOpenPlayers() }
     if (page.tierlistHub) handleOpenTierlists()
-    if (page.history) {
-      const g = games.find((x) => x.id === page.history)
-      if (g && scoresheets && scoresheets[g.id]) openHistory(g, page.historyView || 'stats')
-    }
+    if (page.history) pendingHistoryRef.current = { id: page.history, view: page.historyView || 'stats' }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [games, scoresheets])
+  }, [games])
+
+  // Historique différé : restauré dès que les fiches de score sont chargées (table présente). Si la
+  // table est absente / hors ligne (scoresheets reste null), on ne restaure pas l'historique (mais le
+  // reste — fiche comprise, qui est en dessous — a bien été restauré).
+  useEffect(() => {
+    const ph = pendingHistoryRef.current
+    if (!ph || games === null || scoresheets === null) return
+    pendingHistoryRef.current = null
+    const g = games.find((x) => x.id === ph.id)
+    if (g && scoresheets[g.id]) openHistory(g, ph.view)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scoresheets, games])
 
   // Mémorise l'écran courant (après la restauration, pour ne pas écraser l'état à restaurer).
   useEffect(() => {
