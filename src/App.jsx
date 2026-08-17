@@ -76,6 +76,28 @@ function saveView(v) {
   }
 }
 
+// Écran ouvert par-dessus l'onglet (fiche jeu / historique / réglages / joueurs / hub tierlists),
+// mémorisé pour revenir dessus après une actualisation. On NE mémorise PAS les formulaires en cours
+// de saisie (nouvelle partie, édition…) : leur contenu non enregistré serait perdu de toute façon.
+const PAGE_KEY = 'kalyx-page'
+function loadPage() {
+  try {
+    const raw = localStorage.getItem(PAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+function savePage(p) {
+  try {
+    const empty = !p.detail && !p.history && !p.settings && !p.players && !p.tierlistHub
+    if (empty) localStorage.removeItem(PAGE_KEY)
+    else localStorage.setItem(PAGE_KEY, JSON.stringify(p))
+  } catch {
+    /* stockage indispo : tant pis */
+  }
+}
+
 // Fréquence de la sauvegarde automatique (mémorisée dans le navigateur).
 const BACKUP_FREQ_KEY = 'kalyx-backup-freq'
 function loadBackupFreq() {
@@ -367,6 +389,40 @@ export default function App() {
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [closeTopLayer])
+
+  // Restaure l'écran ouvert avant l'actualisation (fiche jeu / historique / réglages / joueurs / hub).
+  // On attend que les jeux soient chargés (fiche/historique référencés par id) ; l'historique attend
+  // aussi les fiches de score (il lui faut le template). Ne s'exécute qu'une fois.
+  const restoredRef = useRef(false)
+  useEffect(() => {
+    if (restoredRef.current || games === null) return
+    const page = loadPage()
+    if (!page) { restoredRef.current = true; return }
+    if (page.history && scoresheets === null) return // besoin des fiches de score → on réessaie après
+    restoredRef.current = true
+    if (page.detail) { const g = games.find((x) => x.id === page.detail); if (g) setDetailGame(g) }
+    if (page.settings) setSettingsOpen(true)
+    if (page.players) { setSettingsOpen(true); handleOpenPlayers() }
+    if (page.tierlistHub) handleOpenTierlists()
+    if (page.history) {
+      const g = games.find((x) => x.id === page.history)
+      if (g && scoresheets && scoresheets[g.id]) openHistory(g, page.historyView || 'stats')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [games, scoresheets])
+
+  // Mémorise l'écran courant (après la restauration, pour ne pas écraser l'état à restaurer).
+  useEffect(() => {
+    if (!restoredRef.current) return
+    savePage({
+      detail: detailGame?.id || null,
+      history: historyGame?.id || null,
+      historyView,
+      settings: settingsOpen,
+      players: playersOpen,
+      tierlistHub,
+    })
+  }, [detailGame, historyGame, historyView, settingsOpen, playersOpen, tierlistHub])
 
   // Liste des propriétaires déjà utilisés (un jeu peut en avoir plusieurs).
   const owners = useMemo(() => {

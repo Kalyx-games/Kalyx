@@ -45,8 +45,11 @@ export default function GameDetail({
   const tags = parseTags(game.tags)
   const fullImg = game.image_url
 
-  // Sondage BGG « nombre de joueurs » (si stocké) : { total, rows:[{n,best,rec,notRec}] }.
-  const poll = game.bgg_poll && Array.isArray(game.bgg_poll.rows) && game.bgg_poll.rows.length ? game.bgg_poll : null
+  // Sondage BGG « nombre de joueurs » : { total, rows:[{n,best,rec,notRec}] }.
+  // pollSearched = on a bien interrogé BGG (objet avec un tableau rows, même vide) → distingue
+  // « sondage cherché mais vide » (petite phrase) de « non cherché » (rien, bgg_poll absent/null).
+  const pollSearched = game.bgg_poll && Array.isArray(game.bgg_poll.rows) ? game.bgg_poll : null
+  const poll = pollSearched && pollSearched.rows.length ? pollSearched : null
 
   // Repli si l'image ne charge pas (optimiseur ET image brute en échec) → on montre le dé
   // au lieu d'une icône d'image cassée (cohérent avec la carte).
@@ -196,6 +199,14 @@ export default function GameDetail({
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* Sondage cherché mais sans aucun vote sur BGG → on l'indique (uniquement dans ce cas). */}
+      {!poll && pollSearched && (
+        <div className="detail-poll">
+          <div className="detail-poll-head">🗳️ Nombre de joueurs</div>
+          <p className="detail-poll-none">Aucun sondage sur BoardGameGeek pour ce jeu.</p>
         </div>
       )}
     </div>

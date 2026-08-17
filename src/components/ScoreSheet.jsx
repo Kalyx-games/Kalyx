@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { parseExtensions, effectivePlayersSet } from '../lib/games'
 import { resolveDefaultExts } from '../lib/scoresheets'
 import NameField from './NameField'
@@ -85,13 +85,14 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     return Array.from({ length: minP }, () => makePlayer())
   })
   const [focusedPlayer, setFocusedPlayer] = useState(null)
-  // Parcours de saisie (compétitif à points) : étape 1 = noms + extensions, étape 2 = scores.
-  // Une NOUVELLE partie commence à l'étape 1 ; l'édition d'une partie va direct aux scores.
-  const [step, setStep] = useState(isEdit ? 2 : 1)
-  // Vue de saisie des scores : 'byPlayer' (une carte par joueur) | 'byItem' (tableau).
-  // Défaut = choix de la fiche ; basculable pendant la saisie.
-  const [entryView, setEntryView] = useState(() => (template?.entry === 'byPlayer' ? 'byPlayer' : 'byItem'))
-  const [cardIndex, setCardIndex] = useState(0) // carte joueur affichée en vue « par joueur »
+  // Parcours de saisie (compétitif à points) : 1 = noms + extensions, 2 = parcours (joueur/item), 3 = récap.
+  // Une NOUVELLE partie commence à l'étape 1 ; l'édition d'une partie va direct au récapitulatif.
+  const [step, setStep] = useState(isEdit ? 3 : 1)
+  const [cardIndex, setCardIndex] = useState(0) // page du parcours affichée (joueur ou item selon le mode)
+  const walkRef = useRef(null) // conteneur du parcours (pour le glissé)
+  const swipeRef = useRef({ x: 0, y: 0, dragging: false })
+  const navRef = useRef({ goPrev: () => {}, goNext: () => {} }) // maj à chaque rendu → toujours frais
+  const navDirRef = useRef(1) // sens du dernier changement de page (animation de glissé)
   // Variante « pour toute la partie » : valeur unique, relue depuis n'importe quel joueur de
   // la partie éditée (stockée à l'identique sur chacun dans playVariant ; repli sur `variant`
   // pour les rares parties enregistrées avant la refonte, quand il n'y a pas de variante joueur).
@@ -501,10 +502,40 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   useEffect(() => {
     if (triggerAsked && triggers.length === 1) setInstantTrigger((t) => t ?? triggers[0])
   }, [triggerAsked])
-  // Réaligne la carte affichée si le nombre de joueurs a diminué (retour à l'étape 1 puis retrait).
+  // Réaligne la page affichée si le nombre de joueurs a diminué (retour à l'étape 1 puis retrait).
   useEffect(() => {
     setCardIndex((k) => Math.min(k, Math.max(0, players.length - 1)))
   }, [players.length])
+  // Glissé horizontal pour changer de page pendant le parcours (étape 2). Écouteurs tactiles natifs
+  // non-passifs (les Pointer Events React sont passifs → preventDefault impossible). navRef reste frais.
+  useEffect(() => {
+    if (step !== 2) return
+    const el = walkRef.current
+    if (!el) return
+    const st = swipeRef.current
+    const onStart = (e) => { const t = e.touches[0]; st.x = t.clientX; st.y = t.clientY; st.dragging = false }
+    const onMove = (e) => {
+      const t = e.touches[0]
+      const dx = t.clientX - st.x
+      const dy = t.clientY - st.y
+      if (!st.dragging && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) + 4) st.dragging = true
+      if (st.dragging) e.preventDefault()
+    }
+    const onEnd = (e) => {
+      if (!st.dragging) return
+      st.dragging = false
+      const dx = e.changedTouches[0].clientX - st.x
+      if (Math.abs(dx) > 50) (dx < 0 ? navRef.current.goNext : navRef.current.goPrev)()
+    }
+    el.addEventListener('touchstart', onStart, { passive: true })
+    el.addEventListener('touchmove', onMove, { passive: false })
+    el.addEventListener('touchend', onEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchmove', onMove)
+      el.removeEventListener('touchend', onEnd)
+    }
+  }, [step])
   const triggerField = showTrigger && (
     <div className="field">
       <label className="field-label">🏁 {isCoop ? 'Comment le groupe a gagné' : 'Comment le jeu a été gagné'} <span className="field-opt">(facultatif)</span></label>
@@ -808,38 +839,112 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     )
   }
 
-  // ---------- COMPÉTITIF AVEC POINTS (assistant en 2 étapes) ----------
-  const idx = Math.min(cardIndex, Math.max(0, players.length - 1))
-  const cardP = players[idx]
+  // ---------- COMPÉTITIF AVEC POINTS (assistant : noms → parcours → récap) ----------
+  const entry = template?.entry === 'byPlayer' ? 'byPlayer' : 'byItem'
+  const pageCount = entry === 'byPlayer' ? players.length : visibleCats.length
+  const idx = Math.min(cardIndex, Math.max(0, pageCount - 1))
 
-  // Bloc « catégories d'un joueur » réutilisé par la carte (compteurs −/+).
-  const catRows = (p, checkClass, stepper) =>
-    visibleCats.map((c) => (
-      <div key={c.label} className="pcard-row">
-        <div className="pcard-cat">
-          <span className="pcard-cat-label">
-            {c.label}
-            {c.value != null ? <span className="sheet-cat-val">{c.value > 0 ? `+${c.value}` : c.value}</span> : null}
-          </span>
-          {c.hint ? <span className="sheet-cat-hint">{c.hint}</span> : null}
-          {c.ext ? <span className="sheet-cat-ext">🧩 {c.ext}</span> : null}
-        </div>
-        {c.value != null ? (
-          <input
-            className={checkClass}
-            type="checkbox"
-            checked={Number(p.scores[c.label]) === c.value}
-            onChange={(e) => setScore(p.id, c.label, e.target.checked ? String(c.value) : '')}
-            aria-label={`${c.label} — ${c.value} points`}
-          />
-        ) : (
-          stepper(p, c)
-        )}
+  // Champ de saisie d'une case : cochable si la catégorie a une valeur fixe, sinon compteur −/+ (et clavier).
+  const inputFor = (p, c) =>
+    c.value != null ? (
+      <input
+        className="sheet-check pcard-check"
+        type="checkbox"
+        checked={Number(p.scores[c.label]) === c.value}
+        onChange={(e) => setScore(p.id, c.label, e.target.checked ? String(c.value) : '')}
+        aria-label={`${c.label} — ${c.value} points`}
+      />
+    ) : (
+      <div className="pcard-stepper">
+        <button type="button" className="pcard-pm" onClick={() => bump(p.id, c.label, -1)} aria-label="Moins 1">−</button>
+        <input
+          className="pcard-value"
+          type="number"
+          inputMode="numeric"
+          placeholder="0"
+          value={p.scores[c.label] ?? ''}
+          onChange={(e) => setScore(p.id, c.label, e.target.value)}
+        />
+        <button type="button" className="pcard-pm" onClick={() => bump(p.id, c.label, +1)} aria-label="Plus 1">+</button>
       </div>
-    ))
+    )
 
-  // Vue TABLEAU (item par item) : noms fixés à l'étape 1 → en-tête en lecture seule.
-  const tableView = (
+  const catValueTag = (c) => (c.value != null ? <span className="sheet-cat-val">{c.value > 0 ? `+${c.value}` : c.value}</span> : null)
+
+  // Une page du parcours : soit un joueur (toutes ses catégories), soit une catégorie (tous les joueurs).
+  // SANS mention de l'extension d'origine (retirée de la fiche de décompte).
+  const walkPage =
+    pageCount === 0 ? null : entry === 'byPlayer' ? (
+      (() => {
+        const p = players[idx]
+        return (
+          <div className="pcard" data-dir={navDirRef.current} key={`p${idx}`}>
+            <div className="pcard-head">
+              <span className="pcard-name">{isTopWinner(p) ? '🏆 ' : ''}{nameOf(p, idx)}</span>
+              {variantPerPlayer && p.variant ? <span className="pcard-variant">{p.variant}</span> : null}
+            </div>
+            {visibleCats.map((c) => (
+              <div key={c.label} className="pcard-row">
+                <div className="pcard-cat">
+                  <span className="pcard-cat-label">{c.label}{catValueTag(c)}</span>
+                  {c.hint ? <span className="sheet-cat-hint">{c.hint}</span> : null}
+                </div>
+                {inputFor(p, c)}
+              </div>
+            ))}
+            <div className="pcard-total"><span>Total</span><b>{totals[idx]}</b></div>
+          </div>
+        )
+      })()
+    ) : (
+      (() => {
+        const c = visibleCats[idx]
+        return (
+          <div className="pcard" data-dir={navDirRef.current} key={`c${idx}`}>
+            <div className="pcard-head">
+              <span className="pcard-name">{c.label}{catValueTag(c)}</span>
+            </div>
+            {c.hint ? <p className="pcard-item-hint">{c.hint}</p> : null}
+            {players.map((p, i) => (
+              <div key={p.id} className="pcard-row">
+                <div className="pcard-cat">
+                  <span className="pcard-cat-label">{isTopWinner(p) ? '🏆 ' : ''}{nameOf(p, i)}</span>
+                  {variantPerPlayer && p.variant ? <span className="hist-variant">{p.variant}</span> : null}
+                </div>
+                {inputFor(p, c)}
+              </div>
+            ))}
+          </div>
+        )
+      })()
+    )
+
+  // Navigation du parcours : ← recule (ou revient aux noms) / → avance (ou va au récap). navDirRef pilote l'animation.
+  const goPrev = () => { navDirRef.current = -1; if (idx > 0) setCardIndex(idx - 1); else setStep(1) }
+  const goNext = () => { navDirRef.current = 1; if (idx < pageCount - 1) setCardIndex(idx + 1); else setStep(3) }
+  const jumpTo = (k) => { navDirRef.current = k >= idx ? 1 : -1; setCardIndex(k) }
+  navRef.current = { goPrev, goNext }
+
+  const prevLabel = idx > 0 ? (entry === 'byPlayer' ? nameOf(players[idx - 1], idx - 1) : visibleCats[idx - 1].label) : 'Joueurs'
+  const nextLabel = idx < pageCount - 1 ? (entry === 'byPlayer' ? nameOf(players[idx + 1], idx + 1) : visibleCats[idx + 1].label) : 'Récapitulatif'
+
+  // Visualiseur : un pointillé court par page, un long sur la page active ; doré = gagnant (mode joueur).
+  const walkDots = (
+    <div className="pcard-dots">
+      {Array.from({ length: pageCount }).map((_, k) => (
+        <button
+          key={k}
+          type="button"
+          className={`pcard-dot ${k === idx ? 'on' : ''} ${entry === 'byPlayer' && players[k] && isTopWinner(players[k]) ? 'win' : ''}`}
+          onClick={() => jumpTo(k)}
+          aria-label={`Page ${k + 1} sur ${pageCount}`}
+        />
+      ))}
+    </div>
+  )
+
+  // Tableau récapitulatif éditable (colonnes = joueurs), SANS mention d'extension.
+  const recapTable = (
     <div className="sheet-scroll">
       <table className="sheet-table">
         <thead>
@@ -857,12 +962,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           {visibleCats.map((c) => (
             <tr key={c.label}>
               <th className="sheet-cat" scope="row">
-                <span className="sheet-cat-label">
-                  {c.label}
-                  {c.value != null ? <span className="sheet-cat-val">{c.value > 0 ? `+${c.value}` : c.value}</span> : null}
-                </span>
+                <span className="sheet-cat-label">{c.label}{catValueTag(c)}</span>
                 {c.hint ? <span className="sheet-cat-hint">{c.hint}</span> : null}
-                {c.ext ? <span className="sheet-cat-ext">🧩 {c.ext}</span> : null}
               </th>
               {players.map((p) => (
                 <td key={p.id}>
@@ -902,53 +1003,6 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     </div>
   )
 
-  // Vue PAR JOUEUR : une carte plein écran par joueur, compteurs −/+ (+ clavier).
-  const cardView = cardP ? (
-    <div className="pcard-wrap">
-      <div className="pcard-dots">
-        {players.map((pp, k) => (
-          <button
-            key={pp.id}
-            type="button"
-            className={`pcard-dot ${k === idx ? 'on' : ''} ${isTopWinner(pp) ? 'win' : ''}`}
-            onClick={() => setCardIndex(k)}
-            aria-label={`Voir ${nameOf(pp, k)}`}
-          />
-        ))}
-      </div>
-      <div className="pcard">
-        <div className="pcard-head">
-          <span className="pcard-name">{isTopWinner(cardP) ? '🏆 ' : ''}{nameOf(cardP, idx)}</span>
-          {variantPerPlayer && cardP.variant ? <span className="pcard-variant">{cardP.variant}</span> : null}
-        </div>
-        {catRows(cardP, 'sheet-check pcard-check', (p, c) => (
-          <div className="pcard-stepper">
-            <button type="button" className="pcard-pm" onClick={() => bump(p.id, c.label, -1)} aria-label="Moins 1">−</button>
-            <input
-              className="pcard-value"
-              type="number"
-              inputMode="numeric"
-              placeholder="0"
-              value={p.scores[c.label] ?? ''}
-              onChange={(e) => setScore(p.id, c.label, e.target.value)}
-            />
-            <button type="button" className="pcard-pm" onClick={() => bump(p.id, c.label, +1)} aria-label="Plus 1">+</button>
-          </div>
-        ))}
-        <div className="pcard-total"><span>Total</span><b>{totals[idx]}</b></div>
-      </div>
-      <div className="pcard-nav">
-        <button type="button" className="pcard-navbtn" onClick={() => setCardIndex(Math.max(0, idx - 1))} disabled={idx === 0}>
-          ← {idx > 0 ? nameOf(players[idx - 1], idx - 1) : ''}
-        </button>
-        <span className="pcard-count">{idx + 1} / {players.length}</span>
-        <button type="button" className="pcard-navbtn" onClick={() => setCardIndex(Math.min(players.length - 1, idx + 1))} disabled={idx === players.length - 1}>
-          {idx < players.length - 1 ? nameOf(players[idx + 1], idx + 1) : ''} →
-        </button>
-      </div>
-    </div>
-  ) : null
-
   // ÉTAPE 1 : noms des joueurs + extensions jouées.
   if (step === 1) {
     return (
@@ -973,81 +1027,94 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           )}
         </div>
         <div className="sheet-editor-actions">
-          <button type="button" className="btn-primary" onClick={() => setStep(2)}>Suivant · saisir les scores →</button>
+          <button type="button" className="btn-primary" onClick={() => { setCardIndex(0); navDirRef.current = 1; setStep(2) }}>Suivant · saisir les scores →</button>
         </div>
       </div>
     )
   }
 
-  // ÉTAPE 2 : saisie des scores (par joueur OU tableau, basculable).
+  // ÉTAPE 3 : récapitulatif (tableau éditable) + champs de partie + notes + enregistrement.
+  if (step === 3) {
+    return (
+      <div className="sheet">
+        {titleHead}
+        <div className="entry-bar">
+          <button type="button" className="entry-back" onClick={() => { navDirRef.current = -1; setStep(2) }}>← Modifier les scores</button>
+          <span className="entry-recap-title">🧾 Récapitulatif</span>
+        </div>
+
+        {visibleCats.length === 0 ? (
+          <p className="empty" style={{ padding: 24 }}>Cette fiche n'a pas encore de catégories.</p>
+        ) : (
+          recapTable
+        )}
+
+        {(scenarioField || instantField || playVariantField) && (
+          <div className="coop-form">
+            {scenarioField}
+            {playVariantField}
+            {instantField}
+          </div>
+        )}
+
+        {tiedPlayers.length >= 2 && instantWinnerId == null && (
+          <div className="coop-form">
+            <div className="field">
+              <label className="field-label">🤝 Égalité — vainqueur <span className="field-opt">(départage secondaire)</span></label>
+              <div className="chips">
+                {tiedPlayers.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`fchip ${forcedWinner === p.id ? 'on' : ''}`}
+                    onClick={() => setForcedWinnerId((cur) => (cur === p.id ? null : p.id))}
+                  >
+                    🏆 {nameOf(p, players.indexOf(p))}
+                  </button>
+                ))}
+              </div>
+              <p className="field-hint" style={{ marginTop: 6 }}>Laisse vide = tous ex æquo gagnent.</p>
+            </div>
+          </div>
+        )}
+
+        <div className="coop-form">{notesField}</div>
+
+        {onSavePlay && visibleCats.length > 0 && (
+          <div className="sheet-editor-actions sheet-save-bar">
+            {anyScore &&
+              (() => {
+                const leaders = players.filter((p) => isTopWinner(p))
+                if (!leaders.length) return null
+                const total = totals[players.indexOf(leaders[0])]
+                return (
+                  <div className="sheet-leader">
+                    🏆 {leaders.map((p) => nameOf(p, players.indexOf(p))).join(', ')} · <b>{total}</b>
+                  </div>
+                )
+              })()}
+            <button type="button" className="btn-primary" onClick={saveScored} disabled={saving || (!anyScore && !instantWinnerId)}>
+              {saving ? '…' : saveLabel}
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ÉTAPE 2 : parcours page par page (joueur par joueur OU item par item, selon la fiche) + glissé.
   return (
     <div className="sheet">
       {titleHead}
-      <div className="entry-bar">
-        <button type="button" className="entry-back" onClick={() => setStep(1)}>← Joueurs</button>
-        <div className="entry-switch">
-          <button type="button" className={`entry-switch-btn ${entryView === 'byPlayer' ? 'on' : ''}`} onClick={() => setEntryView('byPlayer')}>🃏 Par joueur</button>
-          <button type="button" className={`entry-switch-btn ${entryView === 'byItem' ? 'on' : ''}`} onClick={() => setEntryView('byItem')}>📋 Tableau</button>
+      <div className="pcard-wrap" ref={walkRef}>
+        {walkDots}
+        {walkPage}
+        <div className="pcard-nav">
+          <button type="button" className="pcard-navbtn" onClick={goPrev}>← {prevLabel}</button>
+          <span className="pcard-count">{idx + 1} / {pageCount}</span>
+          <button type="button" className="pcard-navbtn pcard-navbtn-next" onClick={goNext}>{nextLabel} →</button>
         </div>
       </div>
-
-      {visibleCats.length === 0 ? (
-        <p className="empty" style={{ padding: 24 }}>Cette fiche n'a pas encore de catégories.</p>
-      ) : entryView === 'byPlayer' ? (
-        cardView
-      ) : (
-        tableView
-      )}
-
-      {(scenarioField || instantField || playVariantField) && (
-        <div className="coop-form">
-          {scenarioField}
-          {playVariantField}
-          {instantField}
-        </div>
-      )}
-
-      {tiedPlayers.length >= 2 && instantWinnerId == null && (
-        <div className="coop-form">
-          <div className="field">
-            <label className="field-label">🤝 Égalité — vainqueur <span className="field-opt">(départage secondaire)</span></label>
-            <div className="chips">
-              {tiedPlayers.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className={`fchip ${forcedWinner === p.id ? 'on' : ''}`}
-                  onClick={() => setForcedWinnerId((cur) => (cur === p.id ? null : p.id))}
-                >
-                  🏆 {nameOf(p, players.indexOf(p))}
-                </button>
-              ))}
-            </div>
-            <p className="field-hint" style={{ marginTop: 6 }}>Laisse vide = tous ex æquo gagnent.</p>
-          </div>
-        </div>
-      )}
-
-      <div className="coop-form">{notesField}</div>
-
-      {onSavePlay && visibleCats.length > 0 && (
-        <div className="sheet-editor-actions sheet-save-bar">
-          {anyScore &&
-            (() => {
-              const leaders = players.filter((p) => isTopWinner(p))
-              if (!leaders.length) return null
-              const total = totals[players.indexOf(leaders[0])]
-              return (
-                <div className="sheet-leader">
-                  🏆 {leaders.map((p) => nameOf(p, players.indexOf(p))).join(', ')} · <b>{total}</b>
-                </div>
-              )
-            })()}
-          <button type="button" className="btn-primary" onClick={saveScored} disabled={saving || (!anyScore && !instantWinnerId)}>
-            {saving ? '…' : saveLabel}
-          </button>
-        </div>
-      )}
     </div>
   )
 }

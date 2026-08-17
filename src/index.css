@@ -2,6 +2,7 @@
   --bg: #eef1f6;
   --card: #ffffff;
   --soft: #eef1f6; /* surface neutre discrète (bannières, code, hovers) */
+  --btn-ghost-bg: #eef1f6; /* fond des boutons secondaires (.btn-ghost) */
   --input-bg: #f7f8fb;
   --input-focus: #ffffff;
   --accent-soft: #eef0ff; /* fond teinté primaire (boutons doux) */
@@ -36,6 +37,7 @@
     --bg: #10151d;
     --card: #191f2b;
     --soft: #232b3a;
+    --btn-ghost-bg: #2b3546;
     --input-bg: #232b3a;
     --input-focus: #2c3547;
     --accent-soft: #2a2f52;
@@ -63,6 +65,7 @@
   --bg: #10151d;
   --card: #191f2b;
   --soft: #232b3a;
+  --btn-ghost-bg: #2b3546;
   --input-bg: #232b3a;
   --input-focus: #2c3547;
   --accent-soft: #2a2f52;
@@ -209,6 +212,14 @@ body {
   transform: translateY(160px);
   opacity: 0;
   pointer-events: none;
+}
+/* Les FAB de filtre des overlays (historique, tierlist) ne se masquent JAMAIS :
+   ils vivent dans un écran à défilement propre, le masquage au scroll de l'app pouvait les faire disparaître définitivement. */
+.app.bars-hidden .hist-fab-filter,
+.app.bars-hidden .tl-fab-filter {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .brand {
@@ -1552,8 +1563,9 @@ body {
   gap: 8px;
 }
 .btn-ghost {
-  background: var(--soft);
-  color: var(--muted);
+  background: var(--btn-ghost-bg);
+  color: var(--ink);
+  border: 1px solid var(--line);
 }
 .btn-primary {
   background: linear-gradient(135deg, var(--primary), var(--primary-2));
@@ -2642,6 +2654,7 @@ body {
 }
 .detail-poll-head { font-weight: 600; font-size: 0.95rem; margin-bottom: 8px; }
 .detail-poll-total { color: var(--muted); font-weight: 400; }
+.detail-poll-none { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.4; }
 /* Légende en toutes lettres (dot coloré + mot) → pas d'abréviation ambiguë. */
 .poll-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 10px; font-size: 0.78rem; color: var(--muted); }
 .poll-key { display: inline-flex; align-items: center; gap: 5px; }
@@ -3763,52 +3776,54 @@ body {
   padding: 6px 4px;
   cursor: pointer;
 }
-.entry-switch {
+.entry-recap-title {
   margin-left: auto;
-  display: inline-flex;
-  background: var(--soft);
-  border-radius: 10px;
-  padding: 3px;
-  gap: 3px;
-}
-.entry-switch-btn {
-  border: none;
-  background: none;
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 0.82rem;
-  padding: 7px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.entry-switch-btn.on {
-  background: var(--card);
+  font-weight: 800;
   color: var(--ink);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  font-size: 0.95rem;
 }
 
-/* Vue « par joueur » : une carte plein écran par joueur */
+/* Parcours de saisie : une page plein écran (joueur ou item) */
 .pcard-wrap {
   padding: 8px 16px 4px;
+  touch-action: pan-y; /* le glissé horizontal change de page, le vertical scrolle */
 }
+/* Visualiseur : pointillés courts + un long sur la page active (doré si gagnant, mode joueur). */
 .pcard-dots {
   display: flex;
   justify-content: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
 }
 .pcard-dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
+  width: 8px;
+  height: 4px;
+  border-radius: 2px;
   border: none;
-  background: var(--soft);
+  background: var(--line);
   cursor: pointer;
   padding: 0;
-  transition: transform 0.15s;
+  transition: width 0.18s ease, background 0.18s ease;
 }
-.pcard-dot.on { background: var(--primary); transform: scale(1.25); }
+.pcard-dot.on { width: 24px; background: var(--primary); }
 .pcard-dot.win { background: var(--gold, #eab308); }
+
+/* Animation de changement de page (sens du glissé). */
+@keyframes pcard-slide-r { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+@keyframes pcard-slide-l { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
+.pcard[data-dir='1'] { animation: pcard-slide-r 0.18s ease; }
+.pcard[data-dir='-1'] { animation: pcard-slide-l 0.18s ease; }
+.pcard-item-hint {
+  margin: -2px 0 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pcard[data-dir] { animation: none; }
+}
 .pcard {
   background: var(--card);
   border: 1px solid var(--line);
@@ -3930,6 +3945,7 @@ body {
   white-space: nowrap;
 }
 .pcard-navbtn:disabled { opacity: 0.35; cursor: default; }
+.pcard-navbtn-next { background: var(--accent-soft); color: var(--primary); border-color: transparent; }
 .pcard-count {
   flex-shrink: 0;
   font-size: 0.82rem;

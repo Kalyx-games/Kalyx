@@ -99,7 +99,9 @@ function playerPoll(xml) {
     const notRec = g('Not Recommended')
     if (best + rec + notRec > 0) rows.push({ n: m[1], best, rec, notRec })
   }
-  return rows.length ? { total, rows } : null
+  // Un élément de sondage EXISTE (pollM) → on renvoie l'objet même sans votes (rows vide),
+  // pour distinguer « sondage cherché mais vide » de « non cherché » (null) côté fiche.
+  return { total, rows }
 }
 
 export default async function handler(req, res) {
