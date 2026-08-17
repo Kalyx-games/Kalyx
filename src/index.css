@@ -2615,12 +2615,20 @@ body {
 /* ---- Fiche jeu (page détaillée, ouverte en tapant une carte de la collection) ---- */
 .detail-sheet { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
 .detail-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Changement de jeu au glissé (swipe) : le corps de la fiche glisse dans le sens du geste. */
-@keyframes kx-detail-in-r { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
-@keyframes kx-detail-in-l { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
-.detail-body[data-dir='1'] { animation: kx-detail-in-r 0.22s ease; }
-.detail-body[data-dir='-1'] { animation: kx-detail-in-l 0.22s ease; }
-@media (prefers-reduced-motion: reduce) { .detail-body[data-dir] { animation: none; } }
+/* Changement de jeu au glissé : la fiche ACTUELLE part dans le sens du geste (data-leaving), puis la
+   NOUVELLE entre depuis le côté opposé (data-dir) → on voit l'ancienne disparaître, la nouvelle arriver. */
+@keyframes kx-detail-in-r { from { opacity: 0; transform: translateX(44px); } to { opacity: 1; transform: none; } }
+@keyframes kx-detail-in-l { from { opacity: 0; transform: translateX(-44px); } to { opacity: 1; transform: none; } }
+@keyframes kx-detail-out-l { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-44px); } }
+@keyframes kx-detail-out-r { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(44px); } }
+.detail-body[data-dir='1'] { animation: kx-detail-in-r 0.2s ease; }
+.detail-body[data-dir='-1'] { animation: kx-detail-in-l 0.2s ease; }
+/* Sortie (prioritaire pendant la transition) — forwards : reste sortie jusqu'à la bascule. */
+.detail-body[data-leaving='1'] { animation: kx-detail-out-l 0.16s ease forwards; }
+.detail-body[data-leaving='-1'] { animation: kx-detail-out-r 0.16s ease forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .detail-body[data-dir], .detail-body[data-leaving] { animation: none; }
+}
 
 .detail-hero-wrap { position: relative; margin: 4px 0 12px; }
 .detail-hero {

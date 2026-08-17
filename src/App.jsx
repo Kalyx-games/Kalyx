@@ -320,11 +320,39 @@ export default function App() {
   const viewRef = useRef(view)
   viewRef.current = view
 
-  // Change de vue en mémorisant la vue actuelle (pour le retour). Pas de pushState ici :
-  // la sentinelle du bouton retour (plus bas) capte chaque retour et rejoue la vue précédente.
+  // ═══ Bouton « retour » Android (PWA installée) — modèle FIABLE ═══
+  // Recherche confirmée : Chrome IGNORE au « retour » toute entrée pushState créée SANS activation
+  // utilisateur (« intervention anti-piégeage »). Donc on NE re-pousse JAMAIS une sentinelle dans le
+  // handler de retour (elle serait sautée → sortie de l'app). À la place : UNE entrée d'historique par
+  // couche ouverte, poussée dans l'effet qui SUIT le tap d'ouverture (l'activation utilisateur est
+  // encore « fraîche » → entrée respectée) ; chaque retour ferme UNE couche ; l'historique reste
+  // équilibré (1 ouverture = 1 entrée = 1 retour). À la racine, le retour laisse quitter (normal Android).
+  const layerCount = Object.values(uiRef.current).filter(Boolean).length
+  const depthRef = useRef(0) // nb d'entrées d'historique poussées pour les couches ouvertes
+  const ignoreBackRef = useRef(0) // popstate synthétiques (resynchro) à ignorer
+  const backClosingRef = useRef(false) // la baisse de layerCount en cours vient d'un « retour »
+
+  // Synchronise le nb d'entrées d'historique avec le nb de couches ouvertes.
+  useEffect(() => {
+    const diff = layerCount - depthRef.current
+    depthRef.current = layerCount
+    if (diff > 0) {
+      // Couche ouverte → 1 entrée par couche (l'effet suit le tap → activation présente).
+      for (let i = 0; i < diff; i++) window.history.pushState({ kalyx: 'layer' }, '')
+    } else if (diff < 0 && !backClosingRef.current) {
+      // Couche fermée par un BOUTON (pas par « retour ») → consomme l'entrée orpheline pour rester équilibré.
+      ignoreBackRef.current += -diff
+      window.history.go(diff)
+    }
+    backClosingRef.current = false
+  }, [layerCount])
+
+  // Change de vue en mémorisant la vue actuelle (pour le retour). Pousse 1 entrée (on est dans le tap
+  // de la barre de navigation → activation présente → entrée respectée par Chrome).
   const goToView = useCallback((v) => {
     if (v === viewRef.current) return
     viewHistoryRef.current.push(viewRef.current)
+    window.history.pushState({ kalyx: 'view' }, '')
     setView(v)
   }, [])
 
@@ -358,33 +386,19 @@ export default function App() {
     return true
   }, [])
 
-  // Bouton "retour" du téléphone — trappe ROBUSTE : UNE entrée sentinelle en avant, toujours
-  // ré-armée après chaque retour. Chaque « retour » ferme donc au plus UNE couche (ou rejoue la
-  // vue précédente), et à la racine on reste dans l'app (jamais de sortie).
-  // ⚠️ POINT CLÉ (PWA installée / Chrome Android) : Chrome IGNORE au retour les entrées créées par
-  // pushState SANS interaction utilisateur (« intervention anti-piégeage du bouton retour »). Une
-  // sentinelle poussée au chargement (dans un effet, sans geste) est donc SAUTÉE → le retour sort de
-  // l'app. Correctif : on (ré)arme la sentinelle au 1er GESTE utilisateur (là elle est « activée » →
-  // respectée). Le ré-armement dans `popstate` est déclenché par l'appui « retour » = un geste, donc
-  // lui aussi respecté.
+  // Chaque « retour » ferme UNE couche (ordre de priorité) ou rejoue la vue précédente. On NE re-pousse
+  // JAMAIS d'entrée ici (voir le bloc plus haut : ce serait sauté par Chrome → sortie de l'app). Quand
+  // une couche est fermée, on marque `backClosingRef` pour que l'effet de synchro ne re-consomme pas
+  // l'entrée (le « retour » l'a déjà consommée). À la racine (rien à fermer), on laisse quitter.
   useEffect(() => {
-    const arm = () => window.history.pushState({ kalyx: 'sentinel' }, '')
-    arm() // immédiat (navigateurs sans l'intervention) — inoffensif si Chrome la saute
-    const armOnGesture = () => arm() // 1er geste → sentinelle « activée par l'utilisateur »
-    window.addEventListener('pointerdown', armOnGesture, { once: true, capture: true })
-    window.addEventListener('keydown', armOnGesture, { once: true, capture: true })
     const onPop = () => {
-      if (!closeTopLayer() && viewHistoryRef.current.length > 0) {
-        setView(viewHistoryRef.current.pop())
-      }
-      arm() // ré-arme (l'appui « retour » est une activation utilisateur → entrée respectée)
+      if (ignoreBackRef.current > 0) { ignoreBackRef.current--; return } // « retour » synthétique (resynchro) → ignorer
+      if (closeTopLayer()) { backClosingRef.current = true; return }
+      if (viewHistoryRef.current.length > 0) setView(viewHistoryRef.current.pop())
+      // sinon : racine → on ne fait rien, le « retour » quitte l'app (comportement Android normal)
     }
     window.addEventListener('popstate', onPop)
-    return () => {
-      window.removeEventListener('pointerdown', armOnGesture, { capture: true })
-      window.removeEventListener('keydown', armOnGesture, { capture: true })
-      window.removeEventListener('popstate', onPop)
-    }
+    return () => window.removeEventListener('popstate', onPop)
   }, [closeTopLayer])
 
   // Restaure l'écran ouvert avant l'actualisation (fiche jeu / réglages / joueurs / hub) dès que les
@@ -582,6 +596,8 @@ export default function App() {
     (filters.duration != null ? 1 : 0) +
     (!statsOpen && view === 'wishlist' && (filters.priceRange[0] !== PRICE_MIN || filters.priceRange[1] !== PRICE_MAX) ? 1 : 0) +
     (filters.complexity.length ? 1 : 0)
+  // Pastille du bouton flottant : on NE compte PAS le propriétaire (filtre « passif » persistant).
+  const badgeCount = activeFilterCount - (filters.owners.length ? 1 : 0)
 
   // Réinitialise les filtres en gardant le propriétaire (utilisé par la liste ET les tierlists).
   const resetFilters = useCallback(() => setFilters((f) => ({ ...EMPTY_FILTERS, owners: f.owners })), [])
@@ -1388,7 +1404,7 @@ export default function App() {
         aria-label="Filtrer les jeux"
       >
         <FilterIcon size={22} color="currentColor" />
-        {activeFilterCount > 0 && <span className="fab-badge">{activeFilterCount}</span>}
+        {badgeCount > 0 && <span className="fab-badge">{badgeCount}</span>}
       </button>
       {/* Ajouter = bouton plus petit, au-dessus du filtre (liste seulement). */}
       {!statsOpen && (

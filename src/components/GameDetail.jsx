@@ -64,8 +64,24 @@ export default function GameDetail({
   const sheetRef = useRef(null)
   const swipeRef = useRef({ x: 0, y: 0, dragging: false })
   const navDirRef = useRef(0) // sens du dernier changement de jeu (0 = ouverture, 1 = suivant, -1 = précédent)
+  // Transition en 2 temps : la fiche actuelle SORT (dans le sens du geste), puis la nouvelle ENTRE
+  // → on « voit » l'ancienne partir et la nouvelle arriver.
+  const [pendingNav, setPendingNav] = useState(null) // { game, dir } | null
+  const startNav = (dir) => {
+    const next = idx + dir
+    if (pendingNav || !onNavigate || idx < 0 || next < 0 || next >= siblings.length) return
+    navDirRef.current = dir
+    setPendingNav({ game: siblings[next], dir }) // déclenche la sortie de la fiche actuelle
+  }
   const navRef = useRef({})
-  navRef.current = { idx, siblings, onNavigate }
+  navRef.current = { startNav }
+  // Une fois la sortie jouée (~160 ms), on bascule sur le nouveau jeu → il glisse en entrée.
+  useEffect(() => {
+    if (!pendingNav) return
+    const t = setTimeout(() => { onNavigate(pendingNav.game); setPendingNav(null) }, 160)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingNav])
   useEffect(() => {
     const el = sheetRef.current
     if (!el) return
@@ -83,13 +99,7 @@ export default function GameDetail({
       st.dragging = false
       const dx = e.changedTouches[0].clientX - st.x
       if (Math.abs(dx) < 60) return
-      const { idx, siblings, onNavigate } = navRef.current
-      if (!onNavigate || idx < 0) return
-      const next = dx < 0 ? idx + 1 : idx - 1 // glissé vers la gauche → jeu suivant
-      if (next >= 0 && next < siblings.length) {
-        navDirRef.current = dx < 0 ? 1 : -1
-        onNavigate(siblings[next])
-      }
+      navRef.current.startNav(dx < 0 ? 1 : -1) // glissé vers la gauche → jeu suivant
     }
     el.addEventListener('touchstart', onStart, { passive: true })
     el.addEventListener('touchmove', onMove, { passive: false })
@@ -108,8 +118,9 @@ export default function GameDetail({
         <h2 className="detail-title">{game.name}</h2>
       </div>
 
-      {/* key={game.id} → le corps se re-monte au changement de jeu ; data-dir pilote le glissé. */}
-      <div className="detail-body" key={game.id} data-dir={navDirRef.current}>
+      {/* key={game.id} → le corps se re-monte au changement de jeu. data-leaving = sortie de la fiche
+          actuelle (avant bascule) ; data-dir = entrée de la nouvelle. */}
+      <div className="detail-body" key={game.id} data-dir={navDirRef.current} data-leaving={pendingNav ? pendingNav.dir : undefined}>
       <div className="detail-hero-wrap">
         {showImg ? (
           <button type="button" className="detail-hero" onClick={() => onZoomImage(fullImg)} aria-label="Agrandir l'image">
