@@ -63,6 +63,7 @@ export default function GameDetail({
   const idx = siblings.findIndex((g) => g.id === game.id)
   const sheetRef = useRef(null)
   const swipeRef = useRef({ x: 0, y: 0, dragging: false })
+  const navDirRef = useRef(0) // sens du dernier changement de jeu (0 = ouverture, 1 = suivant, -1 = précédent)
   const navRef = useRef({})
   navRef.current = { idx, siblings, onNavigate }
   useEffect(() => {
@@ -85,7 +86,10 @@ export default function GameDetail({
       const { idx, siblings, onNavigate } = navRef.current
       if (!onNavigate || idx < 0) return
       const next = dx < 0 ? idx + 1 : idx - 1 // glissé vers la gauche → jeu suivant
-      if (next >= 0 && next < siblings.length) onNavigate(siblings[next])
+      if (next >= 0 && next < siblings.length) {
+        navDirRef.current = dx < 0 ? 1 : -1
+        onNavigate(siblings[next])
+      }
     }
     el.addEventListener('touchstart', onStart, { passive: true })
     el.addEventListener('touchmove', onMove, { passive: false })
@@ -104,6 +108,8 @@ export default function GameDetail({
         <h2 className="detail-title">{game.name}</h2>
       </div>
 
+      {/* key={game.id} → le corps se re-monte au changement de jeu ; data-dir pilote le glissé. */}
+      <div className="detail-body" key={game.id} data-dir={navDirRef.current}>
       <div className="detail-hero-wrap">
         {showImg ? (
           <button type="button" className="detail-hero" onClick={() => onZoomImage(fullImg)} aria-label="Agrandir l'image">
@@ -249,6 +255,7 @@ export default function GameDetail({
           <p className="detail-poll-none">Aucun sondage sur BoardGameGeek pour ce jeu.</p>
         </div>
       )}
+      </div>
     </div>
   )
 }

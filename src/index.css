@@ -2615,6 +2615,13 @@ body {
 /* ---- Fiche jeu (page détaillée, ouverte en tapant une carte de la collection) ---- */
 .detail-sheet { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
 .detail-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Changement de jeu au glissé (swipe) : le corps de la fiche glisse dans le sens du geste. */
+@keyframes kx-detail-in-r { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+@keyframes kx-detail-in-l { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
+.detail-body[data-dir='1'] { animation: kx-detail-in-r 0.22s ease; }
+.detail-body[data-dir='-1'] { animation: kx-detail-in-l 0.22s ease; }
+@media (prefers-reduced-motion: reduce) { .detail-body[data-dir] { animation: none; } }
+
 .detail-hero-wrap { position: relative; margin: 4px 0 12px; }
 .detail-hero {
   display: block;

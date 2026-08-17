@@ -360,21 +360,31 @@ export default function App() {
 
   // Bouton "retour" du téléphone — trappe ROBUSTE : UNE entrée sentinelle en avant, toujours
   // ré-armée après chaque retour. Chaque « retour » ferme donc au plus UNE couche (ou rejoue la
-  // vue précédente), et à la racine on reste dans l'app (jamais de sortie). Ré-armer 1 sentinelle
-  // par retour reste au rythme humain → aucun throttle pushState (contrairement à l'ancien système
-  // « une poussée par couche » qui, après une actualisation, se désynchronisait — retour redondant
-  // voire sortie de l'app).
+  // vue précédente), et à la racine on reste dans l'app (jamais de sortie).
+  // ⚠️ POINT CLÉ (PWA installée / Chrome Android) : Chrome IGNORE au retour les entrées créées par
+  // pushState SANS interaction utilisateur (« intervention anti-piégeage du bouton retour »). Une
+  // sentinelle poussée au chargement (dans un effet, sans geste) est donc SAUTÉE → le retour sort de
+  // l'app. Correctif : on (ré)arme la sentinelle au 1er GESTE utilisateur (là elle est « activée » →
+  // respectée). Le ré-armement dans `popstate` est déclenché par l'appui « retour » = un geste, donc
+  // lui aussi respecté.
   useEffect(() => {
-    window.history.pushState({ kalyx: 'sentinel' }, '')
+    const arm = () => window.history.pushState({ kalyx: 'sentinel' }, '')
+    arm() // immédiat (navigateurs sans l'intervention) — inoffensif si Chrome la saute
+    const armOnGesture = () => arm() // 1er geste → sentinelle « activée par l'utilisateur »
+    window.addEventListener('pointerdown', armOnGesture, { once: true, capture: true })
+    window.addEventListener('keydown', armOnGesture, { once: true, capture: true })
     const onPop = () => {
       if (!closeTopLayer() && viewHistoryRef.current.length > 0) {
         setView(viewHistoryRef.current.pop())
       }
-      // Toujours ré-armer une sentinelle en avant → le prochain retour est capté, jamais de sortie.
-      window.history.pushState({ kalyx: 'sentinel' }, '')
+      arm() // ré-arme (l'appui « retour » est une activation utilisateur → entrée respectée)
     }
     window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
+    return () => {
+      window.removeEventListener('pointerdown', armOnGesture, { capture: true })
+      window.removeEventListener('keydown', armOnGesture, { capture: true })
+      window.removeEventListener('popstate', onPop)
+    }
   }, [closeTopLayer])
 
   // Restaure l'écran ouvert avant l'actualisation (fiche jeu / réglages / joueurs / hub) dès que les
