@@ -2675,10 +2675,12 @@ button { transition: transform 0.12s ease; }
 /* Changement de jeu au glissé = pager PLEIN ÉCRAN : le corps du NOUVEAU jeu entre en plein depuis un
    bord PENDANT que l'ancien (instantané figé `.detail-body-leaving`) sort par l'autre bord, avec une
    ombre nette entre les deux → on voit vraiment une fiche remplacer l'autre. */
-@keyframes kx-detail-in-r { from { transform: translateX(100%); } to { transform: translateX(0); } }
-@keyframes kx-detail-in-l { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-@keyframes kx-detail-out-l { to { transform: translateX(-100%); } }
-@keyframes kx-detail-out-r { to { transform: translateX(100%); } }
+/* translateX en VW (largeur de l'écran), pas en % (largeur de l'élément) → l'ancienne fiche sort
+   TOUJOURS complètement, même si la largeur mesurée du corps est décalée d'un pixel sur un appareil. */
+@keyframes kx-detail-in-r { from { transform: translateX(100vw); } to { transform: translateX(0); } }
+@keyframes kx-detail-in-l { from { transform: translateX(-100vw); } to { transform: translateX(0); } }
+@keyframes kx-detail-out-l { to { transform: translateX(-100vw); } }
+@keyframes kx-detail-out-r { to { transform: translateX(100vw); } }
 .detail-body[data-dir='1'] { animation: kx-detail-in-r 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
 .detail-body[data-dir='-1'] { animation: kx-detail-in-l 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
 .detail-body-leaving {
