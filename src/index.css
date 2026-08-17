@@ -3735,6 +3735,209 @@ body {
   font-size: 0.95rem;
 }
 
+/* ===== Saisie d'une partie : assistant en 2 étapes (compétitif à points) ===== */
+
+/* Nom de joueur figé (en-tête du tableau à l'étape 2 — plus d'édition ici) */
+.sheet-name-fixed {
+  display: inline-block;
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* Barre du haut de l'étape 2 : retour aux noms + bascule de vue */
+.entry-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 4px;
+}
+.entry-back {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 6px 4px;
+  cursor: pointer;
+}
+.entry-switch {
+  margin-left: auto;
+  display: inline-flex;
+  background: var(--soft);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+}
+.entry-switch-btn {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.entry-switch-btn.on {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* Vue « par joueur » : une carte plein écran par joueur */
+.pcard-wrap {
+  padding: 8px 16px 4px;
+}
+.pcard-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.pcard-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: none;
+  background: var(--soft);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s;
+}
+.pcard-dot.on { background: var(--primary); transform: scale(1.25); }
+.pcard-dot.win { background: var(--gold, #eab308); }
+.pcard {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+.pcard-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.pcard-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+.pcard-variant {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--accent-soft);
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+.pcard-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--soft);
+}
+.pcard-row:last-of-type { border-bottom: none; }
+.pcard-cat {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pcard-cat-label {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+.pcard-stepper {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pcard-pm {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--input-bg);
+  color: var(--ink);
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.pcard-pm:active { background: var(--accent-soft); }
+.pcard-value {
+  width: 58px;
+  height: 40px;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--ink);
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.pcard-check {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+}
+.pcard-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 2px solid var(--line);
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+.pcard-total b { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.pcard-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.pcard-navbtn {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pcard-navbtn:disabled { opacity: 0.35; cursor: default; }
+.pcard-count {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Indice discret sous le champ Nom (recherche BGG à la touche Entrée) */
 .bgg-hint {
   margin: 0;

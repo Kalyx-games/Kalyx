@@ -34,6 +34,9 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   // Type de partie (options composables).
   const [win, setWin] = useState(() => template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive'))
   const [scoring, setScoring] = useState(() => template?.scoring || 'high')
+  // Mode de saisie d'une partie (compétitif à points seulement) : 'byPlayer' = une carte
+  // par joueur (compteurs), 'byItem' = tableau (item par item). Défaut = tableau (actuel).
+  const [entry, setEntry] = useState(() => (template?.entry === 'byPlayer' ? 'byPlayer' : 'byItem'))
   // « Pas de points » = victoire directe (par désignation / condition). Peut coexister
   // avec un score (compat : ancien scoring 'none' → pas de points implicite).
   const [instant, setInstant] = useState(() => template?.instant ?? template?.scoring === 'none')
@@ -254,6 +257,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
         {
           win,
           scoring,
+          entry,
           instant,
           triggers: instant ? triggerNames : [],
           scenario: false, // paramètre retiré de l'app (voir ScoreSheet) — nettoyé à chaque enregistrement
@@ -308,6 +312,18 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
             🏁 Pas de points / Victoire directe
           </button>
         </div>
+
+        {/* Mode de saisie (compétitif à points uniquement) : cartes par joueur ou tableau. */}
+        {!isCoop && !teamsOn && scoring !== 'none' && (
+          <>
+            <label className="field-label" style={{ marginTop: 14 }}>Saisie des scores</label>
+            <div className="chips">
+              <button type="button" className={`fchip ${entry === 'byPlayer' ? 'on' : ''}`} onClick={() => setEntry('byPlayer')}>🃏 Par joueur</button>
+              <button type="button" className={`fchip ${entry === 'byItem' ? 'on' : ''}`} onClick={() => setEntry('byItem')}>📋 Item par item</button>
+            </div>
+            <p className="field-hint" style={{ marginTop: 6 }}>« Par joueur » = une carte plein écran par joueur (compteurs −/+). Basculable pendant la saisie.</p>
+          </>
+        )}
 
         {/* Déclencheurs de victoire (conditions instantanées), facultatifs. */}
         {instant && (
