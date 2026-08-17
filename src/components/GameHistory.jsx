@@ -3,7 +3,7 @@ import { computePlayStats, computeEntityStats, playWinners } from '../lib/plays'
 import { effectivePlayersSet } from '../lib/games'
 import SortMenu from './SortMenu'
 import FilterSheet from './FilterSheet'
-import { FilterIcon } from './icons'
+import { FilterIcon, BackIcon } from './icons'
 
 // Filtres des stats des parties (vide = tout).
 const EMPTY_HFILTERS = { players: [], period: 'all', extensions: [], scenarios: [], counts: [] }
@@ -305,7 +305,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
   return (
     <div className="sheet hist-sheet">
       <div className="settings-head">
-        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">←</button>
+        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2 className="sheet-title">{isPlaysView ? '🗓️' : '📊'} {game?.name}</h2>
         {onEditSheet && (
           <button type="button" className="back-btn sheet-edit-btn" onClick={onEditSheet} disabled={!online} title={online ? 'Modifier la fiche de score' : 'Indisponible hors ligne'} aria-label="Modifier la fiche de score">✏️</button>

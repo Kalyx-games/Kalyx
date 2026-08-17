@@ -284,7 +284,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
     setBggFilled(null)
   }
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
     if (!form.name.trim()) return
     const players = countsToText(playersSet)
@@ -295,7 +295,10 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
     const tags = tagsToText(tagSet)
     const extensions = serializeExtensions(extList)
     // Une seule durée saisie → on remplit min ET max avec la même valeur (schéma inchangé).
-    onSave({ ...form, owner, tags, players, players_min, players_max, players_best, extensions, duration_min: form.duration, duration_max: form.duration })
+    // onSave renvoie true si l'enregistrement a réussi → on ferme en glissant vers le bas
+    // (au lieu d'une fermeture brusque). En cas d'échec, le formulaire reste ouvert (message).
+    const ok = await onSave({ ...form, owner, tags, players, players_min, players_max, players_best, extensions, duration_min: form.duration, duration_max: form.duration })
+    if (ok !== false) animateClose(onCancel)
   }
 
   return (

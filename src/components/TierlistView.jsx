@@ -3,7 +3,7 @@ import { TIERS } from '../lib/tierlists'
 import { passesFilters } from '../lib/filtering'
 import FilterSheet from './FilterSheet'
 import Filters from './Filters'
-import { FilterIcon } from './icons'
+import { FilterIcon, BackIcon } from './icons'
 import NameField from './NameField'
 
 // Miniature optimisée (même image que les cartes, via l'optimiseur Vercel).
@@ -326,7 +326,7 @@ export default function TierlistView({
   return (
     <div className="sheet tl-sheet" ref={rootRef} onClick={onRootClick}>
       <div className="settings-head tl-head">
-        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">‹</button>
+        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         {editing ? (
           <div className="tl-name-edit">
             <NameField

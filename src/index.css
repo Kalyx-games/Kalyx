@@ -2,7 +2,8 @@
   --bg: #eef1f6;
   --card: #ffffff;
   --soft: #eef1f6; /* surface neutre discrète (bannières, code, hovers) */
-  --btn-ghost-bg: #eef1f6; /* fond des boutons secondaires (.btn-ghost) */
+  --btn-ghost-bg: #ffffff; /* fond des boutons secondaires (.btn-ghost) — blanc, ressort sur le fond #eef1f6 */
+  --btn-ghost-border: #d5dce8;
   --input-bg: #f7f8fb;
   --input-focus: #ffffff;
   --accent-soft: #eef0ff; /* fond teinté primaire (boutons doux) */
@@ -38,6 +39,7 @@
     --card: #191f2b;
     --soft: #232b3a;
     --btn-ghost-bg: #2b3546;
+    --btn-ghost-border: #3a4557;
     --input-bg: #232b3a;
     --input-focus: #2c3547;
     --accent-soft: #2a2f52;
@@ -66,6 +68,7 @@
   --card: #191f2b;
   --soft: #232b3a;
   --btn-ghost-bg: #2b3546;
+  --btn-ghost-border: #3a4557;
   --input-bg: #232b3a;
   --input-focus: #2c3547;
   --accent-soft: #2a2f52;
@@ -1565,7 +1568,7 @@ body {
 .btn-ghost {
   background: var(--btn-ghost-bg);
   color: var(--ink);
-  border: 1px solid var(--line);
+  border: 1px solid var(--btn-ghost-border);
 }
 .btn-primary {
   background: linear-gradient(135deg, var(--primary), var(--primary-2));
@@ -1687,13 +1690,19 @@ body {
 .back-btn {
   width: 44px;
   height: 44px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid var(--btn-ghost-border);
+  background: var(--btn-ghost-bg);
   color: var(--ink);
-  font-size: 1.3rem;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
 }
+.back-btn svg { width: 22px; height: 22px; display: block; }
 .settings-head h2 {
   font-size: 1.3rem;
   color: var(--ink);
@@ -2584,6 +2593,15 @@ body {
   /* Pas de padding-bas : la barre d'actions sticky se colle au vrai bas de l'écran
      (elle gère elle-même la safe-area). L'historique (sans barre) rajoute son padding. */
   padding: 8px 16px 0;
+  /* Ouverture d'une page : glisse depuis la droite (effet « swipe vers la gauche »). */
+  animation: kx-page-in 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes kx-page-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet { animation: none; }
 }
 /* Historique/Stats : espace en bas pour que le contenu défilé passe au-dessus du bouton
    flottant des filtres (fixé en bas à droite). */
@@ -2600,7 +2618,7 @@ body {
   width: 100%;
   border: 0;
   padding: 0;
-  background: var(--soft);
+  background: transparent; /* pas de cadre : l'image « flotte » sur le fond, identique clair/sombre */
   border-radius: 14px;
   overflow: hidden;
   cursor: zoom-in;
@@ -2613,6 +2631,9 @@ body {
   justify-content: center;
   font-size: 3rem;
   cursor: default;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 14px;
 }
 /* Bulles propriétaires/tags superposées en bas à gauche de l'image, empilées vers le HAUT. */
 .detail-bubbles {
@@ -3759,33 +3780,37 @@ body {
   white-space: nowrap;
 }
 
-/* Barre du haut de l'étape 2 : retour aux noms + bascule de vue */
+/* Barre du haut du récap : bouton « retour aux scores ». */
 .entry-bar {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 16px 4px;
+  padding: 10px 16px 2px;
 }
 .entry-back {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--btn-ghost-bg);
+  border: 1px solid var(--btn-ghost-border);
+  color: var(--ink);
   font-weight: 700;
   font-size: 0.9rem;
-  padding: 6px 4px;
+  padding: 9px 14px 9px 9px;
+  border-radius: 10px;
   cursor: pointer;
 }
-.entry-recap-title {
-  margin-left: auto;
-  font-weight: 800;
-  color: var(--ink);
-  font-size: 0.95rem;
-}
+.entry-back svg { width: 18px; height: 18px; flex-shrink: 0; }
 
-/* Parcours de saisie : une page plein écran (joueur ou item) */
+/* Étape 2 en colonne pleine hauteur → la zone de glissé (.pcard-wrap) couvre aussi
+   l'espace vide sous les boutons de navigation (glissé possible partout). */
+.sheet-walk { display: flex; flex-direction: column; }
+.sheet-walk > .settings-head { flex-shrink: 0; }
+/* Parcours de saisie : une page plein écran (joueur ou item). Pas de marge latérale propre :
+   la feuille (.sheet) fournit déjà 16px → on évite la double marge (bloc trop étroit). */
 .pcard-wrap {
-  padding: 8px 16px 4px;
+  padding: 6px 0 8px;
+  flex: 1 0 auto; /* remplit la hauteur restante → le glissé marche dans la « zone morte » */
   touch-action: pan-y; /* le glissé horizontal change de page, le vertical scrolle */
 }
 /* Visualiseur : pointillés courts + un long sur la page active (doré si gagnant, mode joueur). */
@@ -3802,13 +3827,14 @@ body {
   height: 4px;
   border-radius: 2px;
   border: none;
-  background: var(--line);
+  background: var(--muted);
+  opacity: 0.4; /* inactif = discret mais bien visible (clair ET sombre) */
   cursor: pointer;
   padding: 0;
-  transition: width 0.18s ease, background 0.18s ease;
+  transition: width 0.18s ease, background 0.18s ease, opacity 0.18s ease;
 }
-.pcard-dot.on { width: 24px; background: var(--primary); }
-.pcard-dot.win { background: var(--gold, #eab308); }
+.pcard-dot.on { width: 24px; background: var(--primary); opacity: 1; }
+.pcard-dot.win { background: var(--gold, #eab308); opacity: 1; }
 
 /* Animation de changement de page (sens du glissé). */
 @keyframes pcard-slide-r { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
@@ -3821,8 +3847,15 @@ body {
   color: var(--muted);
   line-height: 1.4;
 }
+/* Récapitulatif : entrée « apothéose » (le tableau se matérialise en montant + fondu + relief). */
+@keyframes recap-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.recap-anim { animation: recap-in 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
 @media (prefers-reduced-motion: reduce) {
   .pcard[data-dir] { animation: none; }
+  .recap-anim { animation: none; }
 }
 .pcard {
   background: var(--card);
@@ -3925,33 +3958,35 @@ body {
 .pcard-total b { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
 .pcard-nav {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: stretch;
+  gap: 10px;
   margin-top: 12px;
 }
 .pcard-navbtn {
   flex: 1;
   min-width: 0;
-  padding: 12px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--card);
+  padding: 11px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--btn-ghost-border);
+  background: var(--btn-ghost-bg);
   color: var(--ink);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   cursor: pointer;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.25;
+  white-space: normal; /* passe sur 2 lignes si le nom d'item est long (responsive petits écrans) */
+  overflow-wrap: anywhere;
 }
-.pcard-navbtn:disabled { opacity: 0.35; cursor: default; }
-.pcard-navbtn-next { background: var(--accent-soft); color: var(--primary); border-color: transparent; }
-.pcard-count {
-  flex-shrink: 0;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+.pcard-navbtn:disabled { opacity: 0.4; cursor: default; }
+/* Le bouton « avance » (item suivant / récap) est mis en avant : dégradé primaire. */
+.pcard-navbtn-next {
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  color: #fff;
+  border-color: transparent;
 }
 
 /* Indice discret sous le champ Nom (recherche BGG à la touche Entrée) */

@@ -396,16 +396,26 @@ export default function App() {
   // bloquer le reste ni la mémorisation (cas table absente / hors ligne où scoresheets reste null).
   const restoredRef = useRef(false)
   const pendingHistoryRef = useRef(null)
+  // `booting` = true tant qu'un écran mémorisé n'a pas été réappliqué → on masque la collection
+  // pendant ce court instant (sinon flash de l'accueil avant que la fiche/l'écran ne recouvre).
+  const [booting, setBooting] = useState(() => {
+    const p = loadPage()
+    return !!(p && (p.detail || p.history || p.settings || p.players || p.tierlistHub))
+  })
   useEffect(() => {
     if (restoredRef.current || games === null) return
     restoredRef.current = true
     const page = loadPage()
-    if (!page) return
-    if (page.detail) { const g = games.find((x) => x.id === page.detail); if (g) setDetailGame(g) }
-    if (page.settings) setSettingsOpen(true)
-    if (page.players) { setSettingsOpen(true); handleOpenPlayers() }
-    if (page.tierlistHub) handleOpenTierlists()
-    if (page.history) pendingHistoryRef.current = { id: page.history, view: page.historyView || 'stats' }
+    if (page) {
+      if (page.detail) { const g = games.find((x) => x.id === page.detail); if (g) setDetailGame(g) }
+      if (page.settings) setSettingsOpen(true)
+      if (page.players) { setSettingsOpen(true); handleOpenPlayers() }
+      if (page.tierlistHub) handleOpenTierlists()
+      if (page.history) pendingHistoryRef.current = { id: page.history, view: page.historyView || 'stats' }
+    }
+    // On garde `booting` (→ squelettes neutres derrière) le temps que l'écran restauré glisse en
+    // place, pour ne PAS laisser apparaître la vraie collection pendant l'animation (flash évité).
+    setTimeout(() => setBooting(false), 320)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [games])
 
@@ -626,9 +636,10 @@ export default function App() {
         const created = await addGame(payload)
         setGames((gs) => [...(gs ?? []), created])
       }
-      setEditing(null)
+      return true // succès → GameForm ferme en glissant vers le bas (animateClose)
     } catch (e) {
       setError(e.message)
+      return false
     } finally {
       setSaving(false)
     }
@@ -941,17 +952,22 @@ export default function App() {
     setSavingPlay(true)
     setError(null)
     try {
-      if (editingPlay) await updatePlay(editingPlay.id, play)
+      const wasEditing = !!editingPlay
+      if (wasEditing) await updatePlay(editingPlay.id, play)
       else await savePlay(scoringGame.id, play)
       const g = scoringGame
-      // Toujours atterrir sur la page de stats DU JEU (jamais l'accueil), même quand la
-      // partie a été lancée depuis le menu de glissement d'une carte (historyGame était null).
-      const target = historyGame || g
       setScoringGame(null)
       setEditingPlay(null)
-      setHistoryGame(target)
-      refreshHistory(target)
-      showToast(editingPlay ? 'Partie modifiée.' : 'Partie enregistrée.')
+      // Nouvelle partie → on revient sur la FICHE du jeu (déjà ouverte dessous ; sinon on l'ouvre).
+      // Édition depuis l'historique → on revient sur l'historique (déjà ouvert dessous), rafraîchi.
+      if (wasEditing) {
+        if (historyGame) refreshHistory(historyGame)
+      } else if (!detailGame) {
+        setDetailGame(g)
+      }
+      // Met à jour le résumé « N parties · dernière le … » de la fiche.
+      fetchPlayMeta().then(setPlayMeta).catch(() => {})
+      showToast(wasEditing ? 'Partie modifiée.' : 'Partie enregistrée.')
     } catch (e) {
       setError(e.message)
     } finally {
@@ -1308,7 +1324,7 @@ export default function App() {
         </Suspense>
       ) : (
       <main className="list" ref={listRef}>
-        {games === null ? (
+        {games === null || booting ? (
           Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
         ) : visible.length === 0 ? (
           <div className="empty">

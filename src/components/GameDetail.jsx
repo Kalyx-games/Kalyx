@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
+import { BackIcon } from './icons'
 import {
   parseOwners, parseTags, ownerDisplay, parseExtensions,
   basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText,
@@ -60,7 +61,7 @@ export default function GameDetail({
   return (
     <div className="sheet detail-sheet">
       <div className="settings-head">
-        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">‹</button>
+        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2 className="detail-title">{game.name}</h2>
       </div>
 
@@ -103,7 +104,7 @@ export default function GameDetail({
       </div>
 
       {extensions.length > 0 && (
-        <p className="detail-ext"><span className="detail-info-k">🧩 Extensions</span> {extensions.join(', ')}</p>
+        <p className="detail-ext"><span className="detail-info-k">🧩</span> {extensions.join(', ')}</p>
       )}
 
       {hasSheet && (

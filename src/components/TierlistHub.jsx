@@ -1,12 +1,13 @@
 // Menu des tierlists : la tierlist globale (moyenne), la liste des tierlists existantes
 // (par joueur), et le bouton pour créer la sienne.
+import { BackIcon } from './icons'
 export default function TierlistHub({ tierlists, online, onOpenGlobal, onOpenTierlist, onCreate, onClose }) {
   const missing = tierlists === null // table pas encore créée (migration à lancer)
   const list = tierlists || []
   return (
     <div className="sheet settings">
       <div className="settings-head">
-        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">‹</button>
+        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2>🏆 Tierlists</h2>
       </div>
 

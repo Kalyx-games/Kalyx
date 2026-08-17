@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { BackIcon } from './icons'
 import { parseExtensions, effectivePlayersSet } from '../lib/games'
 import { resolveDefaultExts } from '../lib/scoresheets'
 import NameField from './NameField'
@@ -428,8 +429,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         />
       )}
       <div className="settings-head">
-        <button type="button" className="back-btn" onClick={requestClose} aria-label="Retour">←</button>
-        <h2 className="sheet-title">📚 {game?.name}{isEdit ? ' — modifier' : ''}</h2>
+        <button type="button" className="back-btn" onClick={requestClose} aria-label="Retour"><BackIcon /></button>
+        <h2 className="sheet-title">{game?.name}{isEdit ? ' — modifier' : ''}</h2>
         {onEdit && !isEdit && (
           <button type="button" className="back-btn sheet-edit-btn" onClick={onEdit} title="Modifier la fiche" aria-label="Modifier la fiche">✏️</button>
         )}
@@ -945,7 +946,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
   // Tableau récapitulatif éditable (colonnes = joueurs), SANS mention d'extension.
   const recapTable = (
-    <div className="sheet-scroll">
+    <div className="sheet-scroll recap-anim">
       <table className="sheet-table">
         <thead>
           <tr>
@@ -1039,8 +1040,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       <div className="sheet">
         {titleHead}
         <div className="entry-bar">
-          <button type="button" className="entry-back" onClick={() => { navDirRef.current = -1; setStep(2) }}>← Modifier les scores</button>
-          <span className="entry-recap-title">🧾 Récapitulatif</span>
+          <button type="button" className="entry-back" onClick={() => { navDirRef.current = -1; setStep(2) }}><BackIcon />Modifier les scores</button>
         </div>
 
         {visibleCats.length === 0 ? (
@@ -1104,14 +1104,13 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
   // ÉTAPE 2 : parcours page par page (joueur par joueur OU item par item, selon la fiche) + glissé.
   return (
-    <div className="sheet">
+    <div className="sheet sheet-walk">
       {titleHead}
       <div className="pcard-wrap" ref={walkRef}>
         {walkDots}
         {walkPage}
         <div className="pcard-nav">
           <button type="button" className="pcard-navbtn" onClick={goPrev}>← {prevLabel}</button>
-          <span className="pcard-count">{idx + 1} / {pageCount}</span>
           <button type="button" className="pcard-navbtn pcard-navbtn-next" onClick={goNext}>{nextLabel} →</button>
         </div>
       </div>

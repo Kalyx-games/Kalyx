@@ -1,4 +1,5 @@
 import { Fragment, useMemo, useRef, useState } from 'react'
+import { BackIcon } from './icons'
 import qrcode from 'qrcode-generator'
 import { getTheme, applyTheme } from '../lib/theme'
 import BubbleListManager from './BubbleListManager'
@@ -104,7 +105,7 @@ export default function Settings({
   return (
     <div className="settings">
       <div className="settings-head">
-        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">←</button>
+        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2>Réglages</h2>
       </div>
 

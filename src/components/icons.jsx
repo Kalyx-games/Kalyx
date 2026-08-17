@@ -58,6 +58,22 @@ export function ChwaziIcon({ size = 20 }) {
   )
 }
 
+// Flèche « retour » (chevron gauche net, centré) — utilisée par tous les boutons .back-btn.
+export function BackIcon({ size = 22 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false">
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15 5l-7 7 7 7"
+      />
+    </svg>
+  )
+}
+
 export function SettingsIcon({ size = 20 }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false">

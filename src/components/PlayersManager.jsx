@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { BackIcon } from './icons'
 
 // Écran « Joueurs » : la liste de tous les joueurs enregistrés (toutes parties, tous
 // jeux). Renommer ici met le nom à jour PARTOUT — pratique pour corriger une faute de
@@ -33,7 +34,7 @@ export default function PlayersManager({ roster, busy, online, onRename, onClose
   return (
     <div className="settings" onKeyDown={onKeyDown}>
       <div className="settings-head">
-        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">←</button>
+        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2>👥 Joueurs</h2>
       </div>
 

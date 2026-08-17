@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { BackIcon } from './icons'
 import { parseExtensions } from '../lib/games'
 
 // Éditeur d'une fiche de score : on définit les catégories (nom + explication +
@@ -282,7 +283,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   return (
     <div className="sheet">
       <div className="settings-head">
-        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour">←</button>
+        <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2 className="sheet-title">✏️ {isNew ? 'Nouvelle fiche' : 'Modifier'} — {game?.name}</h2>
       </div>
 
