@@ -286,7 +286,9 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
 
   const submit = async (e) => {
     e.preventDefault()
-    if (!form.name.trim()) return
+    // Garde anti double-envoi : pendant la fermeture animée (260 ms) `saving` est déjà false,
+    // le bouton redevient cliquable → un 2e tap créerait un doublon. On bloque tant qu'on ferme.
+    if (closing || saving || !form.name.trim()) return
     const players = countsToText(playersSet)
     const players_min = playersSet.length ? Math.min(...playersSet) : ''
     const players_max = playersSet.length ? Math.max(...playersSet) : ''
@@ -572,7 +574,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
 
           <div className="modal-actions">
             <button type="button" className="btn-ghost" onClick={requestCancel} disabled={saving}>Annuler</button>
-            <button type="submit" className="btn-primary" disabled={saving || !form.name.trim()}>
+            <button type="submit" className="btn-primary" disabled={saving || closing || !form.name.trim()}>
               {saving ? 'Enregistrement…' : isEdit ? 'Enregistrer' : 'Ajouter'}
             </button>
           </div>
