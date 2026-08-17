@@ -2665,7 +2665,12 @@ button { transition: transform 0.12s ease; }
 }
 
 /* ---- Fiche jeu (page détaillée, ouverte en tapant une carte de la collection) ---- */
-.detail-sheet { padding-bottom: calc(28px + env(safe-area-inset-bottom)); overflow-x: hidden; }
+/* Le corps de la fiche est PLEINE LARGEUR (marge de 16px déplacée dans la tête + le corps) → au
+   swipe entre fiches, un translateX de 100% = toute la largeur de l'écran ⇒ l'ancienne fiche sort
+   COMPLÈTEMENT (plus de bande figée à gauche). */
+.detail-sheet { padding: 8px 0 calc(28px + env(safe-area-inset-bottom)); overflow-x: hidden; }
+.detail-sheet .settings-head { padding-left: 16px; padding-right: 16px; }
+.detail-body { padding-left: 16px; padding-right: 16px; }
 .detail-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Changement de jeu au glissé = pager PLEIN ÉCRAN : le corps du NOUVEAU jeu entre en plein depuis un
    bord PENDANT que l'ancien (instantané figé `.detail-body-leaving`) sort par l'autre bord, avec une
@@ -3691,14 +3696,14 @@ button { transition: transform 0.12s ease; }
   border-left: 3px solid var(--primary);
   padding: 2px 4px 2px 14px;
   margin: 6px 2px 20px;
-  /* Dépliage à l'arrivée sur l'onglet Stats (repère « on a changé d'onglet », comme le petit
-     mouvement des cartes sur Collection/Wishlist) : l'anecdote se déroule de haut en bas. */
+  /* Dépliage à l'arrivée sur l'onglet Stats (repère « on a changé d'onglet »). Se déroule de GAUCHE
+     à DROITE, DEPUIS le trait vertical (ancrage) → transform-origin gauche, clip qui découvre vers la droite. */
   animation: kx-anec-unfold 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: left center;
 }
 @keyframes kx-anec-unfold {
-  from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translateY(-7px); }
-  60% { opacity: 1; }
-  to { opacity: 1; clip-path: inset(0 0 0 0); transform: translateY(0); }
+  from { opacity: 0.2; clip-path: inset(0 100% 0 0); transform: scaleX(0.96); }
+  to { opacity: 1; clip-path: inset(0 0 0 0); transform: scaleX(1); }
 }
 @media (prefers-reduced-motion: reduce) {
   .tl-anec-hero { animation: none; }
