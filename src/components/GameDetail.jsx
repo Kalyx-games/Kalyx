@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { BackIcon } from './icons'
 import {
   parseOwners, parseTags, ownerDisplay, parseExtensions,
@@ -24,7 +24,7 @@ const complexityWord = (n) => (n == null ? '' : n < 2 ? 'Simple' : n < 3 ? 'Moye
 // l'image. TOUTES les actions renvoient vers les écrans existants (rien n'est perdu).
 export default function GameDetail({
   game, online, hasSheet, playCount = 0, lastPlayedLabel,
-  ownerMap, tagMap,
+  ownerMap, tagMap, siblings = [], onNavigate,
   onClose, onZoomImage, onNewPlay, onStats, onHistory, onCreateSheet, onEdit, onBgg,
 }) {
   const basePlayers = basePlayersSet(game)
@@ -58,8 +58,47 @@ export default function GameDetail({
   useEffect(() => setImgBroken(false), [fullImg])
   const showImg = Boolean(fullImg) && !imgBroken
 
+  // Glissé horizontal sur la fiche → jeu précédent/suivant de la liste filtrée (siblings).
+  // Écouteurs tactiles natifs non-passifs (comme ailleurs). navRef reste frais à chaque rendu.
+  const idx = siblings.findIndex((g) => g.id === game.id)
+  const sheetRef = useRef(null)
+  const swipeRef = useRef({ x: 0, y: 0, dragging: false })
+  const navRef = useRef({})
+  navRef.current = { idx, siblings, onNavigate }
+  useEffect(() => {
+    const el = sheetRef.current
+    if (!el) return
+    const st = swipeRef.current
+    const onStart = (e) => { const t = e.touches[0]; st.x = t.clientX; st.y = t.clientY; st.dragging = false }
+    const onMove = (e) => {
+      const t = e.touches[0]
+      const dx = t.clientX - st.x
+      const dy = t.clientY - st.y
+      if (!st.dragging && Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) + 6) st.dragging = true
+      if (st.dragging) e.preventDefault()
+    }
+    const onEnd = (e) => {
+      if (!st.dragging) return
+      st.dragging = false
+      const dx = e.changedTouches[0].clientX - st.x
+      if (Math.abs(dx) < 60) return
+      const { idx, siblings, onNavigate } = navRef.current
+      if (!onNavigate || idx < 0) return
+      const next = dx < 0 ? idx + 1 : idx - 1 // glissé vers la gauche → jeu suivant
+      if (next >= 0 && next < siblings.length) onNavigate(siblings[next])
+    }
+    el.addEventListener('touchstart', onStart, { passive: true })
+    el.addEventListener('touchmove', onMove, { passive: false })
+    el.addEventListener('touchend', onEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchmove', onMove)
+      el.removeEventListener('touchend', onEnd)
+    }
+  }, [])
+
   return (
-    <div className="sheet detail-sheet">
+    <div className="sheet detail-sheet" ref={sheetRef}>
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2 className="detail-title">{game.name}</h2>

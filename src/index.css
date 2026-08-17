@@ -2626,9 +2626,9 @@ body {
   overflow: hidden;
   cursor: zoom-in;
 }
-/* Image en pleine largeur, hauteur naturelle (pas de letterbox → les coins arrondis se voient).
-   Une image très haute est rognée à 340px (cover) plutôt que de laisser des bandes transparentes. */
-.detail-hero img { display: block; width: 100%; height: auto; max-height: 340px; object-fit: cover; border-radius: 14px; }
+/* Image à sa taille naturelle (pas pleine largeur → moins imposante), plafonnée à 240px de haut,
+   CENTRÉE. La boîte épouse l'image (pas de letterbox) → les coins arrondis se voient bien. */
+.detail-hero img { display: block; width: auto; height: auto; max-width: 100%; max-height: 240px; border-radius: 14px; margin: 0 auto; }
 .detail-hero-empty {
   height: 150px;
   display: flex;

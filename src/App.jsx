@@ -1406,6 +1406,8 @@ export default function App() {
           lastPlayedLabel={playMeta[detailGameLive.id]?.last ? formatDay(playMeta[detailGameLive.id].last) : null}
           ownerMap={ownerMap}
           tagMap={tagMap}
+          siblings={visible}
+          onNavigate={(g) => setDetailGame(g)}
           onClose={() => setDetailGame(null)}
           onZoomImage={(url) => setZoomImage(url)}
           onNewPlay={() => handleNewPlayFromCard(detailGameLive)}
