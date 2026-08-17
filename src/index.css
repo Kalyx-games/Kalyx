@@ -2687,24 +2687,27 @@ button { transition: transform 0.12s ease; }
    TOUJOURS complètement, même si la largeur mesurée du corps est décalée d'un pixel sur un appareil. */
 @keyframes kx-detail-in-r { from { transform: translateX(100vw); } to { transform: translateX(0); } }
 @keyframes kx-detail-in-l { from { transform: translateX(-100vw); } to { transform: translateX(0); } }
-/* La sortie se termine à opacity 0 : même si l'instantané est retiré une frame trop tard, son état
-   final (bord + ombre) est INVISIBLE → plus de « bande avec ombre » qui traîne. */
-@keyframes kx-detail-out-l { from { transform: translateX(0); opacity: 1; } 80% { opacity: 1; } to { transform: translateX(-100vw); opacity: 0; } }
-@keyframes kx-detail-out-r { from { transform: translateX(0); opacity: 1; } 80% { opacity: 1; } to { transform: translateX(100vw); opacity: 0; } }
-.detail-body[data-dir='1'] { animation: kx-detail-in-r 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
-.detail-body[data-dir='-1'] { animation: kx-detail-in-l 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+@keyframes kx-detail-out-l { to { transform: translateX(-100vw); } }
+@keyframes kx-detail-out-r { to { transform: translateX(100vw); } }
+/* Le NOUVEAU corps est AU-DESSUS de l'instantané sortant (z-index 4 > 3) et OPAQUE : dès qu'il remplit
+   l'écran (fin du glissé), il RECOUVRE entièrement l'ancien → plus aucun « bout d'écran qui reste »
+   même si l'instantané est retiré une frame trop tard. L'ombre est portée par le NOUVEAU corps (bord
+   d'attaque) → elle sort de l'écran quand il se cale, donc ne traîne pas non plus. */
+.detail-body { position: relative; z-index: 4; background: var(--bg); }
+.detail-body[data-dir='1'] { box-shadow: -22px 0 40px rgba(0, 0, 0, 0.34); animation: kx-detail-in-r 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+.detail-body[data-dir='-1'] { box-shadow: 22px 0 40px rgba(0, 0, 0, 0.34); animation: kx-detail-in-l 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
 .detail-body-leaving {
   position: fixed;
   bottom: 0;
-  z-index: 3; /* au-dessus du nouveau corps, sous la tête fixe de la fiche */
+  z-index: 3; /* SOUS le nouveau corps (4) → recouvert dès qu'il remplit l'écran */
   background: var(--bg);
   overflow: hidden;
   pointer-events: none;
   will-change: transform;
 }
 .detail-body-leaving * { animation: none !important; transition: none !important; } /* fige l'instantané */
-.detail-body-leaving.dir-1 { box-shadow: 20px 0 40px rgba(0, 0, 0, 0.34); animation: kx-detail-out-l 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
-.detail-body-leaving.dir--1 { box-shadow: -20px 0 40px rgba(0, 0, 0, 0.34); animation: kx-detail-out-r 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+.detail-body-leaving.dir-1 { animation: kx-detail-out-l 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+.detail-body-leaving.dir--1 { animation: kx-detail-out-r 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
 @media (prefers-reduced-motion: reduce) {
   .detail-body[data-dir] { animation: none; }
   .detail-body-leaving { display: none; }
