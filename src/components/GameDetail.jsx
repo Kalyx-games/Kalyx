@@ -24,7 +24,7 @@ const complexityWord = (n) => (n == null ? '' : n < 2 ? 'Simple' : n < 3 ? 'Moye
 // l'image. TOUTES les actions renvoient vers les écrans existants (rien n'est perdu).
 export default function GameDetail({
   game, online, hasSheet, playCount = 0, lastPlayedLabel,
-  ownerMap, tagMap, siblings = [], onNavigate,
+  ownerMap, tagMap, siblings = [], onNavigate, closing = false,
   onClose, onZoomImage, onNewPlay, onStats, onHistory, onCreateSheet, onEdit, onBgg,
 }) {
   const basePlayers = basePlayersSet(game)
@@ -112,7 +112,7 @@ export default function GameDetail({
   }, [])
 
   return (
-    <div className="sheet detail-sheet" ref={sheetRef}>
+    <div className={`sheet detail-sheet${closing ? ' closing' : ''}`} ref={sheetRef}>
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2 className="detail-title">{game.name}</h2>

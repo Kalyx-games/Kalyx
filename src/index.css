@@ -1889,9 +1889,7 @@ body {
   font-weight: 600;
   font-size: 0.9rem;
 }
-.link-row:active {
-  transform: scale(0.99);
-}
+/* NB : le retour d'appui de .link-row est géré dans le bloc « Retour visuel d'appui » (scale 0.985). */
 .link-row.disabled {
   opacity: 0.45;
   cursor: default;
@@ -2603,9 +2601,55 @@ body {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .sheet { animation: none; }
+/* Fermeture d'une page : glisse vers la droite (miroir de l'ouverture). `forwards` garde la feuille
+   hors écran jusqu'au démontage réel ; pointer-events coupés pour ne pas gêner l'écran qui réapparaît. */
+@keyframes kx-page-out {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
 }
+.sheet.closing {
+  animation: kx-page-out 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet, .sheet.closing { animation: none; }
+}
+
+/* ---- Retour visuel d'appui (feedback tactile partout) ----
+   1) DOUCEUR : chaque bouton anime son enfoncement → lisse aussi les :active déjà présents
+      (fab, navtab, fchip, icon-btn…) qui « claquaient ». transform seul = aucun risque de saut. */
+button { transition: transform 0.12s ease; }
+/* 2) ENFONCEMENT par défaut pour les boutons d'action + tapables qui n'avaient AUCUN retour.
+      Liste EXPLICITE : on évite un `button:active` global qui écraserait les boutons centrés par
+      `transform: translateY(-50%)` (.clear-btn gère déjà le sien, .modal-del/.swipe-hint sont exclus).
+      Les composants avec leur propre :active gardent leur valeur (plus spécifique). */
+.btn-primary:active, .btn-ghost:active, .btn-danger:active,
+.back-btn:active, .sortmenu-btn:active, .pcard-navbtn:active, .swipe-act:active,
+.price-verify:active, .settings-relink:active, .swatch:active, .chwazi-round:active,
+.cc-btn:active, .tl-global-btn:active, .tl-create-btn:active, .tl-edit-btn:active,
+.tl-del-btn:active, .tl-done-btn:active, .tl-label-btn:active,
+.filters-reset-top:active, .filters-see:active, .detail-hero:active {
+  transform: scale(0.96);
+}
+/* 3) Surfaces cliquables NON-<button> ou pleine largeur (liens réglages, lignes de stats/tierlist,
+      pastilles de filtre) : enfoncement plus léger, mieux adapté à une grande surface. */
+.link-row, .bar-row-btn, .tl-list-item, .active-chip {
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.15s ease;
+}
+.link-row:active, .bar-row-btn:active, .tl-list-item:active, .active-chip:active {
+  transform: scale(0.985);
+}
+@media (prefers-reduced-motion: reduce) {
+  button, .link-row, .bar-row-btn, .tl-list-item, .active-chip { transition: none; }
+  .btn-primary:active, .btn-ghost:active, .btn-danger:active,
+  .back-btn:active, .sortmenu-btn:active, .pcard-navbtn:active, .swipe-act:active,
+  .price-verify:active, .settings-relink:active, .swatch:active, .chwazi-round:active,
+  .cc-btn:active, .tl-global-btn:active, .tl-create-btn:active, .tl-edit-btn:active,
+  .tl-del-btn:active, .tl-done-btn:active, .tl-label-btn:active,
+  .filters-reset-top:active, .filters-see:active, .detail-hero:active,
+  .link-row:active, .bar-row-btn:active, .tl-list-item:active, .active-chip:active { transform: none; }
+}
+
 /* Historique/Stats : espace en bas pour que le contenu défilé passe au-dessus du bouton
    flottant des filtres (fixé en bas à droite). */
 .hist-sheet {

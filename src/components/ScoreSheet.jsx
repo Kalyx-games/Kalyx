@@ -24,7 +24,7 @@ const makeTeamRow = (t = {}) => {
   return { id: ++tid, name: t.name || '', size, players: Array.from({ length: n }, () => makePlayer()), score: '', win: false }
 }
 
-export default function ScoreSheet({ game, template, initialPlay = null, playerNames = [], scenarioNames = [], onSavePlay, saving, onEdit, onClose }) {
+export default function ScoreSheet({ game, template, initialPlay = null, playerNames = [], scenarioNames = [], closing = false, onSavePlay, saving, onEdit, onClose }) {
   const win = template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive')
   const scoring = template?.scoring || 'high'
   // Le « scénario » a été retiré de la création de fiche : on ne le demande plus à la
@@ -651,7 +651,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // ---------- COOPÉRATIF ----------
   if (isCoop) {
     return (
-      <div className="sheet">
+      <div className={`sheet${closing ? ' closing' : ''}`}>
         {head}
         <div className="coop-form">
           <div className="field">
@@ -730,7 +730,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // ---------- EN ÉQUIPES ----------
   if (isTeams) {
     return (
-      <div className="sheet">
+      <div className={`sheet${closing ? ' closing' : ''}`}>
         {head}
         <div className="coop-form">
           {triggerField}
@@ -817,7 +817,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // ---------- COMPÉTITIF, PAS DE POINTS ----------
   if (noPoints) {
     return (
-      <div className="sheet">
+      <div className={`sheet${closing ? ' closing' : ''}`}>
         {head}
         <div className="coop-form">
           {scenarioField}
@@ -1007,7 +1007,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // ÉTAPE 1 : noms des joueurs + extensions jouées.
   if (step === 1) {
     return (
-      <div className="sheet">
+      <div className={`sheet${closing ? ' closing' : ''}`}>
         {titleHead}
         <div className="coop-form">
           <div className="field">
@@ -1037,7 +1037,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // ÉTAPE 3 : récapitulatif (tableau éditable) + champs de partie + notes + enregistrement.
   if (step === 3) {
     return (
-      <div className="sheet">
+      <div className={`sheet${closing ? ' closing' : ''}`}>
         {titleHead}
         <div className="entry-bar">
           <button type="button" className="entry-back" onClick={() => { navDirRef.current = -1; setStep(2) }}><BackIcon />Modifier les scores</button>
@@ -1104,7 +1104,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
   // ÉTAPE 2 : parcours page par page (joueur par joueur OU item par item, selon la fiche) + glissé.
   return (
-    <div className="sheet sheet-walk">
+    <div className={`sheet sheet-walk${closing ? ' closing' : ''}`}>
       {titleHead}
       <div className="pcard-wrap" ref={walkRef}>
         {walkDots}

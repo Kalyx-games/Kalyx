@@ -8,6 +8,7 @@ import { fetchTags, addTag, updateTag, renameTag, deleteTag } from './lib/tags'
 import { downloadBackup, downloadCsv, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup, restorePreview } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { EMPTY_FILTERS, PRICE_MIN, PRICE_MAX, norm, passesFilters } from './lib/filtering'
+import { useExitLayer } from './lib/useExitLayer'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
 import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, computeAnecdoteList, emptyRanking, dedupeByName, repIdMap, remapRanking } from './lib/tierlists'
 import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayMeta, renameCategories, fetchPlayerRoster, fetchPlayerOverall, renamePlayer } from './lib/plays'
@@ -374,8 +375,8 @@ export default function App() {
     else if (s.showFilters) setShowFilters(false)
     else if (s.chwaziOpen) setChwaziOpen(false)
     else if (s.editingSheet) setEditingSheet(null)
-    else if (s.scoringGame) { setScoringGame(null); setEditingPlay(null) }
-    else if (s.historyGame) { setHistoryGame(null); setGamePlays(null) }
+    else if (s.scoringGame) setScoringGame(null) // editingPlay laissé tel quel (réinitialisé à l'ouverture) → pas de flicker pendant la fermeture animée
+    else if (s.historyGame) setHistoryGame(null) // gamePlays idem (rechargé à l'ouverture)
     else if (s.detailGame) setDetailGame(null) // la fiche jeu : les sous-écrans (ci-dessus) se ferment d'abord
     else if (s.tierlistView) setTierlistView(null) // une tierlist s'ouvre PAR-DESSUS le menu
     else if (s.tierlistHub) setTierlistHub(false)
@@ -511,6 +512,16 @@ export default function App() {
     () => (detailGame ? (games ?? []).find((g) => g.id === detailGame.id) || detailGame : null),
     [detailGame, games]
   )
+
+  // Fermeture ANIMÉE des écrans plein écran : chaque écran reste monté (avec la classe .closing →
+  // il glisse vers la droite) le temps de l'animation, puis se démonte. `useExitLayer` mémorise la
+  // dernière valeur pour que l'écran garde ses données pendant la sortie, et respecte reduced-motion.
+  const detailLayer = useExitLayer(detailGameLive)
+  const historyLayer = useExitLayer(historyGame)
+  const tlHubLayer = useExitLayer(tierlistHub)
+  const tlViewLayer = useExitLayer(tierlistView)
+  const scoringLayer = useExitLayer(scoringGame)
+  const editSheetLayer = useExitLayer(editingSheet)
 
   // Statut affiché selon l'onglet (Collection ou Wishlist).
   const listStatus = view === 'wishlist' ? 'wishlist' : 'collection'
@@ -1423,25 +1434,26 @@ export default function App() {
 
       {/* Fiche jeu (hub) : rendue AVANT les sous-écrans (form, historique, saisie, zoom) pour
           qu'ils s'empilent au-dessus (même z-index → l'ordre du DOM décide). */}
-      {detailGameLive && (
+      {detailLayer.mounted && (
         <GameDetail
-          game={detailGameLive}
+          game={detailLayer.value}
+          closing={detailLayer.closing}
           online={online}
-          hasSheet={Boolean(scoresheets?.[detailGameLive.id])}
-          playCount={playMeta[detailGameLive.id]?.count ?? 0}
-          lastPlayedLabel={playMeta[detailGameLive.id]?.last ? formatDay(playMeta[detailGameLive.id].last) : null}
+          hasSheet={Boolean(scoresheets?.[detailLayer.value.id])}
+          playCount={playMeta[detailLayer.value.id]?.count ?? 0}
+          lastPlayedLabel={playMeta[detailLayer.value.id]?.last ? formatDay(playMeta[detailLayer.value.id].last) : null}
           ownerMap={ownerMap}
           tagMap={tagMap}
           siblings={visible}
           onNavigate={(g) => setDetailGame(g)}
           onClose={() => setDetailGame(null)}
           onZoomImage={(url) => setZoomImage(url)}
-          onNewPlay={() => handleNewPlayFromCard(detailGameLive)}
-          onStats={() => openHistory(detailGameLive, 'stats')}
-          onHistory={() => openHistory(detailGameLive, 'plays')}
-          onCreateSheet={() => setEditingSheet(detailGameLive)}
-          onEdit={() => setEditing(detailGameLive)}
-          onBgg={detailGameLive.bgg_id && online ? () => window.open(`https://boardgamegeek.com/boardgame/${detailGameLive.bgg_id}`, '_blank', 'noopener') : undefined}
+          onNewPlay={() => handleNewPlayFromCard(detailLayer.value)}
+          onStats={() => openHistory(detailLayer.value, 'stats')}
+          onHistory={() => openHistory(detailLayer.value, 'plays')}
+          onCreateSheet={() => setEditingSheet(detailLayer.value)}
+          onEdit={() => setEditing(detailLayer.value)}
+          onBgg={detailLayer.value.bgg_id && online ? () => window.open(`https://boardgamegeek.com/boardgame/${detailLayer.value.bgg_id}`, '_blank', 'noopener') : undefined}
         />
       )}
 
@@ -1617,30 +1629,30 @@ export default function App() {
         </Suspense>
       )}
 
-      {historyGame && (
+      {historyLayer.mounted && (
         <Suspense fallback={null}>
           <GameHistory
-            game={historyGame}
+            key={historyLayer.value.id}
+            game={historyLayer.value}
+            closing={historyLayer.closing}
             plays={gamePlays}
-            template={scoresheets?.[historyGame.id]}
+            template={scoresheets?.[historyLayer.value.id]}
             online={online}
             view={historyView}
             onEditPlay={online ? handleEditPlay : undefined}
-            onEditSheet={() => setEditingSheet(historyGame)}
+            onEditSheet={() => setEditingSheet(historyLayer.value)}
             onDeletePlay={(pl) => setConfirmingPlay(pl)}
-            onClose={() => {
-              setHistoryGame(null)
-              setGamePlays(null)
-            }}
+            onClose={() => setHistoryGame(null)}
           />
         </Suspense>
       )}
 
-      {tierlistHub && (
+      {tlHubLayer.mounted && (
         <Suspense fallback={null}>
           <TierlistHub
             tierlists={tierlists}
             online={online}
+            closing={tlHubLayer.closing}
             onOpenGlobal={handleOpenGlobalTierlist}
             onOpenTierlist={handleOpenTierlist}
             onCreate={handleCreateTierlist}
@@ -1649,19 +1661,20 @@ export default function App() {
         </Suspense>
       )}
 
-      {tierlistView && (
+      {tlViewLayer.mounted && (
         <Suspense fallback={null}>
           <TierlistView
-            key={tierlistView.mode + (tierlistView.id || 'new')}
-            mode={tierlistView.mode}
-            title={tierlistView.title}
-            initialRanking={tierlistView.ranking}
-            unranked={tierlistView.unranked}
-            initialPlayer={tierlistView.player}
+            key={tlViewLayer.value.mode + (tlViewLayer.value.id || 'new')}
+            mode={tlViewLayer.value.mode}
+            title={tlViewLayer.value.title}
+            initialRanking={tlViewLayer.value.ranking}
+            unranked={tlViewLayer.value.unranked}
+            initialPlayer={tlViewLayer.value.player}
+            closing={tlViewLayer.closing}
             filters={filters}
             setFilters={setFilters}
             onResetFilters={resetFilters}
-            savedId={tierlistView.id}
+            savedId={tlViewLayer.value.id}
             games={collectionGames}
             allOwners={allOwners}
             allTags={allTags}
@@ -1674,27 +1687,31 @@ export default function App() {
         </Suspense>
       )}
 
-      {scoringGame && scoresheets && scoresheets[scoringGame.id] && (
+      {scoringLayer.mounted && scoresheets && scoresheets[scoringLayer.value.id] && (
         <Suspense fallback={null}>
           <ScoreSheet
-            game={scoringGame}
-            template={scoresheets[scoringGame.id]}
+            key={scoringLayer.value.id + '-' + (editingPlay ? editingPlay.id : 'new')}
+            game={scoringLayer.value}
+            closing={scoringLayer.closing}
+            template={scoresheets[scoringLayer.value.id]}
             initialPlay={editingPlay}
             playerNames={playerNames}
             scenarioNames={scenarioNames}
             saving={savingPlay}
             onSavePlay={handleSavePlay}
-            onEdit={() => setEditingSheet(scoringGame)}
-            onClose={() => { setScoringGame(null); setEditingPlay(null) }}
+            onEdit={() => setEditingSheet(scoringLayer.value)}
+            onClose={() => setScoringGame(null)}
           />
         </Suspense>
       )}
 
-      {editingSheet && (
+      {editSheetLayer.mounted && (
         <Suspense fallback={null}>
           <ScoreSheetEditor
-            game={editingSheet}
-            template={scoresheets ? scoresheets[editingSheet.id] : null}
+            key={editSheetLayer.value.id}
+            game={editSheetLayer.value}
+            closing={editSheetLayer.closing}
+            template={scoresheets ? scoresheets[editSheetLayer.value.id] : null}
             online={online}
             onSave={handleSaveSheet}
             onClose={() => setEditingSheet(null)}

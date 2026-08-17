@@ -63,7 +63,7 @@ function Tile({ value, label, holder }) {
 
 // `view` : 'stats' (uniquement les statistiques du jeu) | 'plays' (uniquement la liste
 // des parties). Le bouton « Nouvelle partie » n'est PLUS ici (il est sur la fiche jeu).
-export default function GameHistory({ game, plays, template, online, view = 'stats', onEditPlay, onEditSheet, onDeletePlay, onClose }) {
+export default function GameHistory({ game, plays, template, online, view = 'stats', closing = false, onEditPlay, onEditSheet, onDeletePlay, onClose }) {
   const win = template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive')
   const scoring = template?.scoring || 'high'
   const isCoop = win === 'coop'
@@ -313,7 +313,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
     setFilters((f) => ({ ...f, [key]: f[key].includes(val) ? f[key].filter((x) => x !== val) : [...f[key], val] }))
 
   return (
-    <div className="sheet hist-sheet">
+    <div className={`sheet hist-sheet${closing ? ' closing' : ''}`}>
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2 className="sheet-title">{isPlaysView ? '🗓️' : '📊'} {game?.name}</h2>

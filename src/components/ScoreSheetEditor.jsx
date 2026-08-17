@@ -27,7 +27,7 @@ const mkTrigger = (name = '') => ({ id: ++trid, name })
 let oid = 0
 const mkOption = (name = '') => ({ id: ++oid, name })
 
-export default function ScoreSheetEditor({ game, template, online, onSave, onClose }) {
+export default function ScoreSheetEditor({ game, template, online, closing = false, onSave, onClose }) {
   const isNew = !template
   // Extensions ENREGISTRÉES pour ce jeu (choix possibles).
   const availableExts = parseExtensions(game?.extensions).map((e) => e.name).filter(Boolean)
@@ -281,7 +281,7 @@ export default function ScoreSheetEditor({ game, template, online, onSave, onClo
   }
 
   return (
-    <div className="sheet">
+    <div className={`sheet${closing ? ' closing' : ''}`}>
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2 className="sheet-title">✏️ {isNew ? 'Nouvelle fiche' : 'Modifier'} — {game?.name}</h2>

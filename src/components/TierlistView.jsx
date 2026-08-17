@@ -51,6 +51,7 @@ export default function TierlistView({
   setFilters,
   onResetFilters,
   savedId = null,
+  closing = false,
   onClose,
   onSave,
   onDelete,
@@ -324,7 +325,7 @@ export default function TierlistView({
   }
 
   return (
-    <div className="sheet tl-sheet" ref={rootRef} onClick={onRootClick}>
+    <div className={`sheet tl-sheet${closing ? ' closing' : ''}`} ref={rootRef} onClick={onRootClick}>
       <div className="settings-head tl-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         {editing ? (
