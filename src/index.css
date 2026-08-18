@@ -1250,8 +1250,8 @@ body {
   justify-content: center;
   font-size: var(--fs-body);
   font-weight: 700;
-  color: var(--ink); /* budget d'accents : un prix est un FAIT, pas un succès (le vert reste aux états) */
-  background: var(--soft);
+  color: var(--ok-ink); /* fond VERT (retour user : le prix doit rester vert) */
+  background: var(--ok-bg);
   padding: 3px 9px;
   border-radius: 10px;
   white-space: nowrap;
@@ -1395,15 +1395,6 @@ body {
   color: var(--muted);
   font-size: var(--fs-body);
 }
-/* Charte encre & or : la NAVBAR est monochrome — icônes grises au repos, encre sur l'onglet
-   actif (le CSS surclasse les attributs fill="…" des SVG sans !important). Idem pour les
-   chips de statut (Collection/Wishlist) du formulaire. Le logo Chwazi de la topbar, lui,
-   reste multicolore (c'est un logo, pas une icône d'interface). */
-.navtab { color: var(--muted); }
-.navtab.active { color: var(--ink); }
-.navtab svg, .navtab svg * { fill: currentColor; }
-.icon-chip svg, .icon-chip svg * { fill: currentColor; }
-
 /* ---- Bouton flottant + ---- */
 .fab {
   position: fixed;
@@ -1436,12 +1427,12 @@ body {
   background: var(--primary); /* l'action principale porte l'encre (fini le sarcelle) */
   color: var(--on-primary);
 }
-/* Le « + » (secondaire) devient un bouton de SURFACE : carte + contour, l'encre reste au filtre. */
+/* Le « + » porte l'OR (retour user : la surface neutre ne le différenciait pas assez).
+    Texte sombre fixe : lisible sur l'or dans les 2 thèmes. */
 .fab-add-above {
-  background: var(--card);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  box-shadow: 0 6px 16px rgba(16, 24, 40, 0.14);
+  background: var(--gold);
+  color: #131316;
+  box-shadow: 0 6px 16px rgba(16, 24, 40, 0.18);
 }
 /* Les icônes des FAB héritent de la couleur du bouton (surclasse les fill="…" des SVG). */
 .fab svg, .fab svg * { fill: currentColor; }
@@ -2053,9 +2044,9 @@ body {
 }
 .stat-tile-value {
   font-size: var(--fs-display);
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.05;
-  color: var(--primary);
+  color: var(--gold-ink); /* « encre & OR » : les chiffres précieux portent l'or */
 }
 .stat-tile-label {
   margin-top: 3px;
@@ -2145,6 +2136,7 @@ body {
 }
 .stat-block-title {
   font-size: var(--fs-body-l);
+  font-weight: 600; /* retour user : le gras (défaut h3) était trop agressif sur les stats */
   color: var(--ink);
   margin-bottom: 12px;
   text-wrap: balance;
@@ -2394,7 +2386,7 @@ body {
   min-width: 16px;
   text-align: right;
   font-size: var(--fs-body-s);
-  font-weight: 700;
+  font-weight: 500;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
@@ -2895,7 +2887,7 @@ button { transition: transform 0.12s ease; }
 .poll-seg.poll-rec { background: var(--bar-on); }
 .poll-seg.poll-not { background: #d1495b; }
 .poll-pct { text-align: right; font-size: var(--fs-caption); font-weight: 700; font-variant-numeric: tabular-nums; }
-.poll-pct-best { color: #c99000; } /* or plus foncé → lisible sur fond clair ET sombre */
+.poll-pct-best { color: var(--gold-ink); }
 .poll-pct-rec { color: var(--muted); }
 .poll-pct-not { color: #d1495b; }
 .sheet-title {
@@ -3857,7 +3849,7 @@ input[type='number'] {
 /* Anecdote « au hasard » sur le hub : encadré ÉDITORIAL (barre à gauche + italique),
    volontairement PAS un bouton (pas de fond plein, pas de contour, pas d'ombre). */
 .tl-anec-hero {
-  border-left: 3px solid var(--primary);
+  border-left: 3px solid var(--gold); /* liseré OR (retour user) */
   padding: 2px 4px 2px 14px;
   margin: 6px 2px 20px;
   /* Dépliage à l'arrivée sur l'onglet Stats (repère « on a changé d'onglet »). Se déroule de GAUCHE
@@ -3874,10 +3866,10 @@ input[type='number'] {
 }
 .tl-anec-hero-label {
   font-size: var(--fs-caption);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: var(--primary);
+  color: var(--gold-ink);
   margin-bottom: 7px;
 }
 .tl-anec-hero-main { display: flex; align-items: center; gap: 11px; }
@@ -4030,7 +4022,7 @@ input[type='number'] {
 .sheet-leader {
   text-align: center;
   font-weight: 700;
-  color: var(--ink);
+  color: var(--gold-ink); /* le meneur porte l'or (🏆) */
   font-size: var(--fs-body);
 }
 
@@ -4337,8 +4329,8 @@ input[type='number'] {
   margin-left: 8px;
   font-size: var(--fs-micro);
   font-weight: 700;
-  color: var(--primary);
-  border: 1px solid var(--primary);
+  color: var(--gold-ink);
+  border: 1px solid var(--gold-ink);
   padding: 1px 6px;
   border-radius: 999px;
   vertical-align: middle;
