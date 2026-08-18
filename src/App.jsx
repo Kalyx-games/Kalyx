@@ -637,10 +637,11 @@ export default function App() {
 
   // Jeux (tous statuts) filtrés par la recherche + les mêmes filtres, pour les Stats.
   // computeStats sépare ensuite collection / wishlist. Le prix est ignoré ici.
+  // La recherche est ignorée sur les Stats (le champ n'y est plus affiché) : une saisie
+  // résiduelle faite en Collection ne doit pas filtrer les stats en silence.
   const statsGames = useMemo(() => {
-    const q = norm(search)
-    return (games ?? []).filter((g) => passesFilters(g, filters, q, false))
-  }, [games, search, filters])
+    return (games ?? []).filter((g) => passesFilters(g, filters, '', false))
+  }, [games, filters])
 
   // Y a-t-il au moins un jeu en collection (indépendamment des filtres) ? Sert à
   // distinguer « collection vide » de « aucun jeu ne correspond aux filtres » dans les Stats.
@@ -1287,7 +1288,10 @@ export default function App() {
         {!statsOpen && games !== null && <p className="screen-count">{countLabel}</p>}
       </div>
       {/* Ligne 1 : recherche + tri côte à côte. Le tri est à DROITE de la recherche pour
-          libérer toute la ligne 2 aux puces de filtres (qui doivent toutes rester visibles). */}
+          libérer toute la ligne 2 aux puces de filtres (qui doivent toutes rester visibles).
+          MASQUÉE sur l'onglet Stats (chercher un jeu n'y a pas de sens — retour user) ;
+          le menu de filtres (bouton flottant) y reste disponible. */}
+      {!statsOpen && (
       <div className="controls">
         <div className="input-clear search-wrap">
           <input
@@ -1344,6 +1348,7 @@ export default function App() {
           </div>
         )}
       </div>
+      )}
 
       {/* Ligne 2 : les puces de filtres actifs (toutes visibles, elles passent à la ligne).
           Le compteur de jeux vit désormais sous le titre d'écran. */}
@@ -1428,6 +1433,7 @@ export default function App() {
               onMove={view === 'wishlist' ? () => setMoving(g) : undefined}
               // Liens/fonctions réseau désactivés hors ligne (BGG, Philibert, fiches de score).
               onBgg={g.bgg_id && online ? () => window.open(`https://boardgamegeek.com/boardgame/${g.bgg_id}`, '_blank', 'noopener') : undefined}
+              onNewPlay={view !== 'wishlist' && online ? () => handleNewPlayFromCard(g) : undefined}
               onCardClick={
                 !online
                   ? undefined

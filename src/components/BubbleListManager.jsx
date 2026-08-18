@@ -84,7 +84,7 @@ export default function BubbleListManager({ title, items, migrationCode, namePla
 
           {/* Éditeur replié par défaut : on ne montre qu'un bouton, l'écran reste léger. */}
           {online && editing === null && (
-            <button type="button" className="btn-ghost bubble-add" onClick={startNew}>
+            <button type="button" className="btn-ghost btn-add bubble-add" onClick={startNew}>
               ➕ {addLabel}
             </button>
           )}

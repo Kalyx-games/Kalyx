@@ -336,7 +336,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
                 <button type="button" className="ext-row-x" onClick={() => delTrigger(t.id)} aria-label="Retirer le déclencheur">×</button>
               </div>
             ))}
-            <button type="button" className="btn-ghost" onClick={addTrigger}>➕ Ajouter un déclencheur</button>
+            <button type="button" className="btn-ghost btn-add" onClick={addTrigger}>➕ Ajouter un déclencheur</button>
           </div>
         )}
 
@@ -381,7 +381,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
                   <button type="button" className="ext-row-x" onClick={() => delVariantOption(o.id)} aria-label="Retirer la valeur">×</button>
                 </div>
               ))}
-              <button type="button" className="btn-ghost" onClick={addVariantOption}>➕ Ajouter une valeur</button>
+              <button type="button" className="btn-ghost btn-add" onClick={addVariantOption}>➕ Ajouter une valeur</button>
             </div>
           )}
 
@@ -408,7 +408,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
                   <button type="button" className="ext-row-x" onClick={() => delPlayVariantOption(o.id)} aria-label="Retirer la valeur">×</button>
                 </div>
               ))}
-              <button type="button" className="btn-ghost" onClick={addPlayVariantOption}>➕ Ajouter une valeur</button>
+              <button type="button" className="btn-ghost btn-add" onClick={addPlayVariantOption}>➕ Ajouter une valeur</button>
             </div>
           )}
         </section>
@@ -440,7 +440,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
               <button type="button" className="ext-row-x" onClick={() => delTeam(t.id)} aria-label="Retirer l'équipe">×</button>
             </div>
           ))}
-          <button type="button" className="btn-ghost" onClick={addTeam}>➕ Ajouter une équipe</button>
+          <button type="button" className="btn-ghost btn-add" onClick={addTeam}>➕ Ajouter une équipe</button>
         </section>
       )}
 
@@ -550,7 +550,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
           </div>
         ))}
         </div>
-        <button type="button" className="btn-ghost" onClick={addCat}>➕ Ajouter une catégorie</button>
+        <button type="button" className="btn-ghost btn-add" onClick={addCat}>➕ Ajouter une catégorie</button>
       </section>
       )}
 

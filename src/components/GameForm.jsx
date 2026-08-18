@@ -665,7 +665,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                   </div>
                 </div>
               ))}
-              <button type="button" className="btn-ghost ext-add-btn" onClick={addExtRow}>
+              <button type="button" className="btn-ghost btn-add ext-add-btn" onClick={addExtRow}>
                 ➕ Ajouter une extension
               </button>
             </div>

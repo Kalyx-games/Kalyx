@@ -683,7 +683,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         </div>
       ))}
       {players.length < maxP && (
-        <button type="button" className="btn-ghost coop-add" onClick={addPlayer}>➕ Ajouter un joueur</button>
+        <button type="button" className="btn-ghost btn-add coop-add" onClick={addPlayer}>➕ Ajouter un joueur</button>
       )}
     </div>
   )
@@ -833,13 +833,13 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                   </div>
                 ))}
                 {(!t.size || t.players.length < t.size) && t.players.length < 8 && (
-                  <button type="button" className="btn-ghost coop-add" onClick={() => addMember(t.id)}>➕ Ajouter un joueur</button>
+                  <button type="button" className="btn-ghost btn-add coop-add" onClick={() => addMember(t.id)}>➕ Ajouter un joueur</button>
                 )}
               </div>
             </div>
           ))}
           {!predefined && teams.length < 8 && (
-            <button type="button" className="btn-ghost team-add" onClick={addTeam}>➕ Ajouter une équipe</button>
+            <button type="button" className="btn-ghost btn-add team-add" onClick={addTeam}>➕ Ajouter une équipe</button>
           )}
           {notesField}
         </div>
@@ -925,7 +925,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                 </div>
               ))}
               {players.length < maxP && (
-                <button type="button" className="btn-ghost coop-add" onClick={addPlayer}>➕ Ajouter un joueur</button>
+                <button type="button" className="btn-ghost btn-add coop-add" onClick={addPlayer}>➕ Ajouter un joueur</button>
               )}
             </div>
           </div>

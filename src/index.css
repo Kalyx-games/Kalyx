@@ -1613,6 +1613,14 @@ body {
   justify-content: center;
   gap: 8px;
 }
+/* Bouton « ajouter une ligne » (action TERTIAIRE : extension, joueur, catégorie, valeur…) :
+   plus petit et plus léger que les vrais CTA, pour ne pas crier plus fort que le titre de sa
+   section (hiérarchie : titre > contenu > bouton d'ajout). */
+.btn-add {
+  font-size: var(--fs-body-s);
+  font-weight: 600;
+  padding: 9px 14px;
+}
 .btn-ghost {
   background: var(--btn-ghost-bg);
   color: var(--ink);
