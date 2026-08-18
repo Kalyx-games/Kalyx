@@ -1,3 +1,107 @@
+// ============ Icônes Kalyx — système « pièces de jeu » ============
+// RÈGLES (à respecter pour toute nouvelle icône) :
+//  · viewBox 24×24, formes GÉOMÉTRIQUES PLEINES (fill), coins arrondis (strokeLinejoin
+//    round sur le même tracé, ou rx sur les rects) — comme des pions/jetons de jeu.
+//  · UNE seule couleur : currentColor (l'icône hérite du texte à côté d'elle). Les seules
+//    icônes multicolores tolérées sont celles de la NAVBAR + le logo Chwazi (choix user).
+//  · Les GLYPHES (✓ ✕ flèches chevrons) restent en TRAIT (stroke 2.2-2.4, bouts ronds).
+//  · Tailles utilisées : 13-14 (dans une ligne de texte), 20 (boutons), 24 (navbar).
+//  · Vocabulaire du jeu : triangle = joueur (pion), étoile = idéal, quartier de cercle =
+//    durée, carrés emboîtés = extension, dé = partie, couronne = victoire.
+//  · Emoji autorisé uniquement à ≥ 2rem, seul dans son bloc (état vide, anecdote) —
+//    jamais dans un bouton ni dans une ligne de texte.
+
+// Enveloppe commune des icônes PLEINES (une couleur, héritée du texte).
+function Ico({ size = 20, children }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" aria-hidden="true" focusable="false" className="ico">
+      {children}
+    </svg>
+  )
+}
+
+// 👥 Joueurs = deux PIONS (triangles arrondis), le second en retrait.
+export function PlayersIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <path d="M16.6 5.6 21.2 13.9 H12 Z" opacity=".5" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+      <path d="M8.4 7.4 14.2 17.6 H2.6 Z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+    </Ico>
+  )
+}
+
+// ⭐ Idéal = étoile pleine.
+export function StarIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <path
+        d="M12 3.6l2.47 5 5.53.8-4 3.9.94 5.5L12 16.2l-4.94 2.6.94-5.5-4-3.9 5.53-.8z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </Ico>
+  )
+}
+
+// 🕑 Durée = cadran avec un QUARTIER plein (le temps qui passe, en géométrie pure).
+export function ClockIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" strokeWidth="2.2" />
+      <path d="M12 12V6.4A5.6 5.6 0 0 1 17.6 12Z" />
+    </Ico>
+  )
+}
+
+// 🧩 Extension = un MODULE qui s'emboîte (petit carré ajouté au grand).
+export function ExtIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <rect x="2.8" y="8.2" width="13" height="13" rx="3.2" />
+      <rect x="13.6" y="2.8" width="7.6" height="7.6" rx="2.2" opacity=".5" />
+    </Ico>
+  )
+}
+
+// 🎲 Partie = dé (points évidés par fill-rule evenodd → une seule couleur).
+export function DieIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <path
+        fillRule="evenodd"
+        d="M8.4 3.4h7.2a5 5 0 0 1 5 5v7.2a5 5 0 0 1-5 5H8.4a5 5 0 0 1-5-5V8.4a5 5 0 0 1 5-5Zm-2 4.6a1.7 1.7 0 1 0 3.4 0 1.7 1.7 0 0 0-3.4 0Zm3.9 4a1.7 1.7 0 1 0 3.4 0 1.7 1.7 0 0 0-3.4 0Zm3.9 4a1.7 1.7 0 1 0 3.4 0 1.7 1.7 0 0 0-3.4 0Z"
+      />
+    </Ico>
+  )
+}
+
+// 🧠 Complexité = trois barres montantes (même langage que la jauge des cartes).
+export function BarsIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <rect x="3.4" y="13.8" width="4.6" height="6.8" rx="1.6" />
+      <rect x="9.7" y="9.4" width="4.6" height="11.2" rx="1.6" />
+      <rect x="16" y="4.6" width="4.6" height="16" rx="1.6" />
+    </Ico>
+  )
+}
+
+// 🏆 Victoire = couronne (trois pointes sur un socle).
+export function CrownIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <path
+        d="M4.4 17h15.2l1-8.2-4.5 3.1L12 5.6 7.9 11.9 3.4 8.8Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <rect x="4.6" y="18.4" width="14.8" height="2.2" rx="1.1" />
+    </Ico>
+  )
+}
+
 // Petites icônes SVG de l'app.
 // Collection = bibliothèque verte, Wishlist = cœur rouge, Réglages = engrenage.
 

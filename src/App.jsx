@@ -37,7 +37,7 @@ const TierlistView = lazyRetry(() => import('./components/TierlistView'))
 import SkeletonCard from './components/SkeletonCard'
 import { enterFullscreen } from './lib/fullscreen'
 import NavBar from './components/NavBar'
-import { SettingsIcon, ChwaziIcon, FilterIcon } from './components/icons'
+import { SettingsIcon, ChwaziIcon, FilterIcon, ClockIcon, DieIcon } from './components/icons'
 
 
 // Le filtre propriétaire est PERSISTANT (un seul propriétaire regarde en général ses
@@ -1446,13 +1446,9 @@ export default function App() {
               // Quand on trie par une info absente des cartes, on l'affiche dessus.
               metaLine={
                 sort === 'lastplayed'
-                  ? playMeta[g.id]?.last
-                    ? `🕓 Dernière partie : ${formatDay(playMeta[g.id].last)}`
-                    : '🕓 Jamais jouée'
+                  ? <><ClockIcon size={13} /> {playMeta[g.id]?.last ? `Dernière partie : ${formatDay(playMeta[g.id].last)}` : 'Jamais jouée'}</>
                   : sort === 'plays'
-                  ? playMeta[g.id]?.count
-                    ? `🎲 ${playMeta[g.id].count} partie${playMeta[g.id].count > 1 ? 's' : ''} jouée${playMeta[g.id].count > 1 ? 's' : ''}`
-                    : '🎲 Jamais jouée'
+                  ? <><DieIcon size={13} /> {playMeta[g.id]?.count ? `${playMeta[g.id].count} partie${playMeta[g.id].count > 1 ? 's' : ''} jouée${playMeta[g.id].count > 1 ? 's' : ''}` : 'Jamais jouée'}</>
                   : null
               }
               ownerMap={ownerMap}

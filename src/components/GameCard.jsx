@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { parseOwners, parseTags, ownerDisplay, ownerColor, parseExtensions, basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText } from '../lib/games'
-import { CollectionIcon } from './icons'
+import { CollectionIcon, PlayersIcon, StarIcon, ClockIcon, ExtIcon } from './icons'
 
 // Une carte compacte représentant un jeu dans la liste.
 // Toutes les infos (joueurs, idéal, complexité, durée, propriétaire) sont dans
@@ -337,11 +337,11 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
             au même endroit → comparaison au coup d'œil en faisant défiler la liste.
             Ordre DOM = joueurs, durée, idéal, complexité (remplissage ligne par ligne). */}
         <div className="game-meta">
-          <span className="m-players" title={playersTitle}>👥 {playersDisplay}</span>
-          <span className="m-time" title="Durée">🕑 {durationLabel(game)}</span>
-          <span className="m-ideal" title="Joueurs idéal">{idealDisplay ? `⭐ ${idealDisplay}` : ''}</span>
+          <span className="m-players" title={playersTitle}><PlayersIcon size={13} /> {playersDisplay}</span>
+          <span className="m-time" title="Durée"><ClockIcon size={13} /> {durationLabel(game)}</span>
+          <span className="m-ideal" title="Joueurs idéal">{idealDisplay ? <><StarIcon size={13} /> {idealDisplay}</> : ''}</span>
+          {/* Complexité : les 3 barres parlent d'elles-mêmes (le 🧠 était redondant → retiré). */}
           <span className="cx" title={complexity ? `Complexité ${complexity.toFixed(1)} / 5` : 'Complexité inconnue'}>
-            🧠
             <span className="cx-bars">
               {[0, 1, 2].map((i) => {
                 const frac = Math.max(0, Math.min(1, cxRounded - i))
@@ -357,7 +357,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
 
         {extensions.length > 0 && (
           <div className="game-ext" title="Extensions">
-            🧩 {extensions.join(', ')}
+            <ExtIcon size={12} /> <span>{extensions.join(', ')}</span>
           </div>
         )}
         {/* Info liée au tri en cours (parties jouées, dernière partie…), sinon absente. */}

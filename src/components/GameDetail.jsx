@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { BackIcon } from './icons'
+import { BackIcon, PlayersIcon, StarIcon, ClockIcon, BarsIcon, ExtIcon } from './icons'
 import SnapshotPane from './SnapshotPane'
 import {
   parseOwners, parseTags, ownerDisplay, parseExtensions,
@@ -169,14 +169,14 @@ export default function GameDetail({
       </div>
 
       <div className="detail-infos">
-        <div className="detail-info"><span className="detail-info-k">👥 Joueurs</span><span className="detail-info-v">{playersText}</span></div>
-        {bestText && <div className="detail-info"><span className="detail-info-k">⭐ Idéal</span><span className="detail-info-v">{bestText}</span></div>}
-        <div className="detail-info"><span className="detail-info-k">🕑 Durée</span><span className="detail-info-v">{durationLabel(game)}</span></div>
-        <div className="detail-info"><span className="detail-info-k">🧠 Complexité</span><span className="detail-info-v">{complexity ? `${complexity} · ${complexityWord(complexity)}` : '—'}</span></div>
+        <div className="detail-info"><span className="detail-info-k"><PlayersIcon size={13} /> Joueurs</span><span className="detail-info-v">{playersText}</span></div>
+        {bestText && <div className="detail-info"><span className="detail-info-k"><StarIcon size={13} /> Idéal</span><span className="detail-info-v">{bestText}</span></div>}
+        <div className="detail-info"><span className="detail-info-k"><ClockIcon size={13} /> Durée</span><span className="detail-info-v">{durationLabel(game)}</span></div>
+        <div className="detail-info"><span className="detail-info-k"><BarsIcon size={13} /> Complexité</span><span className="detail-info-v">{complexity ? `${complexity} · ${complexityWord(complexity)}` : '—'}</span></div>
       </div>
 
       {extensions.length > 0 && (
-        <p className="detail-ext"><span className="detail-info-k">🧩</span> {extensions.join(', ')}</p>
+        <p className="detail-ext"><span className="detail-info-k"><ExtIcon size={13} /></span> {extensions.join(', ')}</p>
       )}
 
       {hasSheet && (
