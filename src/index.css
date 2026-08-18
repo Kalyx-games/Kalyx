@@ -20,6 +20,18 @@
   --players: #2f6df6;
   --gold: #eab308;
   --gold-ink: #b45309; /* or « texte » : assez foncé pour le clair, éclairci en sombre */
+  /* ÉCHELLE TYPOGRAPHIQUE (chantier typo) : 9 crans nommés, à utiliser PARTOUT à la place de
+     valeurs libres. Hors échelle tolérés : tailles de GLYPHES (croix, +, emojis d'illustration)
+     et l'univers Chwazi (plein écran à part). Identiques dans les 2 thèmes → définis ici seulement. */
+  --fs-micro: 0.6875rem; /* 11px — badges, indices minuscules */
+  --fs-caption: 0.75rem; /* 12px — étiquettes de nav, sous-titres de tuiles */
+  --fs-footnote: 0.8125rem; /* 13px — métadonnées, hints, labels de champs */
+  --fs-body-s: 0.875rem; /* 14px — texte secondaire, chips, bannières */
+  --fs-body: 0.9375rem; /* 15px — texte courant, champs */
+  --fs-body-l: 1.0625rem; /* 17px — valeurs mises en avant, noms, boutons */
+  --fs-title-s: 1.25rem; /* 20px — titres de modales, sous-écrans */
+  --fs-title: 1.75rem; /* 28px — titres d'écran */
+  --fs-display: 2.25rem; /* 36px — chiffres héros (tuiles de stats) */
   --bar-on: #6366f1;
   --bar-off: #e0e4ec;
   --danger: #e11d48;
@@ -110,6 +122,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums; /* chiffres à chasse fixe partout (tableaux, scores) */
 }
 
 .app {
@@ -160,7 +173,7 @@ body {
   background: none;
   cursor: pointer;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: var(--fs-caption);
   font-weight: 600;
   transition: transform 0.12s ease;
 }
@@ -179,7 +192,7 @@ body {
   color: var(--ink);
 }
 .navtab.active span {
-  font-weight: 800;
+  font-weight: 700; /* la pastille + le zoom d'icône portent déjà l'état actif */
 }
 .navtab.active svg {
   opacity: 1;
@@ -235,8 +248,8 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 1.3rem;
-  font-weight: 800;
+  font-size: var(--fs-title-s);
+  font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--ink);
 }
@@ -254,7 +267,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.76rem;
+  font-size: var(--fs-caption);
   font-weight: 600;
   padding: 5px 11px;
   border-radius: 999px;
@@ -307,7 +320,7 @@ body {
   transform: scale(0.94);
 }
 .field-hint {
-  font-size: 0.85rem;
+  font-size: var(--fs-body-s);
   color: var(--muted);
 }
 
@@ -316,7 +329,7 @@ body {
   margin: -4px 0 10px;
   padding: 9px 12px;
   border-radius: 12px;
-  font-size: 0.84rem;
+  font-size: var(--fs-footnote);
   line-height: 1.35;
   background: var(--danger-bg);
   border: 1px solid var(--danger-border);
@@ -328,7 +341,7 @@ body {
   margin: 10px 16px 0;
   padding: 10px 14px;
   border-radius: 12px;
-  font-size: 0.86rem;
+  font-size: var(--fs-body-s);
   background: var(--soft);
   border: 1px solid var(--line);
   color: var(--muted);
@@ -360,7 +373,7 @@ body {
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--ink);
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 .search::placeholder {
@@ -382,18 +395,18 @@ body {
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--ink);
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 .sortmenu-arrows {
   color: var(--primary);
-  font-weight: 800;
+  font-weight: 700;
 }
 .sortmenu-chev {
   color: var(--muted);
-  font-size: 0.7rem;
+  font-size: var(--fs-micro);
   transition: transform 0.15s;
 }
 .sortmenu-chev.up {
@@ -422,7 +435,7 @@ body {
   border: none;
   background: none;
   border-radius: 10px;
-  font-size: 0.92rem;
+  font-size: var(--fs-body);
   color: var(--ink);
   cursor: pointer;
   text-align: left;
@@ -446,8 +459,26 @@ body {
   padding: 6px 16px 2px;
 }
 .count {
-  font-size: 0.88rem;
+  font-size: var(--fs-footnote);
+  font-weight: 500;
+  color: var(--muted);
+}
+/* Titre d'écran de l'accueil (Collection / Wishlist / Statistiques) + compteur en sous-titre.
+   Le « Ta bibliothèque » de Spotify : grand, à gauche, le chrome au-dessus reste discret. */
+.screen-head {
+  padding: 10px 16px 2px;
+}
+.screen-title {
+  font-size: var(--fs-title);
   font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.screen-count {
+  margin-top: 2px;
+  font-size: var(--fs-footnote);
+  font-weight: 500;
   color: var(--muted);
 }
 .sortwrap {
@@ -463,7 +494,7 @@ body {
   background: var(--card);
   color: var(--primary);
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
@@ -479,7 +510,7 @@ body {
 /* Chevron d'un repli (utilisé par « Joueurs occasionnels » dans les filtres de l'historique). */
 .filter-chev {
   color: var(--muted);
-  font-size: 0.7rem;
+  font-size: var(--fs-micro);
   transition: transform 0.15s;
 }
 .filter-chev.up {
@@ -499,7 +530,7 @@ body {
 }
 .filter-label {
   display: block;
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
   font-weight: 700;
   color: var(--ink);
   margin-bottom: 8px;
@@ -519,7 +550,7 @@ body {
   border: 1px solid var(--line);
   background: var(--input-bg);
   color: var(--ink);
-  font-size: 0.88rem;
+  font-size: var(--fs-body-s);
   font-weight: 600;
   cursor: pointer;
 }
@@ -539,7 +570,7 @@ body {
   align-items: center;
   gap: 8px;
   margin-top: 8px;
-  font-size: 0.86rem;
+  font-size: var(--fs-body-s);
   color: var(--muted);
 }
 .filter-check input {
@@ -553,7 +584,7 @@ body {
   margin-top: 2px;
 }
 .rs-value {
-  font-size: 0.82rem;
+  font-size: var(--fs-footnote);
   font-weight: 600;
   color: var(--muted);
   margin-bottom: 0;
@@ -606,7 +637,7 @@ body {
 }
 .field-label {
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--fs-footnote);
   font-weight: 600;
   color: var(--muted);
   margin-bottom: 8px;
@@ -624,7 +655,7 @@ body {
   border: 1px solid var(--line);
   background: var(--input-bg);
   color: var(--ink);
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
   font-weight: 600;
   cursor: pointer;
 }
@@ -650,7 +681,7 @@ body {
   border: 1px solid var(--line);
   background: var(--accent-soft);
   color: var(--primary);
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -684,7 +715,7 @@ body {
   align-items: center;
   gap: 8px;
   margin-top: 8px;
-  font-size: 0.84rem;
+  font-size: var(--fs-footnote);
   font-weight: 400;
   color: var(--ink);
 }
@@ -697,7 +728,7 @@ body {
   border: none;
   background: none;
   color: var(--primary);
-  font-size: 0.82rem;
+  font-size: var(--fs-footnote);
   font-weight: 700;
   cursor: pointer;
   padding: 4px 2px;
@@ -719,7 +750,7 @@ body {
   align-items: center;
   gap: 10px;
   margin-top: 6px;
-  font-size: 0.85rem;
+  font-size: var(--fs-body-s);
 }
 .price-phil-msg .price-verify {
   margin-left: 0;
@@ -764,7 +795,7 @@ body {
 .bgg-result-year {
   flex-shrink: 0;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: var(--fs-body-s);
 }
 .img-preview {
   display: block;
@@ -869,13 +900,13 @@ body {
   flex-shrink: 0;
   width: 22px;
   text-align: center;
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
 }
 .ext-players {
   flex: 1;
   min-width: 0;
   width: 100%;
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
 }
 .ext-add-btn {
   align-self: flex-start;
@@ -933,18 +964,18 @@ body {
 }
 .backup-when {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
   color: var(--ink);
 }
 .backup-meta {
-  font-size: 0.8rem;
+  font-size: var(--fs-footnote);
   color: var(--muted);
 }
 .backup-restore {
   flex-shrink: 0;
   height: 38px;
   padding: 0 12px;
-  font-size: 0.86rem;
+  font-size: var(--fs-body-s);
 }
 
 /* ---- Liste des jeux ---- */
@@ -995,7 +1026,7 @@ body {
   gap: 3px;
   border: none;
   color: #fff;
-  font-size: 0.72rem;
+  font-size: var(--fs-caption);
   font-weight: 700;
   cursor: pointer;
 }
@@ -1111,7 +1142,7 @@ body {
   height: 100%;
   color: #fff;
   font-size: 1.5rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.02em;
 }
 .game-img.zoomable {
@@ -1177,7 +1208,7 @@ body {
 .game-name {
   flex: 1;
   min-width: 0;
-  font-size: 1.04rem;
+  font-size: var(--fs-body-l);
   font-weight: 700;
   line-height: 1.2;
   color: var(--ink);
@@ -1208,8 +1239,8 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.95rem;
-  font-weight: 800;
+  font-size: var(--fs-body);
+  font-weight: 700;
   color: var(--ok-ink); /* tokens « succès » (les hex en dur cassaient le thème sombre) */
   background: var(--ok-bg);
   padding: 3px 9px;
@@ -1227,7 +1258,7 @@ body {
   gap: 5px;
 }
 .game-price-below {
-  font-size: 0.82rem;
+  font-size: var(--fs-footnote);
   padding: 2px 7px;
 }
 .game-meta {
@@ -1239,20 +1270,20 @@ body {
   gap: 4px 8px;
   justify-items: start;
   align-items: center;
-  font-size: 0.83rem;
+  font-size: var(--fs-footnote);
   color: var(--muted);
   margin-top: 5px;
 }
 .game-ext {
   margin-top: 5px;
-  font-size: 0.8rem;
+  font-size: var(--fs-footnote);
   color: var(--muted);
 }
 /* Ligne d'info liée au tri (parties jouées, dernière partie) : discrète, sous les métas. */
 .game-playinfo {
   margin-top: 5px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: var(--fs-footnote);
+  font-weight: 500;
   color: var(--accent);
 }
 /* Cellules de la grille. min-width:0 = elles ne débordent pas de leur colonne. */
@@ -1271,11 +1302,11 @@ body {
 }
 .m-players {
   color: var(--players);
-  font-weight: 600;
+  font-weight: 500; /* la couleur code l'info, le gras est réservé aux titres */
 }
 .m-ideal {
   color: var(--gold-ink); /* suit le thème (le hex figé restait sombre sur carte sombre) */
-  font-weight: 600;
+  font-weight: 500;
 }
 .m-time {
   color: var(--muted);
@@ -1315,7 +1346,7 @@ body {
   height: 26px;
   border-radius: 50%;
   color: #fff;
-  font-size: 0.7rem;
+  font-size: var(--fs-micro);
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -1353,7 +1384,7 @@ body {
 }
 .muted {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
 }
 /* ---- Bouton flottant + ---- */
 .fab {
@@ -1404,8 +1435,8 @@ body {
   border-radius: 999px;
   background: var(--primary);
   color: #fff;
-  font-size: 0.72rem;
-  font-weight: 800;
+  font-size: var(--fs-caption);
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1476,9 +1507,10 @@ body {
   padding: 8px 18px 12px;
 }
 .modal h2 {
-  font-size: 1.25rem;
+  font-size: var(--fs-title-s);
   margin-bottom: 16px;
-  text-align: center;
+  text-align: left;
+  letter-spacing: -0.015em;
   color: var(--ink);
 }
 .modal-head {
@@ -1516,7 +1548,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  font-size: 0.8rem;
+  font-size: var(--fs-footnote);
   font-weight: 600;
   color: var(--muted);
   margin-bottom: 12px;
@@ -1530,7 +1562,7 @@ body {
   border: 1px solid var(--line);
   background: var(--input-bg);
   color: var(--ink);
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
   font-weight: 400;
 }
 .modal input:focus,
@@ -1573,7 +1605,7 @@ body {
   padding: 12px 16px;
   border-radius: 10px;
   border: none;
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
@@ -1614,15 +1646,16 @@ body {
   box-shadow: 0 24px 60px rgba(16, 24, 40, 0.28);
 }
 .confirm h2 {
-  font-size: 1.2rem;
-  text-align: center;
+  font-size: var(--fs-title-s);
+  text-align: center; /* une confirmation reste centrée (dialogue court) */
+  letter-spacing: -0.015em;
   color: var(--ink);
   margin-bottom: 8px;
 }
 .confirm-msg {
   text-align: center;
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: var(--fs-body);
   line-height: 1.45;
   margin-bottom: 18px;
 }
@@ -1636,7 +1669,7 @@ body {
   border-radius: 10px;
   background: var(--input-bg);
   color: var(--ink);
-  font-size: 1.05rem;
+  font-size: var(--fs-body-l);
   text-align: center;
   letter-spacing: 0.08em;
   margin-bottom: 12px;
@@ -1649,7 +1682,7 @@ body {
 .code-err {
   color: var(--danger-ink);
   text-align: center;
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
   margin: -4px 0 12px;
 }
 .settings-relink {
@@ -1658,7 +1691,7 @@ body {
   background: none;
   border: none;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: var(--fs-body-s);
   text-decoration: underline;
   cursor: pointer;
 }
@@ -1681,7 +1714,7 @@ body {
   margin: 0;
 }
 .crash-title {
-  font-size: 1.3rem;
+  font-size: var(--fs-title-s);
   margin: 0;
 }
 .crash-msg {
@@ -1721,8 +1754,10 @@ body {
 }
 .back-btn svg { width: 22px; height: 22px; display: block; }
 .settings-head h2 {
-  font-size: 1.3rem;
+  font-size: var(--fs-title);
   color: var(--ink);
+  letter-spacing: -0.022em; /* les gros titres système ont besoin d'être resserrés */
+  line-height: 1.15;
 }
 .settings-card {
   background: var(--card);
@@ -1733,9 +1768,10 @@ body {
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
 }
 .settings-card h3 {
-  font-size: 1.02rem;
+  font-size: var(--fs-body-l);
   color: var(--ink);
   margin-bottom: 12px;
+  text-wrap: balance;
 }
 .settings-card code {
   background: var(--soft);
@@ -1775,7 +1811,7 @@ body {
   border: none;
   background: transparent;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
   cursor: pointer;
 }
 .owner-del:hover {
@@ -1788,7 +1824,7 @@ body {
   border-radius: 10px;
   border: none;
   background: transparent;
-  font-size: 0.85rem;
+  font-size: var(--fs-body-s);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -1807,7 +1843,7 @@ body {
   border-top: 1px dashed var(--line);
 }
 .owner-editor-title {
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
   font-weight: 700;
   color: var(--ink);
   margin-bottom: 10px;
@@ -1822,7 +1858,7 @@ body {
   border: 1px solid var(--line);
   background: var(--input-bg);
   color: var(--ink);
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
 }
 .oe-name {
   margin-bottom: 12px;
@@ -1848,7 +1884,7 @@ body {
 }
 .oe-label {
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--fs-footnote);
   font-weight: 600;
   color: var(--muted);
   margin-bottom: 6px;
@@ -1856,7 +1892,7 @@ body {
 .oe-preview {
   width: 44px;
   height: 44px;
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
   margin-bottom: 0;
 }
 .palette {
@@ -1901,7 +1937,7 @@ body {
   color: var(--ink);
   text-decoration: none;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
 }
 /* NB : le retour d'appui de .link-row est géré dans le bloc « Retour visuel d'appui » (scale 0.985). */
 .link-row.disabled {
@@ -1940,7 +1976,7 @@ body {
   flex-shrink: 0;
   width: 20px;
   text-align: center;
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
 }
 
 /* ---- Statistiques ---- */
@@ -1962,7 +1998,7 @@ body {
   background: var(--line);
 }
 .stats-divider span {
-  font-size: 0.82rem;
+  font-size: var(--fs-footnote);
   font-weight: 700;
   color: var(--muted);
   text-transform: uppercase;
@@ -1982,25 +2018,25 @@ body {
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
 }
 .stat-tile-value {
-  font-size: 1.9rem;
+  font-size: var(--fs-display);
   font-weight: 800;
   line-height: 1.05;
   color: var(--primary);
 }
 .stat-tile-label {
   margin-top: 3px;
-  font-size: 0.78rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
 }
 /* Tuile dont la valeur est un TEXTE (ex. nom de jeu) : plus petit, et qui passe à la ligne. */
 .stat-tile-value.stat-tile-text {
-  font-size: 1.05rem;
+  font-size: var(--fs-body-l);
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
 .stat-tile-sub {
   margin-top: 2px;
-  font-size: 0.74rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
   opacity: 0.85;
 }
@@ -2048,8 +2084,8 @@ body {
 }
 .tile-holder-name {
   margin-top: 4px;
-  font-size: 0.92rem;
-  font-weight: 800;
+  font-size: var(--fs-body);
+  font-weight: 700;
   color: var(--gold);
   line-height: 1.2;
   overflow-wrap: anywhere; /* un nom long (ou plusieurs ex æquo) passe à la ligne */
@@ -2074,9 +2110,10 @@ body {
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
 }
 .stat-block-title {
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
   color: var(--ink);
   margin-bottom: 12px;
+  text-wrap: balance;
 }
 
 /* ---- Tableaux de stats (podium, moyenne/record) ----
@@ -2091,12 +2128,12 @@ body {
   border-collapse: separate;
   border-spacing: 0 6px;
   width: 100%;
-  font-size: 0.88rem;
+  font-size: var(--fs-body-s);
 }
 .stat-table th {
   font-weight: 600;
   color: var(--muted);
-  font-size: 0.76rem;
+  font-size: var(--fs-caption);
   padding: 0 10px 2px;
   white-space: nowrap;
 }
@@ -2157,7 +2194,7 @@ body {
 }
 .cmp-vs {
   flex-shrink: 0;
-  font-size: 0.78rem;
+  font-size: var(--fs-caption);
   font-weight: 700;
   color: var(--muted);
 }
@@ -2169,7 +2206,7 @@ body {
   flex: 1;
   min-width: 0;
   text-align: center;
-  font-size: 0.72rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
 }
 .cmp-table {
@@ -2184,7 +2221,7 @@ body {
 .cmp-table .cmp-label {
   text-align: left;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: var(--fs-footnote);
   color: var(--muted);
   padding: 0 8px 0 0;
   white-space: normal;
@@ -2200,12 +2237,12 @@ body {
 .cmp-val {
   display: block;
   font-weight: 800;
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
 }
 .cmp-range {
   display: block;
   margin-top: 1px;
-  font-size: 0.7rem;
+  font-size: var(--fs-micro);
   font-weight: 500;
   opacity: 0.7;
 }
@@ -2269,7 +2306,7 @@ body {
   min-width: 0;
   color: var(--ink);
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: var(--fs-body-s);
 }
 .scenario-val {
   white-space: nowrap;
@@ -2279,7 +2316,7 @@ body {
 .scenario-sub {
   color: var(--muted);
   font-weight: 500;
-  font-size: 0.82rem;
+  font-size: var(--fs-footnote);
 }
 
 .bars {
@@ -2295,7 +2332,7 @@ body {
 .bar-label {
   flex: 0 0 30%;
   max-width: 30%;
-  font-size: 0.85rem;
+  font-size: var(--fs-body-s);
   color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
@@ -2303,7 +2340,7 @@ body {
 }
 .bar-sub {
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: var(--fs-caption);
 }
 .bar-track {
   flex: 1;
@@ -2322,14 +2359,14 @@ body {
   flex: 0 0 auto;
   min-width: 16px;
   text-align: right;
-  font-size: 0.85rem;
+  font-size: var(--fs-body-s);
   font-weight: 700;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 .stat-empty-line {
   color: var(--muted);
-  font-size: 0.86rem;
+  font-size: var(--fs-body-s);
 }
 
 /* ---- Chwazi (sélecteur de doigts) ---- */
@@ -2432,7 +2469,7 @@ body {
   border: none;
   background: var(--card);
   color: var(--chw);
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
   font-weight: 700;
   padding: 12px 0;
   cursor: pointer;
@@ -2684,7 +2721,7 @@ button { transition: transform 0.12s ease; }
 .app-version {
   text-align: center;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: var(--fs-caption);
   margin: 18px 0 4px;
   font-variant-numeric: tabular-nums;
 }
@@ -2781,14 +2818,14 @@ button { transition: transform 0.12s ease; }
   flex-direction: column;
   gap: 2px;
 }
-.detail-info-k { font-size: 0.8rem; color: var(--muted); }
-.detail-info-v { font-size: 1rem; font-weight: 600; }
-.detail-ext { margin: 0 0 12px; font-size: 0.92rem; color: var(--ink); }
-.detail-plays { margin: 0 0 14px; font-size: 0.9rem; color: var(--muted); }
+.detail-info-k { font-size: var(--fs-footnote); color: var(--muted); }
+.detail-info-v { font-size: var(--fs-body-l); font-weight: 600; letter-spacing: -0.01em; }
+.detail-ext { margin: 0 0 12px; font-size: var(--fs-body); color: var(--ink); }
+.detail-plays { margin: 0 0 14px; font-size: var(--fs-body); color: var(--muted); }
 .detail-actions { display: flex; flex-direction: column; gap: 8px; }
-.detail-primary { width: 100%; height: 46px; font-size: 1rem; box-shadow: 0 4px 16px var(--cta-glow); }
+.detail-primary { width: 100%; height: 46px; font-size: var(--fs-body-l); box-shadow: 0 4px 16px var(--cta-glow); }
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.detail-grid .btn-ghost { height: 44px; }
+.detail-grid .btn-ghost { height: 44px; padding-left: 8px; padding-right: 8px; /* colonne étroite : le libellé tient sur une ligne */ }
 .detail-bgg-btn { gap: 7px; }
 
 /* Sondage BGG « nombre de joueurs » (idéal / recommandé / déconseillé + votes). */
@@ -2799,11 +2836,11 @@ button { transition: transform 0.12s ease; }
   border-radius: 12px;
   padding: 12px 14px;
 }
-.detail-poll-head { font-weight: 600; font-size: 0.95rem; margin-bottom: 8px; }
+.detail-poll-head { font-weight: 600; font-size: var(--fs-body-l); margin-bottom: 8px; }
 .detail-poll-total { color: var(--muted); font-weight: 400; }
-.detail-poll-none { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.4; }
+.detail-poll-none { margin: 0; color: var(--muted); font-size: var(--fs-body-s); line-height: 1.4; }
 /* Légende en toutes lettres (dot coloré + mot) → pas d'abréviation ambiguë. */
-.poll-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 10px; font-size: 0.78rem; color: var(--muted); }
+.poll-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 10px; font-size: var(--fs-caption); color: var(--muted); }
 .poll-key { display: inline-flex; align-items: center; gap: 5px; }
 .poll-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 .poll-dot.poll-best { background: #eab308; }
@@ -2817,19 +2854,21 @@ button { transition: transform 0.12s ease; }
   align-items: center;
   gap: 7px 8px;
 }
-.poll-n { font-weight: 600; font-size: 0.9rem; text-align: right; }
+.poll-n { font-weight: 600; font-size: var(--fs-body); text-align: right; }
 .poll-bar { height: 12px; border-radius: 6px; overflow: hidden; display: flex; background: var(--soft); }
 .poll-seg { height: 100%; }
 .poll-seg.poll-best { background: #eab308; } /* jaune (idéal), assorti à l'étoile ⭐ */
 .poll-seg.poll-rec { background: #2f6df6; }
 .poll-seg.poll-not { background: #d1495b; }
-.poll-pct { text-align: right; font-size: 0.78rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.poll-pct { text-align: right; font-size: var(--fs-caption); font-weight: 700; font-variant-numeric: tabular-nums; }
 .poll-pct-best { color: #c99000; } /* or plus foncé → lisible sur fond clair ET sombre */
 .poll-pct-rec { color: #2f6df6; }
 .poll-pct-not { color: #d1495b; }
 .sheet-title {
-  font-size: 1.3rem;
+  font-size: var(--fs-title);
   color: var(--ink);
+  letter-spacing: -0.022em;
+  line-height: 1.15;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2859,12 +2898,12 @@ button { transition: transform 0.12s ease; }
 .sheet-cat-label {
   display: block;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
   color: var(--ink);
 }
 .sheet-cat-hint {
   display: block;
-  font-size: 0.72rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
   font-weight: 400;
   line-height: 1.25;
@@ -2877,7 +2916,7 @@ button { transition: transform 0.12s ease; }
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 0.72rem;
+  font-size: var(--fs-caption);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -2893,7 +2932,7 @@ button { transition: transform 0.12s ease; }
 }
 .sheet-cat-ext {
   display: inline-block;
-  font-size: 0.7rem;
+  font-size: var(--fs-micro);
   color: var(--muted);
   margin-top: 2px;
 }
@@ -2914,7 +2953,7 @@ button { transition: transform 0.12s ease; }
   background: var(--card);
   color: var(--ink);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: var(--fs-body-s);
   text-align: center;
 }
 /* Suggestions de noms (auto-complétion maison, marche sur mobile). */
@@ -2942,7 +2981,7 @@ button { transition: transform 0.12s ease; }
   border: none;
   background: none;
   color: var(--ink);
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
@@ -2979,7 +3018,7 @@ button { transition: transform 0.12s ease; }
   border-radius: 10px;
   background: var(--input-bg); /* même fond que tous les champs (—card rendait la case plus foncée en sombre) */
   color: var(--ink);
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
   text-align: center;
 }
 .sheet-cell:focus {
@@ -2997,7 +3036,7 @@ button { transition: transform 0.12s ease; }
   border: 1px dashed var(--line);
   background: var(--soft);
   color: var(--muted);
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
   cursor: pointer;
 }
 .sheet-total-row th,
@@ -3008,7 +3047,7 @@ button { transition: transform 0.12s ease; }
 .sheet-total {
   text-align: center;
   font-weight: 800;
-  font-size: 1.05rem;
+  font-size: var(--fs-body-l);
   color: var(--ink);
 }
 /* Gagnant : simple rectangle plein, couleur d'accentuation de l'onglet actif. */
@@ -3040,14 +3079,14 @@ button { transition: transform 0.12s ease; }
   border-radius: 10px;
   background: var(--input-bg);
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: var(--fs-body);
   color: var(--ink);
 }
 
 .sheet-edit-btn {
   margin-left: auto;
   flex-shrink: 0;
-  font-size: 1.05rem;
+  font-size: var(--fs-body-l);
 }
 
 /* ---- Éditeur de fiche de score ---- */
@@ -3057,7 +3096,7 @@ button { transition: transform 0.12s ease; }
   border-radius: 10px;
   background: var(--input-bg);
   color: var(--ink);
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
 }
 .cat-edit {
   border: 1px solid var(--line);
@@ -3098,7 +3137,7 @@ button { transition: transform 0.12s ease; }
 }
 .player-count {
   flex-shrink: 0;
-  font-size: 0.8rem;
+  font-size: var(--fs-footnote);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -3109,7 +3148,7 @@ button { transition: transform 0.12s ease; }
 }
 .player-merge {
   margin: 6px 0 0;
-  font-size: 0.85rem; /* même taille que .field-hint (même rôle : phrase grise d'explication) */
+  font-size: var(--fs-body-s); /* même taille que .field-hint (même rôle : phrase grise d'explication) */
   color: var(--muted);
   line-height: 1.3;
 }
@@ -3148,7 +3187,7 @@ button { transition: transform 0.12s ease; }
   border-radius: 10px;
   background: var(--input-bg);
   color: var(--ink);
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
 }
 .cat-edit-label:focus,
 .cat-edit-hint:focus,
@@ -3166,7 +3205,7 @@ button { transition: transform 0.12s ease; }
   font-weight: 600;
 }
 .cat-edit-hint {
-  font-size: 0.88rem;
+  font-size: var(--fs-body-s);
 }
 /* Explication + valeur fixe côte à côte (la valeur reste un petit champ discret). */
 .cat-edit-row2 {
@@ -3177,7 +3216,7 @@ button { transition: transform 0.12s ease; }
 .cat-edit-value {
   width: 104px;
   flex-shrink: 0;
-  font-size: 0.88rem;
+  font-size: var(--fs-body-s);
 }
 /* Barre d'actions TOUJOURS visible en bas (collée pendant le défilement). */
 .sheet-editor-actions {
@@ -3209,7 +3248,7 @@ button { transition: transform 0.12s ease; }
   border: 1px dashed var(--line);
   border-radius: 8px;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: var(--fs-footnote);
   font-weight: 600;
   cursor: pointer;
 }
@@ -3247,7 +3286,7 @@ button { transition: transform 0.12s ease; }
 /* Notes de la partie, affichées en petit sous les joueurs. */
 .hist-note {
   margin-top: 8px;
-  font-size: 0.8rem;
+  font-size: var(--fs-footnote);
   line-height: 1.35;
   color: var(--muted);
   white-space: pre-wrap;
@@ -3260,8 +3299,8 @@ button { transition: transform 0.12s ease; }
   justify-content: space-between;
 }
 .hist-date {
-  font-weight: 600;
-  font-size: 0.85rem;
+  font-weight: 500;
+  font-size: var(--fs-body-s);
   color: var(--muted);
 }
 .hist-del {
@@ -3275,13 +3314,13 @@ button { transition: transform 0.12s ease; }
   border-radius: 10px;
   background: var(--input-bg);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
 }
 .hist-del:active {
   transform: scale(0.94);
 }
 .hist-ext {
-  font-size: 0.78rem;
+  font-size: var(--fs-caption);
   color: var(--muted);
   margin-top: 2px;
 }
@@ -3297,7 +3336,7 @@ button { transition: transform 0.12s ease; }
   justify-content: space-between;
   padding: 5px 9px;
   border-radius: 10px;
-  font-size: 0.92rem;
+  font-size: var(--fs-body);
   color: var(--ink);
 }
 .hist-player.hist-winner {
@@ -3314,7 +3353,7 @@ button { transition: transform 0.12s ease; }
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 0.72rem;
+  font-size: var(--fs-caption);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -3330,7 +3369,7 @@ button { transition: transform 0.12s ease; }
   border-radius: 10px;
   background: var(--input-bg);
   color: var(--ink);
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
 }
 .input:focus {
   outline: none;
@@ -3344,7 +3383,7 @@ button { transition: transform 0.12s ease; }
   border-radius: 10px;
   background: var(--input-bg);
   color: var(--ink);
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
   font-family: inherit;
   line-height: 1.4;
   resize: vertical;
@@ -3386,7 +3425,7 @@ button { transition: transform 0.12s ease; }
    Dans la table de score : petit champ sous le nom, à la largeur de la colonne. */
 .variant-input {
   margin-top: 5px;
-  font-size: 0.85rem;
+  font-size: var(--fs-body-s);
   padding: 7px 9px;
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -3470,7 +3509,7 @@ input[type='number'] {
   transform: scale(0.94);
 }
 .coop-badge {
-  font-size: 0.78rem;
+  font-size: var(--fs-caption);
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 999px;
@@ -3490,12 +3529,12 @@ input[type='number'] {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 6px;
-  font-size: 0.82rem;
+  font-size: var(--fs-footnote);
   color: var(--ink);
 }
 .hist-coop-players {
   margin-top: 8px;
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
   color: var(--ink);
 }
 
@@ -3515,7 +3554,7 @@ input[type='number'] {
   border-radius: 10px;
   background: var(--input-bg);
   color: var(--ink);
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
 }
 /* Saisie : un bloc par équipe */
 .team-block {
@@ -3534,7 +3573,7 @@ input[type='number'] {
 .team-name-fixed {
   flex: 1;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
   color: var(--ink);
 }
 .team-name-input {
@@ -3557,7 +3596,7 @@ input[type='number'] {
   padding-left: 10px;
 }
 .team-members .coop-add {
-  font-size: 0.85rem;
+  font-size: var(--fs-body-s);
   padding: 8px 12px;
 }
 .team-add {
@@ -3578,10 +3617,10 @@ input[type='number'] {
   align-items: center;
   justify-content: space-between;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
 }
 .hist-team-members {
-  font-size: 0.82rem;
+  font-size: var(--fs-footnote);
   color: var(--muted);
   margin-top: 2px;
 }
@@ -3597,7 +3636,7 @@ input[type='number'] {
   /* Même dégradé primaire que le FAB / les boutons principaux → DA cohérente, lisible clair+sombre. */
   background: linear-gradient(135deg, var(--primary), var(--primary-2));
   color: #fff;
-  font-size: 1.1rem;
+  font-size: var(--fs-body-l);
   font-weight: 800;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(79, 70, 229, 0.28);
@@ -3614,16 +3653,16 @@ input[type='number'] {
   border-radius: 12px;
   background: var(--card);
   color: var(--ink);
-  font-size: 1.05rem;
+  font-size: var(--fs-body-l);
   font-weight: 700;
   cursor: pointer;
   text-align: left;
 }
 .tl-global-btn { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.tl-global-sub { font-size: 0.82rem; font-weight: 500; color: var(--muted); }
+.tl-global-sub { font-size: var(--fs-footnote); font-weight: 500; color: var(--muted); }
 .tl-create-btn { background: var(--accent-soft); }
 .tl-create-btn:disabled { opacity: 0.5; cursor: default; }
-.tl-list-title { font-size: 0.95rem; color: var(--muted); margin: 14px 2px 8px; }
+.tl-list-title { font-size: var(--fs-body); color: var(--muted); margin: 14px 2px 8px; }
 .tl-list { display: flex; flex-direction: column; gap: 8px; }
 .tl-list-item {
   display: flex;
@@ -3634,7 +3673,7 @@ input[type='number'] {
   border-radius: 12px;
   background: var(--card);
   color: var(--ink);
-  font-size: 1rem;
+  font-size: var(--fs-body-l);
   font-weight: 600;
   cursor: pointer;
 }
@@ -3667,7 +3706,7 @@ input[type='number'] {
   border: none;
   background: var(--soft);
   border-radius: 10px;
-  font-size: 1.05rem;
+  font-size: var(--fs-body-l);
   cursor: pointer;
 }
 .tl-del-btn { background: var(--danger-bg); }
@@ -3680,7 +3719,7 @@ input[type='number'] {
   border-radius: 10px;
   background: #16a34a;
   color: #fff;
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
   font-weight: 700;
   padding: 9px 14px;
   cursor: pointer;
@@ -3690,7 +3729,7 @@ input[type='number'] {
   flex-shrink: 0;
   background: var(--accent-soft);
   color: var(--ink);
-  font-size: 0.8rem;
+  font-size: var(--fs-footnote);
   font-weight: 600;
   text-align: center;
   padding: 6px 10px;
@@ -3743,7 +3782,7 @@ input[type='number'] {
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.14);
   color: #1a1a1a;
-  font-size: 0.55rem;
+  font-size: var(--fs-micro);
   font-weight: 800;
   letter-spacing: 0.3px;
   padding: 2px 4px;
@@ -3763,7 +3802,7 @@ input[type='number'] {
 
 /* Bac des jeux à classer / zone « Non classés ». */
 .tl-tray-wrap { flex-shrink: 0; border-top: 1px solid var(--border); padding-top: 6px; }
-.tl-tray-title { font-size: 0.82rem; color: var(--muted); margin: 0 2px 6px; }
+.tl-tray-title { font-size: var(--fs-footnote); color: var(--muted); margin: 0 2px 6px; }
 .tl-tray {
   display: flex;
   flex-wrap: wrap;
@@ -3800,7 +3839,7 @@ input[type='number'] {
   .tl-anec-hero { animation: none; }
 }
 .tl-anec-hero-label {
-  font-size: 0.72rem;
+  font-size: var(--fs-caption);
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -3809,7 +3848,7 @@ input[type='number'] {
 }
 .tl-anec-hero-main { display: flex; align-items: center; gap: 11px; }
 .tl-anec-hero-icon { font-size: 1.7rem; flex-shrink: 0; }
-.tl-anec-hero-text { font-size: 1.02rem; line-height: 1.4; color: var(--ink); font-weight: 500; }
+.tl-anec-hero-text { font-size: var(--fs-body-l); line-height: 1.4; color: var(--ink); font-weight: 500; }
 
 /* Une vignette de jeu. */
 .tl-chip {
@@ -3851,7 +3890,7 @@ input[type='number'] {
   color: #fff;
   padding: 6px 10px;
   border-radius: 8px;
-  font-size: 0.82rem;
+  font-size: var(--fs-footnote);
   font-weight: 600;
   max-width: 70vw;
   pointer-events: none;
@@ -3884,12 +3923,12 @@ input[type='number'] {
   border: 1px solid var(--accent);
   background: var(--accent-soft);
   color: var(--primary);
-  font-size: 0.85rem;
+  font-size: var(--fs-body-s);
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
 }
-.active-chip-x { font-size: 1.05rem; line-height: 1; opacity: 0.75; }
+.active-chip-x { font-size: var(--fs-body-l); line-height: 1; opacity: 0.75; }
 
 /* Barre du haut du panneau de filtres : Réinitialiser + Voir les N jeux */
 /* Barre d'actions du panneau : volontairement distincte des chips de filtres
@@ -3900,7 +3939,7 @@ input[type='number'] {
   height: 44px;
   border-radius: 12px;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -3922,7 +3961,7 @@ input[type='number'] {
 
 /* Complexité en toutes lettres (tuile Stats) */
 .tile-word {
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--muted);
 }
@@ -3958,7 +3997,7 @@ input[type='number'] {
   text-align: center;
   font-weight: 700;
   color: var(--ink);
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
 }
 
 /* ===== Saisie d'une partie : assistant en 2 étapes (compétitif à points) ===== */
@@ -3968,7 +4007,7 @@ input[type='number'] {
   display: inline-block;
   font-weight: 700;
   color: var(--ink);
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
   white-space: nowrap;
 }
 
@@ -3987,7 +4026,7 @@ input[type='number'] {
   border: 1px solid var(--btn-ghost-border);
   color: var(--ink);
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
   padding: 9px 14px 9px 9px;
   border-radius: 10px;
   cursor: pointer;
@@ -4035,7 +4074,7 @@ input[type='number'] {
 .pcard[data-dir='-1'] { animation: pcard-slide-l 0.18s ease; }
 .pcard-item-hint {
   margin: -2px 0 12px;
-  font-size: 0.85rem;
+  font-size: var(--fs-body-s);
   color: var(--muted);
   line-height: 1.4;
 }
@@ -4066,12 +4105,12 @@ input[type='number'] {
   border-bottom: 1px solid var(--line);
 }
 .pcard-name {
-  font-size: 1.3rem;
+  font-size: var(--fs-title-s);
   font-weight: 800;
   color: var(--ink);
 }
 .pcard-variant {
-  font-size: 0.8rem;
+  font-size: var(--fs-footnote);
   font-weight: 700;
   color: var(--primary);
   background: var(--accent-soft);
@@ -4096,7 +4135,7 @@ input[type='number'] {
 .pcard-cat-label {
   font-weight: 700;
   color: var(--ink);
-  font-size: 0.95rem;
+  font-size: var(--fs-body);
 }
 .pcard-stepper {
   flex-shrink: 0;
@@ -4128,7 +4167,7 @@ input[type='number'] {
   border-radius: 10px;
   background: var(--input-bg);
   color: var(--ink);
-  font-size: 1.1rem;
+  font-size: var(--fs-body-l);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -4149,10 +4188,10 @@ input[type='number'] {
   margin-top: 14px;
   padding-top: 12px;
   border-top: 2px solid var(--line);
-  font-size: 1.05rem;
+  font-size: var(--fs-body-l);
   color: var(--ink);
 }
-.pcard-total b { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.pcard-total b { font-size: var(--fs-title-s); font-variant-numeric: tabular-nums; }
 .pcard-nav {
   display: flex;
   align-items: stretch;
@@ -4168,7 +4207,7 @@ input[type='number'] {
   background: var(--btn-ghost-bg);
   color: var(--ink);
   font-weight: 700;
-  font-size: 0.88rem;
+  font-size: var(--fs-body-s);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -4195,11 +4234,11 @@ input[type='number'] {
 /* Indice discret sous le champ Nom (recherche BGG à la touche Entrée) */
 .bgg-hint {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--fs-body-s);
   color: var(--muted);
   line-height: 1.4;
 }
-.bgg-hint b { color: var(--ink); font-weight: 650; }
+.bgg-hint b { color: var(--ink); font-weight: 700; }
 
 /* Toasts : confirmations éphémères, visibles même par-dessus les overlays */
 .toast {
@@ -4213,7 +4252,7 @@ input[type='number'] {
   color: var(--card);
   padding: 12px 16px;
   border-radius: 12px;
-  font-size: 0.92rem;
+  font-size: var(--fs-body);
   font-weight: 600;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
   display: flex;
@@ -4232,7 +4271,7 @@ input[type='number'] {
 /* Indice sous le champ nom d'une bulle quand on la renomme */
 .oe-rename-hint {
   margin: -4px 0 6px;
-  font-size: 0.8rem;
+  font-size: var(--fs-footnote);
   color: var(--muted);
 }
 
@@ -4248,10 +4287,10 @@ input[type='number'] {
   image-rendering: pixelated; /* QR net, pas flou */
 }
 .share-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.share-hint { margin: 0; font-size: 0.85rem; }
+.share-hint { margin: 0; font-size: var(--fs-body-s); }
 .share-link {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.85rem;
+  font-size: var(--fs-body-s);
   color: var(--ink);
   word-break: break-all;
 }
@@ -4262,7 +4301,7 @@ input[type='number'] {
 .backup-row.latest { background: var(--accent-soft); border-radius: 10px; padding-left: 8px; padding-right: 8px; }
 .backup-badge {
   margin-left: 8px;
-  font-size: 0.66rem;
+  font-size: var(--fs-micro);
   font-weight: 700;
   color: var(--primary);
   border: 1px solid var(--primary);

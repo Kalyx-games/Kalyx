@@ -1280,6 +1280,12 @@ export default function App() {
         </Suspense>
       ) : (
         <>
+      {/* Titre d'écran (comme « Ta bibliothèque » chez Spotify) : grand, à gauche, avec le
+          compteur en sous-titre discret — l'écran principal n'avait aucun titre avant. */}
+      <div className="screen-head">
+        <h1 className="screen-title">{statsOpen ? 'Statistiques' : view === 'wishlist' ? 'Wishlist' : 'Collection'}</h1>
+        {!statsOpen && games !== null && <p className="screen-count">{countLabel}</p>}
+      </div>
       {/* Ligne 1 : recherche + tri côte à côte. Le tri est à DROITE de la recherche pour
           libérer toute la ligne 2 aux puces de filtres (qui doivent toutes rester visibles). */}
       <div className="controls">
@@ -1339,22 +1345,18 @@ export default function App() {
         )}
       </div>
 
-      {/* Ligne 2 : les puces de filtres actifs (toutes visibles, elles passent à la ligne),
-          ou le compteur de jeux s'il n'y a aucun filtre actif. */}
-      {(!statsOpen || activeChips.length > 0) && (
+      {/* Ligne 2 : les puces de filtres actifs (toutes visibles, elles passent à la ligne).
+          Le compteur de jeux vit désormais sous le titre d'écran. */}
+      {activeChips.length > 0 && (
         <div className="controls-row2">
-          {activeChips.length > 0 ? (
-            <div className="active-filters">
-              {activeChips.map((c) => (
-                <button key={c.key} type="button" className="active-chip" onClick={c.remove} aria-label={`Retirer le filtre ${c.label}`}>
-                  <span>{c.label}</span>
-                  <span className="active-chip-x">×</span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            !statsOpen && <span className="count">{games === null ? '' : countLabel}</span>
-          )}
+          <div className="active-filters">
+            {activeChips.map((c) => (
+              <button key={c.key} type="button" className="active-chip" onClick={c.remove} aria-label={`Retirer le filtre ${c.label}`}>
+                <span>{c.label}</span>
+                <span className="active-chip-x">×</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
