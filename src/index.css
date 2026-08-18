@@ -835,6 +835,13 @@ body {
 .ext-item .ext-row {
   margin-bottom: 6px;
 }
+/* Résultats de recherche BGG d'une extension (sous la ligne de nom). */
+.ext-hint {
+  margin: 2px 0 10px;
+}
+.ext-bgg {
+  margin: 2px 0 8px;
+}
 /* Les 2 champs "joueurs" d'une extension : indentés sous le nom (hiérarchie), avec
    une icône devant chacun pour dire à quoi ils correspondent. */
 .ext-players-group {

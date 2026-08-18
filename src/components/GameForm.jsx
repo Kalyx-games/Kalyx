@@ -45,7 +45,10 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
   )
   const addExtRow = () => setExtList((l) => [...l, { id: extIdRef.current++, name: '', players: '', best: '' }])
   const updateExt = (id, field, value) => setExtList((l) => l.map((x) => (x.id === id ? { ...x, [field]: value } : x)))
-  const removeExt = (id) => setExtList((l) => l.filter((x) => x.id !== id))
+  const removeExt = (id) => {
+    setExtList((l) => l.filter((x) => x.id !== id))
+    setExtSearch((s) => (s.id === id ? { id: null, loading: false, results: null, error: '' } : s))
+  }
   const [priceLoading, setPriceLoading] = useState(false)
   const [pricePhil, setPricePhil] = useState(null) // résultat du remplissage PRIX depuis Philibert (wishlist)
   const [imgLoading, setImgLoading] = useState(false)
@@ -56,6 +59,8 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
   const [bggPrev, setBggPrev] = useState(null) // snapshot (form + pickers) avant import, pour annuler
   const [bggFilled, setBggFilled] = useState(null) // { name } du jeu importé (pour le message)
   const [bggError, setBggError] = useState('') // message renvoyé par BGG (ex. 202 "prépare la réponse")
+  // Recherche BGG d'une EXTENSION, pour la ligne d'extension en cours (une seule à la fois).
+  const [extSearch, setExtSearch] = useState({ id: null, loading: false, results: null, error: '' })
 
   // Glissé-pour-fermer + animation de fermeture (glisse vers le bas).
   const [dragY, setDragY] = useState(0)
@@ -279,6 +284,47 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
       setBggError('Import impossible (pas de connexion ?).')
     } finally {
       setBggLoading(false)
+    }
+  }
+
+  // BGG — recherche d'une EXTENSION pour une ligne donnée (nom → liste d'extensions).
+  const searchExtBgg = async (rowId, query) => {
+    const q = (query || '').trim()
+    if (!q) return
+    setExtSearch({ id: rowId, loading: true, results: null, error: '' })
+    try {
+      const r = await fetch(`/api/bgg?q=${encodeURIComponent(q)}&type=expansion`)
+      const data = await r.json()
+      setExtSearch({ id: rowId, loading: false, results: Array.isArray(data.results) ? data.results : [], error: data.error || '' })
+    } catch {
+      setExtSearch({ id: rowId, loading: false, results: [], error: 'Recherche impossible (pas de connexion ?).' })
+    }
+  }
+
+  // BGG — sélection d'une extension : remplit le nom + les joueurs/idéal AJOUTÉS (ce que
+  // l'extension permet EN PLUS de ce que le jeu de base couvre déjà, d'après ses données actuelles).
+  const pickExtBgg = async (rowId, result) => {
+    setExtSearch((s) => ({ ...s, loading: true, error: '' }))
+    try {
+      const r = await fetch(`/api/bgg?id=${result.id}`)
+      const d = await r.json()
+      if (d && d.found) {
+        const extPlayers = expandRange(d.players_min, d.players_max)
+        const addedPlayers = playersSet.length ? extPlayers.filter((n) => !playersSet.includes(n)) : []
+        const extBest = parseCounts(d.players_best)
+        const addedBest = bestSet.length ? extBest.filter((n) => !bestSet.includes(n)) : []
+        setExtList((l) => l.map((x) => (x.id === rowId ? {
+          ...x,
+          name: result.name || d.name || x.name,
+          players: countsToText(addedPlayers),
+          best: countsToText(addedBest),
+        } : x)))
+        setExtSearch({ id: null, loading: false, results: null, error: '' })
+      } else {
+        setExtSearch((s) => ({ ...s, loading: false, error: (d && d.error) || 'Extension introuvable sur BoardGameGeek.' }))
+      }
+    } catch {
+      setExtSearch((s) => ({ ...s, loading: false, error: 'Import impossible (pas de connexion ?).' }))
     }
   }
 
@@ -528,6 +574,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
           {form.status !== 'wishlist' && (
             <div className="field">
               <span className="field-label">🧩 Extensions</span>
+              <p className="field-hint ext-hint">Tape le nom puis <b>Entrée</b> pour la chercher sur BoardGameGeek (remplit le nom + les joueurs ajoutés).</p>
               {extList.map((x) => (
                 <div className="ext-item" key={x.id}>
                   <div className="ext-row">
@@ -535,9 +582,46 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                       value={x.name}
                       onChange={(e) => updateExt(x.id, 'name', e.target.value)}
                       placeholder="Nom de l'extension…"
+                      enterKeyHint="search"
+                      onKeyDown={(e) => {
+                        // Entrée → cherche l'extension sur BGG (et masque le clavier). On stoppe la
+                        // propagation pour ne PAS déclencher le blur générique du formulaire seul.
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          e.currentTarget.blur()
+                          if (x.name.trim() && !extSearch.loading) searchExtBgg(x.id, x.name)
+                        }
+                      }}
                     />
                     <button type="button" className="ext-row-x" onClick={() => removeExt(x.id)} aria-label="Retirer cette extension">×</button>
                   </div>
+                  {extSearch.id === x.id && (
+                    <div className="ext-bgg">
+                      {extSearch.loading && !extSearch.results && (
+                        <div className="price-found"><span>🔎 Recherche sur BoardGameGeek…</span></div>
+                      )}
+                      {extSearch.results && extSearch.results.length > 0 && (
+                        <div className="bgg-results">
+                          {extSearch.results.map((res) => (
+                            <button type="button" key={res.id} className="bgg-result" onClick={() => pickExtBgg(x.id, res)} disabled={extSearch.loading}>
+                              <span className="bgg-result-name">{res.name}</span>
+                              {res.year ? <span className="bgg-result-year">{res.year}</span> : null}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {extSearch.loading && extSearch.results && extSearch.results.length > 0 && (
+                        <div className="price-found"><span>⏳ Import de l'extension…</span></div>
+                      )}
+                      {extSearch.error && (
+                        <div className="price-found price-none"><span>{extSearch.error}</span></div>
+                      )}
+                      {!extSearch.error && extSearch.results && extSearch.results.length === 0 && (
+                        <div className="price-found price-none"><span>Aucune extension trouvée sur BoardGameGeek.</span></div>
+                      )}
+                    </div>
+                  )}
                   <div className="ext-players-group">
                     <div className="ext-field">
                       <span className="ext-field-icon" title="Joueurs ajoutés par l'extension" aria-hidden="true">👥</span>
