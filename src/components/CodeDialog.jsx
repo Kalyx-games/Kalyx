@@ -26,7 +26,7 @@ export default function CodeDialog({ onDone, onClose }) {
   return (
     <div className="modal-backdrop" onClick={busy ? undefined : onClose}>
       <div className="confirm" onClick={(e) => e.stopPropagation()}>
-        <h2>🔒 Autoriser cet appareil</h2>
+        <h2>Autoriser cet appareil</h2>
         <p className="confirm-msg">
           Entre le code d'accès <strong>une seule fois</strong> sur cet appareil. Il sera mémorisé ensuite.
           La lecture reste possible sans code ; le code protège les <strong>modifications</strong>.

@@ -3,7 +3,7 @@ import { computePlayStats, computeEntityStats, playWinners } from '../lib/plays'
 import { effectivePlayersSet } from '../lib/games'
 import SortMenu from './SortMenu'
 import FilterSheet from './FilterSheet'
-import { FilterIcon, BackIcon } from './icons'
+import { FilterIcon, BackIcon, CrownIcon, DieIcon, PlayersIcon, CalendarIcon, ExtIcon, TargetIcon, FlagIcon, PencilIcon, TrashIcon } from './icons'
 
 // Filtres des stats des parties (vide = tout).
 const EMPTY_HFILTERS = { players: [], period: 'all', extensions: [], scenarios: [], counts: [] }
@@ -53,7 +53,7 @@ function Tile({ value, label, holder }) {
           <span className="stat-tile-label">{label}</span>
         </span>
         <span className="tile-face tile-back stat-tile">
-          <span className="tile-holder-icon">🏆</span>
+          <span className="tile-holder-icon"><CrownIcon size={18} /></span>
           <span className="tile-holder-name">{holder}</span>
         </span>
       </span>
@@ -188,7 +188,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
   // podium (il garde son rang chiffré, à la suite).
   const playerRow = (p) => (
     <tr key={p.name} className={!p.occasional && p.rank <= 3 ? 'top' : ''}>
-      <td className="rank">{(!p.occasional && ['🥇', '🥈', '🥉'][p.rank - 1]) || `${p.rank}e`}</td>
+      <td className="rank">{!p.occasional && p.rank <= 3 ? <span className={`rank-badge rank-${p.rank}`}>{p.rank}</span> : `${p.rank}e`}</td>
       <td className="name">
         <button type="button" className="player-link" onClick={() => filterOnPlayer(p.name)} title={`Ne voir que ${p.name}`}>
           {p.name}
@@ -316,7 +316,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
     <div className={`sheet hist-sheet${closing ? ' closing' : ''}`}>
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
-        <h2 className="sheet-title">{isPlaysView ? '🗓️' : '📊'} {game?.name}</h2>
+        <h2 className="sheet-title">{game?.name}</h2>
         {onEditSheet && (
           <button type="button" className="back-btn sheet-edit-btn" onClick={onEditSheet} disabled={!online} title={online ? 'Modifier la fiche de score' : 'Indisponible hors ligne'} aria-label="Modifier la fiche de score"><PencilIcon size={18} /></button>
         )}
@@ -358,7 +358,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                 <div className="filters">
                   {regulars.length + occasional.length > 0 && (
                     <div className="filter-group">
-                      <span className="filter-label">👥 Joueur</span>
+                      <span className="filter-label"><PlayersIcon size={14} /> Joueur</span>
                       {/* Raccourcis : tout le monde (= aucun filtre) ou les réguliers. */}
                       <div className="chips" style={{ marginBottom: 8 }}>
                         <button
@@ -401,7 +401,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                     </div>
                   )}
                   <div className="filter-group">
-                    <span className="filter-label">🗓️ Période</span>
+                    <span className="filter-label"><CalendarIcon size={14} /> Période</span>
                     <div className="chips">
                       {PERIODS.map((pd) => (
                         <button key={pd.value} type="button" className={`fchip ${filters.period === pd.value ? 'on' : ''}`} onClick={() => setFilters((f) => ({ ...f, period: pd.value }))}>{pd.label}</button>
@@ -410,7 +410,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                   </div>
                   {extChips.length > 0 && (
                     <div className="filter-group">
-                      <span className="filter-label">🧩 Extension</span>
+                      <span className="filter-label"><ExtIcon size={14} /> Extension</span>
                       <div className="chips">
                         {extChips.map((e) => (
                           <button key={e} type="button" className={`fchip ${filters.extensions.includes(e) ? 'on' : ''}`} onClick={() => toggleIn('extensions', e)}>{e}</button>
@@ -420,7 +420,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                   )}
                   {allScenarios.length > 0 && (
                     <div className="filter-group">
-                      <span className="filter-label">🎯 Scénario / niveau</span>
+                      <span className="filter-label"><TargetIcon size={14} /> Scénario / niveau</span>
                       <div className="chips">
                         {allScenarios.map((s) => (
                           <button key={s} type="button" className={`fchip ${filters.scenarios.includes(s) ? 'on' : ''}`} onClick={() => toggleIn('scenarios', s)}>{s}</button>
@@ -430,7 +430,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                   )}
                   {allCounts.length > 1 && (
                     <div className="filter-group">
-                      <span className="filter-label">👥 Nombre de joueurs</span>
+                      <span className="filter-label"><PlayersIcon size={14} /> Nombre de joueurs</span>
                       <div className="chips">
                         {allCounts.map((n) => (
                           <button key={n} type="button" className={`fchip ${filters.counts.includes(n) ? 'on' : ''}`} onClick={() => toggleIn('counts', n)}>{n}</button>
@@ -475,8 +475,8 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                       <th />
                       <th className="name">Joueur</th>
                       <th className="num" title="Taux de victoire">%</th>
-                      <th className="num" title="Victoires">🏆</th>
-                      <th className="num" title="Parties jouées">🎮</th>
+                      <th className="num" title="Victoires"><CrownIcon size={14} /></th>
+                      <th className="num" title="Parties jouées"><DieIcon size={14} /></th>
                       {showScores && <th className="num">Moyenne</th>}
                       {showScores && <th className="num">Record</th>}
                     </tr>
@@ -552,7 +552,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
               répartition des PARTIES par valeur (une seule valeur par partie). */}
           {playVariantLabel && variantPlayDist.length > 0 && (
             <section className="stat-block">
-              <h3 className="stat-block-title">🎭 Par {playVariantLabel.toLowerCase()}</h3>
+              <h3 className="stat-block-title">Par {playVariantLabel.toLowerCase()}</h3>
               <div className="scenario-bars">
                 {variantPlayDist.map((v) => {
                   const max = Math.max(...variantPlayDist.map((x) => x.count))
@@ -575,7 +575,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
           {/* Variante par joueur (héros/faction) : taux de victoire par valeur. */}
           {variantLabel && stats.byVariant.length > 0 && (
             <section className="stat-block">
-              <h3 className="stat-block-title">🎭 {variantLabel} — taux de victoire</h3>
+              <h3 className="stat-block-title">{variantLabel} — taux de victoire</h3>
               <div className="scenario-bars">
                 {stats.byVariant.map((v) => (
                   <div key={v.value} className="scenario-row">
@@ -595,7 +595,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
           {/* Favori de chaque joueur pour cette variante. */}
           {variantLabel && stats.favoriteVariant.length > 0 && (
             <section className="stat-block">
-              <h3 className="stat-block-title">🎭 {variantLabel} favori par joueur</h3>
+              <h3 className="stat-block-title">{variantLabel} favori par joueur</h3>
               <div className="table-scroll">
                 <table className="stat-table">
                   <thead>
@@ -711,7 +711,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                       <span className="hist-date">{playDate(pl.played_at)}</span>
                       {coop && (
                         <span className={`coop-badge ${pl.outcome === 'win' ? 'win' : 'loss'}`}>
-                          {pl.outcome === 'win' ? '🏆 Gagné' : '💀 Perdu'}
+                          {pl.outcome === 'win' ? 'Gagné' : 'Perdu'}
                         </span>
                       )}
                       {/* Crayon (édition) + corbeille, groupés à droite. Le clic sur la
@@ -729,30 +729,30 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                       <>
                         {(pl.scenario || pl.trigger || pl.score != null || rowVariant) && (
                           <div className="hist-coop-meta">
-                            {rowVariant ? <span>🎭 {rowVariant}</span> : null}
-                            {pl.scenario ? <span>🎯 {pl.scenario}</span> : null}
-                            {pl.trigger ? <span>🏁 {pl.trigger}</span> : null}
-                            {pl.score != null ? <span>🔢 {pl.score} pts</span> : null}
+                            {rowVariant ? <span>{rowVariant}</span> : null}
+                            {pl.scenario ? <span><TargetIcon size={11} /> {pl.scenario}</span> : null}
+                            {pl.trigger ? <span><FlagIcon size={11} /> {pl.trigger}</span> : null}
+                            {pl.score != null ? <span>{pl.score} pts</span> : null}
                           </div>
                         )}
                         {pl.extensions && pl.extensions.length > 0 && (
-                          <div className="hist-ext">🧩 {pl.extensions.join(', ')}</div>
+                          <div className="hist-ext"><ExtIcon size={11} /> {pl.extensions.join(', ')}</div>
                         )}
                         <div className="hist-coop-players">
-                          👥 {(pl.players || []).map((p) => (variantLabel && p.variant ? `${p.name} (${p.variant})` : p.name)).join(', ')}
+                          <PlayersIcon size={11} /> {(pl.players || []).map((p) => (variantLabel && p.variant ? `${p.name} (${p.variant})` : p.name)).join(', ')}
                         </div>
                       </>
                     ) : teamPlay ? (
                       <>
                         {(pl.scenario || pl.trigger || rowVariant) && (
                           <div className="hist-coop-meta">
-                            {rowVariant ? <span>🎭 {rowVariant}</span> : null}
-                            {pl.scenario ? <span>🎯 {pl.scenario}</span> : null}
-                            {pl.trigger ? <span>🏁 {pl.trigger}</span> : null}
+                            {rowVariant ? <span>{rowVariant}</span> : null}
+                            {pl.scenario ? <span><TargetIcon size={11} /> {pl.scenario}</span> : null}
+                            {pl.trigger ? <span><FlagIcon size={11} /> {pl.trigger}</span> : null}
                           </div>
                         )}
                         {pl.extensions && pl.extensions.length > 0 && (
-                          <div className="hist-ext">🧩 {pl.extensions.join(', ')}</div>
+                          <div className="hist-ext"><ExtIcon size={11} /> {pl.extensions.join(', ')}</div>
                         )}
                         <div className="hist-players">
                           {teamGroups.map((g, i) => {
@@ -760,7 +760,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                             return (
                               <div key={i} className={`hist-team ${isWin ? 'hist-winner' : ''}`}>
                                 <div className="hist-team-head">
-                                  <span className="hist-player-name">{isWin ? '🏆 ' : ''}{g.name}</span>
+                                  <span className="hist-player-name">{isWin ? <><CrownIcon size={12} />{' '}</> : ''}{g.name}</span>
                                   {!noPoints && g.score != null && <span className="hist-player-score">{g.score}</span>}
                                 </div>
                                 <div className="hist-team-members">{g.members.join(', ')}</div>
@@ -773,19 +773,19 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                       <>
                         {(pl.scenario || pl.trigger || rowVariant) && (
                           <div className="hist-coop-meta">
-                            {rowVariant ? <span>🎭 {rowVariant}</span> : null}
-                            {pl.scenario ? <span>🎯 {pl.scenario}</span> : null}
-                            {pl.trigger ? <span>🏁 {pl.trigger}</span> : null}
+                            {rowVariant ? <span>{rowVariant}</span> : null}
+                            {pl.scenario ? <span><TargetIcon size={11} /> {pl.scenario}</span> : null}
+                            {pl.trigger ? <span><FlagIcon size={11} /> {pl.trigger}</span> : null}
                           </div>
                         )}
                         {pl.extensions && pl.extensions.length > 0 && (
-                          <div className="hist-ext">🧩 {pl.extensions.join(', ')}</div>
+                          <div className="hist-ext"><ExtIcon size={11} /> {pl.extensions.join(', ')}</div>
                         )}
                         <div className="hist-players">
                           {ranked.map((p, i) => (
                             <div key={i} className={`hist-player ${winners.has((p.name || '').trim()) ? 'hist-winner' : ''}`}>
                               <span className="hist-player-name">
-                                {winners.has((p.name || '').trim()) ? '🏆 ' : ''}{p.name}
+                                {winners.has((p.name || '').trim()) ? <><CrownIcon size={12} />{' '}</> : ''}{p.name}
                                 {variantLabel && p.variant ? <span className="hist-variant">{p.variant}</span> : null}
                               </span>
                               {!noPoints && <span className="hist-player-score">{p.total}</span>}

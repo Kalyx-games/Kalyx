@@ -128,6 +128,28 @@ export function CheckIcon({ size = 20 }) {
   )
 }
 
+// 🎯 Scénario / mission = cible (cercles concentriques).
+export function TargetIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" strokeWidth="2.2" />
+      <circle cx="12" cy="12" r="3.4" />
+    </Ico>
+  )
+}
+
+// 🗓️ Période = calendrier minimal (deux anneaux + page).
+export function CalendarIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <rect x="3.4" y="5.2" width="17.2" height="15.4" rx="3" />
+      <rect x="7" y="2.6" width="2.4" height="4.4" rx="1.2" />
+      <rect x="14.6" y="2.6" width="2.4" height="4.4" rx="1.2" />
+      <rect x="6.4" y="10.6" width="11.2" height="2" rx="1" fill="var(--card, #fff)" opacity=".9" />
+    </Ico>
+  )
+}
+
 // ✏️ Modifier = crayon (silhouette minimale pleine — convention universelle).
 export function PencilIcon({ size = 20 }) {
   return (

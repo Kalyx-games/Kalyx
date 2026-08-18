@@ -2120,8 +2120,8 @@ body {
   border-color: var(--gold);
 }
 .tile-holder-icon {
-  font-size: 1.2rem;
   line-height: 1;
+  color: var(--gold); /* couronne du record en OR */
 }
 .tile-holder-name {
   margin-top: 4px;
@@ -2210,6 +2210,27 @@ body {
 .podium-table td:last-child {
   border-radius: 0 10px 10px 0;
 }
+/* Couronnes des vainqueurs (lignes de parties, podium, tuile record) : toujours en OR. */
+.hist-winner .ico,
+.hist-player-name .ico,
+.podium-table th .ico {
+  color: var(--gold);
+}
+/* Podium : rang 1/2/3 en pastille or/argent/bronze (chiffre sombre, lisible dans les 2 thèmes). */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: var(--fs-caption);
+  color: #131316;
+}
+.rank-1 { background: var(--gold); }
+.rank-2 { background: #c3c7ce; }
+.rank-3 { background: #c08e5e; }
 .podium-table .rank {
   text-align: center;
   font-weight: 800;
