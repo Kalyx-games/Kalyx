@@ -19,6 +19,7 @@
   --border: var(--line);
   --players: #2f6df6;
   --gold: #eab308;
+  --gold-ink: #b45309; /* or « texte » : assez foncé pour le clair, éclairci en sombre */
   --bar-on: #6366f1;
   --bar-off: #e0e4ec;
   --danger: #e11d48;
@@ -52,6 +53,7 @@
     --primary-2: #a877f0;
     --players: #6ea0ff;
     --gold: #f2c94c;
+    --gold-ink: #f2c94c;
     --bar-on: #8b86ff;
     --bar-off: #2b3444;
     --danger: #fb7185;
@@ -82,6 +84,7 @@
   --primary-2: #a877f0;
   --players: #6ea0ff;
   --gold: #f2c94c;
+  --gold-ink: #f2c94c;
   --bar-on: #8b86ff;
   --bar-off: #2b3444;
   --danger: #fb7185;
@@ -262,15 +265,16 @@ body {
   border-radius: 50%;
   display: inline-block;
 }
+/* Pastille réseau : tokens (les hex en dur restaient clairs en thème sombre → illisible). */
 .net-on {
-  background: #e7f7ee;
-  color: #15803d;
+  background: var(--ok-bg);
+  color: var(--ok-ink);
 }
 .net-on i {
-  background: #22c55e;
+  background: #22c55e; /* point saturé, lisible sur les 2 fonds */
 }
 .net-off {
-  background: #eceff4;
+  background: var(--soft);
   color: var(--muted);
 }
 .net-off i {
@@ -509,7 +513,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
+  min-height: 40px; /* même hauteur que les cases nombre de joueurs (.ppick-chip) empilées juste dessous */
   padding: 0 12px;
   border-radius: 10px;
   border: 1px solid var(--line);
@@ -528,7 +532,7 @@ body {
   color: #fff;
 }
 .fchip:active {
-  transform: scale(0.95);
+  transform: scale(0.94); /* même enfoncement que .ppick-chip */
 }
 .filter-check {
   display: flex;
@@ -1206,8 +1210,8 @@ body {
   justify-content: center;
   font-size: 0.95rem;
   font-weight: 800;
-  color: #16a34a;
-  background: #eaf7ee;
+  color: var(--ok-ink); /* tokens « succès » (les hex en dur cassaient le thème sombre) */
+  background: var(--ok-bg);
   padding: 3px 9px;
   border-radius: 10px;
   white-space: nowrap;
@@ -1270,7 +1274,7 @@ body {
   font-weight: 600;
 }
 .m-ideal {
-  color: #b45309;
+  color: var(--gold-ink); /* suit le thème (le hex figé restait sombre sur carte sombre) */
   font-weight: 600;
 }
 .m-time {
@@ -1639,7 +1643,8 @@ body {
 }
 .code-input:focus {
   outline: none;
-  border-color: var(--input-focus);
+  border-color: var(--primary); /* recette commune à tous les champs (—input-focus est un FOND) */
+  background: var(--input-focus);
 }
 .code-err {
   color: var(--danger-ink);
@@ -2645,6 +2650,7 @@ button { transition: transform 0.12s ease; }
 .price-verify:active, .settings-relink:active, .swatch:active, .chwazi-round:active,
 .cc-btn:active, .tl-global-btn:active, .tl-create-btn:active, .tl-edit-btn:active,
 .tl-del-btn:active, .tl-done-btn:active, .tl-label-btn:active,
+.owner-edit:active, .owner-del:active,
 .filters-reset-top:active, .filters-see:active, .detail-hero:active {
   transform: scale(0.96);
 }
@@ -2663,6 +2669,7 @@ button { transition: transform 0.12s ease; }
   .price-verify:active, .settings-relink:active, .swatch:active, .chwazi-round:active,
   .cc-btn:active, .tl-global-btn:active, .tl-create-btn:active, .tl-edit-btn:active,
   .tl-del-btn:active, .tl-done-btn:active, .tl-label-btn:active,
+  .owner-edit:active, .owner-del:active, .sheet-del:active,
   .filters-reset-top:active, .filters-see:active, .detail-hero:active,
   .link-row:active, .bar-row-btn:active, .tl-list-item:active, .active-chip:active { transform: none; }
 }
@@ -2944,17 +2951,24 @@ button { transition: transform 0.12s ease; }
 .name-suggest button:active {
   background: var(--soft);
 }
+/* Croix « retirer la ligne » de la saisie : MÊME recette que .ext-row-x (l'éditeur) —
+   même rôle, même taille, pleine hauteur de ligne. Avant : 18/26px nues, incohérentes. */
 .sheet-del {
   flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  border: none;
-  background: none;
+  align-self: stretch;
+  min-height: 42px;
+  width: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--soft);
   color: var(--muted);
-  font-size: 1rem;
+  font-size: 1.2rem;
   line-height: 1;
   cursor: pointer;
   padding: 0;
+}
+.sheet-del:active {
+  transform: scale(0.94);
 }
 .sheet-cell {
   width: 100%;
@@ -2963,7 +2977,7 @@ button { transition: transform 0.12s ease; }
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--card);
+  background: var(--input-bg); /* même fond que tous les champs (—card rendait la case plus foncée en sombre) */
   color: var(--ink);
   font-size: 1rem;
   text-align: center;
@@ -3095,7 +3109,7 @@ button { transition: transform 0.12s ease; }
 }
 .player-merge {
   margin: 6px 0 0;
-  font-size: 0.76rem;
+  font-size: 0.85rem; /* même taille que .field-hint (même rôle : phrase grise d'explication) */
   color: var(--muted);
   line-height: 1.3;
 }
@@ -3398,20 +3412,15 @@ button { transition: transform 0.12s ease; }
   flex: 1;
   min-width: 0;
 }
-.coop-player-row .sheet-del {
-  width: 26px;
-  height: 26px;
-  font-size: 1.1rem;
-}
 .coop-add {
   align-self: flex-start;
   margin-top: 2px;
 }
 /* Compétitif à points, une seule colonne (ex. Tarot) : nom + score sur une même ligne. */
 .score-input {
-  width: 90px;
+  width: 80px;
   flex-shrink: 0;
-  text-align: right;
+  text-align: center; /* comme tous les autres champs de score (.sheet-cell, .pcard-value, .team-score-input) */
 }
 /* Coupe présente sur CHAQUE ligne : grisée par défaut, se colore pour le joueur en tête
    (comme le bouton « vainqueur » des jeux sans points) → elle ne « saute » plus d'un nom à l'autre. */
@@ -3652,10 +3661,12 @@ input[type='number'] {
 .tl-edit-btn,
 .tl-del-btn {
   flex-shrink: 0;
+  width: 44px; /* même taille que .back-btn / .sheet-edit-btn dans les autres en-têtes */
+  height: 44px;
+  padding: 0;
   border: none;
   background: var(--soft);
   border-radius: 10px;
-  padding: 8px 11px;
   font-size: 1.05rem;
   cursor: pointer;
 }
@@ -4121,6 +4132,11 @@ input[type='number'] {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+.pcard-value:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--input-focus);
+}
 .pcard-check {
   flex-shrink: 0;
   width: 26px;
@@ -4240,7 +4256,7 @@ input[type='number'] {
   word-break: break-all;
 }
 .share-copy { align-self: flex-start; }
-.share-copy.copied { color: #16a34a; }
+.share-copy.copied { color: var(--ok-ink); } /* même vert « succès » que .link-copy.copied */
 
 /* Sauvegardes : mise en avant de la plus récente */
 .backup-row.latest { background: var(--accent-soft); border-radius: 10px; padding-left: 8px; padding-right: 8px; }
@@ -4262,8 +4278,10 @@ input[type='number'] {
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
-  border-radius: 18px 18px 0 0;
+  /* Même famille que .modal (feuille montante) → même fond, même arrondi, même ombre. */
+  background: var(--card);
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -10px 40px rgba(16, 24, 40, 0.2);
   overflow: hidden;
   animation: kx-sheet-up 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }

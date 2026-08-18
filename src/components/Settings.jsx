@@ -205,7 +205,7 @@ export default function Settings({
 
       {/* Sauvegarde AUTOMATIQUE (dans le cloud) : fréquence + bouton + liste des sauvegardes. */}
       <section className="settings-card">
-        <h3>☁️ Sauvegarde automatique</h3>
+        <h3>Sauvegarde automatique</h3>
 
         <div className="backup-freq-row">
           <span className="field-label">Fréquence</span>
@@ -252,7 +252,7 @@ export default function Settings({
 
       {/* Sauvegarde en FICHIER : à garder sur l'appareil ou à ré-importer. */}
       <section className="settings-card">
-        <h3>📄 Sauvegarde en fichier</h3>
+        <h3>Sauvegarde en fichier</h3>
         <p className="field-hint" style={{ marginTop: 0 }}>Un fichier à garder chez toi, ou à ré-importer plus tard.</p>
         <div className="save-actions">
           <button type="button" className="btn-ghost" onClick={onExport} title="Télécharger la sauvegarde complète (fichier .json)">

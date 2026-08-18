@@ -555,7 +555,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
       )}
 
       <section className="settings-card">
-        <h3>📝 Notes</h3>
+        <h3>Notes</h3>
         <p className="field-hint" style={{ marginBottom: 8 }}>
           Affichées (et modifiables) à chaque partie.
         </p>
