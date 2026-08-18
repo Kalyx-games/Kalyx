@@ -1421,17 +1421,17 @@ body {
   box-shadow: none;
   cursor: not-allowed;
 }
-/* Bouton flottant « Filtrer » = bouton PRINCIPAL en bas (taille de .fab, couleur de l'ancien
-   bouton scan = sarcelle). Le « + » (fab-add-above) est plus petit et se place au-dessus. */
+/* Bouton flottant « Filtrer » = bouton PRINCIPAL en bas → il porte l'OR (la couleur la plus
+   précieuse de la charte va à l'action la plus importante — choix user). Texte sombre fixe :
+   lisible sur l'or dans les 2 thèmes. Le « + » (secondaire) porte l'ENCRE, cohérent avec
+   tous les autres boutons principaux de l'app. */
 .fab-filter {
-  background: var(--primary); /* l'action principale porte l'encre (fini le sarcelle) */
-  color: var(--on-primary);
-}
-/* Le « + » porte l'OR (retour user : la surface neutre ne le différenciait pas assez).
-    Texte sombre fixe : lisible sur l'or dans les 2 thèmes. */
-.fab-add-above {
   background: var(--gold);
   color: #131316;
+}
+.fab-add-above {
+  background: var(--primary);
+  color: var(--on-primary);
   box-shadow: 0 6px 16px rgba(16, 24, 40, 0.18);
 }
 /* Les icônes des FAB héritent de la couleur du bouton (surclasse les fill="…" des SVG). */
@@ -1450,8 +1450,8 @@ body {
   height: 20px;
   padding: 0 5px;
   border-radius: 999px;
-  background: var(--gold);
-  color: #131316;
+  background: var(--primary);
+  color: var(--on-primary);
   font-size: var(--fs-caption);
   font-weight: 700;
   display: flex;

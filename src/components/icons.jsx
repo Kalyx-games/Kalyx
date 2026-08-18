@@ -1,7 +1,7 @@
 // Petites icônes SVG de l'app.
 // Collection = bibliothèque verte, Wishlist = cœur rouge, Réglages = engrenage.
 
-export function CollectionIcon({ size = 20, color = '#16a34a' }) {
+export function CollectionIcon({ size = 20, color = '#4e7a5c' }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false">
       <g fill={color}>
@@ -19,7 +19,7 @@ export function WishlistIcon({ size = 20 }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false">
       <path
-        fill="#ef4444"
+        fill="#8e4f6b"
         d="M12 20.3l-1.45-1.32C5.4 14.24 2 11.15 2 7.5 2 4.9 4.1 3 6.7 3c1.5 0 2.9.7 3.8 1.8L12 6.1l1.5-1.3C14.4 3.7 15.8 3 17.3 3 19.9 3 22 4.9 22 7.5c0 3.65-3.4 6.74-8.55 11.48L12 20.3z"
       />
     </svg>
@@ -29,7 +29,7 @@ export function WishlistIcon({ size = 20 }) {
 export function StatsIcon({ size = 20 }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false">
-      <g fill="#6366f1">
+      <g fill="#6b5a8e">
         <rect x="3.5" y="13" width="4" height="7" rx="1.2" />
         <rect x="10" y="9" width="4" height="11" rx="1.2" />
         <rect x="16.5" y="5" width="4" height="15" rx="1.2" />
@@ -51,9 +51,9 @@ export function FilterIcon({ size = 22, color = '#fff' }) {
 export function ChwaziIcon({ size = 20 }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false">
-      <circle cx="7" cy="8.5" r="3.2" fill="#ef4444" />
-      <circle cx="16.5" cy="7" r="3.2" fill="#2f6df6" />
-      <circle cx="12" cy="16" r="3.2" fill="#22c55e" />
+      <circle cx="7" cy="8.5" r="3.2" fill="#b4553f" />
+      <circle cx="16.5" cy="7" r="3.2" fill="#3e6c8e" />
+      <circle cx="12" cy="16" r="3.2" fill="#4e7a5c" />
     </svg>
   )
 }
