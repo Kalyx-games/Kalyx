@@ -3399,6 +3399,16 @@ button { transition: transform 0.12s ease; }
   text-align: center;
   font-size: 1.05rem;
 }
+/* Retire les petites flèches haut/bas natives des champs numériques : on tape la valeur,
+   elles ne servent à rien ici (et sont minuscules / inutilisables au doigt). */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
 /* Bouton « désigner vainqueur » (compétitif sans points) */
 .win-toggle {
   flex-shrink: 0;

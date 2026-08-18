@@ -897,6 +897,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
               {players.map((p, i) => (
                 <div key={p.id} className="coop-player">
                   <div className="coop-player-row score-row">
+                    <span className="score-crown" aria-hidden="true">{anyScore && isTopWinner(p) ? '🏆' : ''}</span>
                     <NameField
                       id={p.id}
                       className="input"
@@ -908,7 +909,6 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                       focused={focusedPlayer}
                       setFocused={setFocusedPlayer}
                     />
-                    <span className="score-crown" aria-hidden="true">{anyScore && isTopWinner(p) ? '🏆' : ''}</span>
                     <input
                       className="input score-input"
                       type="number"
