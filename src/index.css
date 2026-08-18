@@ -2691,11 +2691,18 @@ button { transition: transform 0.12s ease; }
 @keyframes kx-detail-out-r { to { transform: translateX(100vw); } }
 /* Le NOUVEAU corps est AU-DESSUS de l'instantané sortant (z-index 4 > 3) et OPAQUE : dès qu'il remplit
    l'écran (fin du glissé), il RECOUVRE entièrement l'ancien → plus aucun « bout d'écran qui reste »
-   même si l'instantané est retiré une frame trop tard. L'ombre est portée par le NOUVEAU corps (bord
-   d'attaque) → elle sort de l'écran quand il se cale, donc ne traîne pas non plus. */
+   même si l'instantané est retiré une frame trop tard. */
 .detail-body { position: relative; z-index: 4; background: var(--bg); }
-.detail-body[data-dir='1'] { box-shadow: -22px 0 40px rgba(0, 0, 0, 0.34); animation: kx-detail-in-r 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
-.detail-body[data-dir='-1'] { box-shadow: 22px 0 40px rgba(0, 0, 0, 0.34); animation: kx-detail-in-l 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+.detail-body[data-dir='1'] { animation: kx-detail-in-r 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+.detail-body[data-dir='-1'] { animation: kx-detail-in-l 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+/* Ombre du bord d'attaque = un DÉGRADÉ vertical (gauche/droite SEULEMENT, aucun flou en haut/bas) sur un
+   pseudo-élément, animé UNIQUEMENT pendant le glissé (kx-seam : opacity 1→0, sans `forwards`) → au repos
+   il revient à opacity 0 (base) → plus AUCUNE ombre permanente sous la tête une fois la fiche en place.
+   Tout en CSS (piloté par data-dir, présent sur le DOM) → pas de dépendance à un état React. */
+.detail-body::before { content: ''; position: absolute; top: 0; bottom: 0; width: 34px; pointer-events: none; opacity: 0; z-index: 1; }
+.detail-body[data-dir='1']::before { left: -34px; background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.32)); animation: kx-seam 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+.detail-body[data-dir='-1']::before { right: -34px; background: linear-gradient(to left, transparent, rgba(0, 0, 0, 0.32)); animation: kx-seam 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+@keyframes kx-seam { from { opacity: 1; } 80% { opacity: 1; } to { opacity: 0; } }
 .detail-body-leaving {
   position: fixed;
   bottom: 0;
