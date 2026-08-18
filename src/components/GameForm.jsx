@@ -288,6 +288,8 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
   }
 
   // BGG — recherche d'une EXTENSION pour une ligne donnée (nom → liste d'extensions).
+  // Les mises à jour d'état sont gardées par `s.id === rowId` → si l'utilisateur lance
+  // la recherche d'une AUTRE ligne entre-temps, une réponse tardive ne l'écrase pas.
   const searchExtBgg = async (rowId, query) => {
     const q = (query || '').trim()
     if (!q) return
@@ -295,16 +297,18 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
     try {
       const r = await fetch(`/api/bgg?q=${encodeURIComponent(q)}&type=expansion`)
       const data = await r.json()
-      setExtSearch({ id: rowId, loading: false, results: Array.isArray(data.results) ? data.results : [], error: data.error || '' })
+      setExtSearch((s) => (s.id === rowId ? { id: rowId, loading: false, results: Array.isArray(data.results) ? data.results : [], error: data.error || '' } : s))
     } catch {
-      setExtSearch({ id: rowId, loading: false, results: [], error: 'Recherche impossible (pas de connexion ?).' })
+      setExtSearch((s) => (s.id === rowId ? { id: rowId, loading: false, results: [], error: 'Recherche impossible (pas de connexion ?).' } : s))
     }
   }
 
   // BGG — sélection d'une extension : remplit le nom + les joueurs/idéal AJOUTÉS (ce que
   // l'extension permet EN PLUS de ce que le jeu de base couvre déjà, d'après ses données actuelles).
+  // ⚠️ On n'ÉCRASE PAS une valeur déjà saisie si BGG n'apporte rien (delta vide : base non
+  // renseignée, extension sans nb de joueurs sur BGG, ou plage incluse dans la base) → `|| x.players`.
   const pickExtBgg = async (rowId, result) => {
-    setExtSearch((s) => ({ ...s, loading: true, error: '' }))
+    setExtSearch((s) => (s.id === rowId ? { ...s, loading: true, error: '' } : s))
     try {
       const r = await fetch(`/api/bgg?id=${result.id}`)
       const d = await r.json()
@@ -313,18 +317,20 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
         const addedPlayers = playersSet.length ? extPlayers.filter((n) => !playersSet.includes(n)) : []
         const extBest = parseCounts(d.players_best)
         const addedBest = bestSet.length ? extBest.filter((n) => !bestSet.includes(n)) : []
+        const pTxt = countsToText(addedPlayers)
+        const bTxt = countsToText(addedBest)
         setExtList((l) => l.map((x) => (x.id === rowId ? {
           ...x,
           name: result.name || d.name || x.name,
-          players: countsToText(addedPlayers),
-          best: countsToText(addedBest),
+          players: pTxt || x.players, // garde la valeur saisie si BGG n'ajoute rien
+          best: bTxt || x.best,
         } : x)))
-        setExtSearch({ id: null, loading: false, results: null, error: '' })
+        setExtSearch((s) => (s.id === rowId ? { id: null, loading: false, results: null, error: '' } : s))
       } else {
-        setExtSearch((s) => ({ ...s, loading: false, error: (d && d.error) || 'Extension introuvable sur BoardGameGeek.' }))
+        setExtSearch((s) => (s.id === rowId ? { ...s, loading: false, error: (d && d.error) || 'Extension introuvable sur BoardGameGeek.' } : s))
       }
     } catch {
-      setExtSearch((s) => ({ ...s, loading: false, error: 'Import impossible (pas de connexion ?).' }))
+      setExtSearch((s) => (s.id === rowId ? { ...s, loading: false, error: 'Import impossible (pas de connexion ?).' } : s))
     }
   }
 
@@ -590,7 +596,9 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                           e.preventDefault()
                           e.stopPropagation()
                           e.currentTarget.blur()
-                          if (x.name.trim() && !extSearch.loading) searchExtBgg(x.id, x.name)
+                          // On bloque un 2e Entrée sur LA MÊME ligne en cours de recherche,
+                          // mais une AUTRE ligne peut chercher (résultat rendu stale-safe).
+                          if (x.name.trim() && !(extSearch.loading && extSearch.id === x.id)) searchExtBgg(x.id, x.name)
                         }
                       }}
                     />
