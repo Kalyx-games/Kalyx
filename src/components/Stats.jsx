@@ -6,10 +6,10 @@ import SortMenu from './SortMenu'
 // Tout est calculé sur la COLLECTION (jeux possédés) déjà filtrée par les filtres
 // partagés (les mêmes que l'onglet Collection) — d'où l'absence de filtre propre ici.
 
-const PLAYERS_COLOR = '#2f6df6' // bleu (cohérent avec 👥 sur les cartes)
-const OPTIMAL_COLOR = '#eab308' // or (cohérent avec ⭐ « idéal » sur les cartes)
-const DURATION_COLOR = '#0d9488' // sarcelle
-const COMPLEXITY_COLOR = '#6366f1' // indigo (cohérent avec 🧠 sur les cartes)
+const PLAYERS_COLOR = 'var(--bar-on)' // encre : la longueur porte l'info, pas la teinte
+const OPTIMAL_COLOR = 'var(--gold)' // l'or reste à l'idéal ⭐
+const DURATION_COLOR = 'var(--bar-on)'
+const COMPLEXITY_COLOR = 'var(--bar-on)'
 
 // Une ligne de barre horizontale : libellé · piste remplie · valeur.
 function BarRow({ label, sub, count, max, color, onClick }) {

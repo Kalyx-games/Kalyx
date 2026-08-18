@@ -141,7 +141,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
   //   Wishlist   : Éditer · BGG · Vers collection (tout à droite)
   const ACTION_W = 76
   const actions = []
-  if (onEdit) actions.push({ key: 'edit', label: 'Éditer', ico: '✏️', bg: 'var(--primary)', run: onEdit })
+  if (onEdit) actions.push({ key: 'edit', label: 'Éditer', ico: '✏️', bg: 'var(--soft)', fg: 'var(--ink)', run: onEdit })
   if (onBgg)
     actions.push({
       key: 'bgg',
@@ -156,13 +156,14 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
           onError={(e) => { e.currentTarget.style.display = 'none' }}
         />
       ),
-      bg: '#475569',
+      bg: 'var(--soft)',
+      fg: 'var(--ink)',
       run: onBgg,
     })
   // Action « tout à droite » (la plus accessible au pouce) :
   // collection → Nouvelle partie (remise à la demande de l'user) ; wishlist → Vers collection.
-  if (onNewPlay) actions.push({ key: 'play', label: 'Partie', ico: '🎲', bg: '#0d9488', run: onNewPlay })
-  if (onMove) actions.push({ key: 'move', label: 'Vers collection', node: <CollectionIcon size={20} color="#fff" />, bg: '#16a34a', run: onMove })
+  if (onNewPlay) actions.push({ key: 'play', label: 'Partie', ico: '🎲', bg: 'var(--primary)', fg: 'var(--on-primary)', run: onNewPlay })
+  if (onMove) actions.push({ key: 'move', label: 'Vers collection', node: <CollectionIcon size={20} color="currentColor" />, bg: 'var(--primary)', fg: 'var(--on-primary)', run: onMove })
   const menuW = actions.length * ACTION_W
   const OPEN = -menuW
   const [offset, setOffset] = useState(0)
@@ -246,7 +247,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
               key={a.key}
               type="button"
               className="swipe-act"
-              style={{ width: ACTION_W, background: a.bg }}
+              style={{ width: ACTION_W, background: a.bg, color: a.fg || 'var(--ink)' }}
               onClick={() => { setOffset(0); a.run() }}
               disabled={!online}
               aria-label={a.label}

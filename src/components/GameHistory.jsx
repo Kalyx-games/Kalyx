@@ -517,7 +517,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                       <span className="scenario-val">{s.winRate} % <span className="scenario-sub">({s.wins}/{s.games})</span></span>
                     </div>
                     <div className="bar-track">
-                      <div className="bar-fill" style={{ width: `${s.winRate}%`, background: '#16a34a' }} />
+                      <div className="bar-fill" style={{ width: `${s.winRate}%`, background: 'var(--bar-on)' }} />
                     </div>
                   </div>
                 ))}
@@ -539,7 +539,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                         <span className="scenario-val">{t.count} <span className="scenario-sub">partie{t.count > 1 ? 's' : ''}</span></span>
                       </div>
                       <div className="bar-track">
-                        <div className="bar-fill" style={{ width: `${Math.round((t.count / maxC) * 100)}%`, background: '#8b5cf6' }} />
+                        <div className="bar-fill" style={{ width: `${Math.round((t.count / maxC) * 100)}%`, background: 'var(--bar-on)' }} />
                       </div>
                     </div>
                   )
@@ -563,7 +563,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                         <span className="scenario-val">{v.count} <span className="scenario-sub">{v.count > 1 ? 'parties' : 'partie'}</span></span>
                       </div>
                       <div className="bar-track">
-                        <div className="bar-fill" style={{ width: `${(v.count / max) * 100}%`, background: '#2f6df6' }} />
+                        <div className="bar-fill" style={{ width: `${(v.count / max) * 100}%`, background: 'var(--bar-on)' }} />
                       </div>
                     </div>
                   )
@@ -584,7 +584,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                       <span className="scenario-val">{v.winRate} % <span className="scenario-sub">({v.wins}/{v.games})</span></span>
                     </div>
                     <div className="bar-track">
-                      <div className="bar-fill" style={{ width: `${v.winRate}%`, background: '#2f6df6' }} />
+                      <div className="bar-fill" style={{ width: `${v.winRate}%`, background: 'var(--bar-on)' }} />
                     </div>
                   </div>
                 ))}

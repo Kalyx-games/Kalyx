@@ -10,7 +10,7 @@
         var t = localStorage.getItem('kalyx-theme')
         if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t)
         var dark = t === 'dark' || (t !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
-        document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#10151d' : '#ffffff')
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#161618' : '#ffffff')
       } catch (e) {}
     </script>
     <link rel="icon" type="image/png" href="/logo.png" />

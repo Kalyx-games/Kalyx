@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { ownerColor, ownerInitials } from '../lib/games'
+import { ownerColor, ownerInitials, OWNER_COLORS, muteOwnerColor } from '../lib/games'
 
 // Gestionnaire d'une liste de "bulles" (propriétaires OU tags) : liste + éditeur
 // (nom + initiales 2 lettres + couleur). Même UI pour les deux, d'où ce composant partagé.
 
 // Palette de couleurs des bulles.
-const PALETTE = ['#ef4444', '#f97316', '#f59e0b', '#16a34a', '#0d9488', '#2f6df6', '#8b5cf6', '#ec4899']
+const PALETTE = OWNER_COLORS // une seule palette pour toute l'app (tons sourds de la charte)
 
 export default function BubbleListManager({ title, items, migrationCode, namePlaceholder, addLabel, online = true, onAdd, onUpdate, onRename, onDelete }) {
   // null = éditeur fermé (on ne voit que la liste + le bouton d'ajout) ;
@@ -28,7 +28,7 @@ export default function BubbleListManager({ title, items, migrationCode, namePla
     setEditing(o)
     setName(o.name)
     setInitials(o.initials || ownerInitials(o.name))
-    setColor(o.color || ownerColor(o.name))
+    setColor(muteOwnerColor(o.color) || ownerColor(o.name))
     setInitialsTouched(true)
   }
   const onNameChange = (v) => {
@@ -65,7 +65,7 @@ export default function BubbleListManager({ title, items, migrationCode, namePla
             <ul className="owner-list">
               {items.map((o) => (
                 <li key={o.id} className={editing !== 'new' && editing && editing.id === o.id ? 'editing' : ''}>
-                  <span className="owner-bubble" style={{ background: o.color || ownerColor(o.name) }}>
+                  <span className="owner-bubble" style={{ background: o.color ? muteOwnerColor(o.color) : ownerColor(o.name) }}>
                     {o.initials || ownerInitials(o.name)}
                   </span>
                   <span className="owner-name-txt">{o.name}</span>

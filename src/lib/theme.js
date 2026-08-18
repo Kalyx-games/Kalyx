@@ -5,7 +5,7 @@
 const KEY = 'kalyx-theme'
 // ⚠️ Ces deux couleurs de barre doivent rester identiques au script anti-FOUC de index.html
 // (qui pose la couleur AVANT le chargement du bundle, on ne peut donc pas partager la constante).
-const DARK_BG = '#10151d'
+const DARK_BG = '#161618' // = --card sombre (la topbar est en var(--card))
 const LIGHT_BG = '#ffffff'
 
 export function getTheme() {

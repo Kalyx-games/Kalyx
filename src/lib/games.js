@@ -259,10 +259,22 @@ export async function renameInGamesCsv(col, oldName, newName) {
 }
 
 // Bulle propriétaire : 2 lettres + une couleur propre à chaque propriétaire.
-const OWNER_COLORS = [
-  '#ef4444', '#f59e0b', '#16a34a', '#2f6df6', '#8b5cf6', '#ec4899',
-  '#0d9488', '#f97316', '#6366f1', '#65a30d', '#0ea5e9', '#d946ef',
+// Charte encre & or : 6 tons SOURDS de luminosité équivalente (les couleurs pures juraient
+// avec les jaquettes — la seule vraie couleur de l'écran doit venir des jeux).
+export const OWNER_COLORS = [
+  '#b4553f' /* terracotta */, '#8a6a47' /* brun */, '#4e7a5c' /* sauge */,
+  '#3e6c8e' /* ardoise */, '#6b5a8e' /* prune */, '#8e4f6b' /* framboise */,
 ]
+// Les couleurs VIVES choisies avant la charte (stockées en base dans owners.color) sont
+// converties à l'AFFICHAGE vers le ton sourd le plus proche — aucune migration, réversible.
+const MUTED_MAP = {
+  '#ef4444': '#b4553f', '#f97316': '#b4553f', '#f59e0b': '#8a6a47', '#65a30d': '#4e7a5c',
+  '#16a34a': '#4e7a5c', '#0d9488': '#4e7a5c', '#2f6df6': '#3e6c8e', '#0ea5e9': '#3e6c8e',
+  '#6366f1': '#6b5a8e', '#8b5cf6': '#6b5a8e', '#ec4899': '#8e4f6b', '#d946ef': '#8e4f6b',
+}
+export function muteOwnerColor(c) {
+  return MUTED_MAP[(c || '').toLowerCase()] || c
+}
 // Hachage FNV-1a (bonne répartition) → une couleur stable par propriétaire.
 export function ownerColor(name) {
   let h = 2166136261
@@ -282,6 +294,6 @@ export function ownerDisplay(name, ownerMap) {
   const o = ownerMap && ownerMap[name]
   return {
     initials: (o && o.initials) || ownerInitials(name),
-    color: (o && o.color) || ownerColor(name),
+    color: o && o.color ? muteOwnerColor(o.color) : ownerColor(name),
   }
 }

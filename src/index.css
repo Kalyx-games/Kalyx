@@ -1,25 +1,32 @@
+/* ============ CHARTE « ENCRE & OR » (choix user, 2026-08-18) ============
+   Pas de couleur de marque : la « marque » est l'ENCRE (boutons noirs en clair, blancs en
+   sombre, via --on-primary pour le texte posé dessus). Le seul accent est l'OR (idéal ⭐,
+   victoires, records). Les gris sont STRICTEMENT neutres (plus de gris bleutés) → les
+   jaquettes des jeux sont la seule couleur de l'écran. Les états système (--ok/--danger)
+   et les couleurs de tierlists restent sémantiques et inchangés. */
 :root {
-  --bg: #eef1f6;
+  --bg: #f4f4f5;
   --card: #ffffff;
-  --soft: #eef1f6; /* surface neutre discrète (bannières, code, hovers) */
-  --btn-ghost-bg: #ffffff; /* fond des boutons secondaires (.btn-ghost) — blanc, ressort sur le fond #eef1f6 */
-  --btn-ghost-border: #d5dce8;
-  --cta-glow: rgba(79, 70, 229, 0.3); /* halo des boutons « jalon » */
-  --input-bg: #f7f8fb;
+  --soft: #efeff1; /* surface neutre discrète (bannières, code, hovers) */
+  --btn-ghost-bg: #ffffff; /* fond des boutons secondaires (.btn-ghost) — blanc, ressort sur le fond */
+  --btn-ghost-border: #dcdce0;
+  --cta-glow: rgba(16, 24, 40, 0.16); /* une ombre est GRISE, jamais colorée */
+  --input-bg: #f7f7f8;
   --input-focus: #ffffff;
-  --accent-soft: #eef0ff; /* fond teinté primaire (boutons doux) */
-  --ink: #1f2733;
-  --muted: #7a8699;
-  --line: #e5e9f0;
-  --primary: #4f46e5;
-  --primary-2: #7c3aed;
+  --accent-soft: #ececef; /* fond doux (surlignages discrets) — neutre désormais */
+  --ink: #18181b;
+  --muted: #71717a;
+  --line: #e4e4e7;
+  --primary: #1c1c21; /* ENCRE : les boutons principaux sont noirs en clair */
+  --primary-2: var(--primary); /* plus AUCUN dégradé (l'alias neutralise les 7 linear-gradient) */
+  --on-primary: #ffffff; /* texte/icônes posés sur --primary (blanc sur encre) */
   /* Alias utilisés dans le CSS : résolus paresseusement → suivent le thème courant
      (car --primary et --line sont redéfinis dans les blocs sombres, sur :root aussi). */
   --accent: var(--primary);
   --border: var(--line);
-  --players: #2f6df6;
-  --gold: #eab308;
-  --gold-ink: #b45309; /* or « texte » : assez foncé pour le clair, éclairci en sombre */
+  --players: var(--muted); /* budget d'accents : les joueurs ne sont plus bleus */
+  --gold: #e0a106; /* or « remplissage » (barres, pastilles) */
+  --gold-ink: #a16207; /* or « texte » : assez foncé pour le clair, éclairci en sombre */
   /* ÉCHELLE TYPOGRAPHIQUE (chantier typo) : 9 crans nommés, à utiliser PARTOUT à la place de
      valeurs libres. Hors échelle tolérés : tailles de GLYPHES (croix, +, emojis d'illustration)
      et l'univers Chwazi (plein écran à part). Identiques dans les 2 thèmes → définis ici seulement. */
@@ -32,8 +39,8 @@
   --fs-title-s: 1.25rem; /* 20px — titres de modales, sous-écrans */
   --fs-title: 1.75rem; /* 28px — titres d'écran */
   --fs-display: 2.25rem; /* 36px — chiffres héros (tuiles de stats) */
-  --bar-on: #6366f1;
-  --bar-off: #e0e4ec;
+  --bar-on: #2e2e33; /* barres de graphes = encre adoucie (la longueur porte l'info, pas la teinte) */
+  --bar-off: #e7e7ea;
   --danger: #e11d48;
   --danger-bg: #fef2f2;
   --danger-border: #fecaca;
@@ -41,7 +48,7 @@
   --ok-bg: #ecfdf5;
   --ok-border: #a7f3d0;
   --ok-ink: #047857;
-  --nav-pill: rgba(79, 70, 229, 0.14);
+  --nav-pill: rgba(28, 28, 33, 0.08);
   --app-w: 640px; /* largeur max de l'app (élargie en grille sur tablette/desktop) */
   color-scheme: light;
 }
@@ -49,25 +56,26 @@
 /* ---- Thème sombre (auto selon le système, sauf si forcé clair/sombre) ---- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #10151d;
-    --card: #191f2b;
-    --soft: #232b3a;
-    --btn-ghost-bg: #2b3546;
-    --btn-ghost-border: #3a4557;
-    --cta-glow: rgba(139, 134, 255, 0.45);
-    --input-bg: #232b3a;
-    --input-focus: #2c3547;
-    --accent-soft: #2a2f52;
-    --ink: #e7ebf3;
-    --muted: #97a3b6;
-    --line: #2b3444;
-    --primary: #8b86ff;
-    --primary-2: #a877f0;
-    --players: #6ea0ff;
-    --gold: #f2c94c;
-    --gold-ink: #f2c94c;
-    --bar-on: #8b86ff;
-    --bar-off: #2b3444;
+    --bg: #0b0b0c;
+    --card: #161618;
+    --soft: #202023;
+    --btn-ghost-bg: #26262a;
+    --btn-ghost-border: #33333a;
+    --cta-glow: rgba(0, 0, 0, 0.5);
+    --input-bg: #202023;
+    --input-focus: #2a2a2e;
+    --accent-soft: #232326;
+    --ink: #f3f3f4;
+    --muted: #9b9ba3;
+    --line: #2a2a2e;
+    --primary: #f2f2f4; /* ENCRE inversée : boutons blancs en sombre */
+    --primary-2: var(--primary);
+    --on-primary: #131316;
+    --players: var(--muted);
+    --gold: #f5c542;
+    --gold-ink: #f5c542;
+    --bar-on: #d8d8dc;
+    --bar-off: #2a2a2e;
     --danger: #fb7185;
     --danger-bg: #33161f;
     --danger-border: #7f2233;
@@ -75,30 +83,31 @@
     --ok-bg: #12271f;
     --ok-border: #1f6b4d;
     --ok-ink: #6ee7b7;
-    --nav-pill: rgba(139, 134, 255, 0.24);
+    --nav-pill: rgba(242, 242, 244, 0.1);
     color-scheme: dark;
   }
 }
 :root[data-theme='dark'] {
-  --bg: #10151d;
-  --card: #191f2b;
-  --soft: #232b3a;
-  --btn-ghost-bg: #2b3546;
-  --btn-ghost-border: #3a4557;
-  --cta-glow: rgba(139, 134, 255, 0.45);
-  --input-bg: #232b3a;
-  --input-focus: #2c3547;
-  --accent-soft: #2a2f52;
-  --ink: #e7ebf3;
-  --muted: #97a3b6;
-  --line: #2b3444;
-  --primary: #8b86ff;
-  --primary-2: #a877f0;
-  --players: #6ea0ff;
-  --gold: #f2c94c;
-  --gold-ink: #f2c94c;
-  --bar-on: #8b86ff;
-  --bar-off: #2b3444;
+  --bg: #0b0b0c;
+  --card: #161618;
+  --soft: #202023;
+  --btn-ghost-bg: #26262a;
+  --btn-ghost-border: #33333a;
+  --cta-glow: rgba(0, 0, 0, 0.5);
+  --input-bg: #202023;
+  --input-focus: #2a2a2e;
+  --accent-soft: #232326;
+  --ink: #f3f3f4;
+  --muted: #9b9ba3;
+  --line: #2a2a2e;
+  --primary: #f2f2f4; /* ENCRE inversée : boutons blancs en sombre */
+  --primary-2: var(--primary);
+    --on-primary: #131316;
+  --players: var(--muted);
+  --gold: #f5c542;
+  --gold-ink: #f5c542;
+  --bar-on: #d8d8dc;
+  --bar-off: #2a2a2e;
   --danger: #fb7185;
   --danger-bg: #33161f;
   --danger-border: #7f2233;
@@ -106,7 +115,7 @@
   --ok-bg: #12271f;
   --ok-border: #1f6b4d;
   --ok-ink: #6ee7b7;
-  --nav-pill: rgba(139, 134, 255, 0.24);
+  --nav-pill: rgba(242, 242, 244, 0.1);
   color-scheme: dark;
 }
 
@@ -560,7 +569,7 @@ body {
 .fchip.on {
   background: var(--primary);
   border-color: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
 }
 .fchip:active {
   transform: scale(0.94); /* même enfoncement que .ppick-chip */
@@ -662,7 +671,7 @@ body {
 .ppick-chip.on {
   background: var(--primary);
   border-color: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
 }
 .ppick-chip:active {
   transform: scale(0.94);
@@ -1109,7 +1118,7 @@ body {
   height: 66px;
   border-radius: 13px;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  background: var(--soft); /* placeholder NEUTRE pendant le chargement (fini le flash violet) */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1241,8 +1250,8 @@ body {
   justify-content: center;
   font-size: var(--fs-body);
   font-weight: 700;
-  color: var(--ok-ink); /* tokens « succès » (les hex en dur cassaient le thème sombre) */
-  background: var(--ok-bg);
+  color: var(--ink); /* budget d'accents : un prix est un FAIT, pas un succès (le vert reste aux états) */
+  background: var(--soft);
   padding: 3px 9px;
   border-radius: 10px;
   white-space: nowrap;
@@ -1284,7 +1293,7 @@ body {
   margin-top: 5px;
   font-size: var(--fs-footnote);
   font-weight: 500;
-  color: var(--accent);
+  color: var(--muted); /* budget d'accents : info de tri en gris */
 }
 /* Cellules de la grille. min-width:0 = elles ne débordent pas de leur colonne. */
 .game-meta > span {
@@ -1386,6 +1395,15 @@ body {
   color: var(--muted);
   font-size: var(--fs-body);
 }
+/* Charte encre & or : la NAVBAR est monochrome — icônes grises au repos, encre sur l'onglet
+   actif (le CSS surclasse les attributs fill="…" des SVG sans !important). Idem pour les
+   chips de statut (Collection/Wishlist) du formulaire. Le logo Chwazi de la topbar, lui,
+   reste multicolore (c'est un logo, pas une icône d'interface). */
+.navtab { color: var(--muted); }
+.navtab.active { color: var(--ink); }
+.navtab svg, .navtab svg * { fill: currentColor; }
+.icon-chip svg, .icon-chip svg * { fill: currentColor; }
+
 /* ---- Bouton flottant + ---- */
 .fab {
   position: fixed;
@@ -1395,12 +1413,12 @@ body {
   height: 60px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
-  color: white;
+  background: var(--primary);
+  color: var(--on-primary);
   font-size: 2rem;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 12px 26px rgba(79, 70, 229, 0.42);
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.22); /* ombre NEUTRE (une ombre n'est pas colorée) */
   z-index: 20;
   transition: transform 0.25s ease, opacity 0.25s ease;
 }
@@ -1415,10 +1433,18 @@ body {
 /* Bouton flottant « Filtrer » = bouton PRINCIPAL en bas (taille de .fab, couleur de l'ancien
    bouton scan = sarcelle). Le « + » (fab-add-above) est plus petit et se place au-dessus. */
 .fab-filter {
-  background: linear-gradient(135deg, #0d9488, #14b8a6);
-  color: #fff;
-  box-shadow: 0 12px 26px rgba(13, 148, 136, 0.42);
+  background: var(--primary); /* l'action principale porte l'encre (fini le sarcelle) */
+  color: var(--on-primary);
 }
+/* Le « + » (secondaire) devient un bouton de SURFACE : carte + contour, l'encre reste au filtre. */
+.fab-add-above {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 16px rgba(16, 24, 40, 0.14);
+}
+/* Les icônes des FAB héritent de la couleur du bouton (surclasse les fill="…" des SVG). */
+.fab svg, .fab svg * { fill: currentColor; }
 .fab-add-above {
   bottom: calc(146px + env(safe-area-inset-bottom));
   width: 52px;
@@ -1433,8 +1459,8 @@ body {
   height: 20px;
   padding: 0 5px;
   border-radius: 999px;
-  background: var(--primary);
-  color: #fff;
+  background: var(--gold);
+  color: #131316;
   font-size: var(--fs-caption);
   font-weight: 700;
   display: flex;
@@ -1627,8 +1653,8 @@ body {
   border: 1px solid var(--btn-ghost-border);
 }
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
-  color: white;
+  background: var(--primary);
+  color: var(--on-primary);
 }
 .btn-primary:disabled {
   opacity: 0.5;
@@ -2851,8 +2877,8 @@ button { transition: transform 0.12s ease; }
 .poll-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 10px; font-size: var(--fs-caption); color: var(--muted); }
 .poll-key { display: inline-flex; align-items: center; gap: 5px; }
 .poll-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
-.poll-dot.poll-best { background: #eab308; }
-.poll-dot.poll-rec { background: #2f6df6; }
+.poll-dot.poll-best { background: var(--gold); }
+.poll-dot.poll-rec { background: var(--bar-on); }
 .poll-dot.poll-not { background: #d1495b; }
 /* Tableau du sondage : nb de joueurs · barre · 3 colonnes de % alignées (la légende
    ci-dessus donne la signification des couleurs). Une seule grille → tout s'aligne. */
@@ -2865,12 +2891,12 @@ button { transition: transform 0.12s ease; }
 .poll-n { font-weight: 600; font-size: var(--fs-body); text-align: right; }
 .poll-bar { height: 12px; border-radius: 6px; overflow: hidden; display: flex; background: var(--soft); }
 .poll-seg { height: 100%; }
-.poll-seg.poll-best { background: #eab308; } /* jaune (idéal), assorti à l'étoile ⭐ */
-.poll-seg.poll-rec { background: #2f6df6; }
+.poll-seg.poll-best { background: var(--gold); } /* or (idéal), assorti à l'étoile ⭐ */
+.poll-seg.poll-rec { background: var(--bar-on); }
 .poll-seg.poll-not { background: #d1495b; }
 .poll-pct { text-align: right; font-size: var(--fs-caption); font-weight: 700; font-variant-numeric: tabular-nums; }
 .poll-pct-best { color: #c99000; } /* or plus foncé → lisible sur fond clair ET sombre */
-.poll-pct-rec { color: #2f6df6; }
+.poll-pct-rec { color: var(--muted); }
 .poll-pct-not { color: #d1495b; }
 .sheet-title {
   font-size: var(--fs-title);
@@ -3642,12 +3668,12 @@ input[type='number'] {
   border: none;
   border-radius: 14px;
   /* Même dégradé primaire que le FAB / les boutons principaux → DA cohérente, lisible clair+sombre. */
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
-  color: #fff;
+  background: var(--primary);
+  color: var(--on-primary);
   font-size: var(--fs-body-l);
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.28);
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.12);
 }
 .tl-open-btn:active { transform: scale(0.99); }
 
@@ -3725,8 +3751,8 @@ input[type='number'] {
   flex-shrink: 0;
   border: none;
   border-radius: 10px;
-  background: #16a34a;
-  color: #fff;
+  background: var(--primary);
+  color: var(--on-primary);
   font-size: var(--fs-body);
   font-weight: 700;
   padding: 9px 14px;
@@ -3962,9 +3988,9 @@ input[type='number'] {
 .filters-reset-top:disabled { opacity: 0.4; cursor: default; }
 .filters-see {
   border: none;
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
-  color: #fff;
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--primary) 35%, transparent);
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.12);
 }
 
 /* Complexité en toutes lettres (tuile Stats) */
@@ -4073,7 +4099,7 @@ input[type='number'] {
   transition: width 0.18s ease, background 0.18s ease, opacity 0.18s ease;
 }
 .pcard-dot.on { width: 24px; background: var(--primary); opacity: 1; }
-.pcard-dot.win { background: var(--gold, #eab308); opacity: 1; }
+.pcard-dot.win { background: var(--gold); opacity: 1; }
 
 /* Animation de changement de page (sens du glissé). */
 @keyframes pcard-slide-r { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
@@ -4230,8 +4256,8 @@ input[type='number'] {
    Les boutons de navigation entre items restent discrets (ghost) pour les différencier. */
 .pcard-navbtn-recap,
 .sheet-cta {
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
-  color: #fff;
+  background: var(--primary);
+  color: var(--on-primary);
   border-color: transparent;
   font-weight: 800;
   box-shadow: 0 4px 16px var(--cta-glow);
@@ -4269,7 +4295,7 @@ input[type='number'] {
   cursor: pointer;
   animation: kx-toast-in 0.22s ease;
 }
-.toast-ico { color: #4ade80; }
+.toast-ico { color: var(--ok-ink); }
 @keyframes kx-toast-in {
   from { opacity: 0; transform: translate(-50%, 12px); }
   to { opacity: 1; transform: translate(-50%, 0); }
