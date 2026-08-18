@@ -265,3 +265,17 @@ export function SettingsIcon({ size = 20 }) {
     </svg>
   )
 }
+
+// ✦ Étincelle = anecdote / « le saviez-vous » (4 pointes concaves, pleine).
+export function SparkIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <path
+        d="M12 4c1 5.2 2.8 7 8 8-5.2 1-7 2.8-8 8-1-5.2-2.8-7-8-8 5.2-1 7-2.8 8-8Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </Ico>
+  )
+}

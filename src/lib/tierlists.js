@@ -248,7 +248,6 @@ export function computeAnecdoteList(tierlists, gameIds, repById, nameById, seed 
       .sort((a, b) => b.spread - a.spread)
       .slice(0, 8)
       .map((d) => ({
-        icon: '⚔️',
         text: `${gname(d.id)} divise : ${tierOf(d.max)} pour ${d.hi.map((x) => x.player).join(', ')}, ${tierOf(d.min)} pour ${d.lo.map((x) => x.player).join(', ')}.`,
       }))
   )
@@ -260,11 +259,11 @@ export function computeAnecdoteList(tierlists, gameIds, repById, nameById, seed 
     .forEach(([id, arr]) => {
       const s = arr[0].score
       const n = gname(id)
-      if (s >= 6) unan.push({ icon: '❤️', text: `Tout le monde adore ${n} (S) !` })
-      else if (s >= 5) unan.push({ icon: '😍', text: `${n} fait l'unanimité en A.` })
-      else if (s <= 1) unan.push({ icon: '🗑️', text: `Personne ne sauve ${n} (F).` })
-      else if (s <= 2) unan.push({ icon: '💤', text: `${n} laisse tout le monde de marbre (D).` })
-      else unan.push({ icon: '🎯', text: `Accord parfait : tout le monde met ${n} en ${tierOf(s)}.` })
+      if (s >= 6) unan.push({ text: `Tout le monde adore ${n} (S) !` })
+      else if (s >= 5) unan.push({ text: `${n} fait l'unanimité en A.` })
+      else if (s <= 1) unan.push({ text: `Personne ne sauve ${n} (F).` })
+      else if (s <= 2) unan.push({ text: `${n} laisse tout le monde de marbre (D).` })
+      else unan.push({ text: `Accord parfait : tout le monde met ${n} en ${tierOf(s)}.` })
     })
   addGroup(unan)
 
@@ -281,7 +280,6 @@ export function computeAnecdoteList(tierlists, gameIds, repById, nameById, seed 
   })
   addGroup(
     bolds.slice(0, 6).map((b) => ({
-      icon: '🌶️',
       text: `${b.player} met ${gname(b.id)} en ${b.tier}, là où le groupe le voit plutôt en ${b.othersTier}.`,
     }))
   )
@@ -293,14 +291,14 @@ export function computeAnecdoteList(tierlists, gameIds, repById, nameById, seed 
   if (avgList.length) {
     const top = avgList.reduce((b, x) => (x.avg > b.avg ? x : b))
     const bot = avgList.reduce((b, x) => (x.avg < b.avg ? x : b))
-    addGroup([{ icon: '🏆', text: `${gname(top.id)} est le jeu préféré du groupe.` }])
-    addGroup([{ icon: '📉', text: `${gname(bot.id)} est le moins aimé du groupe.` }])
+    addGroup([{ text: `${gname(top.id)} est le jeu préféré du groupe.` }])
+    addGroup([{ text: `${gname(bot.id)} est le moins aimé du groupe.` }])
   }
   // 📊 Le jeu le plus classé (indépendant : c'est justement une histoire de nombre de votants).
   const rated = Object.entries(byGame)
   if (rated.length) {
     const mostRated = rated.reduce((b, x) => (x[1].length > b[1].length ? x : b))
-    if (mostRated[1].length >= 3) addGroup([{ icon: '📊', text: `${gname(mostRated[0])} est le jeu le plus classé (${mostRated[1].length} joueurs).` }])
+    if (mostRated[1].length >= 3) addGroup([{ text: `${gname(mostRated[0])} est le jeu le plus classé (${mostRated[1].length} joueurs).` }])
   }
 
   // ⭐ Coup de cœur / 😖 bête noire de chaque joueur (un jeu au hasard parmi ses S / ses F).
@@ -309,8 +307,8 @@ export function computeAnecdoteList(tierlists, gameIds, repById, nameById, seed 
   Object.entries(byPlayer).forEach(([player, m]) => {
     const sGames = Object.keys(m).filter((id) => m[id] === 6)
     const fGames = Object.keys(m).filter((id) => m[id] === 1)
-    if (sGames.length) coups.push({ icon: '⭐', text: `Un coup de cœur de ${player} : ${gname(pick(sGames))} (S).` })
-    if (fGames.length) betes.push({ icon: '😖', text: `Une bête noire de ${player} : ${gname(pick(fGames))} (F).` })
+    if (sGames.length) coups.push({ text: `Un coup de cœur de ${player} : ${gname(pick(sGames))} (S).` })
+    if (fGames.length) betes.push({ text: `Une bête noire de ${player} : ${gname(pick(fGames))} (F).` })
   })
   addGroup(coups)
   addGroup(betes)
@@ -323,16 +321,16 @@ export function computeAnecdoteList(tierlists, gameIds, repById, nameById, seed 
   }))
   if (gen.length) {
     const enthou = gen.reduce((b, x) => (x.s > b.s ? x : b))
-    if (enthou.s > 0) addGroup([{ icon: '😇', text: `${enthou.p} est le plus enthousiaste : ${enthou.s} jeux en S !` }])
+    if (enthou.s > 0) addGroup([{ text: `${enthou.p} est le plus enthousiaste : ${enthou.s} jeux en S !` }])
     const severe = gen.reduce((b, x) => (x.f > b.f ? x : b))
-    if (severe.f > 0) addGroup([{ icon: '😈', text: `${severe.p} est le plus sévère : ${severe.f} jeux en F.` }])
+    if (severe.f > 0) addGroup([{ text: `${severe.p} est le plus sévère : ${severe.f} jeux en F.` }])
   }
 
   // 🔢 Nombre de jeux classés par joueur.
   addGroup(
     Object.entries(byPlayer)
       .filter(([, m]) => Object.keys(m).length >= 5)
-      .map(([player, m]) => ({ icon: '🔢', text: `${player} a classé ${Object.keys(m).length} jeux.` }))
+      .map(([player, m]) => ({ text: `${player} a classé ${Object.keys(m).length} jeux.` }))
   )
 
   // 👯 Goûts les plus proches / les plus opposés (paires, ≥ 5 jeux en commun).
@@ -350,10 +348,10 @@ export function computeAnecdoteList(tierlists, gameIds, repById, nameById, seed 
   }
   if (pairs.length) {
     const close = pairs.reduce((b, x) => (x.diff < b.diff ? x : b))
-    addGroup([{ icon: '🫶', text: `${close.a} et ${close.b} ont les goûts les plus proches.` }])
+    addGroup([{ text: `${close.a} et ${close.b} ont les goûts les plus proches.` }])
     if (pairs.length > 1) {
       const far = pairs.reduce((b, x) => (x.diff > b.diff ? x : b))
-      addGroup([{ icon: '🙃', text: `${far.a} et ${far.b} ont les goûts les plus opposés.` }])
+      addGroup([{ text: `${far.a} et ${far.b} ont les goûts les plus opposés.` }])
     }
   }
 

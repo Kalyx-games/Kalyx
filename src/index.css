@@ -14,6 +14,11 @@
   /* Élévation des cartes : en clair une ombre douce remplace la bordure ; en sombre les
      ombres sont invisibles → un liseré lumineux en haut fait « émerger » la surface. */
   --card-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 5px 14px -10px rgba(16, 24, 40, 0.12); /* courte : dans une liste serrée, une ombre longue fait un « trait » dans le gap */
+  /* Rayons : 3 crans SEULEMENT (les gros arrondis uniformes partout = tic des applis IA).
+     ctl = boutons/champs/chips · card = cartes/surfaces/menus · sheet = feuilles montantes. */
+  --r-ctl: 6px;
+  --r-card: 8px;
+  --r-sheet: 12px;
   --input-bg: #e9e9ec; /* assez marqué pour se passer de bordure sur une carte blanche */
   --input-focus: #ffffff;
   --accent-soft: #ececef; /* fond doux (surlignages discrets) — neutre désormais */
@@ -175,7 +180,7 @@ body {
   bottom: calc(5px + env(safe-area-inset-bottom));
   left: 6px;
   width: calc(33.333% - 12px);
-  border-radius: 14px;
+  border-radius: var(--r-card);
   background: var(--nav-pill);
   transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 0;
@@ -275,7 +280,7 @@ body {
   color: var(--ink);
 }
 .brand img {
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
 }
 /* Téléphone ÉTROIT seulement (≤360px : Galaxy base, vieux modèles) : on masque le nom
    « Kalyx » (le logo suffit) pour désencombrer le bandeau. Les téléphones plus larges
@@ -326,7 +331,7 @@ body {
   justify-content: center;
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--muted);
@@ -349,7 +354,7 @@ body {
 .dup-warn {
   margin: -4px 0 10px;
   padding: 9px 12px;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   font-size: var(--fs-footnote);
   line-height: 1.35;
   background: var(--danger-bg);
@@ -361,7 +366,7 @@ body {
 .banner {
   margin: 10px 16px 0;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   font-size: var(--fs-body-s);
   background: var(--soft);
   border: 1px solid var(--line);
@@ -390,7 +395,7 @@ body {
   min-width: 0;
   height: 46px;
   padding: 0 14px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: 0;
   background: var(--input-bg); /* même fond que tous les champs (était le seul sur --card) */
   color: var(--ink);
@@ -414,7 +419,7 @@ body {
   align-items: center;
   gap: 7px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--ink);
@@ -443,7 +448,7 @@ body {
   list-style: none;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--r-card);
   box-shadow: 0 14px 34px rgba(16, 24, 40, 0.16);
   padding: 6px;
   z-index: 30;
@@ -457,7 +462,7 @@ body {
   padding: 11px 12px;
   border: none;
   background: none;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   font-size: var(--fs-body);
   color: var(--ink);
   cursor: pointer;
@@ -512,7 +517,7 @@ body {
 .sortdir {
   height: 46px;
   width: 46px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--primary);
@@ -544,7 +549,7 @@ body {
   margin: 8px 16px 0;
   padding: 14px 14px 16px;
   background: var(--card);
-  border-radius: 12px; /* rayons resserrés (les gros arrondis partout = tic des applis IA) */
+  border-radius: var(--r-card); /* rayons resserrés (les gros arrondis partout = tic des applis IA) */
   box-shadow: var(--card-shadow);
 }
 .filter-group {
@@ -568,7 +573,7 @@ body {
   gap: 6px;
   min-height: 40px; /* même hauteur que les cases nombre de joueurs (.ppick-chip) empilées juste dessous */
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: 1px solid var(--line);
   background: var(--input-bg);
   color: var(--ink);
@@ -673,7 +678,7 @@ body {
   min-width: 40px;
   height: 40px;
   padding: 0 9px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: 1px solid var(--line);
   background: var(--input-bg);
   color: var(--ink);
@@ -699,7 +704,7 @@ body {
   gap: 6px;
   padding: 0 16px;
   height: 44px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: 1px solid var(--line);
   background: var(--accent-soft);
   color: var(--primary);
@@ -801,7 +806,7 @@ body {
   text-align: left;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   background: var(--soft);
   color: inherit;
   cursor: pointer;
@@ -823,7 +828,7 @@ body {
   display: block;
   margin: 8px 0 14px;
   max-height: 120px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: 1px solid var(--line);
 }
 /* Champ avec une croix pour l'effacer d'un clic (image, prix). */
@@ -877,7 +882,7 @@ body {
   align-self: stretch; /* toujours la MÊME hauteur que le champ d'à côté (même dans une rangée centrée) */
   min-height: 42px;
   width: 44px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: 1px solid var(--line);
   background: var(--soft);
   color: var(--muted);
@@ -1032,7 +1037,7 @@ body {
 .swipe-row {
   position: relative;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   box-shadow: var(--card-shadow); /* l'ombre vit ICI (l'overflow:hidden la couperait sur .game) */
 }
 /* Menu derrière la carte (révélé au glissé) : une ou plusieurs actions côte à côte. */
@@ -1107,7 +1112,7 @@ body {
   align-items: start; /* tout le contenu aligné en haut (image, infos) */
   padding: 11px 22px 11px 11px; /* bande droite réservée au chevron */
   background: var(--card);
-  border-radius: 12px; /* rayons resserrés (les gros arrondis partout = tic des applis IA) */
+  border-radius: var(--r-card); /* rayons resserrés (les gros arrondis partout = tic des applis IA) */
   box-shadow: var(--card-shadow);
   position: relative;
   z-index: 1;
@@ -1135,7 +1140,7 @@ body {
 .game-thumb {
   width: 66px;
   height: 66px;
-  border-radius: 8px; /* coins serrés à la Netflix : la jaquette redevient une boîte de jeu */
+  border-radius: 5px; /* l'ART est le plus serré : la jaquette redevient une vraie boîte de jeu */
   overflow: hidden;
   background: var(--soft); /* placeholder NEUTRE pendant le chargement (fini le flash violet) */
   display: flex;
@@ -1196,7 +1201,7 @@ body {
 .lightbox-img {
   max-width: 100%;
   max-height: 100%;
-  border-radius: 14px;
+  border-radius: var(--r-card);
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
   animation: kx-lightbox-img-in 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -1272,7 +1277,7 @@ body {
   color: var(--ok-ink); /* fond VERT (retour user : le prix doit rester vert) */
   background: var(--ok-bg);
   padding: 3px 9px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   white-space: nowrap;
 }
 /* Première colonne : image + (en wishlist) prix juste en dessous. Alignée en bas :
@@ -1512,7 +1517,7 @@ body {
 
 .modal {
   background: var(--card);
-  border-radius: 16px 16px 0 0;
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
   width: 100%;
   max-width: 640px;
   max-height: 92dvh;
@@ -1575,7 +1580,7 @@ body {
   transform: translateY(-50%);
   width: 44px;
   height: 44px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: 1px solid var(--line);
   background: var(--danger-bg);
   font-size: 1.1rem;
@@ -1603,7 +1608,7 @@ body {
   width: 100%;
   min-width: 0;
   padding: 11px 12px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: 0;
   background: var(--input-bg);
   color: var(--ink);
@@ -1650,7 +1655,7 @@ body {
 .btn-ghost,
 .btn-danger {
   padding: 12px 16px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: none;
   font-size: var(--fs-body-l);
   font-weight: 700;
@@ -1696,7 +1701,7 @@ body {
   width: calc(100% - 44px);
   max-width: 400px;
   background: var(--card);
-  border-radius: 18px;
+  border-radius: var(--r-sheet);
   padding: 24px 20px 18px;
   box-shadow: 0 24px 60px rgba(16, 24, 40, 0.28);
 }
@@ -1721,7 +1726,7 @@ body {
   box-sizing: border-box;
   padding: 13px 14px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   background: var(--input-bg);
   box-shadow: inset 0 0 0 2px transparent;
   transition: box-shadow 0.15s ease, background 0.15s ease;
@@ -1797,7 +1802,7 @@ body {
 .back-btn {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: var(--r-ctl);
   border: 1px solid var(--btn-ghost-border);
   background: var(--btn-ghost-bg);
   color: var(--ink);
@@ -1818,7 +1823,7 @@ body {
 }
 .settings-card {
   background: var(--card);
-  border-radius: 12px;
+  border-radius: var(--r-card);
   padding: 16px;
   margin-bottom: 22px; /* sans cadres, c'est l'ESPACE qui sépare */
   box-shadow: var(--card-shadow);
@@ -1861,7 +1866,7 @@ body {
 .owner-del {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: none;
   background: transparent;
   color: var(--muted);
@@ -1875,7 +1880,7 @@ body {
 .owner-edit {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: none;
   background: transparent;
   font-size: var(--fs-body-s);
@@ -1908,7 +1913,7 @@ body {
   min-width: 0;
   height: 44px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: 0;
   box-shadow: inset 0 0 0 2px transparent;
   transition: box-shadow 0.15s ease, background 0.15s ease;
@@ -2037,6 +2042,15 @@ body {
 .stats {
   padding: 8px 16px 24px;
 }
+/* Puces de filtres actifs quand elles vivent DANS l'onglet Stats (sous l'anecdote
+   et le bouton Tierlists), puis un filet discret avant les statistiques. */
+.stats-chips {
+  margin: 0 0 14px; /* les puces appartiennent à la section STATS (sous le séparateur) */
+}
+.stats-sep {
+  border-top: 1px solid var(--line);
+  margin: 18px 0 14px;
+}
 /* Séparateur « Jeux ↑ / Joueurs ↓ » : trait avec un libellé centré. */
 .stats-divider {
   display: flex;
@@ -2066,7 +2080,7 @@ body {
 }
 .stat-tile {
   background: var(--card);
-  border-radius: 12px;
+  border-radius: var(--r-card);
   padding: 14px 16px;
   box-shadow: var(--card-shadow);
 }
@@ -2156,7 +2170,7 @@ body {
 }
 .stat-block {
   background: var(--card);
-  border-radius: 12px;
+  border-radius: var(--r-card);
   padding: 15px 16px 16px;
   margin-bottom: 14px;
   box-shadow: var(--card-shadow);
@@ -2216,10 +2230,10 @@ body {
   background: var(--nav-pill);
 }
 .podium-table td:first-child {
-  border-radius: 10px 0 0 10px;
+  border-radius: var(--r-ctl) 0 0 var(--r-ctl);
 }
 .podium-table td:last-child {
-  border-radius: 0 10px 10px 0;
+  border-radius: 0 var(--r-ctl) var(--r-ctl) 0;
 }
 /* Couronnes des vainqueurs (lignes de parties, podium, tuile record) : toujours en OR. */
 .hist-winner .ico,
@@ -2304,7 +2318,7 @@ body {
 .cmp-cell {
   width: 34%;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -2497,7 +2511,7 @@ body {
   z-index: 3;
   width: min(340px, 82vw);
   background: var(--card);
-  border-radius: 22px;
+  border-radius: var(--r-sheet);
   padding: 20px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
 }
@@ -2665,7 +2679,7 @@ body {
   position: relative;
   overflow: hidden;
   background: var(--input-bg);
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
 }
 .sk::after {
   content: '';
@@ -2854,13 +2868,13 @@ button { transition: transform 0.12s ease; }
   border: 0;
   padding: 0;
   background: transparent; /* pas de cadre : l'image « flotte » sur le fond, identique clair/sombre */
-  border-radius: 14px;
+  border-radius: var(--r-card);
   overflow: hidden;
   cursor: zoom-in;
 }
 /* Image à sa taille naturelle (pas pleine largeur → moins imposante), plafonnée à 240px de haut,
    CENTRÉE. La boîte épouse l'image (pas de letterbox) → les coins arrondis se voient bien. */
-.detail-hero img { display: block; width: auto; height: auto; max-width: 100%; max-height: 240px; border-radius: 14px; margin: 0 auto; }
+.detail-hero img { display: block; width: auto; height: auto; max-width: 100%; max-height: 240px; border-radius: 5px; margin: 0 auto; } /* comme les jaquettes : l'art est le plus serré */
 .detail-hero-empty {
   height: 150px;
   display: flex;
@@ -2870,7 +2884,7 @@ button { transition: transform 0.12s ease; }
   cursor: default;
   background: var(--soft);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--r-card);
 }
 /* Bulles propriétaires/tags superposées en bas à gauche de l'image, empilées vers le HAUT. */
 .detail-bubbles {
@@ -2886,7 +2900,7 @@ button { transition: transform 0.12s ease; }
 .detail-info {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   padding: 9px 12px;
   display: flex;
   flex-direction: column;
@@ -2907,7 +2921,7 @@ button { transition: transform 0.12s ease; }
   margin-top: 18px;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r-card);
   padding: 12px 14px;
 }
 .detail-poll-head { font-weight: 600; font-size: var(--fs-body-l); margin-bottom: 8px; }
@@ -3023,7 +3037,7 @@ button { transition: transform 0.12s ease; }
   width: 72px; /* surchargé en ligne (largeur dynamique selon le nom) */
   padding: 6px 8px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   background: var(--card);
   color: var(--ink);
   font-weight: 700;
@@ -3042,7 +3056,7 @@ button { transition: transform 0.12s ease; }
   padding: 4px;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   box-shadow: 0 8px 22px rgba(16, 24, 40, 0.18);
   max-height: 220px;
   overflow-y: auto;
@@ -3071,7 +3085,7 @@ button { transition: transform 0.12s ease; }
   align-self: stretch;
   min-height: 42px;
   width: 44px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: 1px solid var(--line);
   background: var(--soft);
   color: var(--muted);
@@ -3089,7 +3103,7 @@ button { transition: transform 0.12s ease; }
   height: 40px;
   padding: 4px;
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   background: var(--input-bg);
   box-shadow: inset 0 0 0 2px transparent;
   transition: box-shadow 0.15s ease, background 0.15s ease; /* même fond que tous les champs (—card rendait la case plus foncée en sombre) */
@@ -3129,7 +3143,7 @@ button { transition: transform 0.12s ease; }
 /* Gagnant : simple rectangle plein, couleur d'accentuation de l'onglet actif. */
 .sheet-winner {
   background: var(--nav-pill);
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
 }
 .sheet-total.sheet-winner {
   color: var(--primary);
@@ -3152,7 +3166,7 @@ button { transition: transform 0.12s ease; }
   align-items: center;
   padding: 11px 12px;
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   background: var(--input-bg);
   box-shadow: inset 0 0 0 2px transparent;
   transition: box-shadow 0.15s ease, background 0.15s ease;
@@ -3171,7 +3185,7 @@ button { transition: transform 0.12s ease; }
 .sheet .ext-row input {
   padding: 11px 12px;
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   background: var(--input-bg);
   box-shadow: inset 0 0 0 2px transparent;
   transition: box-shadow 0.15s ease, background 0.15s ease;
@@ -3179,7 +3193,7 @@ button { transition: transform 0.12s ease; }
   font-size: var(--fs-body);
 }
 .cat-edit {
-  border-radius: 12px;
+  border-radius: var(--r-card);
   padding: 10px;
   margin-bottom: 10px;
   background: var(--soft); /* groupe imbriqué = surface douce, pas un cadre dans un cadre */
@@ -3263,7 +3277,7 @@ button { transition: transform 0.12s ease; }
   width: 100%;
   padding: 11px 12px;
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   background: var(--input-bg);
   box-shadow: inset 0 0 0 2px transparent;
   transition: box-shadow 0.15s ease, background 0.15s ease;
@@ -3327,7 +3341,7 @@ button { transition: transform 0.12s ease; }
   padding: 6px 10px;
   background: transparent;
   border: 1px dashed var(--line);
-  border-radius: 8px;
+  border-radius: var(--r-ctl);
   color: var(--muted);
   font-size: var(--fs-footnote);
   font-weight: 600;
@@ -3352,7 +3366,7 @@ button { transition: transform 0.12s ease; }
   margin-top: 12px;
 }
 .hist-row {
-  border-radius: 12px;
+  border-radius: var(--r-card);
   padding: 10px 12px;
   background: var(--card);
   box-shadow: var(--card-shadow);
@@ -3392,7 +3406,7 @@ button { transition: transform 0.12s ease; }
   align-items: center;
   justify-content: center;
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   background: var(--input-bg);
   box-shadow: inset 0 0 0 2px transparent;
   transition: box-shadow 0.15s ease, background 0.15s ease;
@@ -3418,7 +3432,7 @@ button { transition: transform 0.12s ease; }
   align-items: center;
   justify-content: space-between;
   padding: 5px 9px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   font-size: var(--fs-body);
   color: var(--ink);
 }
@@ -3449,7 +3463,7 @@ button { transition: transform 0.12s ease; }
   width: 100%;
   padding: 11px 12px;
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   background: var(--input-bg);
   box-shadow: inset 0 0 0 2px transparent;
   transition: box-shadow 0.15s ease, background 0.15s ease;
@@ -3465,7 +3479,7 @@ button { transition: transform 0.12s ease; }
   width: 100%;
   padding: 11px 12px;
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   background: var(--input-bg);
   box-shadow: inset 0 0 0 2px transparent;
   transition: box-shadow 0.15s ease, background 0.15s ease;
@@ -3515,7 +3529,7 @@ button { transition: transform 0.12s ease; }
   font-size: var(--fs-body-s);
   padding: 7px 9px;
   border: 0;
-  border-radius: 9px;
+  border-radius: var(--r-ctl);
   background: var(--input-bg);
   color: var(--ink);
   box-shadow: inset 0 0 0 2px transparent;
@@ -3582,7 +3596,7 @@ input[type='number'] {
   width: 40px;
   height: 40px;
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   background: var(--input-bg);
   box-shadow: inset 0 0 0 2px transparent;
   transition: box-shadow 0.15s ease, background 0.15s ease;
@@ -3644,7 +3658,7 @@ input[type='number'] {
   flex-shrink: 0;
   padding: 11px 12px;
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   background: var(--input-bg);
   box-shadow: inset 0 0 0 2px transparent;
   transition: box-shadow 0.15s ease, background 0.15s ease;
@@ -3654,7 +3668,7 @@ input[type='number'] {
 /* Saisie : un bloc par équipe */
 .team-block {
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r-card);
   padding: 12px;
   margin-bottom: 12px;
   background: var(--card);
@@ -3700,7 +3714,7 @@ input[type='number'] {
 /* Historique : une équipe */
 .hist-team {
   padding: 6px 9px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   margin-bottom: 4px;
   color: var(--ink);
 }
@@ -3727,7 +3741,7 @@ input[type='number'] {
   padding: 15px;
   margin-bottom: 16px;
   border: none;
-  border-radius: 14px;
+  border-radius: var(--r-card);
   /* Même dégradé primaire que le FAB / les boutons principaux → DA cohérente, lisible clair+sombre. */
   background: var(--primary);
   color: var(--on-primary);
@@ -3745,7 +3759,7 @@ input[type='number'] {
   padding: 15px;
   margin-bottom: 12px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-card);
   background: var(--card);
   color: var(--ink);
   font-size: var(--fs-body-l);
@@ -3765,7 +3779,7 @@ input[type='number'] {
   justify-content: space-between;
   padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-card);
   background: var(--card);
   color: var(--ink);
   font-size: var(--fs-body-l);
@@ -3800,7 +3814,7 @@ input[type='number'] {
   padding: 0;
   border: none;
   background: var(--soft);
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   font-size: var(--fs-body-l);
   cursor: pointer;
 }
@@ -3811,7 +3825,7 @@ input[type='number'] {
 .tl-done-btn {
   flex-shrink: 0;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   background: var(--primary);
   color: var(--on-primary);
   font-size: var(--fs-body);
@@ -3828,7 +3842,7 @@ input[type='number'] {
   font-weight: 600;
   text-align: center;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: var(--r-card);
   margin-bottom: 8px;
 }
 
@@ -3848,7 +3862,7 @@ input[type='number'] {
   align-items: stretch;
   gap: 4px;
   background: var(--card);
-  border-radius: 8px;
+  border-radius: var(--r-card);
   overflow: hidden;
   min-height: 56px;
   /* Ne pas compresser la ligne dans la colonne flex : elle garde la hauteur de son
@@ -3907,7 +3921,7 @@ input[type='number'] {
   overscroll-behavior: contain;
   padding: 4px 2px calc(8px + env(safe-area-inset-bottom));
 }
-.tl-tray.tl-over { background: var(--accent-soft); border-radius: 8px; }
+.tl-tray.tl-over { background: var(--accent-soft); border-radius: var(--r-card); }
 /* Bac d'édition épinglé en bas → on réserve un espace en bas à droite pour que ses vignettes
    ne passent jamais sous le bouton flottant des filtres (fixé en bas à droite, 52px). */
 .tl-tray-wrap .tl-tray { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
@@ -3941,15 +3955,13 @@ input[type='number'] {
   color: var(--gold-ink);
   margin-bottom: 7px;
 }
-.tl-anec-hero-main { display: flex; align-items: center; gap: 11px; }
-.tl-anec-hero-icon { font-size: 1.7rem; flex-shrink: 0; }
 .tl-anec-hero-text { font-size: var(--fs-body-l); line-height: 1.4; color: var(--ink); font-weight: 500; }
 
 /* Une vignette de jeu. */
 .tl-chip {
   width: 48px;
   height: 48px;
-  border-radius: 7px;
+  border-radius: 5px;
   overflow: hidden;
   background: var(--soft);
   flex-shrink: 0;
@@ -3968,7 +3980,7 @@ input[type='number'] {
   transform: translate(-50%, -50%);
   width: 56px;
   height: 56px;
-  border-radius: 9px;
+  border-radius: var(--r-ctl);
   overflow: hidden;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
   pointer-events: none;
@@ -3984,7 +3996,7 @@ input[type='number'] {
   background: rgba(20, 22, 30, 0.95);
   color: #fff;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: var(--r-ctl);
   font-size: var(--fs-footnote);
   font-weight: 600;
   max-width: 70vw;
@@ -4032,7 +4044,7 @@ input[type='number'] {
 .filters-see {
   flex: 1;
   height: 44px;
-  border-radius: 12px;
+  border-radius: var(--r-ctl);
   font-weight: 700;
   font-size: var(--fs-body);
   cursor: pointer;
@@ -4071,7 +4083,7 @@ input[type='number'] {
   color: inherit;
   cursor: pointer;
   width: 100%;
-  border-radius: 8px;
+  border-radius: var(--r-ctl);
 }
 .bar-row-btn:active { background: var(--soft); }
 
@@ -4123,7 +4135,7 @@ input[type='number'] {
   font-weight: 700;
   font-size: var(--fs-body);
   padding: 9px 14px 9px 9px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   cursor: pointer;
 }
 .entry-back svg { width: 18px; height: 18px; flex-shrink: 0; }
@@ -4186,7 +4198,7 @@ input[type='number'] {
 .pcard {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--r-card);
   padding: 16px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
 }
@@ -4241,7 +4253,7 @@ input[type='number'] {
 .pcard-pm {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   border: 1px solid var(--line);
   background: var(--input-bg);
   color: var(--ink);
@@ -4259,7 +4271,7 @@ input[type='number'] {
   height: 40px;
   text-align: center;
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   background: var(--input-bg);
   box-shadow: inset 0 0 0 2px transparent;
   transition: box-shadow 0.15s ease, background 0.15s ease;
@@ -4299,7 +4311,7 @@ input[type='number'] {
   flex: 1;
   min-width: 0;
   padding: 11px 12px;
-  border-radius: 12px;
+  border-radius: var(--r-ctl);
   border: 1px solid var(--btn-ghost-border);
   background: var(--btn-ghost-bg);
   color: var(--ink);
@@ -4348,7 +4360,7 @@ input[type='number'] {
   background: var(--ink);
   color: var(--card);
   padding: 12px 16px;
-  border-radius: 12px;
+  border-radius: var(--r-card);
   font-size: var(--fs-body);
   font-weight: 600;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
@@ -4380,7 +4392,7 @@ input[type='number'] {
   height: 118px;
   background: #fff;
   padding: 6px;
-  border-radius: 10px;
+  border-radius: var(--r-ctl);
   image-rendering: pixelated; /* QR net, pas flou */
 }
 .share-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
@@ -4395,7 +4407,7 @@ input[type='number'] {
 .share-copy.copied { color: var(--ok-ink); } /* même vert « succès » que .link-copy.copied */
 
 /* Sauvegardes : mise en avant de la plus récente */
-.backup-row.latest { background: var(--accent-soft); border-radius: 10px; padding-left: 8px; padding-right: 8px; }
+.backup-row.latest { background: var(--accent-soft); border-radius: var(--r-ctl); padding-left: 8px; padding-right: 8px; }
 .backup-badge {
   margin-left: 8px;
   font-size: var(--fs-micro);
@@ -4416,7 +4428,7 @@ input[type='number'] {
   flex-direction: column;
   /* Même famille que .modal (feuille montante) → même fond, même arrondi, même ombre. */
   background: var(--card);
-  border-radius: 16px 16px 0 0;
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
   box-shadow: 0 -10px 40px rgba(16, 24, 40, 0.2);
   overflow: hidden;
   animation: kx-sheet-up 0.24s cubic-bezier(0.22, 1, 0.36, 1);

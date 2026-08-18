@@ -696,6 +696,25 @@ export default function App() {
 
   const currentCount = (games ?? []).filter((g) => g.status === listStatus).length
 
+  // Les puces de filtres actifs, prêtes à rendre (au-dessus de la liste, ou dans l'onglet
+  // Stats sous l'anecdote/Tierlists). null s'il n'y a aucune puce.
+  const activeChipsEl =
+    activeChips.length > 0 ? (
+      <div className="active-filters">
+        {activeChips.map((c) => (
+          <button key={c.key} type="button" className="active-chip" onClick={c.remove} aria-label={`Retirer le filtre ${c.label}`}>
+            <span>{c.label}</span>
+            <span className="active-chip-x">×</span>
+          </button>
+        ))}
+      </div>
+    ) : null
+
+  // Compte affiché sur le bouton du menu de filtres. Sur Stats on ne compte QUE la
+  // collection (statsGames inclut la wishlist pour la tuile dédiée → « 75 » là où la
+  // Collection dit « 67 », c'était perçu comme un bug).
+  const filterShownCount = statsOpen ? statsGames.filter((g) => g.status !== 'wishlist').length : visible.length
+
   async function handleSave(formValues) {
     setSaving(true)
     setError(null)
@@ -1298,7 +1317,7 @@ export default function App() {
             className="search"
             type="text"
             enterKeyHint="search"
-            placeholder="Rechercher un jeu…"
+            placeholder="Rechercher"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => {
@@ -1351,25 +1370,15 @@ export default function App() {
       )}
 
       {/* Ligne 2 : les puces de filtres actifs (toutes visibles, elles passent à la ligne).
-          Le compteur de jeux vit désormais sous le titre d'écran. */}
-      {activeChips.length > 0 && (
-        <div className="controls-row2">
-          <div className="active-filters">
-            {activeChips.map((c) => (
-              <button key={c.key} type="button" className="active-chip" onClick={c.remove} aria-label={`Retirer le filtre ${c.label}`}>
-                <span>{c.label}</span>
-                <span className="active-chip-x">×</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+          Le compteur de jeux vit désormais sous le titre d'écran. Sur l'onglet Stats, les
+          puces descendent SOUS l'anecdote et le bouton Tierlists (rendues par <Stats/>). */}
+      {!statsOpen && activeChipsEl && <div className="controls-row2">{activeChipsEl}</div>}
 
       {/* Filtres en MENU FLOTTANT (ouvert par le bouton flottant) : bloque l'arrière-plan. */}
       {showFilters && (
         <FilterSheet
           resetCount={activeFilterCount - (filters.owners.length ? 1 : 0)}
-          visibleLabel={`Voir les ${statsOpen ? statsGames.length : visible.length} jeu${(statsOpen ? statsGames.length : visible.length) > 1 ? 'x' : ''}`}
+          visibleLabel={`Voir les ${filterShownCount} jeu${filterShownCount > 1 ? 'x' : ''}`}
           onReset={resetFilters}
           onClose={() => setShowFilters(false)}
           closeRef={filterCloseRef}
@@ -1394,6 +1403,7 @@ export default function App() {
             playerOverall={playerOverall}
             onOpenTierlists={handleOpenTierlists}
             anecdote={anecShown}
+            chips={activeChipsEl}
             onFilter={(patch, label) => {
               // On applique le filtre SANS changer de vue (les Stats se mettent à jour d'elles-mêmes)
               // et on confirme par un toast.

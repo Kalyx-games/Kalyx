@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { computeStats } from '../lib/stats'
 import SortMenu from './SortMenu'
+import { SparkIcon } from './icons'
 
 // Écran Statistiques : chiffres clés + répartitions en barres horizontales.
 // Tout est calculé sur la COLLECTION (jeux possédés) déjà filtrée par les filtres
@@ -241,7 +242,7 @@ function PlayerSection({ playerOverall }) {
   )
 }
 
-export default function Stats({ games, hasCollection, playerOverall, onOpenTierlists, anecdote, onFilter }) {
+export default function Stats({ games, hasCollection, playerOverall, onOpenTierlists, anecdote, chips, onFilter }) {
   const s = useMemo(() => computeStats(games), [games])
 
   // Aucun jeu de collection à afficher : soit la collection est vraiment vide,
@@ -251,11 +252,10 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
   // Anecdote du jour (issue des tierlists), tout en haut de l'onglet Stats.
   const anecEl = anecdote ? (
     <div className="tl-anec-hero">
-      <div className="tl-anec-hero-label">💡 Le saviez-vous ?</div>
-      <div className="tl-anec-hero-main">
-        <span className="tl-anec-hero-icon">{anecdote.icon}</span>
-        <span className="tl-anec-hero-text">{anecdote.text}</span>
+      <div className="tl-anec-hero-label">
+        <SparkIcon size={12} /> Le saviez-vous ?
       </div>
+      <div className="tl-anec-hero-text">{anecdote.text}</div>
     </div>
   ) : null
 
@@ -266,11 +266,22 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
     </button>
   ) : null
 
+  // En-tête de l'onglet : anecdote + Tierlists, puis un filet discret, puis la section des
+  // statistiques — dont les puces de filtres actifs font partie (elles décrivent ce qui est
+  // compté ci-dessous, elles vivent donc du MÊME côté du séparateur que les stats).
+  const header = (
+    <>
+      {anecEl}
+      {tierBtn}
+      {(anecEl || tierBtn) && <div className="stats-sep" aria-hidden="true" />}
+      {chips ? <div className="stats-chips">{chips}</div> : null}
+    </>
+  )
+
   if (noCollectionShown) {
     return (
       <div className="stats">
-        {anecEl}
-        {tierBtn}
+        {header}
         <div className="empty stats-empty">
           <p className="empty-emoji">📊</p>
           {hasCollection ? (
@@ -293,8 +304,7 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
 
   return (
     <div className="stats">
-      {anecEl}
-      {tierBtn}
+      {header}
       <div className="stat-tiles">
         <Tile value={s.total} label={s.total > 1 ? 'jeux en collection' : 'jeu en collection'} />
         <Tile value={s.wishlistCount} label="en wishlist" />
