@@ -1190,34 +1190,64 @@ export default function App() {
 
   const countLabel = `${visible.length} jeu${visible.length > 1 ? 'x' : ''}`
 
+  // Nom de l'écran courant : sert au grand titre ET au titre condensé de la barre du haut.
+  const screenTitle = settingsOpen
+    ? playersOpen
+      ? 'Joueurs'
+      : 'Réglages'
+    : statsOpen
+      ? 'Statistiques'
+      : view === 'wishlist'
+        ? 'Wishlist'
+        : 'Collection'
+
   // Barre du haut + FAB qui s'effacent en descendant, réapparaissent en remontant
   // (plus de place sur petit écran ; les FAB ne recouvrent plus les cartes du bas).
+  // `scrolled` (dès les premiers pixels) sert au chrome qui s'efface : la barre du haut
+  // n'a un filet — et ne montre le nom de l'écran — que quand du contenu passe dessous.
   const [hideBars, setHideBars] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
     let lastY = window.scrollY
     const onScroll = () => {
       const y = window.scrollY
+      setScrolled(y > 6)
       if (y < 48) { setHideBars(false); lastY = y; return } // tout en haut → toujours visible
       const dy = y - lastY
       if (dy > 6) setHideBars(true)
       else if (dy < -6) setHideBars(false)
       lastY = y
     }
+    onScroll() // état correct dès le montage (restauration d'écran, rechargement en cours de page)
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   return (
-    <div className={`app ${hideBars ? 'bars-hidden' : ''}`}>
+    <div className={`app ${hideBars ? 'bars-hidden' : ''} ${scrolled ? 'scrolled' : ''}`}>
       <header className="topbar">
         <div className="brand">
           <img src="/logo.png" alt="" width="32" height="32" />
-          <span>Kalyx</span>
+          {/* Le nom de l'app cède la place au nom de l'écran dès qu'on défile : le grand
+              titre est alors sorti de l'écran, et « Kalyx » n'apprend rien à personne. */}
+          <span className="brand-swap">
+            <span className="brand-name">Kalyx</span>
+            {/* Redite visuelle du titre de l'écran (déjà annoncé par le <h1> ou l'en-tête
+                de l'écran ouvert) → masqué aux lecteurs d'écran pour ne pas l'énoncer 2×. */}
+            <span className="brand-screen" aria-hidden="true">
+              {screenTitle}
+            </span>
+          </span>
         </div>
         <div className="topbar-right">
-          <span className={`net ${online ? 'net-on' : 'net-off'}`}>
-            <i /> {online ? 'En ligne' : 'Hors ligne'}
-          </span>
+          {/* Un état normal ne s'annonce pas : rien quand tout va bien. Hors ligne, la
+              bannière explicative est déjà là en haut de page → la pastille ne prend le
+              relais qu'une fois qu'on a défilé (sinon l'info s'affiche deux fois). */}
+          {!online && scrolled && (
+            <span className="net net-off">
+              <i /> Hors ligne
+            </span>
+          )}
           <button
             type="button"
             className="icon-btn"
@@ -1303,7 +1333,7 @@ export default function App() {
       {/* Titre d'écran (comme « Ta bibliothèque » chez Spotify) : grand, à gauche, avec le
           compteur en sous-titre discret — l'écran principal n'avait aucun titre avant. */}
       <div className="screen-head">
-        <h1 className="screen-title">{statsOpen ? 'Statistiques' : view === 'wishlist' ? 'Wishlist' : 'Collection'}</h1>
+        <h1 className="screen-title">{screenTitle}</h1>
         {!statsOpen && games !== null && <p className="screen-count">{countLabel}</p>}
       </div>
       {/* Ligne 1 : recherche + tri côte à côte. Le tri est à DROITE de la recherche pour

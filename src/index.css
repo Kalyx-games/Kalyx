@@ -247,10 +247,16 @@ body {
   justify-content: space-between;
   padding: 13px 16px;
   padding-top: max(13px, env(safe-area-inset-top));
-  /* Pas de backdrop-filter : le fond est opaque, le flou serait calculé pour rien. */
-  background: var(--card);
-  border-bottom: 1px solid var(--line);
-  transition: transform 0.25s ease;
+  /* Le chrome s'efface : même fond que la page (la barre ne se voit pas quand on est en
+     haut), opaque quand même car le contenu défile DERRIÈRE. Pas de backdrop-filter :
+     le fond est opaque, le flou serait calculé pour rien. */
+  background: var(--bg);
+  border-bottom: 1px solid transparent;
+  transition: transform 0.25s ease, border-color 0.2s ease;
+}
+/* Filet fin UNIQUEMENT quand du contenu est passé sous la barre. */
+.app.scrolled .topbar {
+  border-bottom-color: var(--line);
 }
 /* En descendant, la barre du haut et les FAB s'effacent (réapparaissent en remontant). */
 .app.bars-hidden .topbar {
@@ -282,11 +288,49 @@ body {
 .brand img {
   border-radius: var(--r-ctl);
 }
+/* Les deux libellés occupent la MÊME cellule : ils se croisent sans décaler le logo. */
+.brand-swap {
+  display: inline-grid;
+  min-width: 0;
+}
+.brand-name,
+.brand-screen {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.brand-screen {
+  opacity: 0;
+  transform: translateY(5px);
+}
+.app.scrolled .brand-name {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+.app.scrolled .brand-screen {
+  opacity: 1;
+  transform: none;
+}
+/* ⚠️ Ce bloc DOIT rester APRÈS les règles animées ci-dessus : une media query n'ajoute
+   aucune spécificité, donc à sélecteur égal c'est l'ordre du fichier qui tranche (placé
+   plus haut, il était purement décoratif). Le chrome apparaît alors sans glissement. */
+@media (prefers-reduced-motion: reduce) {
+  .topbar,
+  .brand-name,
+  .brand-screen {
+    transition: none;
+  }
+  .brand-screen,
+  .app.scrolled .brand-name {
+    transform: none;
+  }
+}
 /* Téléphone ÉTROIT seulement (≤360px : Galaxy base, vieux modèles) : on masque le nom
    « Kalyx » (le logo suffit) pour désencombrer le bandeau. Les téléphones plus larges
-   gardent le nom (Pixel 9a ≈412px, Galaxy S25+ ≈480px, iPhones 375–430px). */
+   gardent le nom (Pixel 9a ≈412px, Galaxy S25+ ≈480px, iPhones 375–430px).
+   Le nom de l'ÉCRAN, lui, reste : il apprend quelque chose, contrairement au nom de l'app. */
 @media (max-width: 360px) {
-  .brand span { display: none; }
+  .brand-name { display: none; }
 }
 
 .net {
@@ -305,19 +349,16 @@ body {
   display: inline-block;
 }
 /* Pastille réseau : tokens (les hex en dur restaient clairs en thème sombre → illisible). */
-.net-on {
-  background: var(--ok-bg);
-  color: var(--ok-ink);
-}
-.net-on i {
-  background: #22c55e; /* point saturé, lisible sur les 2 fonds */
-}
+/* Seul l'état ANORMAL s'affiche (en ligne = rien) → il doit se lire, pas se deviner.
+   Pas de capsule : sur le fond de page, --soft ne se détachait pas (contraste 1,04) et
+   une capsule serait du chrome de plus. Le point ambre + le mot suffisent. */
 .net-off {
-  background: var(--soft);
-  color: var(--muted);
+  background: transparent;
+  padding: 5px 2px;
+  color: var(--ink);
 }
 .net-off i {
-  background: #94a3b8;
+  background: var(--gold-ink);
 }
 
 .topbar-right {
@@ -332,15 +373,15 @@ body {
   width: 38px;
   height: 38px;
   border-radius: var(--r-ctl);
-  border: 1px solid var(--line);
-  background: var(--card);
+  border: 0; /* un cadre autour d'une icône, c'est du chrome : l'icône se voit déjà */
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
 }
 .icon-btn.active {
-  color: var(--primary);
-  border-color: var(--primary);
-  background: var(--accent-soft);
+  /* L'écran ouvert se voit déjà : l'icône passe simplement à l'encre. Un fond --soft ne
+     se distinguait pas du fond de page en thème clair (contraste 1,04). */
+  color: var(--ink);
 }
 .icon-btn:active {
   transform: scale(0.94);
