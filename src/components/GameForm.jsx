@@ -26,6 +26,16 @@ function toForm(game, defaultStatus, prefill) {
 const DIACRITICS = new RegExp('[\\u0300-\\u036f]', 'g')
 const normName = (s) => (s || '').normalize('NFD').replace(DIACRITICS, '').toLowerCase().trim()
 
+// Message de confirmation après l'import BGG d'une extension : dit ce qui a été rempli. Surtout,
+// quand l'extension ne change PAS le nombre de joueurs (cas le plus fréquent : la plage BGG de
+// l'extension = celle du jeu de base), on l'explique → un champ « joueurs ajoutés » vide ne déroute plus.
+function extPickMessage(name, players, best) {
+  if (players && best) return `« ${name} » importée — joueurs ajoutés : ${players} ; idéal ajouté : ${best}.`
+  if (players) return `« ${name} » importée — joueurs ajoutés : ${players}.`
+  if (best) return `« ${name} » importée — idéal ajouté : ${best}. Elle ne change pas le nombre de joueurs.`
+  return `« ${name} » importée — elle ne change ni le nombre de joueurs ni l'idéal.`
+}
+
 export default function GameForm({ game, owners, tags, existingGames = [], saving, onSave, onCancel, onDelete, defaultStatus, prefill, closeRef }) {
   const [form, setForm] = useState(() => toForm(game, defaultStatus, prefill))
   const [playersSet, setPlayersSet] = useState(() =>
@@ -60,7 +70,8 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
   const [bggFilled, setBggFilled] = useState(null) // { name } du jeu importé (pour le message)
   const [bggError, setBggError] = useState('') // message renvoyé par BGG (ex. 202 "prépare la réponse")
   // Recherche BGG d'une EXTENSION, pour la ligne d'extension en cours (une seule à la fois).
-  const [extSearch, setExtSearch] = useState({ id: null, loading: false, results: null, error: '' })
+  // `done` = message de confirmation après un import réussi (null sinon).
+  const [extSearch, setExtSearch] = useState({ id: null, loading: false, results: null, error: '', done: null })
 
   // Glissé-pour-fermer + animation de fermeture (glisse vers le bas).
   const [dragY, setDragY] = useState(0)
@@ -293,13 +304,13 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
   const searchExtBgg = async (rowId, query) => {
     const q = (query || '').trim()
     if (!q) return
-    setExtSearch({ id: rowId, loading: true, results: null, error: '' })
+    setExtSearch({ id: rowId, loading: true, results: null, error: '', done: null })
     try {
       const r = await fetch(`/api/bgg?q=${encodeURIComponent(q)}&type=expansion`)
       const data = await r.json()
-      setExtSearch((s) => (s.id === rowId ? { id: rowId, loading: false, results: Array.isArray(data.results) ? data.results : [], error: data.error || '' } : s))
+      setExtSearch((s) => (s.id === rowId ? { id: rowId, loading: false, results: Array.isArray(data.results) ? data.results : [], error: data.error || '', done: null } : s))
     } catch {
-      setExtSearch((s) => (s.id === rowId ? { id: rowId, loading: false, results: [], error: 'Recherche impossible (pas de connexion ?).' } : s))
+      setExtSearch((s) => (s.id === rowId ? { id: rowId, loading: false, results: [], error: 'Recherche impossible (pas de connexion ?).', done: null } : s))
     }
   }
 
@@ -319,13 +330,16 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
         const addedBest = bestSet.length ? extBest.filter((n) => !bestSet.includes(n)) : []
         const pTxt = countsToText(addedPlayers)
         const bTxt = countsToText(addedBest)
+        const filledName = result.name || d.name || 'Extension'
         setExtList((l) => l.map((x) => (x.id === rowId ? {
           ...x,
           name: result.name || d.name || x.name,
           players: pTxt || x.players, // garde la valeur saisie si BGG n'ajoute rien
           best: bTxt || x.best,
         } : x)))
-        setExtSearch((s) => (s.id === rowId ? { id: null, loading: false, results: null, error: '' } : s))
+        // On garde la ligne « en cours » avec un message de confirmation (dit ce qui a été rempli,
+        // et surtout que l'extension ne change pas le nb de joueurs le cas échéant → champ vide expliqué).
+        setExtSearch((s) => (s.id === rowId ? { id: rowId, loading: false, results: null, error: '', done: extPickMessage(filledName, pTxt, bTxt) } : s))
       } else {
         setExtSearch((s) => (s.id === rowId ? { ...s, loading: false, error: (d && d.error) || 'Extension introuvable sur BoardGameGeek.' } : s))
       }
@@ -627,6 +641,9 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                       )}
                       {!extSearch.error && extSearch.results && extSearch.results.length === 0 && (
                         <div className="price-found price-none"><span>Aucune extension trouvée sur BoardGameGeek.</span></div>
+                      )}
+                      {extSearch.done && (
+                        <div className="price-found"><span>✓ {extSearch.done}</span></div>
                       )}
                     </div>
                   )}
