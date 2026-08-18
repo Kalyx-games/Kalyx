@@ -3393,11 +3393,20 @@ button { transition: transform 0.12s ease; }
   flex-shrink: 0;
   text-align: right;
 }
+/* Coupe présente sur CHAQUE ligne : grisée par défaut, se colore pour le joueur en tête
+   (comme le bouton « vainqueur » des jeux sans points) → elle ne « saute » plus d'un nom à l'autre. */
 .score-crown {
-  width: 22px;
+  width: 24px;
   flex-shrink: 0;
   text-align: center;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
+  filter: grayscale(1);
+  opacity: 0.35;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+.score-crown.on {
+  filter: none;
+  opacity: 1;
 }
 /* Retire les petites flèches haut/bas natives des champs numériques : on tape la valeur,
    elles ne servent à rien ici (et sont minuscules / inutilisables au doigt). */

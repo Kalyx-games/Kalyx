@@ -897,7 +897,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
               {players.map((p, i) => (
                 <div key={p.id} className="coop-player">
                   <div className="coop-player-row score-row">
-                    <span className="score-crown" aria-hidden="true">{anyScore && isTopWinner(p) ? '🏆' : ''}</span>
+                    <span className={`score-crown ${anyScore && isTopWinner(p) ? 'on' : ''}`} aria-hidden="true">🏆</span>
                     <NameField
                       id={p.id}
                       className="input"
