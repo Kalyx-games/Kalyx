@@ -112,11 +112,13 @@ export default async function handler(req, res) {
   }
   const q = (req.query?.q || '').toString().trim()
   const id = (req.query?.id || '').toString().trim()
+  // type=expansion → cherche des EXTENSIONS (boardgameexpansion), sinon des jeux (boardgame).
+  const searchType = (req.query?.type || '').toString().trim() === 'expansion' ? 'boardgameexpansion' : 'boardgame'
 
   try {
-    // --- Recherche : liste de jeux (nom + année) ---
+    // --- Recherche : liste de jeux ou d'extensions (nom + année) ---
     if (q && !id) {
-      const r = await bggFetch(`${BGG}/search?query=${encodeURIComponent(q)}&type=boardgame`, token)
+      const r = await bggFetch(`${BGG}/search?query=${encodeURIComponent(q)}&type=${searchType}`, token)
       // 202 = BGG prépare encore la réponse (après plusieurs essais) → on le dit clairement.
       if (r.status === 202) {
         res.status(200).json({ results: [], error: 'BoardGameGeek prépare la réponse, réessaie dans un instant.' })
@@ -128,7 +130,7 @@ export default async function handler(req, res) {
       }
       const doc = await r.text()
       const results = []
-      const re = /<item type="boardgame" id="(\d+)">([\s\S]*?)<\/item>/gi
+      const re = new RegExp(`<item type="${searchType}" id="(\\d+)">([\\s\\S]*?)<\\/item>`, 'gi')
       let m
       while ((m = re.exec(doc)) && results.length < 300) {
         const name = m[2].match(/<name[^>]*value="([^"]*)"/i)
