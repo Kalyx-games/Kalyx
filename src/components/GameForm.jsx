@@ -26,14 +26,13 @@ function toForm(game, defaultStatus, prefill) {
 const DIACRITICS = new RegExp('[\\u0300-\\u036f]', 'g')
 const normName = (s) => (s || '').normalize('NFD').replace(DIACRITICS, '').toLowerCase().trim()
 
-// Message de confirmation après l'import BGG d'une extension : dit ce qui a été rempli. Surtout,
-// quand l'extension ne change PAS le nombre de joueurs (cas le plus fréquent : la plage BGG de
-// l'extension = celle du jeu de base), on l'explique → un champ « joueurs ajoutés » vide ne déroute plus.
+// Message de confirmation après l'import BGG d'une extension. On dit ce qui a été rempli, et on
+// signale seulement le cas où BoardGameGeek n'a pas l'info (champ resté vide → non déroutant).
 function extPickMessage(name, players, best) {
-  if (players && best) return `« ${name} » importée — joueurs ajoutés : ${players} ; idéal ajouté : ${best}.`
-  if (players) return `« ${name} » importée — joueurs ajoutés : ${players}.`
-  if (best) return `« ${name} » importée — idéal ajouté : ${best}. Elle ne change pas le nombre de joueurs.`
-  return `« ${name} » importée — elle ne change ni le nombre de joueurs ni l'idéal.`
+  if (players && best) return `« ${name} » importée.`
+  if (players) return `« ${name} » importée (BoardGameGeek n'indique pas de nombre idéal).`
+  if (best) return `« ${name} » importée (BoardGameGeek n'indique pas de nombre de joueurs).`
+  return `« ${name} » importée (BoardGameGeek n'a pas d'info sur le nombre de joueurs).`
 }
 
 export default function GameForm({ game, owners, tags, existingGames = [], saving, onSave, onCancel, onDelete, defaultStatus, prefill, closeRef }) {
@@ -314,22 +313,19 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
     }
   }
 
-  // BGG — sélection d'une extension : remplit le nom + les joueurs/idéal AJOUTÉS (ce que
-  // l'extension permet EN PLUS de ce que le jeu de base couvre déjà, d'après ses données actuelles).
-  // ⚠️ On n'ÉCRASE PAS une valeur déjà saisie si BGG n'apporte rien (delta vide : base non
-  // renseignée, extension sans nb de joueurs sur BGG, ou plage incluse dans la base) → `|| x.players`.
+  // BGG — sélection d'une extension : remplit le nom + les PROPRES joueurs/idéal de l'extension
+  // (sa plage complète d'après BGG), dans tous les cas. Le jeu combine ensuite base ∪ extension
+  // (effectivePlayersSet) → l'affichage sur la carte/fiche est le même qu'avec un delta, mais les
+  // deux champs sont TOUJOURS renseignés. ⚠️ Si BGG n'a pas l'info (plage 0-0 / pas de sondage),
+  // on ne remplace PAS une valeur déjà saisie → `|| x.players`.
   const pickExtBgg = async (rowId, result) => {
     setExtSearch((s) => (s.id === rowId ? { ...s, loading: true, error: '' } : s))
     try {
       const r = await fetch(`/api/bgg?id=${result.id}`)
       const d = await r.json()
       if (d && d.found) {
-        const extPlayers = expandRange(d.players_min, d.players_max)
-        const addedPlayers = playersSet.length ? extPlayers.filter((n) => !playersSet.includes(n)) : []
-        const extBest = parseCounts(d.players_best)
-        const addedBest = bestSet.length ? extBest.filter((n) => !bestSet.includes(n)) : []
-        const pTxt = countsToText(addedPlayers)
-        const bTxt = countsToText(addedBest)
+        const pTxt = countsToText(expandRange(d.players_min, d.players_max))
+        const bTxt = countsToText(parseCounts(d.players_best))
         const filledName = result.name || d.name || 'Extension'
         setExtList((l) => l.map((x) => (x.id === rowId ? {
           ...x,
@@ -594,7 +590,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
           {form.status !== 'wishlist' && (
             <div className="field">
               <span className="field-label">🧩 Extensions</span>
-              <p className="field-hint ext-hint">Tape le nom puis <b>Entrée</b> pour la chercher sur BoardGameGeek (remplit le nom + les joueurs ajoutés).</p>
+              <p className="field-hint ext-hint">Tape le nom puis <b>Entrée</b> pour la chercher sur BoardGameGeek (remplit le nom, les joueurs et l'idéal).</p>
               {extList.map((x) => (
                 <div className="ext-item" key={x.id}>
                   <div className="ext-row">
@@ -649,21 +645,21 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                   )}
                   <div className="ext-players-group">
                     <div className="ext-field">
-                      <span className="ext-field-icon" title="Joueurs ajoutés par l'extension" aria-hidden="true">👥</span>
+                      <span className="ext-field-icon" title="Nombre de joueurs avec cette extension" aria-hidden="true">👥</span>
                       <input
                         className="ext-players"
                         value={x.players}
                         onChange={(e) => updateExt(x.id, 'players', e.target.value)}
-                        placeholder="joueurs (ex. 5-6)"
+                        placeholder="joueurs (ex. 2-5)"
                       />
                     </div>
                     <div className="ext-field">
-                      <span className="ext-field-icon" title="Joueurs idéal ajoutés par l'extension" aria-hidden="true">⭐</span>
+                      <span className="ext-field-icon" title="Nombre de joueurs idéal avec cette extension" aria-hidden="true">⭐</span>
                       <input
                         className="ext-players"
                         value={x.best}
                         onChange={(e) => updateExt(x.id, 'best', e.target.value)}
-                        placeholder="idéal (ex. 5)"
+                        placeholder="idéal (ex. 2-3)"
                       />
                     </div>
                   </div>
