@@ -11,7 +11,10 @@
   --btn-ghost-bg: #ffffff; /* fond des boutons secondaires (.btn-ghost) — blanc, ressort sur le fond */
   --btn-ghost-border: #dcdce0;
   --cta-glow: rgba(16, 24, 40, 0.16); /* une ombre est GRISE, jamais colorée */
-  --input-bg: #f7f7f8;
+  /* Élévation des cartes : en clair une ombre douce remplace la bordure ; en sombre les
+     ombres sont invisibles → un liseré lumineux en haut fait « émerger » la surface. */
+  --card-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 5px 14px -10px rgba(16, 24, 40, 0.12); /* courte : dans une liste serrée, une ombre longue fait un « trait » dans le gap */
+  --input-bg: #e9e9ec; /* assez marqué pour se passer de bordure sur une carte blanche */
   --input-focus: #ffffff;
   --accent-soft: #ececef; /* fond doux (surlignages discrets) — neutre désormais */
   --ink: #18181b;
@@ -62,8 +65,9 @@
     --btn-ghost-bg: #26262a;
     --btn-ghost-border: #33333a;
     --cta-glow: rgba(0, 0, 0, 0.5);
-    --input-bg: #202023;
-    --input-focus: #2a2a2e;
+    --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    --input-bg: #26262a; /* se détache de --soft (les groupes imbriqués) sans bordure */
+    --input-focus: #2e2e33;
     --accent-soft: #232326;
     --ink: #f3f3f4;
     --muted: #9b9ba3;
@@ -94,8 +98,9 @@
   --btn-ghost-bg: #26262a;
   --btn-ghost-border: #33333a;
   --cta-glow: rgba(0, 0, 0, 0.5);
-  --input-bg: #202023;
-  --input-focus: #2a2a2e;
+  --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --input-bg: #26262a; /* se détache de --soft (les groupes imbriqués) sans bordure */
+  --input-focus: #2e2e33;
   --accent-soft: #232326;
   --ink: #f3f3f4;
   --muted: #9b9ba3;
@@ -386,9 +391,11 @@ body {
   height: 46px;
   padding: 0 14px;
   border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--card);
+  border: 0;
+  background: var(--input-bg); /* même fond que tous les champs (était le seul sur --card) */
   color: var(--ink);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
   font-size: var(--fs-body-l);
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
@@ -537,9 +544,8 @@ body {
   margin: 8px 16px 0;
   padding: 14px 14px 16px;
   background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+  border-radius: 12px; /* rayons resserrés (les gros arrondis partout = tic des applis IA) */
+  box-shadow: var(--card-shadow);
 }
 .filter-group {
   margin-bottom: 18px;
@@ -960,16 +966,19 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
 .backup-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--input-bg);
+  padding: 11px 2px;
+  border-bottom: 1px solid var(--line);
+}
+.backup-row:last-child,
+.owner-list li:last-child,
+.links .link-row:last-child {
+  border-bottom: 0;
 }
 .backup-info {
   flex: 1;
@@ -998,7 +1007,7 @@ body {
 .list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px; /* sans cadres, un interligne serré lit mieux comme une liste continue */
   /* Les FAB s'effacent au défilement (ils ne recouvrent plus le dernier jeu), et
      l'espace pour la barre du bas est déjà géré par le padding de .app. */
   padding: 10px 16px 16px;
@@ -1023,7 +1032,8 @@ body {
 .swipe-row {
   position: relative;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: 12px;
+  box-shadow: var(--card-shadow); /* l'ombre vit ICI (l'overflow:hidden la couperait sur .game) */
 }
 /* Menu derrière la carte (révélé au glissé) : une ou plusieurs actions côte à côte. */
 .swipe-menu {
@@ -1032,6 +1042,9 @@ body {
   right: 0;
   bottom: 0;
   display: flex;
+  /* la carte .game (transform) est rasterisée au pixel inférieur → sans ce clip,
+     un liseré sous-pixel du menu dépasse sous la carte (visible depuis qu'elle n'a plus de bordure) */
+  clip-path: inset(1px 0);
 }
 .swipe-act {
   height: 100%;
@@ -1094,9 +1107,8 @@ body {
   align-items: start; /* tout le contenu aligné en haut (image, infos) */
   padding: 11px 22px 11px 11px; /* bande droite réservée au chevron */
   background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+  border-radius: 12px; /* rayons resserrés (les gros arrondis partout = tic des applis IA) */
+  box-shadow: var(--card-shadow);
   position: relative;
   z-index: 1;
   transition: transform 0.2s ease;
@@ -1123,7 +1135,7 @@ body {
 .game-thumb {
   width: 66px;
   height: 66px;
-  border-radius: 13px;
+  border-radius: 8px; /* coins serrés à la Netflix : la jaquette redevient une boîte de jeu */
   overflow: hidden;
   background: var(--soft); /* placeholder NEUTRE pendant le chargement (fini le flash violet) */
   display: flex;
@@ -1500,7 +1512,7 @@ body {
 
 .modal {
   background: var(--card);
-  border-radius: 22px 22px 0 0;
+  border-radius: 16px 16px 0 0;
   width: 100%;
   max-width: 640px;
   max-height: 92dvh;
@@ -1592,16 +1604,18 @@ body {
   min-width: 0;
   padding: 11px 12px;
   border-radius: 10px;
-  border: 1px solid var(--line);
+  border: 0;
   background: var(--input-bg);
   color: var(--ink);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
   font-size: var(--fs-body-l);
   font-weight: 400;
 }
 .modal input:focus,
 .modal select:focus {
   outline: none;
-  border-color: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--primary);
   background: var(--input-focus);
 }
 .row2 {
@@ -1706,9 +1720,11 @@ body {
   width: 100%;
   box-sizing: border-box;
   padding: 13px 14px;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: 10px;
   background: var(--input-bg);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
   color: var(--ink);
   font-size: var(--fs-body-l);
   text-align: center;
@@ -1717,7 +1733,7 @@ body {
 }
 .code-input:focus {
   outline: none;
-  border-color: var(--primary); /* recette commune à tous les champs (—input-focus est un FOND) */
+  box-shadow: inset 0 0 0 2px var(--primary);
   background: var(--input-focus);
 }
 .code-err {
@@ -1802,11 +1818,10 @@ body {
 }
 .settings-card {
   background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 16px;
-  margin-bottom: 14px;
-  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+  margin-bottom: 22px; /* sans cadres, c'est l'ESPACE qui sépare */
+  box-shadow: var(--card-shadow);
 }
 .settings-card h3 {
   font-size: var(--fs-body-l);
@@ -1824,17 +1839,15 @@ body {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
   margin-bottom: 12px;
 }
 .owner-list li {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
-  background: var(--input-bg);
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--line); /* lignes à filet partagé, plus de mini-cartes */
   font-weight: 600;
   color: var(--ink);
 }
@@ -1896,7 +1909,9 @@ body {
   height: 44px;
   padding: 0 12px;
   border-radius: 10px;
-  border: 1px solid var(--line);
+  border: 0;
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
   background: var(--input-bg);
   color: var(--ink);
   font-size: var(--fs-body-l);
@@ -1907,7 +1922,7 @@ body {
 .oe-name:focus,
 .oe-initials:focus {
   outline: none;
-  border-color: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--primary);
   background: var(--input-focus);
 }
 .oe-initials {
@@ -1965,16 +1980,14 @@ body {
 .links {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
 .link-row {
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 12px 14px;
-  background: var(--input-bg);
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--line);
   color: var(--ink);
   text-decoration: none;
   font-weight: 600;
@@ -2053,10 +2066,9 @@ body {
 }
 .stat-tile {
   background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 14px 16px;
-  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+  box-shadow: var(--card-shadow);
 }
 .stat-tile-value {
   font-size: var(--fs-display);
@@ -2144,11 +2156,10 @@ body {
 }
 .stat-block {
   background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 15px 16px 16px;
-  margin-bottom: 12px;
-  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+  margin-bottom: 14px;
+  box-shadow: var(--card-shadow);
 }
 .stat-block-title {
   font-size: var(--fs-body-l);
@@ -3077,16 +3088,18 @@ button { transition: transform 0.12s ease; }
   min-width: 72px;
   height: 40px;
   padding: 4px;
-  border: 1px solid var(--line);
+  border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: 10px;
-  background: var(--input-bg); /* même fond que tous les champs (—card rendait la case plus foncée en sombre) */
+  background: var(--input-bg);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease; /* même fond que tous les champs (—card rendait la case plus foncée en sombre) */
   color: var(--ink);
   font-size: var(--fs-body-l);
   text-align: center;
 }
 .sheet-cell:focus {
   outline: none;
-  border-color: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--primary);
   background: var(--input-focus);
 }
 .sheet-add-col {
@@ -3138,9 +3151,11 @@ button { transition: transform 0.12s ease; }
   display: flex;
   align-items: center;
   padding: 11px 12px;
-  border: 1px solid var(--line);
+  border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: 10px;
   background: var(--input-bg);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
   font-weight: 600;
   font-size: var(--fs-body);
   color: var(--ink);
@@ -3155,18 +3170,19 @@ button { transition: transform 0.12s ease; }
 /* ---- Éditeur de fiche de score ---- */
 .sheet .ext-row input {
   padding: 11px 12px;
-  border: 1px solid var(--line);
+  border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: 10px;
   background: var(--input-bg);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
   color: var(--ink);
   font-size: var(--fs-body);
 }
 .cat-edit {
-  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px;
   margin-bottom: 10px;
-  background: var(--card);
+  background: var(--soft); /* groupe imbriqué = surface douce, pas un cadre dans un cadre */
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -3246,9 +3262,11 @@ button { transition: transform 0.12s ease; }
 .cat-edit-ext {
   width: 100%;
   padding: 11px 12px;
-  border: 1px solid var(--line);
+  border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: 10px;
   background: var(--input-bg);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
   color: var(--ink);
   font-size: var(--fs-body);
 }
@@ -3259,7 +3277,7 @@ button { transition: transform 0.12s ease; }
 .team-size:focus,
 .sheet .ext-row input:focus {
   outline: none;
-  border-color: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--primary);
   background: var(--input-focus);
 }
 .cat-edit-label {
@@ -3334,10 +3352,10 @@ button { transition: transform 0.12s ease; }
   margin-top: 12px;
 }
 .hist-row {
-  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px 12px;
   background: var(--card);
+  box-shadow: var(--card-shadow);
 }
 /* Crayon + corbeille groupés à droite de la ligne de partie. */
 .hist-actions {
@@ -3373,9 +3391,11 @@ button { transition: transform 0.12s ease; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--line);
+  border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: 10px;
   background: var(--input-bg);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
   cursor: pointer;
   font-size: var(--fs-body);
 }
@@ -3428,23 +3448,27 @@ button { transition: transform 0.12s ease; }
 .input {
   width: 100%;
   padding: 11px 12px;
-  border: 1px solid var(--line);
+  border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: 10px;
   background: var(--input-bg);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
   color: var(--ink);
   font-size: var(--fs-body);
 }
 .input:focus {
   outline: none;
-  border-color: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--primary);
   background: var(--input-focus);
 }
 .notes-area {
   width: 100%;
   padding: 11px 12px;
-  border: 1px solid var(--line);
+  border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: 10px;
   background: var(--input-bg);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
   color: var(--ink);
   font-size: var(--fs-body);
   font-family: inherit;
@@ -3453,7 +3477,7 @@ button { transition: transform 0.12s ease; }
 }
 .notes-area:focus {
   outline: none;
-  border-color: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--primary);
   background: var(--input-focus);
 }
 .field-opt {
@@ -3490,10 +3514,12 @@ button { transition: transform 0.12s ease; }
   margin-top: 5px;
   font-size: var(--fs-body-s);
   padding: 7px 9px;
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: 9px;
   background: var(--input-bg);
   color: var(--ink);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
 }
 .coop-player .variant-input {
   display: block;
@@ -3507,7 +3533,7 @@ button { transition: transform 0.12s ease; }
 }
 .variant-input:focus {
   outline: none;
-  border-color: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--primary);
   background: var(--input-focus);
 }
 .coop-player-row .sheet-name-wrap {
@@ -3555,9 +3581,11 @@ input[type='number'] {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
-  border: 1px solid var(--line);
+  border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: 10px;
   background: var(--input-bg);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -3615,9 +3643,11 @@ input[type='number'] {
   width: 84px;
   flex-shrink: 0;
   padding: 11px 12px;
-  border: 1px solid var(--line);
+  border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: 10px;
   background: var(--input-bg);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
   color: var(--ink);
   font-size: var(--fs-body);
 }
@@ -4228,9 +4258,11 @@ input[type='number'] {
   width: 58px;
   height: 40px;
   text-align: center;
-  border: 1px solid var(--line);
+  border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: 10px;
   background: var(--input-bg);
+  box-shadow: inset 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
   color: var(--ink);
   font-size: var(--fs-body-l);
   font-weight: 700;
@@ -4238,7 +4270,7 @@ input[type='number'] {
 }
 .pcard-value:focus {
   outline: none;
-  border-color: var(--primary);
+  box-shadow: inset 0 0 0 2px var(--primary);
   background: var(--input-focus);
 }
 .pcard-check {
@@ -4384,7 +4416,7 @@ input[type='number'] {
   flex-direction: column;
   /* Même famille que .modal (feuille montante) → même fond, même arrondi, même ombre. */
   background: var(--card);
-  border-radius: 22px 22px 0 0;
+  border-radius: 16px 16px 0 0;
   box-shadow: 0 -10px 40px rgba(16, 24, 40, 0.2);
   overflow: hidden;
   animation: kx-sheet-up 0.24s cubic-bezier(0.22, 1, 0.36, 1);
