@@ -817,6 +817,8 @@ body {
 }
 .ext-row-x {
   flex-shrink: 0;
+  align-self: stretch; /* toujours la MÊME hauteur que le champ d'à côté (même dans une rangée centrée) */
+  min-height: 42px;
   width: 44px;
   border-radius: 10px;
   border: 1px solid var(--line);
@@ -3005,20 +3007,26 @@ button { transition: transform 0.12s ease; }
 }
 
 /* Extensions choisies dans l'éditeur (liste + retrait). */
+/* Rangée « champ + croix » de l'éditeur (déclencheurs, valeurs de variantes, extensions).
+   ⚠️ Le conteneur est TRANSPARENT (pas de fond/bordure) : c'est le champ à l'intérieur qui
+   porte le style — sinon on obtient un « champ dans un champ » (double fond, halo). */
 .ext-chip-row {
   display: flex;
-  align-items: center;
+  align-items: stretch; /* la croix prend toute la hauteur de la ligne */
   gap: 8px;
-  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+/* Cas « nom d'extension non éditable » : c'est le span qui joue le rôle du champ. */
+.ext-chip-name {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 11px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--input-bg);
-  margin-bottom: 8px;
-}
-.ext-chip-name {
-  flex: 1;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   color: var(--ink);
 }
 
@@ -3030,12 +3038,12 @@ button { transition: transform 0.12s ease; }
 
 /* ---- Éditeur de fiche de score ---- */
 .sheet .ext-row input {
-  padding: 9px 10px;
+  padding: 11px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--input-bg);
   color: var(--ink);
-  font-size: 0.92rem;
+  font-size: 0.95rem;
 }
 .cat-edit {
   border: 1px solid var(--line);
@@ -3114,17 +3122,29 @@ button { transition: transform 0.12s ease; }
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
   opacity: 0.95;
 }
+/* Champs de l'éditeur : MÊME recette que les champs de saisie (.input) — padding, taille,
+   fond, focus — pour que tous les champs de l'app aient exactement la même tête. */
 .cat-edit-label,
 .cat-edit-hint,
 .cat-edit-value,
 .cat-edit-ext {
   width: 100%;
-  padding: 9px 10px;
+  padding: 11px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--input-bg);
   color: var(--ink);
-  font-size: 0.92rem;
+  font-size: 0.95rem;
+}
+.cat-edit-label:focus,
+.cat-edit-hint:focus,
+.cat-edit-value:focus,
+.cat-edit-ext:focus,
+.team-size:focus,
+.sheet .ext-row input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--input-focus);
 }
 .cat-edit-label {
   flex: 1;
@@ -3132,7 +3152,7 @@ button { transition: transform 0.12s ease; }
   font-weight: 600;
 }
 .cat-edit-hint {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
 }
 /* Explication + valeur fixe côte à côte (la valeur reste un petit champ discret). */
 .cat-edit-row2 {
@@ -3143,7 +3163,7 @@ button { transition: transform 0.12s ease; }
 .cat-edit-value {
   width: 104px;
   flex-shrink: 0;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
 }
 /* Barre d'actions TOUJOURS visible en bas (collée pendant le défilement). */
 .sheet-editor-actions {
@@ -3481,7 +3501,7 @@ input[type='number'] {
 .team-size {
   width: 84px;
   flex-shrink: 0;
-  padding: 9px 10px;
+  padding: 11px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--input-bg);
