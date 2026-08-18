@@ -191,11 +191,11 @@ export default function GameDetail({
         {hasSheet ? (
           <>
             {/* Gros bouton « Nouvelle partie » en tête, puis les 4 boutons (grille 2×2). */}
-            <button type="button" className="btn-primary detail-primary" onClick={onNewPlay} disabled={!online}>🎲 Nouvelle partie</button>
+            <button type="button" className="btn-primary detail-primary" onClick={onNewPlay} disabled={!online}>Nouvelle partie</button>
             <div className="detail-grid">
-              <button type="button" className="btn-ghost" onClick={onStats} disabled={!online}>📊 Statistiques</button>
-              <button type="button" className="btn-ghost" onClick={onHistory} disabled={!online}>📚 Historique</button>
-              <button type="button" className="btn-ghost" onClick={onEdit} disabled={!online}>✏️ Modifier le jeu</button>
+              <button type="button" className="btn-ghost" onClick={onStats} disabled={!online}>Statistiques</button>
+              <button type="button" className="btn-ghost" onClick={onHistory} disabled={!online}>Historique</button>
+              <button type="button" className="btn-ghost" onClick={onEdit} disabled={!online}>Modifier le jeu</button>
               {onBgg && (
               <button type="button" className="btn-ghost detail-bgg-btn" onClick={onBgg}>
                 <img
@@ -213,9 +213,9 @@ export default function GameDetail({
           </>
         ) : (
           <>
-            <button type="button" className="btn-primary detail-primary" onClick={onCreateSheet} disabled={!online}>🧮 Créer la fiche de score</button>
+            <button type="button" className="btn-primary detail-primary" onClick={onCreateSheet} disabled={!online}>Créer la fiche de score</button>
             <div className="detail-grid">
-              <button type="button" className="btn-ghost" onClick={onEdit} disabled={!online}>✏️ Modifier le jeu</button>
+              <button type="button" className="btn-ghost" onClick={onEdit} disabled={!online}>Modifier le jeu</button>
               {onBgg && (
               <button type="button" className="btn-ghost detail-bgg-btn" onClick={onBgg}>
                 <img
@@ -237,7 +237,7 @@ export default function GameDetail({
       {poll && (
         <div className="detail-poll">
           <div className="detail-poll-head">
-            🗳️ Nombre de joueurs
+            Nombre de joueurs
             {poll.total ? <span className="detail-poll-total"> · {poll.total} votes</span> : null}
           </div>
           {/* Légende en toutes lettres (pas d'abréviation ambiguë), puis le tableau :
@@ -278,7 +278,7 @@ export default function GameDetail({
       {/* Sondage cherché mais sans aucun vote sur BGG → on l'indique (uniquement dans ce cas). */}
       {!poll && pollSearched && (
         <div className="detail-poll">
-          <div className="detail-poll-head">🗳️ Nombre de joueurs</div>
+          <div className="detail-poll-head">Nombre de joueurs</div>
           <p className="detail-poll-none">Aucun sondage sur BoardGameGeek pour ce jeu.</p>
         </div>
       )}

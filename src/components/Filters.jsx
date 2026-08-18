@@ -1,4 +1,5 @@
 import RangeSlider from './RangeSlider'
+import { PlayersIcon, ClockIcon, BarsIcon } from './icons'
 import PlayerPicker from './PlayerPicker'
 
 // Panneau de filtres repliable de la Collection.
@@ -50,7 +51,7 @@ export default function Filters({ owners, tags, filters, setFilters, showPrice, 
       )}
 
       <div className="filter-group">
-        <span className="filter-label">👥 Nombre de joueurs</span>
+        <span className="filter-label"><PlayersIcon size={14} /> Nombre de joueurs</span>
         <PlayerPicker value={filters.players} onChange={setPlayers} />
         <label className="filter-check">
           <input type="checkbox" checked={filters.playerOptimal} onChange={toggleOptimal} />
@@ -59,7 +60,7 @@ export default function Filters({ owners, tags, filters, setFilters, showPrice, 
       </div>
 
       <div className="filter-group">
-        <span className="filter-label">🕑 Durée</span>
+        <span className="filter-label"><ClockIcon size={14} /> Durée</span>
         <div className="chips">
           {DURATIONS.map((d) => (
             <button type="button" key={d.value} className={`fchip ${filters.duration === d.value ? 'on' : ''}`} onClick={() => setDuration(d.value)}>
@@ -71,13 +72,13 @@ export default function Filters({ owners, tags, filters, setFilters, showPrice, 
 
       {showPrice && (
         <div className="filter-group">
-          <span className="filter-label">💶 Prix</span>
+          <span className="filter-label">Prix</span>
           <RangeSlider min={0} max={150} step={5} value={filters.priceRange} onChange={setPriceRange} format={fmtPrice} />
         </div>
       )}
 
       <div className="filter-group">
-        <span className="filter-label">🧠 Complexité</span>
+        <span className="filter-label"><BarsIcon size={14} /> Complexité</span>
         <div className="chips">
           {COMPLEXITIES.map((c) => (
             <button type="button" key={c.value} className={`fchip ${filters.complexity.includes(c.value) ? 'on' : ''}`} onClick={() => toggleComplexity(c.value)}>
@@ -89,7 +90,7 @@ export default function Filters({ owners, tags, filters, setFilters, showPrice, 
 
       {showTags && tags.length > 0 && (
         <div className="filter-group">
-          <span className="filter-label">🏷️ Tags</span>
+          <span className="filter-label">Tags</span>
           <div className="chips">
             {tags.map((t) => (
               <button type="button" key={t} className={`fchip ${filters.tags.includes(t) ? 'on' : ''}`} onClick={() => toggleTag(t)}>

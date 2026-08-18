@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BackIcon } from './icons'
+import { BackIcon, DieIcon, CheckIcon } from './icons'
 
 // Écran « Joueurs » : la liste de tous les joueurs enregistrés (toutes parties, tous
 // jeux). Renommer ici met le nom à jour PARTOUT — pratique pour corriger une faute de
@@ -35,7 +35,7 @@ export default function PlayersManager({ roster, busy, online, onRename, onClose
     <div className="settings" onKeyDown={onKeyDown}>
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
-        <h2>👥 Joueurs</h2>
+        <h2>Joueurs</h2>
       </div>
 
       <section className="settings-card">
@@ -62,7 +62,7 @@ export default function PlayersManager({ roster, busy, online, onRename, onClose
                       onChange={(e) => setValue(p.name, e.target.value)}
                       aria-label={`Nom de ${p.name}`}
                     />
-                    <span className="player-count">{p.games} 🎮</span>
+                    <span className="player-count">{p.games} <DieIcon size={13} /></span>
                     {/* Le bouton n'apparaît qu'une fois le nom modifié → rien à confirmer sinon. */}
                     {changed && (
                       <button
@@ -71,7 +71,7 @@ export default function PlayersManager({ roster, busy, online, onRename, onClose
                         onClick={() => rename(p)}
                         disabled={busy || !online}
                       >
-                        {busy ? '…' : '✓'}
+                        {busy ? '…' : <CheckIcon size={15} />}
                       </button>
                     )}
                   </div>

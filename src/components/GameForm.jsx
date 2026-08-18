@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import PlayerPicker from './PlayerPicker'
+import { PlayersIcon, StarIcon, ExtIcon, PlusIcon, TrashIcon } from './icons'
 import { CollectionIcon, WishlistIcon } from './icons'
 import { expandRange, parseCounts, countsToText, parseOwners, ownersToText, parseTags, tagsToText, parseExtensions, serializeExtensions } from '../lib/games'
 import { philibertSearchUrl } from '../lib/philibert'
@@ -409,7 +410,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
             <h2>{isEdit ? 'Modifier le jeu' : 'Ajouter un jeu'}</h2>
             {isEdit && onDelete && (
               <button type="button" className="modal-del" onClick={onDelete} disabled={saving} title="Supprimer ce jeu" aria-label="Supprimer ce jeu">
-                🗑️
+                <TrashIcon size={18} />
               </button>
             )}
           </div>
@@ -489,7 +490,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
 
           {form.status !== 'wishlist' && (
             <div className="field">
-              <span className="field-label">🏷️ Tags</span>
+              <span className="field-label">Tags</span>
               {tagChoices.length > 0 ? (
                 <div className="chips">
                   {tagChoices.map((t) => (
@@ -506,7 +507,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
 
           {form.status === 'wishlist' && (
             <div className="field">
-              <span className="field-label">💶 Prix (€)</span>
+              <span className="field-label">Prix (€)</span>
               <div className="price-row">
                 <div className="input-clear price-input">
                   <input type="number" inputMode="decimal" step="0.01" min="0" value={form.price} onChange={set('price')} placeholder="ex. 39.90" />
@@ -541,22 +542,22 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
           )}
 
           <div className="field">
-            <span className="field-label">👥 Nombre de joueurs</span>
+            <span className="field-label"><PlayersIcon size={13} /> Nombre de joueurs</span>
             <PlayerPicker value={playersSet} onChange={setPlayersSet} />
           </div>
 
           <div className="field">
-            <span className="field-label">⭐ Nombre de joueurs idéal</span>
+            <span className="field-label"><StarIcon size={13} /> Nombre de joueurs idéal</span>
             <PlayerPicker value={bestSet} onChange={setBestSet} />
           </div>
 
           <div className="row2">
             <label>
-              🕑 Durée (min)
+              Durée (min)
               <input type="number" inputMode="numeric" min="0" value={form.duration} onChange={set('duration')} placeholder="ex. 45" />
             </label>
             <label>
-              🧠 Complexité (1 à 5)
+              Complexité (1 à 5)
               <input type="number" inputMode="decimal" step="any" min="1" max="5" value={form.complexity} onChange={set('complexity')} placeholder="ex. 2.7" />
             </label>
           </div>
@@ -589,7 +590,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
 
           {form.status !== 'wishlist' && (
             <div className="field">
-              <span className="field-label">🧩 Extensions</span>
+              <span className="field-label"><ExtIcon size={13} /> Extensions</span>
               <p className="field-hint ext-hint">Tape le nom puis <b>Entrée</b> pour la chercher sur BoardGameGeek (remplit le nom, les joueurs et l'idéal).</p>
               {extList.map((x) => (
                 <div className="ext-item" key={x.id}>
@@ -666,7 +667,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                 </div>
               ))}
               <button type="button" className="btn-ghost btn-add ext-add-btn" onClick={addExtRow}>
-                ➕ Ajouter une extension
+                <PlusIcon size={14} /> Ajouter une extension
               </button>
             </div>
           )}

@@ -159,7 +159,7 @@ function PlayerSection({ playerOverall }) {
   const current = list.find((p) => p.name === selected) || list[0] // défaut : le + de parties
   return (
     <section className="stat-block">
-      <h3 className="stat-block-title">🏆 Bilan d'un joueur</h3>
+      <h3 className="stat-block-title">Bilan d'un joueur</h3>
       <SortMenu
         value={current.name}
         options={list.map((p) => ({ value: p.name, label: p.name }))}
@@ -190,7 +190,7 @@ function PlayerSection({ playerOverall }) {
 
       {/* Comparaison de deux entités (un joueur, les réguliers, ou tout le monde),
           même principe que le comparatif d'un jeu. */}
-      <h3 className="stat-block-title" style={{ marginTop: 18 }}>⚖️ Comparaison</h3>
+      <h3 className="stat-block-title" style={{ marginTop: 18 }}>Comparaison</h3>
       <div className="cmp-heads">
         <SortMenu
           value={cmpLeft}
@@ -262,7 +262,7 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
   // Grand bouton d'accès aux tierlists (toujours en haut de l'onglet Stats).
   const tierBtn = onOpenTierlists ? (
     <button type="button" className="tl-open-btn" onClick={onOpenTierlists}>
-      🏆 Tierlists
+      Tierlists
     </button>
   ) : null
 
@@ -319,7 +319,7 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
       </div>
 
       <BarBlock
-        title="👥 Par nombre de joueurs"
+        title="Par nombre de joueurs"
         color={PLAYERS_COLOR}
         empty="Aucune donnée de joueurs."
         rows={s.byPlayers.map((r) => ({ key: r.n, label: r.label, count: r.count }))}
@@ -327,7 +327,7 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
       />
 
       <BarBlock
-        title="⭐ Par nombre de joueurs idéal"
+        title="Par nombre de joueurs idéal"
         color={OPTIMAL_COLOR}
         empty="Aucun nombre idéal renseigné."
         rows={s.byOptimalPlayers.map((r) => ({ key: r.n, label: r.label, count: r.count }))}
@@ -335,14 +335,14 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
       />
 
       <BarBlock
-        title="🕑 Par durée"
+        title="Par durée"
         color={DURATION_COLOR}
         empty="Aucune durée renseignée."
         rows={s.byDuration.map((r) => ({ key: r.label, label: r.label, count: r.count }))}
       />
 
       <BarBlock
-        title="🧠 Par complexité"
+        title="Par complexité"
         color={COMPLEXITY_COLOR}
         empty="Aucune complexité renseignée."
         rows={s.byComplexity.map((r) => ({ key: r.label, label: r.label, sub: r.hint, count: r.count, bucket: CX_LABEL_TO_BUCKET[r.label] }))}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { CheckIcon } from './icons'
 
 // Menu de tri "maison" : un bouton propre qui ouvre une petite liste d'options
 // (le menu déroulant natif <select> était peu esthétique).
@@ -44,7 +45,7 @@ export default function SortMenu({ value, options, onChange, arrows = true }) {
                 }}
               >
                 {o.label}
-                {o.value === value ? <span className="check">✓</span> : null}
+                {o.value === value ? <span className="check"><CheckIcon size={14} /></span> : null}
               </button>
             </li>
           ))}

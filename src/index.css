@@ -3508,14 +3508,15 @@ button { transition: transform 0.12s ease; }
 .score-crown {
   width: 24px;
   flex-shrink: 0;
-  text-align: center;
-  font-size: 1.1rem;
-  filter: grayscale(1);
-  opacity: 0.35;
-  transition: opacity 0.15s ease, filter 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted); /* couronne SVG : grise au repos… */
+  opacity: 0.45;
+  transition: opacity 0.15s ease, color 0.15s ease;
 }
 .score-crown.on {
-  filter: none;
+  color: var(--gold); /* …OR pour le meneur */
   opacity: 1;
 }
 /* Retire les petites flèches haut/bas natives des champs numériques : on tape la valeur,
@@ -3537,14 +3538,15 @@ input[type='number'] {
   border-radius: 10px;
   background: var(--input-bg);
   cursor: pointer;
-  font-size: 1.15rem;
-  filter: grayscale(1);
-  opacity: 0.4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  opacity: 0.55;
 }
 .win-toggle.on {
-  background: var(--nav-pill);
-  border-color: var(--primary);
-  filter: none;
+  border-color: var(--gold);
+  color: var(--gold);
   opacity: 1;
 }
 .win-toggle:active {

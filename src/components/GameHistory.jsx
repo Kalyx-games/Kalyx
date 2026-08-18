@@ -299,11 +299,11 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
   // Étiquettes des filtres actifs (retirables d'un tap), affichées en haut — comme la collection.
   const activeChips = useMemo(() => {
     const chips = []
-    filters.players.forEach((n) => chips.push({ key: 'p:' + n, label: '👤 ' + n, remove: () => setFilters((f) => ({ ...f, players: f.players.filter((x) => x !== n) })) }))
-    if (filters.period !== 'all') chips.push({ key: 'period', label: filters.period === 'month' ? '📅 Ce mois-ci' : '📅 Cette année', remove: () => setFilters((f) => ({ ...f, period: 'all' })) })
-    filters.extensions.forEach((e) => chips.push({ key: 'e:' + e, label: '🧩 ' + e, remove: () => setFilters((f) => ({ ...f, extensions: f.extensions.filter((x) => x !== e) })) }))
-    filters.scenarios.forEach((s) => chips.push({ key: 's:' + s, label: '🎯 ' + s, remove: () => setFilters((f) => ({ ...f, scenarios: f.scenarios.filter((x) => x !== s) })) }))
-    filters.counts.forEach((c) => chips.push({ key: 'c:' + c, label: '👥 ' + c, remove: () => setFilters((f) => ({ ...f, counts: f.counts.filter((x) => x !== c) })) }))
+    filters.players.forEach((n) => chips.push({ key: 'p:' + n, label: n, remove: () => setFilters((f) => ({ ...f, players: f.players.filter((x) => x !== n) })) }))
+    if (filters.period !== 'all') chips.push({ key: 'period', label: filters.period === 'month' ? 'Ce mois-ci' : 'Cette année', remove: () => setFilters((f) => ({ ...f, period: 'all' })) })
+    filters.extensions.forEach((e) => chips.push({ key: 'e:' + e, label: e, remove: () => setFilters((f) => ({ ...f, extensions: f.extensions.filter((x) => x !== e) })) }))
+    filters.scenarios.forEach((s) => chips.push({ key: 's:' + s, label: s, remove: () => setFilters((f) => ({ ...f, scenarios: f.scenarios.filter((x) => x !== s) })) }))
+    filters.counts.forEach((c) => chips.push({ key: 'c:' + c, label: c + ' j.', remove: () => setFilters((f) => ({ ...f, counts: f.counts.filter((x) => x !== c) })) }))
     return chips
   }, [filters])
   // Chips extension = celles réellement utilisées dans les parties (filtrer sur une
@@ -318,7 +318,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2 className="sheet-title">{isPlaysView ? '🗓️' : '📊'} {game?.name}</h2>
         {onEditSheet && (
-          <button type="button" className="back-btn sheet-edit-btn" onClick={onEditSheet} disabled={!online} title={online ? 'Modifier la fiche de score' : 'Indisponible hors ligne'} aria-label="Modifier la fiche de score">✏️</button>
+          <button type="button" className="back-btn sheet-edit-btn" onClick={onEditSheet} disabled={!online} title={online ? 'Modifier la fiche de score' : 'Indisponible hors ligne'} aria-label="Modifier la fiche de score"><PencilIcon size={18} /></button>
         )}
       </div>
 
@@ -467,7 +467,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
               alignées + scroll latéral sur petit écran (aucune info coupée). */}
           {stats.byPlayer.length > 0 && (
             <section className="stat-block">
-              <h3 className="stat-block-title">🏆 Joueurs</h3>
+              <h3 className="stat-block-title">Joueurs</h3>
               <div className="table-scroll">
                 <table className="stat-table podium-table">
                   <thead>
@@ -508,7 +508,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
           {/* Taux de victoire par scénario (jeux coopératifs à scénarios/niveaux). */}
           {isCoop && stats.byScenario.length > 0 && (
             <section className="stat-block">
-              <h3 className="stat-block-title">🎯 Victoires par scénario</h3>
+              <h3 className="stat-block-title">Victoires par scénario</h3>
               <div className="scenario-bars">
                 {stats.byScenario.map((s) => (
                   <div key={s.scenario} className="scenario-row">
@@ -528,7 +528,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
           {/* Répartition des victoires par déclencheur (jeux à victoire directe). */}
           {stats.byTrigger.length > 0 && (
             <section className="stat-block">
-              <h3 className="stat-block-title">🏁 Fins de partie</h3>
+              <h3 className="stat-block-title">Fins de partie</h3>
               <div className="scenario-bars">
                 {stats.byTrigger.map((t) => {
                   const maxC = stats.byTrigger[0].count || 1
@@ -625,7 +625,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
               Absorbe les stats par catégorie (moyenne en gros, min–max en dessous). */}
           {allPlayerNames.length > 0 && (
             <section className="stat-block">
-              <h3 className="stat-block-title">⚖️ Comparaison</h3>
+              <h3 className="stat-block-title">Comparaison</h3>
               <div className="cmp-heads">
                 <SortMenu
                   value={cmpLeft}
@@ -718,10 +718,10 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                           ligne elle-même n'édite plus. */}
                       <span className="hist-actions">
                         {onEditPlay && (
-                          <button type="button" className="hist-del" onClick={() => onEditPlay(pl)} disabled={!online} title={online ? 'Modifier cette partie' : 'Indisponible hors ligne'} aria-label="Modifier cette partie">✏️</button>
+                          <button type="button" className="hist-del" onClick={() => onEditPlay(pl)} disabled={!online} title={online ? 'Modifier cette partie' : 'Indisponible hors ligne'} aria-label="Modifier cette partie"><PencilIcon size={15} /></button>
                         )}
                         {onDeletePlay && (
-                          <button type="button" className="hist-del" onClick={() => onDeletePlay(pl)} disabled={!online} title={online ? 'Supprimer cette partie' : 'Indisponible hors ligne'} aria-label="Supprimer cette partie">🗑️</button>
+                          <button type="button" className="hist-del" onClick={() => onDeletePlay(pl)} disabled={!online} title={online ? 'Supprimer cette partie' : 'Indisponible hors ligne'} aria-label="Supprimer cette partie"><TrashIcon size={15} /></button>
                         )}
                       </span>
                     </div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BackIcon } from './icons'
+import { BackIcon, PlayersIcon, ExtIcon, FlagIcon, CrownIcon, PlusIcon, PencilIcon } from './icons'
 import { parseExtensions, effectivePlayersSet } from '../lib/games'
 import { resolveDefaultExts } from '../lib/scoresheets'
 import NameField from './NameField'
@@ -420,7 +420,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const canSaveTeams = noPoints
     ? teams.some((t) => teamUsed(t) && t.win)
     : teams.some((t) => teamUsed(t) && t.score.trim() !== '')
-  const saveLabel = isEdit ? '💾 Enregistrer les modifications' : '💾 Enregistrer la partie'
+  const saveLabel = isEdit ? 'Enregistrer les modifications' : 'Enregistrer la partie'
 
   // Départage d'égalité + barre d'enregistrement du compétitif à points : réutilisés par le
   // récapitulatif (multi-pages) ET par la page unique (un seul item / un seul joueur → pas de récap).
@@ -428,7 +428,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     tiedPlayers.length >= 2 && instantWinnerId == null ? (
       <div className="coop-form">
         <div className="field">
-          <label className="field-label">🤝 Égalité — vainqueur <span className="field-opt">(départage secondaire)</span></label>
+          <label className="field-label">Égalité — vainqueur <span className="field-opt">(départage secondaire)</span></label>
           <div className="chips">
             {tiedPlayers.map((p) => (
               <button
@@ -437,7 +437,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                 className={`fchip ${forcedWinner === p.id ? 'on' : ''}`}
                 onClick={() => setForcedWinnerId((cur) => (cur === p.id ? null : p.id))}
               >
-                🏆 {nameOf(p, players.indexOf(p))}
+                <CrownIcon size={14} /> {nameOf(p, players.indexOf(p))}
               </button>
             ))}
           </div>
@@ -456,7 +456,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
             const total = totals[players.indexOf(leaders[0])]
             return (
               <div className="sheet-leader">
-                🏆 {leaders.map((p) => nameOf(p, players.indexOf(p))).join(', ')} · <b>{total}</b>
+                <CrownIcon size={14} /> {leaders.map((p) => nameOf(p, players.indexOf(p))).join(', ')} · <b>{total}</b>
               </div>
             )
           })()}
@@ -472,7 +472,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2 className="sheet-title">{game?.name}{isEdit ? ' — modifier' : ''}</h2>
         {onEdit && !isEdit && (
-          <button type="button" className="back-btn sheet-edit-btn" onClick={onEdit} title="Modifier la fiche" aria-label="Modifier la fiche">✏️</button>
+          <button type="button" className="back-btn sheet-edit-btn" onClick={onEdit} title="Modifier la fiche" aria-label="Modifier la fiche"><PencilIcon size={18} /></button>
         )}
       </div>
     </>
@@ -501,7 +501,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
   const scenarioField = wantScenario && (
     <div className="field">
-      <label className="field-label">🎯 Scénario / niveau <span className="field-opt">(facultatif)</span></label>
+      <label className="field-label">Scénario / niveau <span className="field-opt">(facultatif)</span></label>
       <NameField
         id="scenario"
         className="input"
@@ -518,7 +518,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
   const notesField = (
     <div className="field">
-      <label className="field-label">📝 Notes</label>
+      <label className="field-label">Notes</label>
       <textarea
         className="notes-area"
         value={notes}
@@ -579,7 +579,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   }, [step])
   const triggerField = showTrigger && (
     <div className="field">
-      <label className="field-label">🏁 {isCoop ? 'Comment le groupe a gagné' : 'Comment le jeu a été gagné'} <span className="field-opt">(facultatif)</span></label>
+      <label className="field-label"><FlagIcon size={13} /> {isCoop ? 'Comment le groupe a gagné' : 'Comment le jeu a été gagné'} <span className="field-opt">(facultatif)</span></label>
       <div className="chips">
         {triggers.map((t) => (
           <button key={t} type="button" className={`fchip ${instantTrigger === t ? 'on' : ''}`} onClick={() => setInstantTrigger((cur) => (cur === t ? null : t))}>{t}</button>
@@ -591,11 +591,11 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // Section « victoire directe » (branche AU SCORE individuelle : on désigne un joueur).
   const instantField = hasInstant && !isCoop && !isTeams && !noPoints && (
     <div className="field">
-      <label className="field-label">🏁 Victoire directe ? <span className="field-opt">(sinon au score)</span></label>
+      <label className="field-label"><FlagIcon size={13} /> Victoire directe ? <span className="field-opt">(sinon au score)</span></label>
       <div className="chips">
         {players.map((p, i) => (
           <button key={p.id} type="button" className={`fchip ${instantWinnerId === p.id ? 'on' : ''}`} onClick={() => setInstantWinnerId((cur) => (cur === p.id ? null : p.id))}>
-            🏆 {nameOf(p, i)}
+            <CrownIcon size={14} /> {nameOf(p, i)}
           </button>
         ))}
       </div>
@@ -632,7 +632,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // Champ UNIQUE quand la variante vaut pour toute la partie (ex. la carte de Toy Battle).
   const playVariantField = variantPerPlay ? (
     <div className="field">
-      <label className="field-label">🎭 {playVariantCfg.label}</label>
+      <label className="field-label">{playVariantCfg.label}</label>
       <NameField
         id="playVariant"
         className="input"
@@ -661,7 +661,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                 aria-label="Désigner vainqueur"
                 title="Vainqueur"
               >
-                🏆
+                <CrownIcon size={17} />
               </button>
             )}
             <NameField
@@ -683,7 +683,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         </div>
       ))}
       {players.length < maxP && (
-        <button type="button" className="btn-ghost btn-add coop-add" onClick={addPlayer}>➕ Ajouter un joueur</button>
+        <button type="button" className="btn-ghost btn-add coop-add" onClick={addPlayer}><PlusIcon size={14} /> Ajouter un joueur</button>
       )}
     </div>
   )
@@ -697,8 +697,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           <div className="field">
             <label className="field-label">Résultat</label>
             <div className="chips">
-              <button type="button" className={`fchip coop-win ${outcome === 'win' ? 'on' : ''}`} onClick={() => setOutcome('win')}>🏆 Gagné</button>
-              <button type="button" className={`fchip coop-loss ${outcome === 'loss' ? 'on' : ''}`} onClick={() => setOutcome('loss')}>💀 Perdu</button>
+              <button type="button" className={`fchip coop-win ${outcome === 'win' ? 'on' : ''}`} onClick={() => setOutcome('win')}>Gagné</button>
+              <button type="button" className={`fchip coop-loss ${outcome === 'loss' ? 'on' : ''}`} onClick={() => setOutcome('loss')}>Perdu</button>
             </div>
           </div>
           {triggerField}
@@ -707,7 +707,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           {/* Score du groupe, détaillé par catégorie (total = somme). */}
           {!noPoints && (
             <div className="field">
-              <label className="field-label">🔢 Score du groupe <span className="field-opt">(facultatif)</span></label>
+              <label className="field-label">Score du groupe <span className="field-opt">(facultatif)</span></label>
               <table className="sheet-table">
                 <tbody>
                   {visibleCats.map((c) => (
@@ -718,7 +718,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                           {c.value != null ? <span className="sheet-cat-val">{c.value > 0 ? `+${c.value}` : c.value}</span> : null}
                         </span>
                         {c.hint ? <span className="sheet-cat-hint">{c.hint}</span> : null}
-                        {c.ext ? <span className="sheet-cat-ext">🧩 {c.ext}</span> : null}
+                        {c.ext ? <span className="sheet-cat-ext"><ExtIcon size={11} /> {c.ext}</span> : null}
                       </th>
                       <td>
                         {c.value != null ? (
@@ -751,7 +751,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
             </div>
           )}
           <div className="field">
-            <label className="field-label">👥 Joueurs présents</label>
+            <label className="field-label"><PlayersIcon size={13} /> Joueurs présents</label>
             {playerList(false)}
           </div>
           {notesField}
@@ -787,7 +787,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                     onClick={() => toggleTeamWin(t.id)}
                     aria-label="Équipe gagnante"
                     title={noPoints ? 'Équipe gagnante' : 'Victoire directe de cette équipe'}
-                  >🏆</button>
+                  ><CrownIcon size={17} /></button>
                 )}
                 {predefined ? (
                   <span className="team-name-fixed">{t.name || `Équipe ${ti + 1}`}</span>
@@ -833,13 +833,13 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                   </div>
                 ))}
                 {(!t.size || t.players.length < t.size) && t.players.length < 8 && (
-                  <button type="button" className="btn-ghost btn-add coop-add" onClick={() => addMember(t.id)}>➕ Ajouter un joueur</button>
+                  <button type="button" className="btn-ghost btn-add coop-add" onClick={() => addMember(t.id)}><PlusIcon size={14} /> Ajouter un joueur</button>
                 )}
               </div>
             </div>
           ))}
           {!predefined && teams.length < 8 && (
-            <button type="button" className="btn-ghost btn-add team-add" onClick={addTeam}>➕ Ajouter une équipe</button>
+            <button type="button" className="btn-ghost btn-add team-add" onClick={addTeam}><PlusIcon size={14} /> Ajouter une équipe</button>
           )}
           {notesField}
         </div>
@@ -864,7 +864,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           {triggerField}
           {playVariantField}
           <div className="field">
-            <label className="field-label">Joueurs — coche le(s) vainqueur(s) 🏆</label>
+            <label className="field-label">Joueurs — coche le(s) vainqueur(s)</label>
             {playerList(true)}
           </div>
           {notesField}
@@ -897,7 +897,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
               {players.map((p, i) => (
                 <div key={p.id} className="coop-player">
                   <div className="coop-player-row score-row">
-                    <span className={`score-crown ${anyScore && isTopWinner(p) ? 'on' : ''}`} aria-hidden="true">🏆</span>
+                    <span className={`score-crown ${anyScore && isTopWinner(p) ? 'on' : ''}`} aria-hidden="true"><CrownIcon size={16} /></span>
                     <NameField
                       id={p.id}
                       className="input"
@@ -925,7 +925,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                 </div>
               ))}
               {players.length < maxP && (
-                <button type="button" className="btn-ghost btn-add coop-add" onClick={addPlayer}>➕ Ajouter un joueur</button>
+                <button type="button" className="btn-ghost btn-add coop-add" onClick={addPlayer}><PlusIcon size={14} /> Ajouter un joueur</button>
               )}
             </div>
           </div>
@@ -983,7 +983,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         return (
           <div className="pcard" data-dir={navDirRef.current} key={`p${idx}`}>
             <div className="pcard-head">
-              <span className="pcard-name">{isTopWinner(p) ? '🏆 ' : ''}{nameOf(p, idx)}</span>
+              <span className="pcard-name">{isTopWinner(p) ? <><CrownIcon size={12} />{' '}</> : ''}{nameOf(p, idx)}</span>
               {variantPerPlayer && p.variant ? <span className="pcard-variant">{p.variant}</span> : null}
             </div>
             {visibleCats.map((c) => (
@@ -1011,7 +1011,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
             {players.map((p, i) => (
               <div key={p.id} className="pcard-row">
                 <div className="pcard-cat">
-                  <span className="pcard-cat-label">{isTopWinner(p) ? '🏆 ' : ''}{nameOf(p, i)}</span>
+                  <span className="pcard-cat-label">{isTopWinner(p) ? <><CrownIcon size={12} />{' '}</> : ''}{nameOf(p, i)}</span>
                   {variantPerPlayer && p.variant ? <span className="hist-variant">{p.variant}</span> : null}
                 </div>
                 {inputFor(p, c)}
@@ -1055,7 +1055,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
             <th className="sheet-cat-head">Catégorie</th>
             {players.map((p, i) => (
               <th key={p.id} className={isTopWinner(p) ? 'sheet-winner' : ''}>
-                <span className="sheet-name-fixed">{isTopWinner(p) ? '🏆 ' : ''}{nameOf(p, i)}</span>
+                <span className="sheet-name-fixed">{isTopWinner(p) ? <><CrownIcon size={12} />{' '}</> : ''}{nameOf(p, i)}</span>
                 {variantPerPlayer && p.variant ? <span className="hist-variant">{p.variant}</span> : null}
               </th>
             ))}
@@ -1096,7 +1096,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
             <th className="sheet-cat" scope="row">Total</th>
             {players.map((p, i) => (
               <td key={p.id} className={`sheet-total ${isTopWinner(p) ? 'sheet-winner' : ''}`}>
-                {isTopWinner(p) ? '🏆 ' : ''}
+                {isTopWinner(p) ? <><CrownIcon size={12} />{' '}</> : ''}
                 {totals[i]}
               </td>
             ))}
@@ -1113,12 +1113,12 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         {titleHead}
         <div className="coop-form">
           <div className="field">
-            <label className="field-label">👥 Qui joue ?</label>
+            <label className="field-label"><PlayersIcon size={13} /> Qui joue ?</label>
             {playerList(false)}
           </div>
           {exts.length > 0 && (
             <div className="field">
-              <label className="field-label">🧩 Extensions jouées</label>
+              <label className="field-label"><ExtIcon size={13} /> Extensions jouées</label>
               <div className="chips">
                 {exts.map((name) => (
                   <button key={name} type="button" className={`fchip ${activeExts.has(name) ? 'on' : ''}`} onClick={() => toggleExt(name)}>

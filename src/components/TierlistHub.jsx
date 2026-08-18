@@ -1,6 +1,6 @@
 // Menu des tierlists : la tierlist globale (moyenne), la liste des tierlists existantes
 // (par joueur), et le bouton pour créer la sienne.
-import { BackIcon } from './icons'
+import { BackIcon, PlusIcon } from './icons'
 export default function TierlistHub({ tierlists, online, closing = false, onOpenGlobal, onOpenTierlist, onCreate, onClose }) {
   const missing = tierlists === null // table pas encore créée (migration à lancer)
   const list = tierlists || []
@@ -8,7 +8,7 @@ export default function TierlistHub({ tierlists, online, closing = false, onOpen
     <div className={`sheet settings${closing ? ' closing' : ''}`}>
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
-        <h2>🏆 Tierlists</h2>
+        <h2>Tierlists</h2>
       </div>
 
       {missing ? (
@@ -18,11 +18,11 @@ export default function TierlistHub({ tierlists, online, closing = false, onOpen
       ) : (
         <>
           <button type="button" className="tl-global-btn" onClick={onOpenGlobal}>
-            🌍 Tierlist globale <span className="tl-global-sub">moyenne de tous les joueurs</span>
+            Tierlist globale <span className="tl-global-sub">moyenne de tous les joueurs</span>
           </button>
 
           <button type="button" className="tl-create-btn" onClick={onCreate} disabled={!online} title={online ? '' : 'Indisponible hors ligne'}>
-            ➕ Créer ma tierlist
+            <PlusIcon size={14} /> Créer ma tierlist
           </button>
 
           <h3 className="tl-list-title">Tierlists des joueurs</h3>

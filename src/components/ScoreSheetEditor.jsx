@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { BackIcon } from './icons'
+import { BackIcon, ExtIcon, PlusIcon } from './icons'
 import { parseExtensions } from '../lib/games'
 
 // Éditeur d'une fiche de score : on définit les catégories (nom + explication +
@@ -284,7 +284,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
     <div className={`sheet${closing ? ' closing' : ''}`}>
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
-        <h2 className="sheet-title">✏️ {isNew ? 'Nouvelle fiche' : 'Modifier'} — {game?.name}</h2>
+        <h2 className="sheet-title">{isNew ? 'Nouvelle fiche' : 'Modifier'} — {game?.name}</h2>
       </div>
 
       <section className="settings-card">
@@ -293,10 +293,10 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
         <label className="field-label">Qui gagne</label>
         <div className="chips">
           <button type="button" className={`fchip ${!isCoop ? 'on' : ''}`} onClick={() => setWin('competitive')}>
-            🏅 Compétitif
+            Compétitif
           </button>
           <button type="button" className={`fchip ${isCoop ? 'on' : ''}`} onClick={() => setWin('coop')}>
-            🤝 Coopératif
+            Coopératif
           </button>
         </div>
 
@@ -304,13 +304,13 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
         <label className="field-label" style={{ marginTop: 14 }}>Comment on gagne</label>
         <div className="chips">
           <button type="button" className={`fchip ${scoring === 'high' ? 'on' : ''}`} onClick={() => setScoring((s) => (s === 'high' ? 'none' : 'high'))}>
-            ⬆️ Plus haut score
+            Plus haut score
           </button>
           <button type="button" className={`fchip ${scoring === 'low' ? 'on' : ''}`} onClick={() => setScoring((s) => (s === 'low' ? 'none' : 'low'))}>
-            ⬇️ Plus petit score
+            Plus petit score
           </button>
           <button type="button" className={`fchip ${instant ? 'on' : ''}`} onClick={() => setInstant((v) => !v)}>
-            🏁 Pas de points / Victoire directe
+            Pas de points / Victoire directe
           </button>
         </div>
 
@@ -319,8 +319,8 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
           <>
             <label className="field-label" style={{ marginTop: 14 }}>Saisie des scores</label>
             <div className="chips">
-              <button type="button" className={`fchip ${entry === 'byPlayer' ? 'on' : ''}`} onClick={() => setEntry('byPlayer')}>🃏 Par joueur</button>
-              <button type="button" className={`fchip ${entry === 'byItem' ? 'on' : ''}`} onClick={() => setEntry('byItem')}>📋 Item par item</button>
+              <button type="button" className={`fchip ${entry === 'byPlayer' ? 'on' : ''}`} onClick={() => setEntry('byPlayer')}>Par joueur</button>
+              <button type="button" className={`fchip ${entry === 'byItem' ? 'on' : ''}`} onClick={() => setEntry('byItem')}>Item par item</button>
             </div>
             <p className="field-hint" style={{ marginTop: 6 }}>« Par joueur » = une carte plein écran par joueur (compteurs −/+). Basculable pendant la saisie.</p>
           </>
@@ -336,14 +336,14 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
                 <button type="button" className="ext-row-x" onClick={() => delTrigger(t.id)} aria-label="Retirer le déclencheur">×</button>
               </div>
             ))}
-            <button type="button" className="btn-ghost btn-add" onClick={addTrigger}>➕ Ajouter un déclencheur</button>
+            <button type="button" className="btn-ghost btn-add" onClick={addTrigger}><PlusIcon size={14} /> Ajouter un déclencheur</button>
           </div>
         )}
 
         {!isCoop && (
           <label className="filter-check" style={{ marginTop: 14 }}>
             <input type="checkbox" checked={teamsOn} onChange={(e) => setTeamsOn(e.target.checked)} />
-            <span>🧑‍🤝‍🧑 En équipes</span>
+            <span>En équipes</span>
           </label>
         )}
 
@@ -359,7 +359,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
           </p>
 
           {/* Une valeur par joueur (ex. le héros de Dice Throne). */}
-          <label className="field-label">👤 Une par joueur</label>
+          <label className="field-label">Une par joueur</label>
           <p className="field-hint" style={{ margin: '2px 0 8px' }}>
             Chaque joueur choisit la sienne (héros, faction, personnage…).
           </p>
@@ -381,12 +381,12 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
                   <button type="button" className="ext-row-x" onClick={() => delVariantOption(o.id)} aria-label="Retirer la valeur">×</button>
                 </div>
               ))}
-              <button type="button" className="btn-ghost btn-add" onClick={addVariantOption}>➕ Ajouter une valeur</button>
+              <button type="button" className="btn-ghost btn-add" onClick={addVariantOption}><PlusIcon size={14} /> Ajouter une valeur</button>
             </div>
           )}
 
           {/* Une valeur unique pour toute la partie (ex. la carte jouée à Toy Battle). */}
-          <label className="field-label" style={{ marginTop: 16, display: 'block' }}>🎲 Une pour toute la partie</label>
+          <label className="field-label" style={{ marginTop: 16, display: 'block' }}>Une pour toute la partie</label>
           <p className="field-hint" style={{ margin: '2px 0 8px' }}>
             La même pour tout le monde (carte, mission, plateau…).
           </p>
@@ -408,7 +408,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
                   <button type="button" className="ext-row-x" onClick={() => delPlayVariantOption(o.id)} aria-label="Retirer la valeur">×</button>
                 </div>
               ))}
-              <button type="button" className="btn-ghost btn-add" onClick={addPlayVariantOption}>➕ Ajouter une valeur</button>
+              <button type="button" className="btn-ghost btn-add" onClick={addPlayVariantOption}><PlusIcon size={14} /> Ajouter une valeur</button>
             </div>
           )}
         </section>
@@ -440,7 +440,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
               <button type="button" className="ext-row-x" onClick={() => delTeam(t.id)} aria-label="Retirer l'équipe">×</button>
             </div>
           ))}
-          <button type="button" className="btn-ghost btn-add" onClick={addTeam}>➕ Ajouter une équipe</button>
+          <button type="button" className="btn-ghost btn-add" onClick={addTeam}><PlusIcon size={14} /> Ajouter une équipe</button>
         </section>
       )}
 
@@ -469,13 +469,13 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
               )}
               {exts.map((name) => (
                 <div key={name} className="ext-chip-row">
-                  <span className="ext-chip-name">🧩 {name}</span>
+                  <span className="ext-chip-name"><ExtIcon size={13} /> {name}</span>
                   <button type="button" className="ext-row-x" onClick={() => removeExt(name)} aria-label="Retirer l'extension">×</button>
                 </div>
               ))}
               {remaining.length === 1 ? (
                 <button type="button" className="btn-ghost" onClick={() => addExtName(remaining[0])}>
-                  ➕ Ajouter « {remaining[0]} »
+                  <PlusIcon size={14} /> Ajouter « {remaining[0]} »
                 </button>
               ) : remaining.length > 1 ? (
                 <select
@@ -485,7 +485,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
                     if (e.target.value) addExtName(e.target.value)
                   }}
                 >
-                  <option value="">➕ Ajouter une extension…</option>
+                  <option value=""><PlusIcon size={14} /> Ajouter une extension…</option>
                   {remaining.map((n) => (
                     <option key={n} value={n}>{n}</option>
                   ))}
@@ -543,14 +543,14 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
               <select className="cat-edit-ext" value={c.ext} onChange={(e) => updCat(c.id, 'ext', e.target.value)}>
                 <option value="">Jeu de base (toujours visible)</option>
                 {extNames.map((n) => (
-                  <option key={n} value={n}>🧩 {n}</option>
+                  <option key={n} value={n}>{n}</option>
                 ))}
               </select>
             )}
           </div>
         ))}
         </div>
-        <button type="button" className="btn-ghost btn-add" onClick={addCat}>➕ Ajouter une catégorie</button>
+        <button type="button" className="btn-ghost btn-add" onClick={addCat}><PlusIcon size={14} /> Ajouter une catégorie</button>
       </section>
       )}
 

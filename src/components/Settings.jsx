@@ -118,7 +118,7 @@ export default function Settings({
             <p className="muted share-hint">Scanne le QR ou copie le lien pour ajouter Kalyx sur un autre téléphone.</p>
             <div className="share-link">{APP_URL.replace('https://', '')}</div>
             <button type="button" className={`btn-ghost share-copy ${copied ? 'copied' : ''}`} onClick={copyAppLink}>
-              {copied ? 'Lien copié ✓' : '📋 Copier le lien'}
+              {copied ? 'Lien copié ✓' : 'Copier le lien'}
             </button>
           </div>
         </div>
@@ -156,7 +156,7 @@ export default function Settings({
         {deviceAuthorized ? (
           <>
             <button type="button" className="btn-ghost settings-open" onClick={onChangeCode} disabled={!online}>
-              🔒 Changer le code d'accès
+              Changer le code d'accès
             </button>
             <button type="button" className="settings-relink" onClick={onEnterCode}>
               Ressaisir le code sur cet appareil
@@ -164,7 +164,7 @@ export default function Settings({
           </>
         ) : (
           <button type="button" className="btn-ghost settings-open" onClick={onEnterCode}>
-            🔒 Autoriser cet appareil
+            Autoriser cet appareil
           </button>
         )}
       </section>
@@ -198,7 +198,7 @@ export default function Settings({
       <section className="settings-card">
         <h3>Joueurs</h3>
         <button type="button" className="btn-ghost settings-open" onClick={onOpenPlayers} disabled={!online}>
-          👥 Renommer les joueurs
+          Renommer les joueurs
         </button>
         {!online && <p className="field-hint" style={{ marginTop: 8 }}>Hors ligne : lecture seule.</p>}
       </section>
@@ -214,7 +214,7 @@ export default function Settings({
 
         <div className="save-actions" style={{ marginTop: 14 }}>
           <button type="button" className="btn-ghost save-now" onClick={onBackupNow} disabled={!online || backupBusy}>
-            {backupBusy ? '…' : '💾 Sauvegarder maintenant'}
+            {backupBusy ? '…' : 'Sauvegarder maintenant'}
           </button>
         </div>
 
@@ -256,10 +256,10 @@ export default function Settings({
         <p className="field-hint" style={{ marginTop: 0 }}>Un fichier à garder chez toi, ou à ré-importer plus tard.</p>
         <div className="save-actions">
           <button type="button" className="btn-ghost" onClick={onExport} title="Télécharger la sauvegarde complète (fichier .json)">
-            ⬇️ Exporter
+            Exporter
           </button>
           <button type="button" className="btn-ghost" onClick={onExportCsv} title="Télécharger 2 fichiers .csv (jeux et parties) ouvrables dans un tableur">
-            📊 Export tableur
+            Export tableur
           </button>
           <button
             type="button"
@@ -268,7 +268,7 @@ export default function Settings({
             disabled={!online}
             title={online ? 'Importer un fichier de sauvegarde' : 'Indisponible hors ligne'}
           >
-            ⬆️ Importer
+            Importer
           </button>
           <input
             ref={fileRef}

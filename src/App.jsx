@@ -37,7 +37,7 @@ const TierlistView = lazyRetry(() => import('./components/TierlistView'))
 import SkeletonCard from './components/SkeletonCard'
 import { enterFullscreen } from './lib/fullscreen'
 import NavBar from './components/NavBar'
-import { SettingsIcon, ChwaziIcon, FilterIcon, ClockIcon, DieIcon } from './components/icons'
+import { SettingsIcon, ChwaziIcon, FilterIcon, ClockIcon, DieIcon, CheckIcon } from './components/icons'
 
 
 // Le filtre propriétaire est PERSISTANT (un seul propriétaire regarde en général ses
@@ -669,27 +669,27 @@ export default function App() {
     )
     if (statsOpen || view !== 'wishlist') {
       filters.tags.forEach((t) =>
-        chips.push({ key: 't:' + t, label: '🏷️ ' + t, remove: () => setFilters((f) => ({ ...f, tags: f.tags.filter((x) => x !== t) })) })
+        chips.push({ key: 't:' + t, label: t, remove: () => setFilters((f) => ({ ...f, tags: f.tags.filter((x) => x !== t) })) })
       )
     }
     if (filters.players.length) {
       const list = [...filters.players].sort((a, b) => a - b).map((n) => (n >= 12 ? '12+' : n)).join(', ')
       chips.push({
         key: 'pl',
-        label: `${filters.playerOptimal ? '⭐' : '👥'} ${list}`,
+        label: (filters.playerOptimal ? 'Idéal ' : '') + list + ' j.',
         remove: () => setFilters((f) => ({ ...f, players: [], playerOptimal: false })),
       })
     }
     if (filters.duration != null) {
-      chips.push({ key: 'dur', label: `🕑 ≤ ${filters.duration} min`, remove: () => setFilters((f) => ({ ...f, duration: null })) })
+      chips.push({ key: 'dur', label: `≤ ${filters.duration} min`, remove: () => setFilters((f) => ({ ...f, duration: null })) })
     }
     filters.complexity.forEach((b) => {
       const lbl = b === 'simple' ? 'Simple' : b === 'moyen' ? 'Moyen' : 'Corsé'
-      chips.push({ key: 'c:' + b, label: '🧠 ' + lbl, remove: () => setFilters((f) => ({ ...f, complexity: f.complexity.filter((x) => x !== b) })) })
+      chips.push({ key: 'c:' + b, label: lbl, remove: () => setFilters((f) => ({ ...f, complexity: f.complexity.filter((x) => x !== b) })) })
     })
     if (!statsOpen && view === 'wishlist' && (filters.priceRange[0] !== PRICE_MIN || filters.priceRange[1] !== PRICE_MAX)) {
       const [lo, hi] = filters.priceRange
-      chips.push({ key: 'price', label: `💶 ${lo}–${hi >= PRICE_MAX ? '150+' : hi} €`, remove: () => setFilters((f) => ({ ...f, priceRange: [PRICE_MIN, PRICE_MAX] })) })
+      chips.push({ key: 'price', label: `${lo}–${hi >= PRICE_MAX ? '150+' : hi} €`, remove: () => setFilters((f) => ({ ...f, priceRange: [PRICE_MIN, PRICE_MAX] })) })
     }
     return chips
   }, [filters, statsOpen, view])
@@ -1089,7 +1089,7 @@ export default function App() {
   }
   function handleOpenGlobalTierlist() {
     const { ranking, unranked } = computeGlobalTierlist(tierlists || [], collectionIds, repById)
-    setTierlistView({ mode: 'global', title: '🌍 Tierlist globale', ranking, unranked, player: '', id: null })
+    setTierlistView({ mode: 'global', title: 'Tierlist globale', ranking, unranked, player: '', id: null })
   }
   function handleOpenTierlist(tl) {
     // Remappe vers les représentants (mutualise les doublons de nom) + retire les jeux supprimés.
@@ -1230,7 +1230,7 @@ export default function App() {
       {error && <p className="banner banner-err">⚠️ {error}</p>}
       {toast && (
         <div className="toast" role="status" onClick={() => setToast('')}>
-          <span className="toast-ico">✅</span> {toast}
+          <span className="toast-ico"><CheckIcon size={16} /></span> {toast}
         </div>
       )}
 
@@ -1332,7 +1332,7 @@ export default function App() {
                 title="Re-mélanger"
                 aria-label="Re-mélanger"
               >
-                🎲
+                <DieIcon size={18} />
               </button>
             ) : (
               <button

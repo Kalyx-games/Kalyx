@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { parseOwners, parseTags, ownerDisplay, ownerColor, parseExtensions, basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText } from '../lib/games'
-import { CollectionIcon, PlayersIcon, StarIcon, ClockIcon, ExtIcon } from './icons'
+import { CollectionIcon, PlayersIcon, StarIcon, ClockIcon, ExtIcon, BarsIcon, PencilIcon, DieIcon } from './icons'
 
 // Une carte compacte représentant un jeu dans la liste.
 // Toutes les infos (joueurs, idéal, complexité, durée, propriétaire) sont dans
@@ -141,7 +141,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
   //   Wishlist   : Éditer · BGG · Vers collection (tout à droite)
   const ACTION_W = 76
   const actions = []
-  if (onEdit) actions.push({ key: 'edit', label: 'Éditer', ico: '✏️', bg: '#3e6c8e', fg: '#fff', run: onEdit })
+  if (onEdit) actions.push({ key: 'edit', label: 'Éditer', node: <PencilIcon size={20} />, bg: '#3e6c8e', fg: '#fff', run: onEdit })
   if (onBgg)
     actions.push({
       key: 'bgg',
@@ -162,7 +162,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
     })
   // Action « tout à droite » (la plus accessible au pouce) :
   // collection → Nouvelle partie (remise à la demande de l'user) ; wishlist → Vers collection.
-  if (onNewPlay) actions.push({ key: 'play', label: 'Partie', ico: '🎲', bg: '#4e7a5c', fg: '#fff', run: onNewPlay })
+  if (onNewPlay) actions.push({ key: 'play', label: 'Partie', node: <DieIcon size={20} />, bg: '#4e7a5c', fg: '#fff', run: onNewPlay })
   if (onMove) actions.push({ key: 'move', label: 'Vers collection', node: <CollectionIcon size={20} color="#fff" />, bg: '#4e7a5c', fg: '#fff', run: onMove })
   const menuW = actions.length * ACTION_W
   const OPEN = -menuW
@@ -340,8 +340,8 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
           <span className="m-players" title={playersTitle}><PlayersIcon size={13} /> {playersDisplay}</span>
           <span className="m-time" title="Durée"><ClockIcon size={13} /> {durationLabel(game)}</span>
           <span className="m-ideal" title="Joueurs idéal">{idealDisplay ? <><StarIcon size={13} /> {idealDisplay}</> : ''}</span>
-          {/* Complexité : les 3 barres parlent d'elles-mêmes (le 🧠 était redondant → retiré). */}
           <span className="cx" title={complexity ? `Complexité ${complexity.toFixed(1)} / 5` : 'Complexité inconnue'}>
+            <BarsIcon size={13} />
             <span className="cx-bars">
               {[0, 1, 2].map((i) => {
                 const frac = Math.max(0, Math.min(1, cxRounded - i))

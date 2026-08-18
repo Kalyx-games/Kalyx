@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ownerColor, ownerInitials, OWNER_COLORS, muteOwnerColor } from '../lib/games'
+import { PlusIcon, PencilIcon, XIcon } from './icons'
 
 // Gestionnaire d'une liste de "bulles" (propriétaires OU tags) : liste + éditeur
 // (nom + initiales 2 lettres + couleur). Même UI pour les deux, d'où ce composant partagé.
@@ -71,8 +72,8 @@ export default function BubbleListManager({ title, items, migrationCode, namePla
                   <span className="owner-name-txt">{o.name}</span>
                   {online && (
                     <>
-                      <button type="button" className="owner-edit" onClick={() => startEdit(o)} aria-label={`Modifier ${o.name}`}>✏️</button>
-                      <button type="button" className="owner-del" onClick={() => onDelete(o)} aria-label={`Supprimer ${o.name}`}>✕</button>
+                      <button type="button" className="owner-edit" onClick={() => startEdit(o)} aria-label={`Modifier ${o.name}`}><PencilIcon size={15} /></button>
+                      <button type="button" className="owner-del" onClick={() => onDelete(o)} aria-label={`Supprimer ${o.name}`}><XIcon size={14} /></button>
                     </>
                   )}
                 </li>
@@ -85,7 +86,7 @@ export default function BubbleListManager({ title, items, migrationCode, namePla
           {/* Éditeur replié par défaut : on ne montre qu'un bouton, l'écran reste léger. */}
           {online && editing === null && (
             <button type="button" className="btn-ghost btn-add bubble-add" onClick={startNew}>
-              ➕ {addLabel}
+              <PlusIcon size={14} /> {addLabel}
             </button>
           )}
 

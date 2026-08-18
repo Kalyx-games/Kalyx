@@ -102,6 +102,61 @@ export function CrownIcon({ size = 20 }) {
   )
 }
 
+// 🏁 Fin de partie / déclencheur = drapeau (triangle sur mât).
+export function FlagIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <rect x="4.6" y="3" width="2.4" height="18" rx="1.2" />
+      <path d="M8.6 4.6 19.4 8.3 8.6 12 Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </Ico>
+  )
+}
+
+// ➕ / ✓ : GLYPHES en trait (bouts ronds) — cf. règles en tête de fichier.
+export function PlusIcon({ size = 20 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true" focusable="false" className="ico">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  )
+}
+export function CheckIcon({ size = 20 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" className="ico">
+      <path d="M4.5 12.6 9.6 17.7 19.5 7.2" />
+    </svg>
+  )
+}
+
+// ✏️ Modifier = crayon (silhouette minimale pleine — convention universelle).
+export function PencilIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <path d="M4.2 19.8l.9-4.2L15.9 4.8a2.5 2.5 0 0 1 3.5 3.5L8.6 19.1l-4.4.7z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </Ico>
+  )
+}
+
+// 🗑️ Supprimer = poubelle minimale (couvercle + corps).
+export function TrashIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <rect x="4" y="4.6" width="16" height="2.3" rx="1.15" />
+      <rect x="9.4" y="2.4" width="5.2" height="2.2" rx="1.1" />
+      <path d="M6.2 8.6h11.6l-.8 10.4a2.4 2.4 0 0 1-2.4 2.2H9.4a2.4 2.4 0 0 1-2.4-2.2z" />
+    </Ico>
+  )
+}
+
+// ✕ Fermer / retirer = glyphe en trait.
+export function XIcon({ size = 20 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true" focusable="false" className="ico">
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  )
+}
+
 // Petites icônes SVG de l'app.
 // Collection = bibliothèque verte, Wishlist = cœur rouge, Réglages = engrenage.
 

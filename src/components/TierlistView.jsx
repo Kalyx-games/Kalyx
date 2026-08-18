@@ -3,7 +3,7 @@ import { TIERS } from '../lib/tierlists'
 import { passesFilters } from '../lib/filtering'
 import FilterSheet from './FilterSheet'
 import Filters from './Filters'
-import { FilterIcon, BackIcon } from './icons'
+import { FilterIcon, BackIcon, PencilIcon, TrashIcon } from './icons'
 import NameField from './NameField'
 
 // Miniature optimisée (même image que les cartes, via l'optimiseur Vercel).
@@ -370,19 +370,19 @@ export default function TierlistView({
                   setEditing(false)
                 }}
               >
-                ✓ Terminé
+                Terminé
               </button>
             ) : (
-              <button type="button" className="tl-edit-btn" onClick={() => setEditing(true)} disabled={!online} title={online ? 'Modifier' : 'Indisponible hors ligne'}>✏️</button>
+              <button type="button" className="tl-edit-btn" onClick={() => setEditing(true)} disabled={!online} title={online ? 'Modifier' : 'Indisponible hors ligne'}><PencilIcon size={18} /></button>
             ))}
           {savedId && onDelete && (
-            <button type="button" className="tl-del-btn" onClick={onDelete} disabled={!online} title={online ? 'Supprimer' : 'Indisponible hors ligne'} aria-label="Supprimer la tierlist">🗑️</button>
+            <button type="button" className="tl-del-btn" onClick={onDelete} disabled={!online} title={online ? 'Supprimer' : 'Indisponible hors ligne'} aria-label="Supprimer la tierlist"><TrashIcon size={18} /></button>
           )}
         </div>
       </div>
       {editing && (
         <div className="tl-editing-banner">
-          {needName ? '📝 Donne un nom à ta tierlist pour l’enregistrer, puis « Terminé ».' : '✏️ Mode édition — glisse les jeux pour les classer'}
+          {needName ? 'Donne un nom à ta tierlist pour l’enregistrer, puis « Terminé ».' : 'Mode édition — glisse les jeux pour les classer'}
         </div>
       )}
 
