@@ -942,6 +942,10 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const entry = template?.entry === 'byPlayer' ? 'byPlayer' : 'byItem'
   const pageCount = entry === 'byPlayer' ? players.length : visibleCats.length
   const idx = Math.min(cardIndex, Math.max(0, pageCount - 1))
+  // Une seule page dans le parcours (byPlayer avec 1 seul joueur, plusieurs catégories → le
+  // byItem à 1 colonne passe par la liste plate plus haut) : le récapitulatif ferait doublon,
+  // on enregistre directement depuis la page unique.
+  const singlePage = pageCount === 1
 
   // Champ de saisie d'une case : cochable si la catégorie a une valeur fixe, sinon compteur −/+ (et clavier).
   const inputFor = (p, c) =>
@@ -1165,17 +1169,38 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   }
 
   // ÉTAPE 2 : parcours page par page (joueur par joueur OU item par item, selon la fiche) + glissé.
+  // Cas particulier : une seule page (1 joueur) → pas de récap, on enregistre directement ici.
   return (
     <div className={`sheet sheet-walk${closing ? ' closing' : ''}`}>
       {titleHead}
-      <div className="pcard-wrap" ref={walkRef}>
-        {walkDots}
-        {walkPage}
-        <div className="pcard-nav">
-          <button type="button" className="pcard-navbtn" onClick={goPrev}>← {prevLabel}</button>
-          <button type="button" className={`pcard-navbtn ${idx === pageCount - 1 ? 'pcard-navbtn-recap' : ''}`} onClick={goNext}>{nextLabel} →</button>
+      {singlePage && (
+        <div className="entry-bar">
+          <button type="button" className="entry-back" onClick={() => { navDirRef.current = -1; setStep(1) }}><BackIcon />Joueurs</button>
         </div>
+      )}
+      <div className="pcard-wrap" ref={walkRef}>
+        {!singlePage && walkDots}
+        {walkPage}
+        {!singlePage && (
+          <div className="pcard-nav">
+            <button type="button" className="pcard-navbtn" onClick={goPrev}>← {prevLabel}</button>
+            <button type="button" className={`pcard-navbtn ${idx === pageCount - 1 ? 'pcard-navbtn-recap' : ''}`} onClick={goNext}>{nextLabel} →</button>
+          </div>
+        )}
       </div>
+      {singlePage && (
+        <>
+          {(playVariantField || instantField) && (
+            <div className="coop-form">
+              {playVariantField}
+              {instantField}
+            </div>
+          )}
+          {renderTieBreak()}
+          <div className="coop-form">{notesField}</div>
+          {renderSaveBar()}
+        </>
+      )}
     </div>
   )
 }
