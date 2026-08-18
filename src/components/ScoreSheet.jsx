@@ -422,6 +422,50 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     : teams.some((t) => teamUsed(t) && t.score.trim() !== '')
   const saveLabel = isEdit ? '💾 Enregistrer les modifications' : '💾 Enregistrer la partie'
 
+  // Départage d'égalité + barre d'enregistrement du compétitif à points : réutilisés par le
+  // récapitulatif (multi-pages) ET par la page unique (un seul item / un seul joueur → pas de récap).
+  const renderTieBreak = () =>
+    tiedPlayers.length >= 2 && instantWinnerId == null ? (
+      <div className="coop-form">
+        <div className="field">
+          <label className="field-label">🤝 Égalité — vainqueur <span className="field-opt">(départage secondaire)</span></label>
+          <div className="chips">
+            {tiedPlayers.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className={`fchip ${forcedWinner === p.id ? 'on' : ''}`}
+                onClick={() => setForcedWinnerId((cur) => (cur === p.id ? null : p.id))}
+              >
+                🏆 {nameOf(p, players.indexOf(p))}
+              </button>
+            ))}
+          </div>
+          <p className="field-hint" style={{ marginTop: 6 }}>Laisse vide = tous ex æquo gagnent.</p>
+        </div>
+      </div>
+    ) : null
+
+  const renderSaveBar = () =>
+    onSavePlay && visibleCats.length > 0 ? (
+      <div className="sheet-editor-actions sheet-save-bar">
+        {anyScore &&
+          (() => {
+            const leaders = players.filter((p) => isTopWinner(p))
+            if (!leaders.length) return null
+            const total = totals[players.indexOf(leaders[0])]
+            return (
+              <div className="sheet-leader">
+                🏆 {leaders.map((p) => nameOf(p, players.indexOf(p))).join(', ')} · <b>{total}</b>
+              </div>
+            )
+          })()}
+        <button type="button" className="btn-primary" onClick={saveScored} disabled={saving || (!anyScore && !instantWinnerId)}>
+          {saving ? '…' : saveLabel}
+        </button>
+      </div>
+    ) : null
+
   const titleHead = (
     <>
       <div className="settings-head">
@@ -836,7 +880,65 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     )
   }
 
-  // ---------- COMPÉTITIF AVEC POINTS (assistant : noms → parcours → récap) ----------
+  // ---------- COMPÉTITIF À POINTS, UNE SEULE COLONNE DE SCORE ----------
+  // (ex. Tarot) : on saisit joueur + score final sur UNE page — comme une belote en « équipes
+  // de 1 » — puis on enregistre directement. Pas de parcours ni de récapitulatif (inutiles quand
+  // il n'y a qu'un score par joueur). Vaut aussi bien pour byItem que byPlayer (1 colonne = pareil).
+  if (!isCoop && !isTeams && !noPoints && visibleCats.length === 1) {
+    const cat = visibleCats[0]
+    return (
+      <div className={`sheet${closing ? ' closing' : ''}`}>
+        {head}
+        <div className="coop-form">
+          {playVariantField}
+          <div className="field">
+            <label className="field-label">Joueurs et scores</label>
+            <div className="coop-players">
+              {players.map((p, i) => (
+                <div key={p.id} className="coop-player">
+                  <div className="coop-player-row score-row">
+                    <NameField
+                      id={p.id}
+                      className="input"
+                      value={p.name}
+                      onChange={(v) => setName(p.id, v)}
+                      onPick={(n) => setName(p.id, n)}
+                      placeholder={`Joueur ${i + 1}`}
+                      playerNames={playerNames}
+                      focused={focusedPlayer}
+                      setFocused={setFocusedPlayer}
+                    />
+                    <span className="score-crown" aria-hidden="true">{anyScore && isTopWinner(p) ? '🏆' : ''}</span>
+                    <input
+                      className="input score-input"
+                      type="number"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={p.scores[cat.label] ?? ''}
+                      onChange={(e) => setScore(p.id, cat.label, e.target.value)}
+                    />
+                    {players.length > minP && (
+                      <button type="button" className="sheet-del" onClick={() => removePlayer(p.id)} aria-label="Retirer ce joueur">×</button>
+                    )}
+                  </div>
+                  {variantField(p)}
+                </div>
+              ))}
+              {players.length < maxP && (
+                <button type="button" className="btn-ghost coop-add" onClick={addPlayer}>➕ Ajouter un joueur</button>
+              )}
+            </div>
+          </div>
+          {instantField}
+          {renderTieBreak()}
+          {notesField}
+        </div>
+        {renderSaveBar()}
+      </div>
+    )
+  }
+
+  // ---------- COMPÉTITIF AVEC POINTS, PLUSIEURS COLONNES (assistant : noms → parcours → récap) ----------
   const entry = template?.entry === 'byPlayer' ? 'byPlayer' : 'byItem'
   const pageCount = entry === 'byPlayer' ? players.length : visibleCats.length
   const idx = Math.min(cardIndex, Math.max(0, pageCount - 1))
@@ -1053,47 +1155,11 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           </div>
         )}
 
-        {tiedPlayers.length >= 2 && instantWinnerId == null && (
-          <div className="coop-form">
-            <div className="field">
-              <label className="field-label">🤝 Égalité — vainqueur <span className="field-opt">(départage secondaire)</span></label>
-              <div className="chips">
-                {tiedPlayers.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className={`fchip ${forcedWinner === p.id ? 'on' : ''}`}
-                    onClick={() => setForcedWinnerId((cur) => (cur === p.id ? null : p.id))}
-                  >
-                    🏆 {nameOf(p, players.indexOf(p))}
-                  </button>
-                ))}
-              </div>
-              <p className="field-hint" style={{ marginTop: 6 }}>Laisse vide = tous ex æquo gagnent.</p>
-            </div>
-          </div>
-        )}
+        {renderTieBreak()}
 
         <div className="coop-form">{notesField}</div>
 
-        {onSavePlay && visibleCats.length > 0 && (
-          <div className="sheet-editor-actions sheet-save-bar">
-            {anyScore &&
-              (() => {
-                const leaders = players.filter((p) => isTopWinner(p))
-                if (!leaders.length) return null
-                const total = totals[players.indexOf(leaders[0])]
-                return (
-                  <div className="sheet-leader">
-                    🏆 {leaders.map((p) => nameOf(p, players.indexOf(p))).join(', ')} · <b>{total}</b>
-                  </div>
-                )
-              })()}
-            <button type="button" className="btn-primary" onClick={saveScored} disabled={saving || (!anyScore && !instantWinnerId)}>
-              {saving ? '…' : saveLabel}
-            </button>
-          </div>
-        )}
+        {renderSaveBar()}
       </div>
     )
   }
