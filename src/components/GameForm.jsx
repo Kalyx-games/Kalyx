@@ -444,7 +444,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
           <div className="autofill">
             <p className="bgg-hint">Tape le nom puis <b>Entrée</b>.</p>
             {bggLoading && !bggResults && !bggFilled && (
-              <div className="price-found"><span>🔎 Recherche sur BoardGameGeek…</span></div>
+              <div className="price-found"><span>Recherche sur BoardGameGeek…</span></div>
             )}
             {bggResults && bggResults.length > 0 && (
               <div className="bgg-results">
@@ -618,7 +618,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                   {extSearch.id === x.id && (
                     <div className="ext-bgg">
                       {extSearch.loading && !extSearch.results && (
-                        <div className="price-found"><span>🔎 Recherche sur BoardGameGeek…</span></div>
+                        <div className="price-found"><span>Recherche sur BoardGameGeek…</span></div>
                       )}
                       {extSearch.results && extSearch.results.length > 0 && (
                         <div className="bgg-results">
@@ -646,7 +646,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                   )}
                   <div className="ext-players-group">
                     <div className="ext-field">
-                      <span className="ext-field-icon" title="Nombre de joueurs avec cette extension" aria-hidden="true">👥</span>
+                      <span className="ext-field-icon" title="Nombre de joueurs avec cette extension" aria-hidden="true"><PlayersIcon size={14} /></span>
                       <input
                         className="ext-players"
                         value={x.players}
@@ -655,7 +655,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                       />
                     </div>
                     <div className="ext-field">
-                      <span className="ext-field-icon" title="Nombre de joueurs idéal avec cette extension" aria-hidden="true">⭐</span>
+                      <span className="ext-field-icon" title="Nombre de joueurs idéal avec cette extension" aria-hidden="true"><StarIcon size={14} /></span>
                       <input
                         className="ext-players"
                         value={x.best}
