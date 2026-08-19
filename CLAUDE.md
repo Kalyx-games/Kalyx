@@ -48,6 +48,24 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅ POINT 4 DE L'AUDIT — LA FICHE JEU RECOMPOSÉE (2026-08-19)
+
+Dernier écran resté à l'ancienne recette : blocs bordés + **4 boutons identiques en grille 2×2** qui mettaient « Statistiques », « Historique », « Modifier le jeu » et « BGG » au MÊME rang.
+
+- **La tête accueille les actions secondaires** : `Modifier` (PencilIcon) et `BGG` (nouvelle **`ExternalIcon`**) deviennent deux **`.detail-head-btn`** NUS (40px, `background: transparent`, `color: var(--ink)`) à droite du titre — de l'administration et un lien externe n'ont pas à figurer au rang de la consultation. Ils restent aussi dans le menu de glissement des cartes. ⚠️ couleur `--ink` et non `--muted` : la tête flotte AU-DESSUS du fond d'ambiance flouté (`.detail-backdrop` remonte à `top:-72px`), et `--muted` sur une jaquette claire tombe à un contraste de 1,25.
+- **Le nombre de parties devient LA donnée du jeu** : l'ancien `<p class="detail-plays">` gris devient un **BOUTON** (filets haut/bas, plus de cadre) — nombre en `--fs-title` (28px), « parties jouées » + « dernière le … », chevron — et **toute la rangée ouvre les Statistiques**. Elle REMPLACE le bouton « Statistiques » anonyme.
+- **Il ne reste qu'une action primaire** (« Nouvelle partie » + DieIcon) et une secondaire (« Historique des parties »). `.detail-grid` / `.detail-grid .btn-ghost` / `.detail-bgg-btn` **supprimées** (CSS + JSX). Branche sans fiche de score : un seul bouton « Créer la fiche de score ».
+- **Surfaces** : `.detail-infos` perd cadres et fonds → **filets verticaux** (`repeat(auto-fit, minmax(72px,1fr))`, `border-left`, libellés en micro-capitales SANS icône) ; `.detail-poll` perd son cadre pour un simple `border-top`. La complexité affiche **le mot seul** (le chiffre BGG passe en `title` — comme le fait déjà GameCard).
+- **Le favicon BGG était chargé chez `google.com/s2/favicons`** : une requête tierce dans une app qui doit marcher hors ligne. Remplacé par une icône maison. (Il reste dans le menu de glissement des cartes, à traiter un jour.)
+
+**Revue adversariale (23 agents, 3 lentilles) → 4 corrigés, 3 réfutés à la mesure** (titre et libellés ne sont PAS tronqués à 375px : mesuré `scrollWidth === clientWidth`) :
+  1. ⚠️⚠️ **DÉFAUT GLOBAL ET ANCIEN, révélé par ce lot : un `<button>` n'hérite PAS de la police du document** — le navigateur lui impose la sienne. **TOUS les boutons de Kalyx s'affichaient en Arial** pendant que le texte autour était en `system-ui`, et leurs chiffres perdaient le `font-variant-numeric: tabular-nums` posé sur `body` (visible sur le nouveau « 25 »). **Fix : `font-family: inherit` + `font-variant-numeric: inherit` sur la règle `button` globale.** Vérifié après coup : aucun libellé ne déborde nulle part, page sans débordement latéral. **RÈGLE : tout élément de formulaire (`button`, `input`, `select`, `textarea`) doit hériter la police explicitement.**
+  2. **La garde `prefers-reduced-motion` des 2 nouveaux enfoncements est posée APRÈS eux** (le bloc général vit l. 2876, mes règles l. 2929/3091) — rappel : une media query n'ajoute AUCUNE spécificité.
+  3. **La bande d'infos passe en 2×2 sous 390px** (au lieu de 360) : mesuré à 375px, « COMPLEXITÉ » remplissait sa piste **au pixel près** (69/69) → casse au moindre changement de police système.
+  4. **4 imports d'icônes morts** (PlayersIcon/StarIcon/ClockIcon/BarsIcon) laissés par la recomposition.
+
+**Version prod : `19/08 · 8e83c4e`** (vérifié par contenu servi : `detail-head-btn`, `detail-plays-n`, `button{font-family:inherit}`, `@media (width<=389px)` — ⚠️ le minifieur réécrit `max-width: 389px` en `width<=389px`, ne pas grep le premier). ⚠️ rappel SW : fermer/rouvrir 2×.
+
 ## 🎨 APRÈS LES 7 CHANTIERS — audit « qu'est-ce qui fait encore IA ? » (2026-08-19)
 
 Audit multi-agents (4 lentilles : finition / écriture / hiérarchie / identité → 61 pistes → tri sans complaisance → 8 retenues). **L'user a validé et fait exécuter les points 1 à 3.**
