@@ -48,6 +48,27 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅ LA FICHE REMANIÉE + TOUTE L’APP AU VOUVOIEMENT (2026-08-19, 4 retours user)
+
+**1. « Le titre du jeu doit reprendre sa place initiale en haut de la fiche. »** Il retourne dans `.settings-head`, à côté du bouton retour — **mais il reste MULTILIGNE** (`-webkit-line-clamp: 3`) : mesuré sur les 146 jeux, une troncature laissait encore **11 titres coupés à 375px** même une fois les boutons partis de la rangée.
+  - ⚠️⚠️ **LE PIÈGE, désamorcé** : `.detail-backdrop` remontait derrière la tête via `top: -72px` = la somme **codée en dur** `8 (padding .detail-sheet) + 6 (margin-top tête) + 44 (bouton retour) + 14 (margin-bottom tête)`. Une tête de 2 lignes laissait donc une **bande de `--bg` nu** derrière la 2e ligne (la tête est en `z-index:5` AU-DESSUS du corps 4 où vit le backdrop). **Fix : la hauteur de la tête est MESURÉE** — `ResizeObserver` dans GameDetail → variable `--kx-head-h` posée en style inline sur `sheetRef` → `top: calc(-28px - var(--kx-head-h, 44px))` et `height: calc(328px + var(--kx-head-h, 44px))`. Vérifié au pixel : tête 64px → `top: -92px` → sommet du backdrop exactement à y=0.
+  - **RÈGLE** : plus aucune constante de mise en page ne doit encoder la hauteur de la tête de la fiche ; passer par `--kx-head-h`.
+
+**2. « Modifier et BGG sur la jaquette, uniquement quand on clique dessus. La jaquette ne s’affiche donc plus en grand. »**
+  - Un tap sur la jaquette bascule `heroActions` → **`.detail-hero-acts`** (absolu en bas de `.detail-hero-wrap`, dégradé sombre) révèle deux **`.hero-act`** BLANCS **avec libellé** (« Modifier », « BGG ») : sur une illustration, une icône nue ne se lit pas, et un fond opaque est la seule façon de tenir sur une jaquette blanche comme sur une noire (couleurs en dur, elles ne dépendent pas du thème puisqu'elles sont posées sur l'image).
+  - Se referment au 2e tap **et au changement de jeu** (`useEffect([game.id])`).
+  - **Le zoom disparaît de la fiche** : prop `onZoomImage` retirée de GameDetail **et** de son appel dans App.jsx. ⚠️ `ImageZoom` et l’état `zoomImage` restent VIVANTS : les cartes de la liste zooment toujours.
+  - ⚠️ **`.detail-hero-wrap` passe en `width: fit-content; margin: 4px auto`** : l'image est centrée et rarement pleine largeur, donc le voile posé en absolu sur ce conteneur **débordait de la jaquette sur toute la largeur de la page**. Vérifié : 0 px de débordement de chaque côté.
+  - ⚠️ **Un jeu SANS jaquette** : le carré au dé `.detail-hero-empty` devient lui aussi un `<button>` qui bascule les actions, et le bloc d'actions est rendu **hors de la condition `showImg`** — sinon Modifier et BGG devenaient purement inaccessibles depuis sa fiche.
+
+**3. « Les bulles propriétaires font moches sur la fiche, mais je ne sais pas où les mettre. »** Elles quittent la jaquette pour une ligne **`.detail-owners`** sous la bande d'infos, avec les **NOMS complets** + une pastille de couleur : la fiche a la place que la carte n'a pas, deux initiales posées sur une illustration n'apprenaient rien et la salissaient. CSS mort retiré au passage (`.detail-head-btn`, `.detail-head-actions`, `.detail-bubbles`).
+
+**4. « Il faut tout conjuguer à la deuxième personne du pluriel. »** Passe complète : **58 textes visibles** relevés par workflow (4 agents, une zone de fichiers chacun) puis appliqués par remplacement LITTÉRAL vérifié (refus si la chaîne est absente, signalement si elle apparaît plusieurs fois). Couvre indices, erreurs, confirmations, états vides, `title=` et `aria-label=`. **Les commentaires de code gardent le tutoiement** (ils ne s’affichent pas). La vérification de mise à jour dit maintenant **« Vous êtes à jour. »** (demande explicite).
+  - **RÈGLE** : tout nouveau texte visible se rédige au VOUVOIEMENT.
+  - ⚠️ **piège de contrôle** : un filet automatique qui cherche `\btes\b` matche à l'intérieur de « ê|tes » — le `\b` de JavaScript est ASCII, donc il voit une frontière de mot après un accent. Ne pas conclure à un résidu sans lire la phrase.
+
+⚠️ **PIÈGE DE VÉRIF (nouveau)** : le chunk `Settings-*.js` contient `__APP_VERSION__`, donc **son nom de fichier diffère entre le build local et celui de Vercel**. Pour le vérifier en prod, prendre le nom RÉELLEMENT servi (`curl .../sw.js | grep Settings-`), jamais celui de `dist/`. Vérifié ainsi : « Vous êtes à jour. » présent, 0 tutoiement, version `19/08 20h22 · 7d2cd7e`.
+
 ## ✅ LE TITRE DE LA FICHE, LE LOGO BGG, LA BARRE D’ONGLETS (2026-08-19, 3 retours user)
 
 **Retour 1 — « le titre des jeux un peu plus long (même Abyss Conspiracy) est systématiquement coupé ».** Vrai : la recomposition de la veille lui faisait partager sa rangée avec 2 boutons de 40px.

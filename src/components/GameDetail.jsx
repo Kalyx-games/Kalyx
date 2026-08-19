@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { BackIcon, ExtIcon, PencilIcon, DieIcon } from './icons'
 import { BGG_LOGO } from '../lib/logos'
 import SnapshotPane from './SnapshotPane'
@@ -71,6 +71,15 @@ export default function GameDetail({
   // que le corps du NOUVEAU jeu glisse dedans → on voit vraiment une fiche remplacer l'autre.
   const bodyRef = useRef(null)
   const [bodyLeaving, setBodyLeaving] = useState(null) // { node, dir, top, left, width } | null
+  // La tête change de hauteur avec le nombre de lignes du titre, donc le corps entrant peut
+  // ne pas être à la même ordonnée que l'instantané sortant (mesuré : 20px d'écart entre un
+  // titre d’une ligne et un titre de deux). On réaligne, sinon les deux panneaux se croisent
+  // en escalier — et le fond d’ambiance du sortant paraîtrait sauter.
+  useLayoutEffect(() => {
+    if (!bodyLeaving || !bodyRef.current) return
+    const top = bodyRef.current.getBoundingClientRect().top
+    setBodyLeaving((b) => (b && Math.abs(b.top - top) > 0.5 ? { ...b, top } : b))
+  }, [bodyLeaving])
   // On change de jeu (glissé) → les actions de la jaquette se referment.
   useEffect(() => { setHeroActions(false) }, [game.id])
   // Le fond d'ambiance remonte DERRIÈRE la tête : son décalage était la somme codée en dur

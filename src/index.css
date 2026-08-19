@@ -1303,7 +1303,7 @@ body {
   letter-spacing: 0.02em;
 }
 .game-img.zoomable {
-  cursor: pointer;
+  cursor: zoom-in; /* depuis une CARTE, l’image s’agrandit toujours */
 }
 
 /* Image affichée en grand (lightbox) — clic n'importe où pour fermer. */
@@ -2992,8 +2992,9 @@ button {
   bottom: 0;
   display: flex;
   justify-content: center;
+  flex-wrap: wrap; /* jaquette portrait : les 2 boutons s’empilent plutôt que de déborder */
   gap: 8px;
-  padding: 26px 10px 10px;
+  padding: 26px 8px 8px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.62), transparent);
   border-radius: 0 0 5px 5px;
   opacity: 0;
@@ -3002,6 +3003,7 @@ button {
   transition: opacity 0.18s ease, transform 0.18s ease;
 }
 .detail-hero-acts.on { opacity: 1; transform: none; pointer-events: auto; }
+.detail-hero-wrap { overflow: hidden; border-radius: 5px; } /* filet : rien ne sort de la jaquette */
 .hero-act {
   display: inline-flex;
   align-items: center;
@@ -3104,18 +3106,20 @@ button {
   background: transparent; /* pas de cadre : l'image « flotte » sur le fond, identique clair/sombre */
   border-radius: var(--r-card);
   overflow: hidden;
-  cursor: zoom-in;
+  cursor: pointer; /* un tap révèle les actions ; la fiche ne zoome plus */
 }
 /* Image à sa taille naturelle (pas pleine largeur → moins imposante), plafonnée à 240px de haut,
    CENTRÉE. La boîte épouse l'image (pas de letterbox) → les coins arrondis se voient bien. */
 .detail-hero img { display: block; width: auto; height: auto; max-width: 100%; max-height: 240px; border-radius: 5px; margin: 0 auto; } /* comme les jaquettes : l'art est le plus serré */
 .detail-hero-empty {
+  width: 240px; /* la boîte épouse son contenu : sans largeur, le carré tombait à la taille du dé */
+  max-width: 100%;
   height: 150px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 3rem;
-  cursor: default;
+  cursor: pointer; /* devenu un bouton : il révèle les actions */
   background: var(--soft);
   border: 1px solid var(--line);
   border-radius: var(--r-card);

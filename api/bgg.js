@@ -121,7 +121,7 @@ export default async function handler(req, res) {
       const r = await bggFetch(`${BGG}/search?query=${encodeURIComponent(q)}&type=${searchType}`, token)
       // 202 = BGG prépare encore la réponse (après plusieurs essais) → on le dit clairement.
       if (r.status === 202) {
-        res.status(200).json({ results: [], error: 'BoardGameGeek prépare la réponse, réessaie dans un instant.' })
+        res.status(200).json({ results: [], error: 'BoardGameGeek prépare la réponse, réessayez dans un instant.' })
         return
       }
       if (!r.ok) {
@@ -158,7 +158,7 @@ export default async function handler(req, res) {
       const r = await bggFetch(`${BGG}/thing?id=${encodeURIComponent(id)}&stats=1`, token)
       // 202 = BGG prépare encore la réponse (après plusieurs essais) → message clair.
       if (r.status === 202) {
-        res.status(200).json({ found: false, error: 'BoardGameGeek prépare la fiche, réessaie dans un instant.' })
+        res.status(200).json({ found: false, error: 'BoardGameGeek prépare la fiche, réessayez dans un instant.' })
         return
       }
       if (!r.ok) {
@@ -191,7 +191,7 @@ export default async function handler(req, res) {
       return
     }
 
-    res.status(400).json({ error: 'Donne ?q=NOM (recherche) ou ?id=ID (fiche).' })
+    res.status(400).json({ error: 'Donnez ?q=NOM (recherche) ou ?id=ID (fiche).' })
   } catch (e) {
     res.status(200).json({ error: String((e && e.message) || e) })
   }
