@@ -133,7 +133,7 @@ export default function Settings({
         <div className="share-row">
           {qrDataUrl && <img className="share-qr" src={qrDataUrl} alt="QR code vers l'app Kalyx" width="118" height="118" />}
           <div className="share-info">
-            <p className="muted share-hint">Scannez le QR ou copiez le lien pour ajouter Kalyx sur un autre téléphone.</p>
+            <p className="muted share-hint">Pour installer Kalyx sur un autre téléphone.</p>
             <div className="share-link">{APP_URL.replace('https://', '')}</div>
             <button type="button" className={`btn-ghost share-copy ${copied ? 'copied' : ''}`} onClick={copyAppLink}>
               {copied ? 'Lien copié ✓' : 'Copier le lien'}
@@ -228,7 +228,7 @@ export default function Settings({
           <SortMenu value={backupFreq} options={FREQ_OPTIONS} onChange={onSetBackupFreq} arrows={false} />
         </div>
 
-        <div className="save-actions" style={{ marginTop: 14 }}>
+        <div className="save-actions">
           <button type="button" className="btn-ghost save-now" onClick={onBackupNow} disabled={!online || backupBusy}>
             {backupBusy ? '…' : 'Sauvegarder maintenant'}
           </button>
@@ -269,7 +269,7 @@ export default function Settings({
       {/* Sauvegarde en FICHIER : à garder sur l'appareil ou à ré-importer. */}
       <section className="settings-card">
         <h3>Sauvegarde en fichier</h3>
-        <p className="field-hint" style={{ marginTop: 0 }}>Un fichier à garder chez vous, ou à ré-importer plus tard.</p>
+        <p className="field-hint">Un fichier à garder chez vous, ou à ré-importer plus tard.</p>
         <div className="save-actions">
           <button type="button" className="btn-ghost" onClick={onExport} title="Télécharger la sauvegarde complète (fichier .json)">
             Exporter

@@ -9,7 +9,7 @@
   --card: #ffffff;
   --soft: #efeff1; /* surface neutre discrète (bannières, code, hovers) */
   --btn-ghost-bg: #ffffff; /* fond des boutons secondaires (.btn-ghost) — blanc, ressort sur le fond */
-  --btn-ghost-border: #dcdce0;
+  --btn-ghost-border: #b6b6be; /* dans une carte blanche, le fond du bouton EST la carte : seul ce filet le fait exister (1,37 → 2,05) */
   /* Élévation des cartes : en clair une ombre douce remplace la bordure ; en sombre les
      ombres sont invisibles → un liseré lumineux en haut fait « émerger » la surface. */
   --backdrop-op: 0.5; /* fond d'ambiance de la fiche */
@@ -118,7 +118,7 @@
     --card: #161618;
     --soft: #202023;
     --btn-ghost-bg: #26262a;
-    --btn-ghost-border: #33333a;
+    --btn-ghost-border: #4a4a53;
     --backdrop-op: 0.36; /* plus discret : le titre est blanc, la jaquette peut être claire */
     --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
     --elev-1: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -158,7 +158,7 @@
   --card: #161618;
   --soft: #202023;
   --btn-ghost-bg: #26262a;
-  --btn-ghost-border: #33333a;
+  --btn-ghost-border: #4a4a53;
   --backdrop-op: 0.36;
   --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   --elev-1: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -606,6 +606,7 @@ body {
   cursor: pointer;
   text-align: left;
 }
+.sortmenu-list button:active { transform: scale(0.98); }
 .sortmenu-list button:hover {
   background: var(--input-bg);
 }
@@ -1098,12 +1099,15 @@ body {
   padding: var(--pad-btn-ajout);
 }
 .save-actions {
+  margin-top: 12px; /* la phrase au-dessus touchait les boutons */
   display: flex;
   flex-wrap: wrap; /* 3 boutons : ils passent à la ligne plutôt que de s'écraser */
   gap: 10px;
 }
 .save-actions .btn-ghost {
-  flex: 1 1 130px;
+  /* demi-largeur : en flex:1 le 3e bouton passait seul à la ligne et s'étirait — « Importer »,
+     le seul des trois qui ÉCRASE des données, devenait le plus gros de la carte. */
+  flex: 0 1 calc(50% - 5px);
   min-width: 0;
   height: 44px;
 }
@@ -1845,6 +1849,10 @@ body {
   color: var(--ink);
   border: 1px solid var(--btn-ghost-border);
 }
+/* Sa couleur explicite écrase l'atténuation que le navigateur applique aux boutons
+   désactivés : sans cette règle, cinq boutons des Réglages restent en encre pleine
+   hors ligne et ne font rien au tap. */
+.btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-primary {
   background: var(--primary);
   color: var(--on-primary);
@@ -1916,14 +1924,18 @@ body {
 }
 .settings-relink {
   display: block;
-  margin: 8px auto 0;
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 12px 2px; /* 41px de cible (17 avant) ; 2px = l'axe des listes de la carte */
   background: none;
   border: none;
   color: var(--muted);
   font-size: var(--fs-body-s);
-  text-decoration: underline;
+  font-weight: 600;
+  text-align: left; /* c'était le seul texte centré de l'écran */
   cursor: pointer;
 }
+.settings-relink:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ---- Écran de secours (Error Boundary) ---- */
 .crash {
@@ -1997,6 +2009,7 @@ body {
 }
 .settings-card h3 {
   font-size: var(--fs-body-l);
+  font-weight: 600; /* le 700 par défaut de h3 criait — même correctif que .stat-block-title */
   color: var(--ink);
   margin-bottom: 12px;
   text-wrap: balance;
@@ -4742,7 +4755,7 @@ input[type='number'] {
 }
 
 /* Carte « Partager Kalyx » (lien + QR) en haut des Réglages */
-.share-row { display: flex; gap: 14px; align-items: center; }
+.share-row { display: flex; gap: 14px; align-items: flex-start; } /* le QR se cale sur la 1re ligne de texte au lieu de flotter */
 .share-qr {
   flex-shrink: 0;
   width: 118px;
@@ -4752,19 +4765,18 @@ input[type='number'] {
   border-radius: var(--r-ctl);
   image-rendering: pixelated; /* QR net, pas flou */
 }
-.share-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.share-info { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .share-hint { margin: 0; font-size: var(--fs-body-s); }
 .share-link {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: var(--fs-body-s);
   color: var(--ink);
-  word-break: break-all;
+  overflow-wrap: anywhere; /* break-all coupait l'adresse en plein mot */
 }
-.share-copy { align-self: flex-start; }
+.share-copy { align-self: stretch; } /* sa largeur ne saute plus au passage « Lien copié » */
 .share-copy.copied { color: var(--ok-ink); } /* même vert « succès » que .link-copy.copied */
 
 /* Sauvegardes : mise en avant de la plus récente */
-.backup-row.latest { background: var(--accent-soft); border-radius: var(--r-ctl); padding-left: 8px; padding-right: 8px; }
 .backup-badge {
   margin-left: 8px;
   font-size: var(--fs-micro);
@@ -4925,10 +4937,11 @@ input[type='number'] {
 }
 .version-check {
   margin-top: 8px;
-  padding: 8px 14px;
-  border: 0;
+  padding: 0 14px;
+  height: 40px; /* 32px : sous le plancher tactile */
+  border: 1px solid var(--btn-ghost-border);
   border-radius: var(--r-ctl);
-  background: var(--soft);
+  background: var(--btn-ghost-bg); /* --soft ne se distinguait pas du fond de page (1,04) */
   color: var(--ink);
   font-size: var(--fs-footnote);
   font-weight: 600;

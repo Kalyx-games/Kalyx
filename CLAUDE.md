@@ -48,6 +48,25 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅ PASSE VISUELLE SUR LES RÉGLAGES (2026-08-19, demande user)
+
+Audit en workflow (3 lentilles : cohérence / composition / finition, puis synthèse). ⚠️ **Prémisse corrigée par l’audit** : les 9 `.settings-card` ne sont PAS bordées — même grammaire que `.game`, `.stat-tile`, `.hist-row`. Le chantier « moins de cadres » était bien passé ; c’est le DÉTAIL à l’intérieur qui n’avait pas suivi. Donc pas de refonte : **12 corrections chirurgicales**.
+
+  1. ⚠️ **`.btn-ghost` n’avait AUCUNE règle `:disabled`** — et il pose une `color` explicite, donc l’atténuation du navigateur était écrasée (piège déjà documenté ici). **Cinq boutons des Réglages restaient en encre pleine hors ligne** et ne faisaient rien au tap (Changer le code, Renommer les joueurs, Sauvegarder maintenant, Restaurer, Importer). Règle ajoutée — elle profite à toute l’app.
+  2. **Les 9 titres de carte étaient les seuls titres à 700** de l’app : `.settings-card h3` ne déclarait pas de graisse, donc le 700 par défaut du navigateur. `.stat-block-title` avait déjà reçu le correctif (600) après un retour user « le gras criait » ; il n’avait jamais été porté ici.
+  3. **Contour des boutons secondaires : 1,37:1.** `--btn-ghost-bg` (#fff) **est** `--card` (#fff) → dans une carte, le fond du bouton est la carte, et seul le filet le fait exister. `--btn-ghost-border` passe à `#b6b6be` / `#4a4a53` → **2,01 clair / 2,06 sombre**. Volontairement modéré : monter à 3:1 redonnerait des boutons franchement encadrés, ce qu’un chantier entier a servi à retirer.
+  4. **« Vérifier les mises à jour » était invisible** : fond `--soft` sur `--bg` = **1,04:1** (la règle maison « un bouton ne compte jamais sur --soft pour se voir », enfreinte par le pied de page lui-même), et **32px** de cible. Passé en bouton secondaire, 40px.
+  5. **La première ligne de sauvegarde était décalée de 6px et barrée d’un filet** : `.backup-row.latest` posait un fond arrondi + un padding latéral, mais gardait le `border-bottom` de `.backup-row` (retiré au `:last-child` seulement, or `latest` est la PREMIÈRE). Le pavé est supprimé ; le badge or « dernière » suffit. Vérifié : les 5 lignes au même x.
+  6. **« Ressaisir le code » : seul texte centré de l’écran, souligné, cible de 17px.** Passe à gauche, 41px, sans soulignement, avec sa règle `:disabled`.
+  7. **Carte « Partager Kalyx »** : le QR flottait au milieu (`align-items: center` avec une colonne de texte plus haute) → `flex-start`, il se cale sur la 1re ligne ; `word-break: break-all` coupait `kalyx-sepia.vercel.app` **en plein mot** → `overflow-wrap: anywhere` ; le bouton rétrécissait de ~18px en passant à « Lien copié ✓ » → `align-self: stretch` ; la phrase d’aide prenait 4 lignes dans 179px → raccourcie.
+  8. **« Importer » était le plus gros bouton de sa carte** alors que c’est le seul des trois qui ÉCRASE des données : `flex: 1 1 130px` le faisait passer seul à la ligne en s’étirant. Demi-largeur → les trois sont égaux.
+  9. Le texte d’aide **touchait** les boutons (0px) dans « Sauvegarde en fichier », alors que la carte voisine avait 14px en style inline pour la même grappe. Marge posée dans le CSS, les deux styles inline retirés.
+ 10. Les options du menu de fréquence n’avaient que `:hover` (inutile au doigt) → `:active`.
+
+**Vérifié** clair + sombre à 412px : titres 600, contour 2,01/2,06, QR aligné à 0px du texte, lignes de sauvegarde toutes au même x, « Vérifier les mises à jour » à 40px, les 3 boutons de fichier à 169px chacun, 12px entre le texte et les boutons.
+
+**NON FAIT, proposé par l’audit et écarté pour l’instant** (ce sont des refontes, pas des corrections visuelles) : fusionner Propriétaires + Tags (même composant, même objet), fusionner les deux cartes de sauvegarde, replier l’historique des sauvegardes (⚠️ `fetchBackups()` n’a **aucun `.limit()`** et la rotation ne s’applique qu’aux sauvegardes `auto` : 20 sauvegardes manuelles = une carte de 1300px), descendre « Partager Kalyx » de la première place, et sortir « Accès de l’appareil » en ligne d’état (c’est la CONDITION de 5 boutons plus bas, pas un réglage).
+
 ## ✅ POINT 6 DE L’AUDIT — L’ÉCHELLE D’ESPACEMENT (2026-08-19) — ⚠️ LIRE LE VERDICT AVANT DE LE REFAIRE
 
 **Chantier demandé par l’user (« le 6 me paraît le plus important »). L’analyse a CONTREDIT le diagnostic que je lui avais vendu (« 28 valeurs, 0 token ») — c’est documenté ici pour que personne ne relance le chantier sur la même prémisse.**
