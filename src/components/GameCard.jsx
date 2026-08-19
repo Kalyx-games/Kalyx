@@ -2,6 +2,7 @@ import { memo, useEffect, useRef, useState } from 'react'
 import { parseOwners, parseTags, ownerDisplay, ownerColor, parseExtensions, basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText } from '../lib/games'
 import { CollectionIcon, PlayersIcon, StarIcon, ClockIcon, ExtIcon, BarsIcon, PencilIcon, DieIcon } from './icons'
 import { thumbSrc } from '../lib/img'
+import { BGG_LOGO } from '../lib/logos'
 
 // Une carte compacte représentant un jeu dans la liste.
 // Toutes les infos (joueurs, idéal, complexité, durée, propriétaire) sont dans
@@ -146,7 +147,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
       node: (
         <img
           className="bgg-logo"
-          src="https://www.google.com/s2/favicons?domain=boardgamegeek.com&sz=64"
+          src={BGG_LOGO}
           alt=""
           width="22"
           height="22"

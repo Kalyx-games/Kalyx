@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { BackIcon, ExtIcon, PencilIcon, ExternalIcon, DieIcon } from './icons'
+import { BackIcon, ExtIcon, PencilIcon, DieIcon } from './icons'
+import { BGG_LOGO } from '../lib/logos'
 import SnapshotPane from './SnapshotPane'
 import { backdropSrc, heroSrc } from '../lib/img'
 import {
@@ -122,17 +123,18 @@ export default function GameDetail({
     <div className={`sheet detail-sheet${closing ? ' closing' : ''}`} ref={sheetRef}>
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
-        <h2 className="detail-title">{game.name}</h2>
-        {/* Modifier et BGG quittent la grille : de l'administration et un lien externe
-            n'ont pas à figurer au même rang que la consultation des parties. */}
-        <button type="button" className="detail-head-btn" onClick={onEdit} disabled={!online} title="Modifier le jeu" aria-label="Modifier le jeu">
-          <PencilIcon size={18} />
-        </button>
-        {onBgg && (
-          <button type="button" className="detail-head-btn" onClick={onBgg} title="Voir sur BoardGameGeek" aria-label="Voir sur BoardGameGeek">
-            <ExternalIcon size={18} />
+        {/* La barre ne porte QUE la navigation : le titre descend dans le corps, où il a
+            toute la largeur (il était coupé dès « Abyss Conspiracy » en partageant la rangée). */}
+        <div className="detail-head-actions">
+          <button type="button" className="detail-head-btn" onClick={onEdit} disabled={!online} title="Modifier le jeu" aria-label="Modifier le jeu">
+            <PencilIcon size={18} />
           </button>
-        )}
+          {onBgg && (
+            <button type="button" className="detail-head-btn" onClick={onBgg} title="Voir sur BoardGameGeek" aria-label="Voir sur BoardGameGeek">
+              <img className="bgg-mark" src={BGG_LOGO} alt="" width="20" height="20" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Corps du nouveau jeu qui GLISSE en entrée (plein écran). L'ancien corps (instantané figé)
@@ -146,6 +148,7 @@ export default function GameDetail({
         />
       )}
       <div className="detail-body" key={game.id} data-dir={navDirRef.current} ref={bodyRef}>
+        <h2 className="detail-title">{game.name}</h2>
       {/* Fond d'ambiance : la jaquette, floutée, teinte le haut de la fiche puis se fond
           dans le fond de page. L'image est demandée en 128 px de large — un flou de 30 px
           n'a que faire de la définition, et ça ne coûte que quelques kilo-octets. */}
@@ -206,9 +209,9 @@ export default function GameDetail({
       )}
 
       {/* La donnée vivante du jeu, traitée comme telle : le nombre en grand, et toute la
-          rangée mène aux statistiques — elle remplace un bouton « Statistiques » anonyme. */}
+          rangée mène à la liste des parties — on tape le compte, on obtient ce qu'il compte. */}
       {hasSheet && (
-        <button type="button" className="detail-plays" onClick={onStats} disabled={!online}>
+        <button type="button" className="detail-plays" onClick={onHistory} disabled={!online} title="Voir l’historique des parties">
           <span className="detail-plays-n">{playCount}</span>
           <span className="detail-plays-txt">
             {playCount > 1 ? 'parties jouées' : 'partie jouée'}
@@ -225,8 +228,8 @@ export default function GameDetail({
             <button type="button" className="btn-primary detail-primary" onClick={onNewPlay} disabled={!online}>
               <DieIcon size={18} /> Nouvelle partie
             </button>
-            <button type="button" className="btn-ghost detail-secondary" onClick={onHistory} disabled={!online}>
-              Historique des parties
+            <button type="button" className="btn-ghost detail-secondary" onClick={onStats} disabled={!online}>
+              Statistiques
             </button>
           </>
         ) : (
