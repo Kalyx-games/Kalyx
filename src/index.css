@@ -1670,6 +1670,9 @@ body {
   font-size: 1.1rem;
   cursor: pointer;
 }
+.modal-del:active {
+  opacity: 0.55; /* pas de scale : son centrage repose sur translateY(-50%) */
+}
 .modal-del:hover {
   background: var(--danger-bg); /* survol souris : le fond réapparaît (il n'y a plus de bordure) */
 }
@@ -3532,6 +3535,10 @@ button { transition: transform 0.12s ease; }
   cursor: pointer;
   font-size: var(--fs-body);
 }
+.hist-del:disabled {
+  opacity: 0.45; /* poser une couleur a écrasé l'atténuation par défaut du navigateur */
+  cursor: default;
+}
 .hist-del:active {
   transform: scale(0.94);
 }
@@ -4660,6 +4667,13 @@ input[type='number'] {
   /* Hauteur RÉSERVÉE pour deux lignes : sans elle, un titre court et un titre long
      décalent les jaquettes de la rangée suivante et la grille part de travers. */
   min-height: calc(2 * 1.25 * var(--fs-caption));
+}
+/* Quand une sous-ligne suit (prix en wishlist, valeur du tri en cours), le titre tient sur
+   UNE ligne réservée — comme un titre puis son artiste. Sinon un titre court laissait un
+   blanc avant sa sous-ligne, qui finissait presque aussi près de la rangée suivante. */
+.gtile:has(.gtile-sub) .gtile-name {
+  -webkit-line-clamp: 1;
+  min-height: calc(1.25 * var(--fs-caption));
 }
 .gtile-sub {
   font-size: var(--fs-micro);
