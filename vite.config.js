@@ -15,9 +15,18 @@ const buildVersion = (() => {
       hash = 'dev'
     }
   }
-  const d = new Date()
-  const p = (n) => String(n).padStart(2, '0')
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}h${p(d.getMinutes())} · ${hash}`
+  // ⚠️ Heure de PARIS, pas celle du serveur de build : Vercel compile en UTC, et une version
+  // annoncée « 11h18 » qui s'affichait « 09h19 » dans l'app donnait l'impression de ne pas l'avoir.
+  const horodatage = new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'Europe/Paris',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+    .format(new Date())
+    .replace(':', 'h') // « 19/08 11:22 » → « 19/08 11h22 »
+  return `${horodatage} · ${hash}`
 })()
 
 // Configuration de Vite (l'outil qui assemble le site).
