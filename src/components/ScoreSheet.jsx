@@ -50,6 +50,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // en équipes, l'équipe gagnante est désignée par son 🏆 et le déclencheur dit ce qui a
   // arrêté la partie.
   const hasInstant = template?.instant ?? scoring === 'none'
+  // Libellé de repli quand la fiche ne nomme aucun déclencheur (ou qu'on n'en choisit pas).
+  const VICTOIRE_DIRECTE = 'Victoire directe'
   const triggers = template?.triggers ?? []
   const predefined = (teamsCfg?.list || []).length > 0
   const cats = template?.categories ?? []
@@ -269,7 +271,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // soit par le bouton ← OU par le bouton RETOUR d'Android — doit demander confirmation pour ne pas la
   // perdre. Le garde est géré par App (pour couvrir aussi le retour Android) ; on lui signale l'état
   // « en cours » via dirtyRef, et le ← appelle simplement onClose (App décide de confirmer ou fermer).
-  const dirtyEntry = !initialPlay && (anyScore || players.some((p) => (p.name || '').trim() !== ''))
+  const dirtyEntry =
+    !initialPlay && (anyScore || instantWinnerId != null || players.some((p) => (p.name || '').trim() !== ''))
   useEffect(() => {
     if (dirtyRef) dirtyRef.current = dirtyEntry
     return () => {
@@ -364,7 +367,9 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     onSavePlay({
       players: built,
       winner: winners.join(', '),
-      trigger: instantP ? instantTrigger || null : null,
+      // Repli obligatoire : sans trace, la relecture ne saurait plus que la victoire est
+      // directe (vainqueur perdu à la réédition, scores nuls comptés dans les moyennes).
+      trigger: instantP ? instantTrigger || VICTOIRE_DIRECTE : null,
       scenario: scenarioVal(),
       extensions: [...activeExts],
       notes: notesVal(),
@@ -417,9 +422,11 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // Une équipe « utilisée » = au moins un membre nommé. On peut enregistrer dès qu'une
   // équipe utilisée a son résultat (victoire cochée en « pas de points », sinon un score).
   const teamUsed = (t) => t.players.some((p) => (p.name || '').trim())
-  const canSaveTeams = noPoints
-    ? teams.some((t) => teamUsed(t) && t.win)
-    : teams.some((t) => teamUsed(t) && t.score.trim() !== '')
+  const canSaveTeams =
+    noPoints || hasInstant
+      ? // une équipe gagnante cochée suffit (victoire directe : il n'y a pas de score à saisir)
+        teams.some((t) => teamUsed(t) && (t.win || t.score.trim() !== ''))
+      : teams.some((t) => teamUsed(t) && t.score.trim() !== '')
   const saveLabel = isEdit ? 'Enregistrer les modifications' : 'Enregistrer la partie'
 
   // Départage d'égalité + barre d'enregistrement du compétitif à points : réutilisés par le
@@ -1106,8 +1113,10 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     </div>
   )
 
-  // ÉTAPE 1 : noms des joueurs + extensions jouées.
+  // ÉTAPE 1 : noms des joueurs + extensions jouées (+ victoire directe : une partie qui
+  // s'arrête sur un déclencheur n'a aucun score à saisir → on l'enregistre depuis ici).
   if (step === 1) {
+    const goScores = () => { setCardIndex(0); navDirRef.current = 1; setStep(2) }
     return (
       <div className={`sheet${closing ? ' closing' : ''}`}>
         {titleHead}
@@ -1128,10 +1137,23 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
               </div>
             </div>
           )}
+          {playVariantField}
+          {instantField}
         </div>
-        <div className="sheet-editor-actions">
-          <button type="button" className="btn-primary sheet-cta" onClick={() => { setCardIndex(0); navDirRef.current = 1; setStep(2) }}>Saisir les scores →</button>
-        </div>
+        {instantWinnerId != null ? (
+          // Vainqueur désigné : on peut enregistrer tout de suite — mais rien n'empêche
+          // d'aller quand même compter les points.
+          <div className="sheet-editor-actions">
+            <button type="button" className="btn-ghost sheet-half" onClick={goScores}>Saisir les scores</button>
+            <button type="button" className="btn-primary sheet-half sheet-cta" onClick={saveScored} disabled={saving}>
+              {saving ? '…' : isEdit ? 'Modifier' : 'Enregistrer'}
+            </button>
+          </div>
+        ) : (
+          <div className="sheet-editor-actions">
+            <button type="button" className="btn-primary sheet-cta" onClick={goScores}>Saisir les scores →</button>
+          </div>
+        )}
       </div>
     )
   }

@@ -4380,6 +4380,11 @@ input[type='number'] {
 }
 .pcard-navbtn-recap:disabled,
 .sheet-cta:disabled { box-shadow: none; }
+/* Deux actions à parts égales dans la barre du bas (« Saisir les scores » / « Enregistrer ») */
+.sheet-half {
+  min-width: 0;
+  white-space: nowrap;
+}
 
 /* Indice discret sous le champ Nom (recherche BGG à la touche Entrée) */
 .bgg-hint {
