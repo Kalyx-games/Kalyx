@@ -48,6 +48,18 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅ PLUS AUCUN LOGO CHARGÉ CHEZ GOOGLE (2026-08-20)
+
+Les 5 liens des Réglages et les 2 boutons Philibert du formulaire chargeaient leur icône chez **`google.com/s2/favicons`** : une requête vers un TIERS par logo, dans une app qui doit marcher hors ligne (les icônes disparaissaient sans réseau), et chaque affichage annonçait à Google quelle app on utilise. C'était la dernière dette du genre après le logo BGG.
+
+  - **`src/lib/logos.js`** exporte maintenant **`SITE_LOGOS`** (indexé par le `domain` de `LINKS`) et **`PHILIBERT_LOGO`**, à côté de `BGG_LOGO`. Six logos en data:URI, ~22 Ko au total.
+  - **Chaque icône est prise CHEZ SON SITE**, jamais chez un intermédiaire : `apple-touch-icon.png` de melodice.org, supabase.com, cdn1.philibertnet.com, github.com ; `favicon.ico` pour vercel.com (converti). Toutes réduites à 64 px (affichées à 20 px → couvre une densité 3).
+  - `Settings.jsx` : `src={SITE_LOGOS[l.domain]}` dans les DEUX branches (en ligne / hors ligne). `GameForm.jsx` : `src={PHILIBERT_LOGO}` sur les 2 boutons.
+  - **Vérifié** : `grep -rn 's2/favicons|google.com' src/ index.html` ne renvoie plus que le commentaire qui l'explique ; les 5 logos et les 2 Philibert chargent en 64×64 depuis `data:`, en clair comme en sombre.
+  - **RÈGLE** : aucun logo de marque ne se charge depuis un service tiers. Pour en ajouter un : prendre son `apple-touch-icon` chez lui, réduire à 64 px, encoder, ajouter à `SITE_LOGOS`.
+
+⚠️ **Piège revécu deux fois de plus** : un script qui écrit un fichier en DEUX temps (le remplacement puis l'import) fait servir l'état intermédiaire par vite → `ReferenceError` sur un import pourtant présent. **Redémarrer preview_stop/preview_start avant de chercher plus loin.**
+
 ## ✅ LES 4 PARCOURS DE SAISIE ALIGNÉS SUR LE PARCOURS DE RÉFÉRENCE (2026-08-20)
 
 **Consigne user** : « tout sur la première page si c'est pertinent, sinon parcours avec recap ». → Les 4 modes d'UN BLOC (coop / équipes / sans points / une colonne) **restent sur une page** ; on les met au niveau du parcours multi-catégories (le seul en 3 étapes).

@@ -4,6 +4,7 @@ import { PlayersIcon, StarIcon, ExtIcon, PlusIcon, TrashIcon } from './icons'
 import { CollectionIcon, WishlistIcon } from './icons'
 import { expandRange, parseCounts, countsToText, parseOwners, ownersToText, parseTags, tagsToText, parseExtensions, serializeExtensions } from '../lib/games'
 import { philibertSearchUrl } from '../lib/philibert'
+import { PHILIBERT_LOGO } from '../lib/logos'
 
 // Formulaire d'ajout / modification d'un jeu (fenêtre modale).
 // Propriétaires : cases multi-sélection (un jeu peut en avoir plusieurs) + ajout.
@@ -523,7 +524,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                   title="Remplir le prix depuis Philibert"
                   aria-label="Remplir le prix depuis Philibert"
                 >
-                  {priceLoading ? '…' : <img className="phil-logo" src="https://www.google.com/s2/favicons?domain=philibertnet.com&sz=64" alt="" width="18" height="18" />}
+                  {priceLoading ? '…' : <img className="phil-logo" src={PHILIBERT_LOGO} alt="" width="18" height="18" />}
                 </button>
               </div>
               {pricePhil && pricePhil.found && (
@@ -579,7 +580,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                 title="Chercher l'image sur Philibert"
                 aria-label="Chercher l'image sur Philibert"
               >
-                {imgLoading ? '…' : <img className="phil-logo" src="https://www.google.com/s2/favicons?domain=philibertnet.com&sz=64" alt="" width="18" height="18" />}
+                {imgLoading ? '…' : <img className="phil-logo" src={PHILIBERT_LOGO} alt="" width="18" height="18" />}
               </button>
             </div>
             {imgPhil && !imgPhil.found && <span className="price-phil-msg muted">Image introuvable sur Philibert.</span>}

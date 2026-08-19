@@ -6,6 +6,7 @@ import { getTheme, applyTheme } from '../lib/theme'
 import { checkForUpdate, forceUpdate } from '../lib/update'
 import BubbleListManager from './BubbleListManager'
 import SortMenu from './SortMenu'
+import { SITE_LOGOS } from '../lib/logos'
 
 // Écran Réglages : propriétaires + tags (même format bulle), sauvegarde, apparence, liens.
 
@@ -317,7 +318,7 @@ export default function Settings({
                 <a className="link-row" href={l.url} target="_blank" rel="noreferrer">
                   <img
                     className="link-fav"
-                    src={`https://www.google.com/s2/favicons?domain=${l.domain}&sz=64`}
+                    src={SITE_LOGOS[l.domain]}
                     alt=""
                     width="20"
                     height="20"
@@ -333,7 +334,7 @@ export default function Settings({
                 <span className="link-row disabled" title="Indisponible hors ligne" aria-disabled="true">
                   <img
                     className="link-fav"
-                    src={`https://www.google.com/s2/favicons?domain=${l.domain}&sz=64`}
+                    src={SITE_LOGOS[l.domain]}
                     alt=""
                     width="20"
                     height="20"
