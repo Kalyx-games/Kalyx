@@ -39,7 +39,7 @@ import SkeletonCard from './components/SkeletonCard'
 import GameTile from './components/GameTile'
 import { enterFullscreen } from './lib/fullscreen'
 import NavBar from './components/NavBar'
-import { SettingsIcon, ChwaziIcon, FilterIcon, ClockIcon, DieIcon, CheckIcon, GridIcon, ListIcon } from './components/icons'
+import { SettingsIcon, ChwaziIcon, FilterIcon, PlusIcon, ClockIcon, DieIcon, CheckIcon, GridIcon, ListIcon } from './components/icons'
 
 
 // Le filtre propriétaire est PERSISTANT (un seul propriétaire regarde en général ses
@@ -1296,17 +1296,20 @@ export default function App() {
             </span>
           )}
 
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={() => {
-              enterFullscreen() // dans le geste de tap → masque la barre système dès l'entrée
-              setChwaziOpen(true)
-            }}
-            aria-label="Chwazi"
-          >
-            <ChwaziIcon size={22} />
-          </button>
+          {/* Ajouter un jeu : une action délibérée et occasionnelle — elle cède la zone du
+              pouce à Chwazi et monte ici. Absente des Stats, où elle n'a pas de sens. */}
+          {!statsOpen && !settingsOpen && (
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={() => setEditing('new')}
+              disabled={!online || games === null}
+              title={online ? 'Ajouter un jeu' : 'Indisponible hors ligne'}
+              aria-label="Ajouter un jeu"
+            >
+              <PlusIcon size={20} />
+            </button>
+          )}
           <button
             type="button"
             className={`icon-btn ${settingsOpen ? 'active' : ''}`}
@@ -1593,18 +1596,18 @@ export default function App() {
         <FilterIcon size={22} color="currentColor" />
         {badgeCount > 0 && <span className="fab-badge">{badgeCount}</span>}
       </button>
-      {/* Ajouter = bouton plus petit, au-dessus du filtre (liste seulement). */}
-      {!statsOpen && (
-        <button
-          className="fab fab-add-above"
-          onClick={() => setEditing('new')}
-          disabled={!online || games === null}
-          title={online ? 'Ajouter un jeu' : 'Indisponible hors ligne'}
-          aria-label="Ajouter un jeu"
-        >
-          +
-        </button>
-      )}
+      {/* Chwazi prend la place du « + » : la meilleure zone de l'écran revient à ce qu'on
+          fait le plus souvent. Contrairement aux autres boutons flottants, il ne s'efface
+          PAS au défilement — c'est justement en parcourant sa collection qu'on se demande
+          qui commence (même exemption que les filtres des écrans plein écran). */}
+      <button
+        className="fab fab-chwazi"
+        onClick={() => { enterFullscreen(); setChwaziOpen(true) }}
+        title="Chwazi — qui commence ?"
+        aria-label="Chwazi"
+      >
+        <ChwaziIcon size={34} />
+      </button>
         </>
       )}
 

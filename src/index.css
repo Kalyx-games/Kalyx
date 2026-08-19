@@ -482,6 +482,15 @@ body {
 .icon-btn:active {
   transform: scale(0.94);
 }
+/* ⚠️ une `color` explicite écrase l'atténuation du navigateur sur :disabled — le bouton
+   « ajouter » paraissait actif hors ligne. */
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.icon-btn:disabled:active {
+  transform: none;
+}
 .field-hint {
   font-size: var(--fs-body-s);
   color: var(--muted);
@@ -1625,25 +1634,26 @@ body {
 }
 /* Bouton flottant « Filtrer » = bouton PRINCIPAL en bas → il porte l'OR (la couleur la plus
    précieuse de la charte va à l'action la plus importante — choix user). Texte sombre fixe :
-   lisible sur l'or dans les 2 thèmes. Le « + » (secondaire) porte l'ENCRE, cohérent avec
-   tous les autres boutons principaux de l'app. */
+   lisible sur l'or dans les 2 thèmes. */
 .fab-filter {
   background: var(--gold);
   color: #131316;
 }
-.fab-add-above {
+/* Chwazi occupe le second rang, au-dessus du filtre : la fonction la plus utilisée mérite
+   la zone du pouce, et « ajouter un jeu » (délibéré, occasionnel) est monté dans la barre
+   du haut. Il porte l'ENCRE, comme tous les boutons principaux de l'app. */
+.fab-chwazi {
+  bottom: calc(146px + env(safe-area-inset-bottom));
+  width: 52px;
+  height: 52px;
   background: var(--primary);
   color: var(--on-primary);
   box-shadow: var(--elev-2);
 }
-/* Les icônes des FAB héritent de la couleur du bouton (surclasse les fill="…" des SVG). */
-.fab svg, .fab svg * { fill: currentColor; }
-.fab-add-above {
-  bottom: calc(146px + env(safe-area-inset-bottom));
-  width: 52px;
-  height: 52px;
-  font-size: 1.7rem;
-}
+/* Les icônes des FAB héritent de la couleur du bouton (surclasse les fill="…" des SVG).
+   Chwazi est exclu : ses trois pastilles SONT son identité (même choix que dans la barre
+   du haut, où le logo est resté multicolore). */
+.fab:not(.fab-chwazi) svg, .fab:not(.fab-chwazi) svg * { fill: currentColor; }
 .fab-badge {
   position: absolute;
   top: -2px;
