@@ -2851,7 +2851,14 @@ body {
 /* ---- Retour visuel d'appui (feedback tactile partout) ----
    1) DOUCEUR : chaque bouton anime son enfoncement → lisse aussi les :active déjà présents
       (fab, navtab, fchip, icon-btn…) qui « claquaient ». transform seul = aucun risque de saut. */
-button { transition: transform 0.12s ease; }
+button {
+  /* Le navigateur impose sa propre police aux boutons : sans ces deux lignes, TOUS les
+     boutons de l'app s'affichent en Arial pendant que le reste est en police systeme,
+     et leurs chiffres perdent l alignement tabulaire pose sur body. */
+  font-family: inherit;
+  font-variant-numeric: inherit;
+  transition: transform 0.12s ease;
+}
 /* 2) ENFONCEMENT par défaut pour les boutons d'action + tapables qui n'avaient AUCUN retour.
       Liste EXPLICITE : on évite un `button:active` global qui écraserait les boutons centrés par
       `transform: translateY(-50%)` (.clear-btn gère déjà le sien, .modal-del/.swipe-hint sont exclus).
@@ -2922,7 +2929,7 @@ button { transition: transform 0.12s ease; }
   justify-content: center;
   border: 0;
   background: transparent;
-  color: var(--muted);
+  color: var(--ink); /* la tête flotte au-dessus du fond d'ambiance : l'encre passe sur toutes les jaquettes */
   border-radius: var(--r-ctl);
   cursor: pointer;
 }
@@ -3053,7 +3060,10 @@ button { transition: transform 0.12s ease; }
 }
 .detail-info:first-child { border-left: 0; padding-left: 0; }
 /* Téléphone étroit : 4 colonnes coupent « Complexité » → on passe à deux rangées de deux. */
-@media (max-width: 360px) {
+/* Sur ecran etroit la bande passe en 2x2. Seuil a 389px : a 375px les 4 colonnes tenaient
+   a 0 px pres (« COMPLEXITE » remplissait sa piste EXACTEMENT), ce qui casse au moindre
+   changement de police systeme. A partir de 390px les 4 tiennent au large. */
+@media (max-width: 389px) {
   .detail-infos { grid-template-columns: 1fr 1fr; row-gap: 14px; }
   .detail-info:nth-child(odd) { border-left: 0; padding-left: 0; }
 }
@@ -3089,6 +3099,11 @@ button { transition: transform 0.12s ease; }
 }
 .detail-plays:disabled { cursor: default; opacity: 0.5; }
 .detail-plays:active { transform: scale(0.995); }
+/* Place ICI (et non dans le bloc general l. 2876) : une media query n ajoute aucune
+   specificite, elle doit donc suivre les regles qu elle neutralise. */
+@media (prefers-reduced-motion: reduce) {
+  .detail-head-btn:active, .detail-plays:active { transform: none; }
+}
 .detail-plays-n {
   font-size: var(--fs-title);
   font-weight: 700;

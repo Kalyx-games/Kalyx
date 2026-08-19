@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { BackIcon, PlayersIcon, StarIcon, ClockIcon, BarsIcon, ExtIcon, PencilIcon, ExternalIcon, DieIcon } from './icons'
+import { BackIcon, ExtIcon, PencilIcon, ExternalIcon, DieIcon } from './icons'
 import SnapshotPane from './SnapshotPane'
 import { backdropSrc, heroSrc } from '../lib/img'
 import {
