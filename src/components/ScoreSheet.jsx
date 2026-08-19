@@ -1143,10 +1143,10 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         {instantWinnerId != null ? (
           // Vainqueur désigné : on peut enregistrer tout de suite — mais rien n'empêche
           // d'aller quand même compter les points.
-          <div className="sheet-editor-actions">
-            <button type="button" className="btn-ghost sheet-half" onClick={goScores}>Saisir les scores</button>
-            <button type="button" className="btn-primary sheet-half sheet-cta" onClick={saveScored} disabled={saving}>
-              {saving ? '…' : isEdit ? 'Modifier' : 'Enregistrer'}
+          <div className="sheet-editor-actions sheet-actions-stack">
+            <button type="button" className="btn-ghost" onClick={goScores}>Saisir les scores</button>
+            <button type="button" className="btn-primary sheet-cta" onClick={saveScored} disabled={saving}>
+              {saving ? '…' : saveLabel}
             </button>
           </div>
         ) : (

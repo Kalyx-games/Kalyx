@@ -4380,11 +4380,9 @@ input[type='number'] {
 }
 .pcard-navbtn-recap:disabled,
 .sheet-cta:disabled { box-shadow: none; }
-/* Deux actions à parts égales dans la barre du bas (« Saisir les scores » / « Enregistrer ») */
-.sheet-half {
-  min-width: 0;
-  white-space: nowrap;
-}
+/* Deux actions dans la barre du bas : EMPILÉES (côte à côte, « Saisir les scores » déborde
+   sous 300px ou avec une police système agrandie). L'action principale est en bas, sous le pouce. */
+.sheet-actions-stack { flex-direction: column; }
 
 /* Indice discret sous le champ Nom (recherche BGG à la touche Entrée) */
 .bgg-hint {
