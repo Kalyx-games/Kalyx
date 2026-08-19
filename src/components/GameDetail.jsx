@@ -224,7 +224,8 @@ export default function GameDetail({
       <div className="detail-actions">
         {hasSheet ? (
           <>
-            {/* Une seule action primaire. L'historique reste à un tap, au second rang. */}
+            {/* Une seule action primaire. Les statistiques restent à un tap, au second rang
+                (la liste des parties, elle, est sous le compte juste au-dessus). */}
             <button type="button" className="btn-primary detail-primary" onClick={onNewPlay} disabled={!online}>
               <DieIcon size={18} /> Nouvelle partie
             </button>

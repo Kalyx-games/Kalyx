@@ -65,7 +65,7 @@ export default function NavBar({ view, onChange }) {
         <button
           type="button"
           key={key}
-          className={`navtab ${view === key ? 'active' : ''}`}
+          className={`navtab navtab-${key} ${view === key ? 'active' : ''}`}
           onClick={() => { if (swipedRef.current) return; onChange(key) }}
           aria-current={view === key ? 'page' : undefined}
         >

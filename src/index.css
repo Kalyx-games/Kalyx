@@ -41,6 +41,13 @@
   --players: var(--muted); /* budget d'accents : les joueurs ne sont plus bleus */
   --gold: #e0a106; /* or « remplissage » (barres, pastilles) */
   --gold-ink: #a16207; /* or « texte » : assez foncé pour le clair, éclairci en sombre */
+  /* Les 3 onglets. Mêmes teintes qu'avant (sauge, framboise, prune) mais saturation
+     doublée (22% → 51%) : c'est le seul endroit de l'app où la couleur a le droit de
+     chanter — choix assumé de l'utilisateur. Déclinées par thème : figées, elles
+     tombaient à 3:1 sur la barre sombre. */
+  --nav-collection: #2f8f5b;
+  --nav-wishlist: #c2456f;
+  --nav-stats: #7250c8;
   /* ÉCHELLE TYPOGRAPHIQUE (chantier typo) : 9 crans nommés, à utiliser PARTOUT à la place de
      valeurs libres. Hors échelle tolérés : tailles de GLYPHES (croix, +, emojis d'illustration)
      et l'univers Chwazi (plein écran à part). Identiques dans les 2 thèmes → définis ici seulement. */
@@ -93,6 +100,9 @@
     --players: var(--muted);
     --gold: #f5c542;
     --gold-ink: #f5c542;
+  --nav-collection: #4fc98d;
+  --nav-wishlist: #f2789f;
+  --nav-stats: #a98bf5;
     --bar-on: #d8d8dc;
     --bar-off: #2a2a2e;
     --danger: #fb7185;
@@ -130,6 +140,9 @@
   --players: var(--muted);
   --gold: #f5c542;
   --gold-ink: #f5c542;
+  --nav-collection: #4fc98d;
+  --nav-wishlist: #f2789f;
+  --nav-stats: #a98bf5;
   --bar-on: #d8d8dc;
   --bar-off: #2a2a2e;
   --danger: #fb7185;
@@ -147,6 +160,14 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+/* Le navigateur mobile peint un voile bleu rectangulaire sur tout ce qu'on touche —
+   un reste du surlignage des liens hypertexte, qui déborde des coins arrondis et
+   traverse les boutons ronds. L'app a son propre retour au toucher (enfoncement des
+   boutons), donc on le retire à la racine plutôt que composant par composant. */
+html {
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Icônes SVG en ligne (système « pièces de jeu ») : jamais écrasées par le flex, calées
@@ -221,9 +242,15 @@ body {
   transform: scale(0.92);
 }
 .navtab svg {
-  opacity: 0.5;
+  opacity: 0.62; /* 0.5 délavait des teintes déjà douces : l'onglet actif se distingue
+                    de toute façon par la pastille, la graisse et le zoom */
   transition: opacity 0.15s ease, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* La couleur vient du thème, pas du SVG : une règle CSS l'emporte sur un attribut de
+   présentation (fill="…"), sans !important. */
+.navtab-stats svg * { fill: var(--nav-stats); }
+.navtab-collection svg * { fill: var(--nav-collection); }
+.navtab-wishlist svg * { fill: var(--nav-wishlist); }
 /* Onglet actif : texte net + icône qui zoome (se marie avec la pastille glissante). */
 .navtab.active {
   color: var(--ink);
@@ -234,6 +261,14 @@ body {
 .navtab.active svg {
   opacity: 1;
   transform: scale(1.18);
+  /* Petit rebond quand l'onglet DEVIENT actif : la classe change, l'animation se rejoue.
+     Sans fill-mode, elle rend la main à la valeur de repos (1.18) en finissant. */
+  animation: kx-tab-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes kx-tab-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.34); }
+  100% { transform: scale(1.18); }
 }
 @media (prefers-reduced-motion: reduce) {
   .navtab svg {
@@ -241,6 +276,7 @@ body {
   }
   .navtab.active svg {
     transform: none;
+    animation: none;
   }
 }
 
@@ -2929,6 +2965,7 @@ button {
   line-height: 1.15;
   color: var(--ink);
   text-wrap: balance;
+  overflow-wrap: anywhere; /* un titre saisi à la main peut être un mot sans espace */
   display: -webkit-box;
   -webkit-line-clamp: 3; /* filet : le plus long de la collection en demande 2 */
   -webkit-box-orient: vertical;
