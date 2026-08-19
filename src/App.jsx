@@ -596,6 +596,10 @@ export default function App() {
 
   // Statut affiché selon l'onglet (Collection ou Wishlist).
   const listStatus = view === 'wishlist' ? 'wishlist' : 'collection'
+  // La grille est INTERDITE en wishlist : une tuile n'a pas de menu de glissement, et le tap
+  // y ouvre Philibert — on ne pourrait donc plus modifier un jeu du tout. La préférence de
+  // l'utilisateur n'est pas touchée : il retrouve sa grille en revenant sur la collection.
+  const grille = layout === 'grille' && listStatus !== 'wishlist'
   // Le tri par prix n'a de sens que dans la Wishlist.
   const sortOptions = [
     ...SORT_OPTIONS,
@@ -641,7 +645,7 @@ export default function App() {
     const list = listRef.current
     // En grille il n'y a aucune cellule à aligner : on sort avant de payer le reflow.
     // `layout` est dans les dépendances pour que la mesure se refasse au retour en liste.
-    if (!list || layout === 'grille') return
+    if (!list || grille) return
     // On mesure à largeur libre (chaque cellule prend sa largeur naturelle)…
     list.style.setProperty('--meta-left', 'max-content')
     let max = 0
@@ -653,7 +657,7 @@ export default function App() {
     list.style.setProperty('--meta-left', max ? `${Math.ceil(max)}px` : 'minmax(0, 1fr)')
     // statsOpen/settingsOpen : le <main> est démonté puis remonté en fermant ces écrans →
     // il faut recalculer, sinon la 1re colonne retombe sur son repli (colonne étirée).
-  }, [games, listStatus, statsOpen, settingsOpen, layout])
+  }, [games, listStatus, statsOpen, settingsOpen, grille])
 
   // Scénarios déjà utilisés pour ce jeu (auto-complétion du champ scénario).
   const scenarioNames = useMemo(
@@ -1380,8 +1384,9 @@ export default function App() {
           <h1 className="screen-title">{screenTitle}</h1>
           {!statsOpen && games !== null && <p className="screen-count">{countLabel}</p>}
         </div>
-        {/* Bascule liste / grille : on montre l’icône de la vue vers laquelle on va. */}
-        {!statsOpen && (
+        {/* Bascule liste / grille : on montre l’icône de la vue vers laquelle on va.
+            Absente en wishlist, où la grille est interdite. */}
+        {!statsOpen && listStatus !== 'wishlist' && (
           <button
             type="button"
             className="layout-btn"
@@ -1500,10 +1505,10 @@ export default function App() {
           />
         </Suspense>
       ) : (
-      <main className={`list${layout === 'grille' ? ' list-grid' : ''}`} ref={listRef}>
+      <main className={`list${grille ? ' list-grid' : ''}`} ref={listRef}>
         {games === null || booting ? (
-          Array.from({ length: layout === 'grille' ? 9 : 5 }).map((_, i) =>
-            layout === 'grille' ? <div key={i} className="gtile-skeleton sk" /> : <SkeletonCard key={i} />
+          Array.from({ length: grille ? 9 : 5 }).map((_, i) =>
+            grille ? <div key={i} className="gtile-skeleton sk" /> : <SkeletonCard key={i} />
           )
         ) : visible.length === 0 ? (
           <div className="empty">
@@ -1523,7 +1528,7 @@ export default function App() {
           </div>
         ) : (
           visible.map((g, i) =>
-            layout === 'grille' ? (
+            grille ? (
               <GameTile
                 key={g.id}
                 game={g}

@@ -48,6 +48,17 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅ GRILLE INTERDITE EN WISHLIST + SAUVEGARDES REPLIÉES (2026-08-19, demande user)
+
+**1. La vue grille est INTERDITE en wishlist.** Une tuile n’a pas de menu de glissement, et en wishlist le tap ouvre Philibert : en grille, on ne pouvait donc plus modifier un jeu **du tout**. C’était la limite assumée du chantier 6, l’user a tranché.
+  - `App.jsx` : nouvelle const **`grille = layout === 'grille' && listStatus !== 'wishlist'`**, qui remplace `layout === 'grille'` dans TOUT le rendu (classe de la liste, squelettes, choix tuile/carte, et la mesure des colonnes + ses dépendances).
+  - ⚠️ **La préférence de l’user n’est PAS touchée** (`kalyx-layout` reste à `grille`) : elle est seulement neutralisée à l’affichage → il retrouve sa grille en revenant sur la collection. Vérifié : collection grille (101 tuiles) → wishlist (10 cartes, bascule ABSENTE) → retour collection (grille, préférence toujours `grille`).
+  - La bascule `.layout-btn` est **masquée** en wishlist (elle n’aurait aucun effet).
+
+**2. La liste des sauvegardes se replie à 2.** Elle n’est pas bornée : `fetchBackups()` n’a aucun `.limit()` et la rotation `BACKUP_KEEP` ne s’applique qu’aux sauvegardes `auto` — une sauvegarde manuelle ne s’efface jamais. La carte pouvait donc dépasser 1300px.
+  - `Settings.jsx` : état `toutesSauvegardes`, `backups.slice(0, 2)`, et un rang **`.backup-more`** « Voir les N plus anciennes » / « Réduire » — dessiné comme un rang de plus (aligné à gauche, muet), pas comme un bouton : il prolonge la colonne au lieu de la refermer.
+  - Vérifié : 2 lignes / carte à 349px → dépliée 5 lignes / 535px → repliée à nouveau.
+
 ## ✅ PASSE VISUELLE SUR LES RÉGLAGES (2026-08-19, demande user)
 
 Audit en workflow (3 lentilles : cohérence / composition / finition, puis synthèse). ⚠️ **Prémisse corrigée par l’audit** : les 9 `.settings-card` ne sont PAS bordées — même grammaire que `.game`, `.stat-tile`, `.hist-row`. Le chantier « moins de cadres » était bien passé ; c’est le DÉTAIL à l’intérieur qui n’avait pas suivi. Donc pas de refonte : **12 corrections chirurgicales**.

@@ -4777,6 +4777,22 @@ input[type='number'] {
 .share-copy.copied { color: var(--ok-ink); } /* même vert « succès » que .link-copy.copied */
 
 /* Sauvegardes : mise en avant de la plus récente */
+/* Repli de la liste des sauvegardes : un rang de plus, pas un bouton — il prolonge la
+   colonne des sauvegardes au lieu de la refermer. */
+.backup-more {
+  width: 100%;
+  margin-top: 2px;
+  padding: 12px 2px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: var(--fs-body-s);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.backup-more:active { transform: scale(0.99); }
+
 .backup-badge {
   margin-left: 8px;
   font-size: var(--fs-micro);

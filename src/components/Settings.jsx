@@ -72,6 +72,7 @@ export default function Settings({
   // Vérification manuelle de mise à jour : le service worker peut se coincer et resservir
   // l'ancienne version indéfiniment ; ce bouton interroge le réseau puis renouvelle tout.
   const [upd, setUpd] = useState(null)
+  const [toutesSauvegardes, setToutesSauvegardes] = useState(false)
   const runUpdateCheck = async () => {
     setUpd('checking')
     try {
@@ -236,7 +237,9 @@ export default function Settings({
 
         {backups && backups.length > 0 && (
           <ul className="backup-list">
-            {backups.map((b, i) => (
+            {/* Seules les deux dernières sont montrées : la liste n'est pas bornée (une
+                sauvegarde manuelle ne s’efface jamais) et la carte pouvait dépasser mille pixels. */}
+            {(toutesSauvegardes ? backups : backups.slice(0, 2)).map((b, i) => (
               <li key={b.id} className={`backup-row ${i === 0 ? 'latest' : ''}`}>
                 <div className="backup-info">
                   <span className="backup-when">
@@ -260,6 +263,11 @@ export default function Settings({
               </li>
             ))}
           </ul>
+        )}
+        {backups && backups.length > 2 && (
+          <button type="button" className="backup-more" onClick={() => setToutesSauvegardes((v) => !v)}>
+            {toutesSauvegardes ? 'Réduire' : `Voir les ${backups.length - 2} plus anciennes`}
+          </button>
         )}
         {backups && backups.length === 0 && (
           <p className="field-hint" style={{ marginTop: 12 }}>Aucune sauvegarde pour l'instant.</p>
