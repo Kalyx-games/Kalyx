@@ -39,7 +39,7 @@ import SkeletonCard from './components/SkeletonCard'
 import GameTile from './components/GameTile'
 import { enterFullscreen } from './lib/fullscreen'
 import NavBar from './components/NavBar'
-import { SettingsIcon, ChwaziIcon, FilterIcon, ClockIcon, DieIcon, CheckIcon, GridIcon, ListIcon } from './components/icons'
+import { SettingsIcon, FilterIcon, ClockIcon, DieIcon, CheckIcon, GridIcon, ListIcon } from './components/icons'
 
 
 // Le filtre propriétaire est PERSISTANT (un seul propriétaire regarde en général ses
@@ -1295,17 +1295,7 @@ export default function App() {
               <i /> Hors ligne
             </span>
           )}
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={() => {
-              enterFullscreen() // dans le geste de tap → masque la barre système dès l'entrée
-              setChwaziOpen(true)
-            }}
-            aria-label="Chwazi"
-          >
-            <ChwaziIcon size={22} />
-          </button>
+
           <button
             type="button"
             className={`icon-btn ${settingsOpen ? 'active' : ''}`}
@@ -1779,6 +1769,7 @@ export default function App() {
       )}
 
       <NavBar
+        onChwazi={() => { enterFullscreen(); setChwaziOpen(true) }}
         view={statsOpen ? 'stats' : settingsOpen ? null : view}
         onChange={(v) => {
           const overlayOpen = statsOpen || settingsOpen

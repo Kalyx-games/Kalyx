@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { StatsIcon, CollectionIcon, WishlistIcon } from './icons'
+import { StatsIcon, CollectionIcon, WishlistIcon, ChwaziIcon } from './icons'
 
 // Barre d'onglets fixée en bas : Stats · Collection · Wishlist (tailles égales).
 // L'onglet actif est mis en avant dynamiquement (pastille glissante + zoom via le CSS).
@@ -10,7 +10,13 @@ const TABS = [
   { key: 'wishlist', label: 'Wishlist', Icon: WishlistIcon },
 ]
 
-export default function NavBar({ view, onChange }) {
+// Chwazi occupe un 4e emplacement du bac, mais ce n'est PAS une vue : il recouvre l'écran
+// courant et vous y ramène. Il ne prend donc jamais la pastille, jamais l'état actif, et le
+// glissé ne l'atteint pas. Il est ici parce que c'est la fonction la plus utilisée et que le
+// bac est la seule surface qui ne disparaît jamais au défilement — la barre du haut, si.
+const SLOTS = TABS.length + 1
+
+export default function NavBar({ view, onChange, onChwazi }) {
   const activeIndex = TABS.findIndex((t) => t.key === view)
   const navRef = useRef(null)
   const idxRef = useRef(activeIndex)
@@ -35,14 +41,16 @@ export default function NavBar({ view, onChange }) {
     const onEnd = (e) => {
       if (!dragging) return
       dragging = false
+      // Le drapeau se pose AVANT le seuil : un glissé trop court ne doit pas se transformer
+      // en tap, sinon il ouvrirait Chwazi par accident.
+      swipedRef.current = true
+      setTimeout(() => { swipedRef.current = false }, 220)
       const dx = e.changedTouches[0].clientX - x
       if (Math.abs(dx) < 45) return
       const i = idxRef.current
       if (i < 0) return // aucun onglet actif (ex. Réglages ouverts) → on ne fait rien
       const next = dx < 0 ? Math.min(TABS.length - 1, i + 1) : Math.max(0, i - 1)
       if (next !== i) {
-        swipedRef.current = true
-        setTimeout(() => { swipedRef.current = false }, 220)
         onChangeRef.current(TABS[next].key)
       }
     }
@@ -59,7 +67,10 @@ export default function NavBar({ view, onChange }) {
   return (
     <nav className="navbar" ref={navRef}>
       {activeIndex >= 0 && (
-        <span className="navbar-pill" style={{ transform: `translateX(calc(${activeIndex} * (100% + 12px)))` }} />
+        <span
+          className="navbar-pill"
+          style={{ width: `calc(${100 / SLOTS}% - 12px)`, transform: `translateX(calc(${activeIndex} * (100% + 12px)))` }}
+        />
       )}
       {TABS.map(({ key, label, Icon }) => (
         <button
@@ -73,6 +84,15 @@ export default function NavBar({ view, onChange }) {
           <span>{label}</span>
         </button>
       ))}
+      <button
+        type="button"
+        className="navtab navtab-chwazi"
+        onClick={() => { if (swipedRef.current) return; onChwazi() }}
+        aria-haspopup="dialog"
+      >
+        <ChwaziIcon size={24} />
+        <span>Chwazi</span>
+      </button>
     </nav>
   )
 }

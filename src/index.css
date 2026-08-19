@@ -247,6 +247,7 @@ body {
 }
 /* Pastille de surbrillance qui glisse sous l'onglet actif. */
 .navbar-pill {
+  /* largeur posée en ligne par NavBar : elle dépend du nombre d’emplacements */
   position: absolute;
   top: 5px;
   bottom: calc(5px + env(safe-area-inset-bottom));
@@ -315,6 +316,22 @@ body {
   40% { transform: scale(1.34); }
   100% { transform: scale(1.18); }
 }
+/* Chwazi n'est pas une VUE : il ne prend jamais la pastille. Un filet vertical dit
+   « celui-ci n'est pas du même ordre » — même motif que les filets de la bande d'infos
+   de la fiche jeu. Et sans les deux règles suivantes, il hériterait du traitement
+   « onglet inactif » (gris + icône à 0,62) et paraîtrait désactivé en permanence. */
+.navtab-chwazi::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 1px;
+  background: var(--line);
+}
+.navtab-chwazi { color: var(--ink); }
+.navtab-chwazi svg { opacity: 1; }
+
 @media (prefers-reduced-motion: reduce) {
   .navtab svg {
     transition: opacity 0.15s ease;

@@ -48,6 +48,29 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅ CHWAZI DESCEND DANS LE BAC + 3 DÉFAUTS « PAR JOUEUR » + ACCÈS EN LIGNE D’ÉTAT (2026-08-20)
+
+**Retour user : « c'est la fonctionnalité que j'utilise le plus mais pour l'ouvrir c'est 3 petits points perdus en haut à droite ».** Diagnostic mesuré (workflow 12 agents, 4 pistes jugées sur 2 lentilles) — quatre défauts CUMULÉS, tous vérifiables :
+  1. **38×38 px** (`.icon-btn`) = **la plus petite cible de l'app**, alors que la norme maison est 44 (`.back-btn`, `.ext-row-x`, `.tl-edit-btn`). La fonction la plus utilisée avait la plus petite cible.
+  2. **Il quitte l'écran au défilement** : `.app.bars-hidden .topbar { transform: translateY(-100%) }`. ⚠️ **il n'existe AUCUNE règle `bars-hidden` pour `.navbar`** — le bac du bas est la seule surface permanente de l'app.
+  3. Coin haut-droit = le plus hostile au pouce sur un 6,7".
+  4. **Trois pastilles à gauche d'un engrenage se lisent « menu ⋯ »** — le glyphe n'est pas en cause, c'est son contexte. D'où le mot exact de l'user.
+
+**Solution retenue : un 4e EMPLACEMENT dans le bac — mais PAS un onglet.** Chwazi n'est pas une vue : il recouvre l'écran courant et y ramène. Il ne prend donc **jamais la pastille, jamais l'état actif, et le glissé ne l'atteint pas** (`TABS` reste à 3 ; `SLOTS = TABS.length + 1`).
+  - `NavBar.jsx` : nouvelle prop `onChwazi`, bouton `.navtab.navtab-chwazi` après le `.map()`. **La pastille reçoit sa largeur EN LIGNE** (`calc(100/SLOTS% - 12px)`) — le `translateX(i * (100% + 12px))` était déjà générique, seule la largeur était figée à 33,333 %.
+  - CSS : filet vertical `::before` (pas un `border-left`, qui fausserait le calcul flex), `color: var(--ink)` et `svg { opacity: 1 }` — sans ces deux règles il hériterait du traitement « onglet inactif » et paraîtrait **désactivé en permanence**.
+  - `App.jsx` : le bouton de la barre du haut est SUPPRIMÉ (elle ne garde que l’engrenage), `ChwaziIcon` retiré de son import. `enterFullscreen()` reste dans le geste de tap (obligatoire, cf. l’historique du plein écran).
+  - ⚠️ **BUG LATENT CORRIGÉ EN PASSANT** : dans `onEnd` du glissé, `swipedRef` n'était posé qu'APRÈS le seuil de 45px → un glissé trop court laissait passer son clic de fin de geste. Tant que le bac ne portait que des vues, ce clic reposait l'onglet courant (sans effet) ; **avec Chwazi dedans, il aurait ouvert un plein écran par accident**. Le drapeau se pose désormais dès qu'un glissé a eu lieu.
+  - **Vérifié** : 4 emplacements de 103px, pastille de 91px bien calée, Chwazi à l'encre et jamais actif, la barre du haut ne garde que l'engrenage, le tap ouvre Chwazi sans changer d'onglet, et le bouton retour Android le referme en revenant sur Collection.
+
+**Trois défauts du mode « par joueur » (corrigés sans demander — nouvelle consigne user : un défaut manifeste se répare, il ne se signale pas)** :
+  - L'aide de l'éditeur annonçait « **Basculable pendant la saisie** » : faux, `entry` est figé une fois la partie ouverte. Texte réécrit pour dire ce que font vraiment les deux options.
+  - **Filet en double** sous la dernière catégorie, en « par joueur » seulement : `.pcard-row:last-of-type` ne matchait plus, la carte s’y terminant par le total et non par une rangée. → `:last-child, :has(+ .pcard-total)`.
+  - **Le glissé menait au récapitulatif depuis la page unique**, dont le retour ne ramène qu'à l'étape 1. Les boutons y étaient masqués, le geste non.
+  - ⚠️ **Le mode « par joueur » lui-même MARCHE** — testé de bout en bout en basculant temporairement Kingdomino (3 catégories, 0 partie) : une page par joueur, totaux justes (39/31), récap correct, puis template RESTAURÉ à l'identique. **`saveScored` est strictement indépendant d'`entry`** : la ligne écrite en base est identique dans les deux modes, donc basculer une fiche ne peut pas abîmer une partie existante.
+
+**« Accès de l'appareil » devient une LIGNE D'ÉTAT** : ce n'était pas un réglage mais **l'état qui commande cinq boutons plus bas** (Changer le code, Renommer les joueurs, Sauvegarder maintenant, Restaurer, Importer), sans que rien n'explique pourquoi ils étaient grisés. → `.device-lock` en tête de page (filet or à gauche, « Autoriser » à droite), qui **disparaît entièrement une fois l'appareil autorisé** ; le changement de code descend alors dans une carte « Code d'accès » avant les liens. Les deux branches vérifiées.
+
 ## ✅ PLUS AUCUN LOGO CHARGÉ CHEZ GOOGLE (2026-08-20)
 
 Les 5 liens des Réglages et les 2 boutons Philibert du formulaire chargeaient leur icône chez **`google.com/s2/favicons`** : une requête vers un TIERS par logo, dans une app qui doit marcher hors ligne (les icônes disparaissaient sans réseau), et chaque affichage annonçait à Google quelle app on utilise. C'était la dernière dette du genre après le logo BGG.
