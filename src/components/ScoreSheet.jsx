@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { BackIcon, PlayersIcon, ExtIcon, FlagIcon, CrownIcon, PlusIcon, PencilIcon } from './icons'
 import { parseExtensions, effectivePlayersSet } from '../lib/games'
 import { resolveDefaultExts } from '../lib/scoresheets'
@@ -39,8 +39,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   //    dans players[].playVariant (aucune colonne dédiée → aucune migration).
   // Rétrocompat : une ancienne fiche avec `variant.scope === 'play'` = variante de la partie.
   const legacyPlay = template?.variant?.scope === 'play' ? template.variant : null
-  const variantCfg = !isTeams && template?.variant?.label && !legacyPlay ? template.variant : null
-  const playVariantCfg = !isTeams ? template?.playVariant?.label ? template.playVariant : legacyPlay : null
+  const variantCfg = template?.variant?.label && !legacyPlay ? template.variant : null
+  const playVariantCfg = template?.playVariant?.label ? template.playVariant : legacyPlay
   const variantOptions = (variantCfg?.options || []).filter(Boolean)
   const playVariantOptions = (playVariantCfg?.options || []).filter(Boolean)
   const variantPerPlayer = !!variantCfg
@@ -84,7 +84,9 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     if (ip && !isTeams && (ip.players || []).length) {
       return ip.players.map((p) => ({ id: ++pid, name: p.name || '', scores: p.scores || {}, variant: p.variant || '' }))
     }
-    return Array.from({ length: minP }, () => makePlayer())
+    // Toujours DEUX joueurs au départ, même pour un jeu jouable en solo : on joue à deux
+    // bien plus souvent qu’à un, et le deuxième se retire d’un tap si besoin.
+    return Array.from({ length: Math.max(2, minP) }, () => makePlayer())
   })
   const [focusedPlayer, setFocusedPlayer] = useState(null)
   // Parcours de saisie (compétitif à points) : 1 = noms + extensions, 2 = parcours (joueur/item), 3 = récap.
@@ -191,6 +193,12 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     setTeams((ts) =>
       ts.map((t) => (t.id === teamId ? { ...t, players: t.players.map((p) => (p.id === pid ? { ...p, name } : p)) } : t))
     )
+  // Les membres d'équipe vivent dans `teams`, pas dans `players` : leur variante a son
+  // propre setter.
+  const setMemberVariant = (teamId, pid, variant) =>
+    setTeams((ts) =>
+      ts.map((t) => (t.id === teamId ? { ...t, players: t.players.map((p) => (p.id === pid ? { ...p, variant } : p)) } : t))
+    )
 
   // Catégories visibles selon les extensions cochées. Si aucune catégorie n'est
   // définie (et qu'il y a des points), on affiche un champ « Points » par défaut
@@ -272,7 +280,16 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // perdre. Le garde est géré par App (pour couvrir aussi le retour Android) ; on lui signale l'état
   // « en cours » via dirtyRef, et le ← appelle simplement onClose (App décide de confirmer ou fermer).
   const dirtyEntry =
-    !initialPlay && (anyScore || instantWinnerId != null || players.some((p) => (p.name || '').trim() !== ''))
+    !initialPlay &&
+    (anyScore ||
+      instantWinnerId != null ||
+      players.some((p) => (p.name || '').trim() !== '') ||
+      // En équipes, la saisie ne vit PAS dans `players` : sans ces trois lignes, un retour
+      // Android en pleine Belote fermait l'écran sans rien demander.
+      teams.some((t) => t.win || t.score.trim() !== '' || t.players.some((p) => (p.name || '').trim() !== '')) ||
+      winnerIds.size > 0 ||
+      outcome != null ||
+      anyGroupScore)
   useEffect(() => {
     if (dirtyRef) dirtyRef.current = dirtyEntry
     return () => {
@@ -385,7 +402,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         const s = Number(t.score)
         const scoreNum = !noPoints && t.score.trim() !== '' && Number.isFinite(s) ? s : null
         // Seuls les membres réellement nommés comptent (pas de placeholder).
-        const members = t.players.map((p) => (p.name || '').trim()).filter(Boolean)
+        const members = t.players.filter((p) => (p.name || '').trim()).map((p) => ({ name: p.name.trim(), variant: p.variant || '' }))
         return { tn, scoreNum, members, win: t.win }
       })
       // Équipe non utilisée (aucun membre nommé) → ignorée (ni affichée ni comptée).
@@ -403,9 +420,11 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     const winnerSet = new Set(winnerTeams.map((t) => t.tn))
     const built = []
     data.forEach((t) => {
-      t.members.forEach((name) => {
-        const rec = { name, team: t.tn }
+      t.members.forEach((m) => {
+        const rec = { name: m.name, team: t.tn }
         if (!noPoints && t.scoreNum != null) rec.total = t.scoreNum
+        if (m.variant) rec.variant = m.variant
+        if (variantPerPlay && playVariant.trim()) rec.playVariant = playVariant.trim()
         built.push(rec)
       })
     })
@@ -431,6 +450,20 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
   // Départage d'égalité + barre d'enregistrement du compétitif à points : réutilisés par le
   // récapitulatif (multi-pages) ET par la page unique (un seul item / un seul joueur → pas de récap).
+  // Deux équipes au même score : sans ça, saveTeams les déclarait TOUTES gagnantes en silence.
+  const teamTieBreak = () =>
+    tiedTeams.length >= 2 && !teams.some((t) => t.win) ? (
+      <div className="field">
+        <label className="field-label">Égalité — qui l’emporte ?</label>
+        <div className="chips">
+          {tiedTeams.map((t) => (
+            <button key={t.id} type="button" className="fchip" onClick={() => toggleTeamWin(t.id)}>{teamName(t)}</button>
+          ))}
+        </div>
+        <p className="field-hint">Sans choix, les deux équipes sont enregistrées gagnantes.</p>
+      </div>
+    ) : null
+
   const renderTieBreak = () =>
     tiedPlayers.length >= 2 && instantWinnerId == null ? (
       <div className="coop-form">
@@ -450,6 +483,52 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           </div>
           <p className="field-hint" style={{ marginTop: 6 }}>Laissez vide = tous ex æquo gagnent.</p>
         </div>
+      </div>
+    ) : null
+
+  // Barre d'enregistrement COMMUNE : le résultat en direct au-dessus du bouton. Seul le mode
+  // à points en avait une ; les trois autres avaient un bouton nu, sans rien dire de ce qui
+  // allait être enregistré ni de ce qui manquait pour pouvoir le faire.
+  // Ce que la barre annonce, selon le mode. Avant, seul le mode à points disait quelque chose.
+  const coopLive =
+    outcome === 'win' ? (
+      <><CrownIcon size={14} /> Gagné{!noPoints && anyGroupScore ? <> · <b>{groupTotal}</b></> : null}</>
+    ) : outcome === 'loss' ? (
+      <>Perdu</>
+    ) : null
+  const noPointsLive = winnerIds.size ? (
+    <><CrownIcon size={14} /> {players.filter((p) => winnerIds.has(p.id)).map((p) => nameOf(p, players.indexOf(p))).join(", ")}</>
+  ) : null
+  const teamName = (t) => t.name.trim() || `Équipe ${teams.indexOf(t) + 1}`
+  // Les équipes à égalité au score : on ne peut pas les départager toutes seules.
+  const tiedTeams = (() => {
+    if (!isTeams || noPoints) return []
+    const scored = teams.filter((t) => teamUsed(t) && t.score.trim() !== '' && Number.isFinite(Number(t.score)))
+    if (scored.length < 2) return []
+    const ex = scoring === 'low' ? Math.min(...scored.map((t) => Number(t.score))) : Math.max(...scored.map((t) => Number(t.score)))
+    const ties = scored.filter((t) => Number(t.score) === ex)
+    return ties.length >= 2 ? ties : []
+  })()
+  const teamLive = (() => {
+    if (!isTeams) return null
+    const used = teams.filter(teamUsed)
+    const crowned = used.filter((t) => t.win)
+    if (crowned.length) return <><CrownIcon size={14} /> {crowned.map(teamName).join(", ")}</>
+    if (noPoints) return null
+    const scored = used.filter((t) => t.score.trim() !== '' && Number.isFinite(Number(t.score)))
+    if (!scored.length) return null
+    const ex = scoring === 'low' ? Math.min(...scored.map((t) => Number(t.score))) : Math.max(...scored.map((t) => Number(t.score)))
+    const tetes = scored.filter((t) => Number(t.score) === ex)
+    return <><CrownIcon size={14} /> {tetes.map(teamName).join(", ")} · <b>{ex}</b></>
+  })()
+
+  const saveBar = (onSave, disabled, live) =>
+    onSavePlay ? (
+      <div className="sheet-editor-actions sheet-save-bar">
+        {live ? <div className="sheet-leader">{live}</div> : null}
+        <button type="button" className="btn-primary sheet-cta" onClick={onSave} disabled={saving || disabled}>
+          {saving ? '…' : saveLabel}
+        </button>
       </div>
     ) : null
 
@@ -485,10 +564,12 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     </>
   )
 
-  // Sélection des extensions jouées (chips). Sur la fiche par joueur, elle est à l'étape 1 ;
-  // pour les autres modes, elle reste en tête (dans `head`).
-  const extSection = exts.length > 0 && (
-    <section className="settings-card">
+  // Extensions jouées : LE MÊME champ dans les cinq parcours. C'était auparavant une carte
+  // de puces sans libellé, collée sous le titre — on ne savait pas ce qu'étaient ces puces,
+  // et elle occupait le haut de l'écran avant même qu'on ait nommé les joueurs.
+  const extField = exts.length > 0 && (
+    <div className="field">
+      <label className="field-label"><ExtIcon size={13} /> Extensions jouées</label>
       <div className="chips">
         {exts.map((name) => (
           <button key={name} type="button" className={`fchip ${activeExts.has(name) ? 'on' : ''}`} onClick={() => toggleExt(name)}>
@@ -496,15 +577,15 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           </button>
         ))}
       </div>
-    </section>
+    </div>
   )
 
-  const head = (
-    <>
-      {titleHead}
-      {extSection}
-    </>
-  )
+  // Même question d'ouverture que le parcours, dans tous les modes.
+  const playersLabel = <label className="field-label"><PlayersIcon size={13} /> Qui joue ?</label>
+  // Le petit champ sous chaque nom perd son indication dès qu'il est rempli : on la rappelle.
+  const variantHint = variantPerPlayer ? (
+    <p className="field-hint">Sous chaque nom : son {variantCfg.label.toLowerCase()}.</p>
+  ) : null
 
   const scenarioField = wantScenario && (
     <div className="field">
@@ -699,8 +780,16 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   if (isCoop) {
     return (
       <div className={`sheet${closing ? ' closing' : ''}`}>
-        {head}
+        {titleHead}
         <div className="coop-form">
+          {/* Même ordre partout : ce qu'on remplit toujours d'abord, l'optionnel ensuite. */}
+          <div className="field">
+            {playersLabel}
+            {playerList(false)}
+            {variantHint}
+          </div>
+          {extField}
+          {playVariantField}
           <div className="field">
             <label className="field-label">Résultat</label>
             <div className="chips">
@@ -709,8 +798,6 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
             </div>
           </div>
           {triggerField}
-          {scenarioField}
-          {playVariantField}
           {/* Score du groupe, détaillé par catégorie (total = somme). */}
           {!noPoints && (
             <div className="field">
@@ -757,19 +844,9 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
               </table>
             </div>
           )}
-          <div className="field">
-            <label className="field-label"><PlayersIcon size={13} /> Joueurs présents</label>
-            {playerList(false)}
-          </div>
           {notesField}
         </div>
-        {onSavePlay && (
-          <div className="sheet-editor-actions">
-            <button type="button" className="btn-primary" onClick={saveCoop} disabled={saving || !outcome}>
-              {saving ? '…' : saveLabel}
-            </button>
-          </div>
-        )}
+        {saveBar(saveCoop, !outcome, coopLive)}
       </div>
     )
   }
@@ -778,10 +855,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   if (isTeams) {
     return (
       <div className={`sheet${closing ? ' closing' : ''}`}>
-        {head}
+        {titleHead}
         <div className="coop-form">
-          {triggerField}
-          {scenarioField}
           {teams.map((t, ti) => (
             <div key={t.id} className="team-block">
               <div className="team-block-head">
@@ -822,22 +897,37 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
               </div>
               <div className="team-members">
                 {t.players.map((p, i) => (
-                  <div key={p.id} className="coop-player-row">
-                    <NameField
-                      id={p.id}
-                      className="input"
-                      value={p.name}
-                      onChange={(v) => setMemberName(t.id, p.id, v)}
-                      onPick={(n) => setMemberName(t.id, p.id, n)}
-                      placeholder={`Joueur ${i + 1}`}
-                      playerNames={playerNames}
-                      focused={focusedPlayer}
-                      setFocused={setFocusedPlayer}
-                    />
+                  <Fragment key={p.id}>
+                    <div className="coop-player-row">
+                      <NameField
+                        id={p.id}
+                        className="input"
+                        value={p.name}
+                        onChange={(v) => setMemberName(t.id, p.id, v)}
+                        onPick={(n) => setMemberName(t.id, p.id, n)}
+                        placeholder={`Joueur ${i + 1}`}
+                        playerNames={playerNames}
+                        focused={focusedPlayer}
+                        setFocused={setFocusedPlayer}
+                      />
                     {t.players.length > 1 && (
                       <button type="button" className="sheet-del" onClick={() => removeMember(t.id, p.id)} aria-label="Retirer ce joueur">×</button>
                     )}
-                  </div>
+                    </div>
+                    {variantPerPlayer && (
+                      <NameField
+                        id={`tv:${p.id}`}
+                        className="input variant-input"
+                        value={p.variant || ''}
+                        onChange={(v) => setMemberVariant(t.id, p.id, v)}
+                        onPick={(v) => setMemberVariant(t.id, p.id, v)}
+                        placeholder={variantCfg.label}
+                        playerNames={variantOptions}
+                        focused={focusedPlayer}
+                        setFocused={setFocusedPlayer}
+                      />
+                    )}
+                  </Fragment>
                 ))}
                 {(!t.size || t.players.length < t.size) && t.players.length < 8 && (
                   <button type="button" className="btn-ghost btn-add coop-add" onClick={() => addMember(t.id)}><PlusIcon size={14} /> Ajouter un joueur</button>
@@ -848,15 +938,13 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           {!predefined && teams.length < 8 && (
             <button type="button" className="btn-ghost btn-add team-add" onClick={addTeam}><PlusIcon size={14} /> Ajouter une équipe</button>
           )}
+          {extField}
+          {playVariantField}
+          {triggerField}
+          {teamTieBreak()}
           {notesField}
         </div>
-        {onSavePlay && (
-          <div className="sheet-editor-actions">
-            <button type="button" className="btn-primary" onClick={saveTeams} disabled={saving || !canSaveTeams}>
-              {saving ? '…' : saveLabel}
-            </button>
-          </div>
-        )}
+        {saveBar(saveTeams, !canSaveTeams, teamLive)}
       </div>
     )
   }
@@ -865,24 +953,20 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   if (noPoints) {
     return (
       <div className={`sheet${closing ? ' closing' : ''}`}>
-        {head}
+        {titleHead}
         <div className="coop-form">
-          {scenarioField}
-          {triggerField}
-          {playVariantField}
           <div className="field">
-            <label className="field-label">Joueurs — cochez le(s) vainqueur(s)</label>
+            {playersLabel}
             {playerList(true)}
+            <p className="field-hint">Touchez la couronne du vainqueur. Plusieurs si la victoire est partagée.</p>
+            {variantHint}
           </div>
+          {extField}
+          {playVariantField}
+          {triggerField}
           {notesField}
         </div>
-        {onSavePlay && (
-          <div className="sheet-editor-actions">
-            <button type="button" className="btn-primary" onClick={saveNoPoints} disabled={saving || !winnerIds.size}>
-              {saving ? '…' : saveLabel}
-            </button>
-          </div>
-        )}
+        {saveBar(saveNoPoints, !winnerIds.size, noPointsLive)}
       </div>
     )
   }
@@ -895,11 +979,17 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     const cat = visibleCats[0]
     return (
       <div className={`sheet${closing ? ' closing' : ''}`}>
-        {head}
+        {titleHead}
         <div className="coop-form">
-          {playVariantField}
           <div className="field">
-            <label className="field-label">Joueurs et scores</label>
+            {/* Le vrai nom de la colonne, celui de la fiche (« Points », « Points de contrat »…),
+                avec son rappel de règle : c'est précisément ce qu'on cherche à table. */}
+            {playersLabel}
+            <p className="field-hint sheet-col-name">
+              Colonne : <b>{cat.label}</b>
+              {scoring === 'low' ? ' · le plus petit score gagne' : ''}
+            </p>
+            {cat.hint ? <p className="field-hint">{cat.hint}</p> : null}
             <div className="coop-players">
               {players.map((p, i) => (
                 <div key={p.id} className="coop-player">
@@ -936,6 +1026,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
               )}
             </div>
           </div>
+          {extField}
+          {playVariantField}
           {instantField}
           {renderTieBreak()}
           {notesField}

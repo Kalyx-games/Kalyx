@@ -48,6 +48,31 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅ LES 4 PARCOURS DE SAISIE ALIGNÉS SUR LE PARCOURS DE RÉFÉRENCE (2026-08-20)
+
+**Consigne user** : « tout sur la première page si c'est pertinent, sinon parcours avec recap ». → Les 4 modes d'UN BLOC (coop / équipes / sans points / une colonne) **restent sur une page** ; on les met au niveau du parcours multi-catégories (le seul en 3 étapes).
+
+**Chiffres réels** (61 fiches / 209 parties) : coop 10 fiches / 28 parties · équipes 8 / 2 · sans points 11 / 20 · une colonne 22 / 53 · parcours 10 / 106.
+
+**TRONC COMMUN (les 4 branches)**
+  1. **Toujours DEUX joueurs au départ** (`Math.max(2, minP)`), même pour un jeu jouable en solo — demande user ; le 2e se retire d'un tap.
+  2. **`extSection` → `extField`** : les extensions étaient une `.settings-card` de puces SANS libellé, collée sous le titre, AVANT même les joueurs. C'est maintenant le même `.field` « ⧉ Extensions jouées » que dans le parcours, placé après les joueurs. `head` supprimé, les 4 branches rendent `titleHead`.
+  3. **`playersLabel`** (« 👥 Qui joue ? ») remplace « Joueurs présents » / « Joueurs — cochez… » / « Joueurs et scores ». **`variantHint`** rappelle ce qu’on met dans le champ sous chaque nom (son placeholder disparaît dès qu’il est rempli).
+  4. **ORDRE UNIQUE** : qui joue → extensions → variante de partie → résultat/vainqueur → déclencheur → départage → notes → barre. Avant, deux blocs FACULTATIFS ouvraient l'écran, et le déclencheur (qui dépend d'un vainqueur) s'insérait AU-DESSUS du bloc qu'on venait de toucher.
+  5. **`saveBar(onSave, disabled, live)`** : barre commune avec le **résultat en direct**. Seul le mode à points en avait une ; les autres avaient un bouton nu. `coopLive` (Gagné + total), `noPointsLive` (les vainqueurs cochés), `teamLive` (équipe en tête + score).
+  6. ⚠️ **BUG CORRIGÉ : la garde anti-perte était aveugle** hors du mode à points. `dirtyEntry` ne lisait que `anyScore`, `instantWinnerId` et `players` — or en ÉQUIPES la saisie vit dans `teams`, et en SANS POINTS dans `winnerIds`. Un retour Android en pleine Belote fermait l'écran **sans rien demander**. Ajout de `teams`, `winnerIds`, `outcome`, `anyGroupScore`.
+
+**ARBITRAGES TRANCHÉS PAR L’USER**
+  - **Égalité en équipes** → un **départage qui apparaît** (`teamTieBreak`). Avant, deux équipes à 501 partout étaient enregistrées TOUTES DEUX gagnantes, en silence.
+  - **Variantes en équipes** → **débloquées, les deux** (le garde `!isTeams` sur `variantCfg`/`playVariantCfg` est retiré). Nouveau `setMemberVariant` : les membres vivent dans `teams`, pas dans `players`. `saveTeams` porte `variant` et `playVariant` sur chaque membre (ajout ADDITIF au format, lu tel quel par GameHistory).
+  - **Vainqueur sans points** → **on garde le multiple**, avec une phrase qui le dit.
+  - **Libellé de la colonne unique** → **le VRAI nom de la fiche** (« Colonne : Points de contrat »), + son rappel de règle, + « le plus petit score gagne » quand c'est le cas (Odin).
+
+**Vérifié en dev** : les 4 écrans ouvrent sur « Qui joue ? » ; Regicide (solo) démarre à 2 joueurs avec 2 croix ; la barre annonce « Gagné » dès le choix ; Dice Throne affiche « Sous chaque nom : son héros » ; Vale of Eternity affiche « Colonne : Points ».
+  - ⚠️ **piège rencontré** : `<Fragment>` utilisé sans être importé → l'app tombait sur l'écran de crash. La console le disait ; l'ErrorBoundary a fait son travail.
+
+**RESTE sur ce chantier** : la saisie « par joueur » en multi-catégories (`entry: byPlayer`) n’est utilisée par **aucune** fiche — chemin jamais éprouvé.
+
 ## ✅ GRILLE INTERDITE EN WISHLIST + SAUVEGARDES REPLIÉES (2026-08-19, demande user)
 
 **1. La vue grille est INTERDITE en wishlist.** Une tuile n’a pas de menu de glissement, et en wishlist le tap ouvre Philibert : en grille, on ne pouvait donc plus modifier un jeu **du tout**. C’était la limite assumée du chantier 6, l’user a tranché.
