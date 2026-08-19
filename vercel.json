@@ -1,16 +1,43 @@
 {
   "rewrites": [
-    { "source": "/api/sb/:path*", "destination": "/api/sbproxy?p=:path*" }
+    {
+      "source": "/api/sb/:path*",
+      "destination": "/api/sbproxy?p=:path*"
+    }
   ],
   "images": {
-    "sizes": [128, 200, 256, 384, 640],
-    "formats": ["image/webp"],
+    "sizes": [
+      128,
+      200,
+      256,
+      384,
+      640
+    ],
+    "formats": [
+      "image/webp"
+    ],
     "minimumCacheTTL": 31536000,
     "remotePatterns": [
-      { "protocol": "https", "hostname": "cf.geekdo-images.com" },
-      { "protocol": "https", "hostname": "philibertnet.com" },
-      { "protocol": "https", "hostname": "**.philibertnet.com" },
-      { "protocol": "https", "hostname": "**.cultura.com" }
+      {
+        "protocol": "https",
+        "hostname": "cf.geekdo-images.com"
+      },
+      {
+        "protocol": "https",
+        "hostname": "philibertnet.com"
+      },
+      {
+        "protocol": "https",
+        "hostname": "**.philibertnet.com"
+      },
+      {
+        "protocol": "https",
+        "hostname": "**.cultura.com"
+      },
+      {
+        "protocol": "https",
+        "hostname": "i0.wp.com"
+      }
     ]
   }
 }
