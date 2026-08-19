@@ -2912,6 +2912,22 @@ button { transition: transform 0.12s ease; }
 }
 .detail-body { padding-left: 16px; padding-right: 16px; }
 .detail-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Actions secondaires de la fiche : nues, comme les boutons de la barre du haut. */
+.detail-head-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: var(--r-ctl);
+  cursor: pointer;
+}
+.detail-head-btn:active { transform: scale(0.94); }
+.detail-head-btn:disabled { opacity: 0.4; cursor: default; }
 /* Changement de jeu au glissé = pager PLEIN ÉCRAN : le corps du NOUVEAU jeu entre en plein depuis un
    bord PENDANT que l'ancien (instantané figé `.detail-body-leaving`) sort par l'autre bord, avec une
    ombre nette entre les deux → on voit vraiment une fiche remplacer l'autre. */
@@ -3019,33 +3035,87 @@ button { transition: transform 0.12s ease; }
   gap: 4px;
 }
 .detail-bubbles .owner-bubble { box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.35); }
-.detail-infos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+/* Bande de stats : les cadres tombent (c'était le dernier écran à en avoir), il reste
+   des filets verticaux et la typographie pour séparer — comme une fiche produit. */
+.detail-infos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 0;
+  margin: 2px 0 18px;
+}
 .detail-info {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--r-ctl);
-  padding: 9px 12px;
+  padding: 0 8px;
+  border-left: 1px solid var(--line);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  min-width: 0;
 }
-.detail-info-k { font-size: var(--fs-footnote); color: var(--muted); display: inline-flex; align-items: center; gap: 5px; }
+.detail-info:first-child { border-left: 0; padding-left: 0; }
+/* Téléphone étroit : 4 colonnes coupent « Complexité » → on passe à deux rangées de deux. */
+@media (max-width: 360px) {
+  .detail-infos { grid-template-columns: 1fr 1fr; row-gap: 14px; }
+  .detail-info:nth-child(odd) { border-left: 0; padding-left: 0; }
+}
+.detail-info-k {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .detail-info-v { font-size: var(--fs-body-l); font-weight: 600; letter-spacing: -0.01em; }
 .detail-ext { margin: 0 0 12px; font-size: var(--fs-body); color: var(--ink); }
-.detail-plays { margin: 0 0 14px; font-size: var(--fs-body); color: var(--muted); }
+.detail-ext .detail-info-k { display: inline; text-transform: none; letter-spacing: 0; }
+/* Le nombre de parties est LA donnée vivante du jeu : elle mérite le corps d'un titre,
+   et la rangée entière ouvre les statistiques. */
+.detail-plays {
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 10px 12px 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.detail-plays:disabled { cursor: default; opacity: 0.5; }
+.detail-plays:active { transform: scale(0.995); }
+.detail-plays-n {
+  font-size: var(--fs-title);
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1;
+  color: var(--ink);
+}
+.detail-plays-txt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: var(--fs-body-s);
+  font-weight: 600;
+  color: var(--ink);
+}
+.detail-plays-last { font-size: var(--fs-caption); font-weight: 500; color: var(--muted); }
+.detail-plays-go { color: var(--muted); font-size: var(--fs-title-s); }
 .detail-actions { display: flex; flex-direction: column; gap: 8px; }
-.detail-primary { width: 100%; height: 46px; font-size: var(--fs-body-l); }
-.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.detail-grid .btn-ghost { height: 44px; padding-left: 8px; padding-right: 8px; /* colonne étroite : le libellé tient sur une ligne */ }
-.detail-bgg-btn { gap: 7px; }
+.detail-primary { width: 100%; height: 46px; font-size: var(--fs-body-l); gap: 8px; }
+.detail-secondary { width: 100%; height: 44px; }
 
 /* Sondage BGG « nombre de joueurs » (idéal / recommandé / déconseillé + votes). */
 .detail-poll {
-  margin-top: 18px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
-  padding: 12px 14px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line); /* plus de cadre : un filet suffit à ouvrir la section */
 }
 .detail-poll-head { font-weight: 600; font-size: var(--fs-body-l); margin-bottom: 8px; }
 .detail-poll-total { color: var(--muted); font-weight: 400; }

@@ -303,3 +303,27 @@ export function ListIcon({ size = 20 }) {
     </Ico>
   )
 }
+
+// ↗ Lien externe = une flèche qui sort du cadre (remplace le favicon distant de BGG :
+// une requête tierce n'a rien à faire dans une app qui doit marcher hors ligne).
+export function ExternalIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <path
+        d="M14 4h6v6M20 4l-8.5 8.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M18 13.5V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 19V8a1.5 1.5 0 0 1 1.5-1.5H11"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+    </Ico>
+  )
+}

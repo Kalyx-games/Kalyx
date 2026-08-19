@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { BackIcon, PlayersIcon, StarIcon, ClockIcon, BarsIcon, ExtIcon } from './icons'
+import { BackIcon, PlayersIcon, StarIcon, ClockIcon, BarsIcon, ExtIcon, PencilIcon, ExternalIcon, DieIcon } from './icons'
 import SnapshotPane from './SnapshotPane'
 import { backdropSrc, heroSrc } from '../lib/img'
 import {
@@ -123,6 +123,16 @@ export default function GameDetail({
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2 className="detail-title">{game.name}</h2>
+        {/* Modifier et BGG quittent la grille : de l'administration et un lien externe
+            n'ont pas à figurer au même rang que la consultation des parties. */}
+        <button type="button" className="detail-head-btn" onClick={onEdit} disabled={!online} title="Modifier le jeu" aria-label="Modifier le jeu">
+          <PencilIcon size={18} />
+        </button>
+        {onBgg && (
+          <button type="button" className="detail-head-btn" onClick={onBgg} title="Voir sur BoardGameGeek" aria-label="Voir sur BoardGameGeek">
+            <ExternalIcon size={18} />
+          </button>
+        )}
       </div>
 
       {/* Corps du nouveau jeu qui GLISSE en entrée (plein écran). L'ancien corps (instantané figé)
@@ -181,71 +191,50 @@ export default function GameDetail({
       </div>
 
       <div className="detail-infos">
-        <div className="detail-info"><span className="detail-info-k"><PlayersIcon size={13} /> Joueurs</span><span className="detail-info-v">{playersText}</span></div>
-        {bestText && <div className="detail-info"><span className="detail-info-k"><StarIcon size={13} /> Idéal</span><span className="detail-info-v">{bestText}</span></div>}
-        <div className="detail-info"><span className="detail-info-k"><ClockIcon size={13} /> Durée</span><span className="detail-info-v">{durationLabel(game)}</span></div>
-        <div className="detail-info"><span className="detail-info-k"><BarsIcon size={13} /> Complexité</span><span className="detail-info-v">{complexity ? `${complexity} · ${complexityWord(complexity)}` : '—'}</span></div>
+        <div className="detail-info"><span className="detail-info-k">Joueurs</span><span className="detail-info-v">{playersText}</span></div>
+        {bestText && <div className="detail-info"><span className="detail-info-k">Idéal</span><span className="detail-info-v">{bestText}</span></div>}
+        <div className="detail-info"><span className="detail-info-k">Durée</span><span className="detail-info-v">{durationLabel(game)}</span></div>
+        <div className="detail-info" title={complexity ? `${complexity} sur 5 (BoardGameGeek)` : undefined}>
+          <span className="detail-info-k">Complexité</span>
+          {/* le mot parle de lui-même ; le chiffre BGG reste en infobulle */}
+          <span className="detail-info-v">{complexity ? complexityWord(complexity) : '—'}</span>
+        </div>
       </div>
 
       {extensions.length > 0 && (
         <p className="detail-ext"><span className="detail-info-k"><ExtIcon size={13} /></span> {extensions.join(', ')}</p>
       )}
 
+      {/* La donnée vivante du jeu, traitée comme telle : le nombre en grand, et toute la
+          rangée mène aux statistiques — elle remplace un bouton « Statistiques » anonyme. */}
       {hasSheet && (
-        <p className="detail-plays">
-          {playCount > 0
-            ? `${playCount} partie${playCount > 1 ? 's' : ''} enregistrée${playCount > 1 ? 's' : ''}${lastPlayedLabel ? ` · dernière le ${lastPlayedLabel}` : ''}.`
-            : 'Aucune partie enregistrée pour l’instant.'}
-        </p>
+        <button type="button" className="detail-plays" onClick={onStats} disabled={!online}>
+          <span className="detail-plays-n">{playCount}</span>
+          <span className="detail-plays-txt">
+            {playCount > 1 ? 'parties jouées' : 'partie jouée'}
+            {lastPlayedLabel && <span className="detail-plays-last">dernière le {lastPlayedLabel}</span>}
+          </span>
+          <span className="detail-plays-go" aria-hidden="true">›</span>
+        </button>
       )}
 
       <div className="detail-actions">
         {hasSheet ? (
           <>
-            {/* Gros bouton « Nouvelle partie » en tête, puis les 4 boutons (grille 2×2). */}
-            <button type="button" className="btn-primary detail-primary" onClick={onNewPlay} disabled={!online}>Nouvelle partie</button>
-            <div className="detail-grid">
-              <button type="button" className="btn-ghost" onClick={onStats} disabled={!online}>Statistiques</button>
-              <button type="button" className="btn-ghost" onClick={onHistory} disabled={!online}>Historique</button>
-              <button type="button" className="btn-ghost" onClick={onEdit} disabled={!online}>Modifier le jeu</button>
-              {onBgg && (
-              <button type="button" className="btn-ghost detail-bgg-btn" onClick={onBgg}>
-                <img
-                  className="bgg-logo"
-                  src="https://www.google.com/s2/favicons?domain=boardgamegeek.com&sz=64"
-                  alt=""
-                  width="18"
-                  height="18"
-                  onError={(e) => { e.currentTarget.style.display = 'none' }}
-                />
-                BGG ↗
-              </button>
-            )}
-            </div>
+            {/* Une seule action primaire. L'historique reste à un tap, au second rang. */}
+            <button type="button" className="btn-primary detail-primary" onClick={onNewPlay} disabled={!online}>
+              <DieIcon size={18} /> Nouvelle partie
+            </button>
+            <button type="button" className="btn-ghost detail-secondary" onClick={onHistory} disabled={!online}>
+              Historique des parties
+            </button>
           </>
         ) : (
-          <>
-            <button type="button" className="btn-primary detail-primary" onClick={onCreateSheet} disabled={!online}>Créer la fiche de score</button>
-            <div className="detail-grid">
-              <button type="button" className="btn-ghost" onClick={onEdit} disabled={!online}>Modifier le jeu</button>
-              {onBgg && (
-              <button type="button" className="btn-ghost detail-bgg-btn" onClick={onBgg}>
-                <img
-                  className="bgg-logo"
-                  src="https://www.google.com/s2/favicons?domain=boardgamegeek.com&sz=64"
-                  alt=""
-                  width="18"
-                  height="18"
-                  onError={(e) => { e.currentTarget.style.display = 'none' }}
-                />
-                BGG ↗
-              </button>
-            )}
-            </div>
-          </>
+          <button type="button" className="btn-primary detail-primary" onClick={onCreateSheet} disabled={!online}>
+            Créer la fiche de score
+          </button>
         )}
       </div>
-
       {poll && (
         <div className="detail-poll">
           <div className="detail-poll-head">
