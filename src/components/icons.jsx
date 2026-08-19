@@ -279,3 +279,27 @@ export function SparkIcon({ size = 20 }) {
     </Ico>
   )
 }
+
+// ▦ Vue grille = quatre tuiles (bascule d'affichage de la collection).
+export function GridIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <rect x="3.5" y="3.5" width="7.4" height="7.4" rx="1.8" />
+      <rect x="13.1" y="3.5" width="7.4" height="7.4" rx="1.8" />
+      <rect x="3.5" y="13.1" width="7.4" height="7.4" rx="1.8" />
+      <rect x="13.1" y="13.1" width="7.4" height="7.4" rx="1.8" />
+    </Ico>
+  )
+}
+
+// ☰ Vue liste = trois rangées (jaquette + texte).
+export function ListIcon({ size = 20 }) {
+  return (
+    <Ico size={size}>
+      <rect x="3.5" y="4.6" width="5" height="5" rx="1.4" />
+      <rect x="10.5" y="5.6" width="10" height="2.8" rx="1.4" opacity=".55" />
+      <rect x="3.5" y="14.4" width="5" height="5" rx="1.4" />
+      <rect x="10.5" y="15.4" width="10" height="2.8" rx="1.4" opacity=".55" />
+    </Ico>
+  )
+}

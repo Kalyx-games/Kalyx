@@ -185,7 +185,7 @@ Kalyx n'est **pas** un site 100 % statique. En plus des fichiers du dossier `dis
 
 Sur un hébergeur purement statique (GitHub Pages par exemple), l'app s'affiche et la collection fonctionne, mais ces boutons échouent.
 
-**Autre point à connaître :** les vignettes des cartes passent par l'optimiseur d'images de Vercel (`/_vercel/image`, configuré dans `vercel.json`). Ailleurs, un repli automatique affiche l'image d'origine : rien ne casse, mais les images sont beaucoup plus lourdes (~1,3 Mo au lieu de ~13 Ko). Le cas échéant, il faudra adapter `thumbSrc()` dans `src/components/GameCard.jsx`.
+**Autre point à connaître :** les vignettes des cartes passent par l'optimiseur d'images de Vercel (`/_vercel/image`, configuré dans `vercel.json`). Ailleurs, un repli automatique affiche l'image d'origine : rien ne casse, mais les images sont beaucoup plus lourdes (~1,3 Mo au lieu de ~13 Ko). Le cas échéant, il faudra adapter `thumbSrc()` dans `src/lib/img.js` (⚠️ seules les largeurs listées dans `vercel.json` sont acceptées).
 
 ---
 

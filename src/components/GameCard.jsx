@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { parseOwners, parseTags, ownerDisplay, ownerColor, parseExtensions, basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText } from '../lib/games'
 import { CollectionIcon, PlayersIcon, StarIcon, ClockIcon, ExtIcon, BarsIcon, PencilIcon, DieIcon } from './icons'
+import { thumbSrc } from '../lib/img'
 
 // Une carte compacte représentant un jeu dans la liste.
 // Toutes les infos (joueurs, idéal, complexité, durée, propriétaire) sont dans
@@ -19,12 +20,8 @@ function formatPrice(p) {
   return `${n.toFixed(2).replace('.', ',')} €`
 }
 
-// URL de la miniature = l'image du champ image, redimensionnée par l'optimiseur Vercel
-// (/_vercel/image). Même image que le plein écran, juste plus petite et en webp.
-// w=256 = net même sur écran retina (la vignette fait ~66px). q=72 = bon compromis.
-function thumbSrc(url, w = 256) {
-  return `/_vercel/image?url=${encodeURIComponent(url)}&w=${w}&q=72`
-}
+// Hauteur de la vignette — DOIT rester synchro avec .game-thumb / .game (index.css).
+const THUMB_H = 88
 
 // Une seule durée par jeu : on affiche le maximum (les jeux ont min = max).
 // < 60 min → « 45 min » ; ≥ 60 min → format heures compact (« 1 h », « 1h30 », « 2 h »)
@@ -60,8 +57,8 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
   const BUBBLE_H = 20
   const BUBBLE_GAP = 3
   const stackH = bubbleCount ? bubbleCount * BUBBLE_H + (bubbleCount - 1) * BUBBLE_GAP : 0
-  // La pile déborde de l'image (66px) quand elle mesure plus de ~76px → on réserve la place.
-  const thumbColStyle = stackH > 76 ? { minHeight: stackH - 10 } : undefined
+  // La pile de bulles déborde sous l'image quand elle dépasse sa hauteur → on réserve la place.
+  const thumbColStyle = stackH > THUMB_H + 10 ? { minHeight: stackH - 10 } : undefined
 
   // Joueurs : base, puis entre parenthèses ce que les extensions AJOUTENT.
   const basePlayers = basePlayersSet(game)
@@ -187,6 +184,14 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
       openCard = null
     }
   }, [offset])
+  // Démontage carte ouverte (bascule en vue grille, filtre qui la retire…) : sans ça, le
+  // registre garderait une carte disparue et n'en refermerait plus d'autre.
+  useEffect(
+    () => () => {
+      if (openCard === meRef.current) openCard = null
+    },
+    []
+  )
 
   useEffect(() => {
     const el = cardRef.current

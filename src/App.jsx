@@ -35,9 +35,10 @@ const GameHistory = lazyRetry(() => import('./components/GameHistory'))
 const TierlistHub = lazyRetry(() => import('./components/TierlistHub'))
 const TierlistView = lazyRetry(() => import('./components/TierlistView'))
 import SkeletonCard from './components/SkeletonCard'
+import GameTile from './components/GameTile'
 import { enterFullscreen } from './lib/fullscreen'
 import NavBar from './components/NavBar'
-import { SettingsIcon, ChwaziIcon, FilterIcon, ClockIcon, DieIcon, CheckIcon } from './components/icons'
+import { SettingsIcon, ChwaziIcon, FilterIcon, ClockIcon, DieIcon, CheckIcon, GridIcon, ListIcon } from './components/icons'
 
 
 // Le filtre propriétaire est PERSISTANT (un seul propriétaire regarde en général ses
@@ -72,6 +73,22 @@ function loadView() {
 function saveView(v) {
   try {
     if (v === 'collection' || v === 'wishlist' || v === 'stats') localStorage.setItem(VIEW_KEY, v)
+  } catch {
+    /* stockage indispo : tant pis */
+  }
+}
+
+const LAYOUT_KEY = 'kalyx-layout'
+function loadLayout() {
+  try {
+    return localStorage.getItem(LAYOUT_KEY) === 'grille' ? 'grille' : 'liste'
+  } catch {
+    return 'liste'
+  }
+}
+function saveLayout(v) {
+  try {
+    if (v === 'liste' || v === 'grille') localStorage.setItem(LAYOUT_KEY, v)
   } catch {
     /* stockage indispo : tant pis */
   }
@@ -187,6 +204,7 @@ export default function App() {
   const [movingBusy, setMovingBusy] = useState(false)
   // Au démarrage à froid, on ignore l'onglet mémorisé → on repart sur la Collection (cf. isReload).
   const savedView = isReload ? loadView() : 'collection'
+  const [layout, setLayout] = useState(loadLayout)
   const [view, setView] = useState(savedView === 'wishlist' ? 'wishlist' : 'collection') // 'collection' | 'wishlist'
   const [settingsOpen, setSettingsOpen] = useState(false) // écran Réglages (engrenage en haut à droite)
   const [playersOpen, setPlayersOpen] = useState(false) // écran Joueurs (renommage global)
@@ -615,7 +633,9 @@ export default function App() {
   const listRef = useRef(null)
   useLayoutEffect(() => {
     const list = listRef.current
-    if (!list) return
+    // En grille il n'y a aucune cellule à aligner : on sort avant de payer le reflow.
+    // `layout` est dans les dépendances pour que la mesure se refasse au retour en liste.
+    if (!list || layout === 'grille') return
     // On mesure à largeur libre (chaque cellule prend sa largeur naturelle)…
     list.style.setProperty('--meta-left', 'max-content')
     let max = 0
@@ -627,7 +647,7 @@ export default function App() {
     list.style.setProperty('--meta-left', max ? `${Math.ceil(max)}px` : 'minmax(0, 1fr)')
     // statsOpen/settingsOpen : le <main> est démonté puis remonté en fermant ces écrans →
     // il faut recalculer, sinon la 1re colonne retombe sur son repli (colonne étirée).
-  }, [games, listStatus, statsOpen, settingsOpen])
+  }, [games, listStatus, statsOpen, settingsOpen, layout])
 
   // Scénarios déjà utilisés pour ce jeu (auto-complétion du champ scénario).
   const scenarioNames = useMemo(
@@ -1188,6 +1208,23 @@ export default function App() {
     }
   }
 
+  // Valeur du tri en cours, affichée sous le nom en vue grille : la tuile n'a pas de
+  // ligne d'infos, sans ça on trierait sur une donnée invisible.
+  const tileSortLabel = (g) => {
+    if (sort === 'lastplayed') return playMeta[g.id]?.last ? formatDay(playMeta[g.id].last) : 'Jamais jouée'
+    if (sort === 'plays') {
+      const n = playMeta[g.id]?.count
+      return n ? `${n} partie${n > 1 ? 's' : ''}` : 'Jamais jouée'
+    }
+    if (sort === 'players') return g.players || (g.players_min ? `${g.players_min}-${g.players_max || g.players_min} j.` : null)
+    if (sort === 'duration') {
+      const d = g.duration_max ?? g.duration_min
+      return d ? (d >= 60 ? `${Math.round((d / 60) * 10) / 10} h` : `${d} min`) : null
+    }
+    if (sort === 'complexity') return g.complexity ? `${Number(g.complexity).toFixed(1)} / 5` : null
+    return null
+  }
+
   const countLabel = `${visible.length} jeu${visible.length > 1 ? 'x' : ''}`
 
   // Nom de l'écran courant : sert au grand titre ET au titre condensé de la barre du haut.
@@ -1333,8 +1370,22 @@ export default function App() {
       {/* Titre d'écran (comme « Ta bibliothèque » chez Spotify) : grand, à gauche, avec le
           compteur en sous-titre discret — l'écran principal n'avait aucun titre avant. */}
       <div className="screen-head">
-        <h1 className="screen-title">{screenTitle}</h1>
-        {!statsOpen && games !== null && <p className="screen-count">{countLabel}</p>}
+        <div className="screen-head-text">
+          <h1 className="screen-title">{screenTitle}</h1>
+          {!statsOpen && games !== null && <p className="screen-count">{countLabel}</p>}
+        </div>
+        {/* Bascule liste / grille : on montre l’icône de la vue vers laquelle on va. */}
+        {!statsOpen && (
+          <button
+            type="button"
+            className="layout-btn"
+            onClick={() => { const v = layout === 'grille' ? 'liste' : 'grille'; setLayout(v); saveLayout(v) }}
+            title={layout === 'grille' ? 'Afficher en liste' : 'Afficher en grille'}
+            aria-label={layout === 'grille' ? 'Afficher en liste' : 'Afficher en grille'}
+          >
+            {layout === 'grille' ? <ListIcon size={20} /> : <GridIcon size={20} />}
+          </button>
+        )}
       </div>
       {/* Ligne 1 : recherche + tri côte à côte. Le tri est à DROITE de la recherche pour
           libérer toute la ligne 2 aux puces de filtres (qui doivent toutes rester visibles).
@@ -1443,9 +1494,11 @@ export default function App() {
           />
         </Suspense>
       ) : (
-      <main className="list" ref={listRef}>
+      <main className={`list${layout === 'grille' ? ' list-grid' : ''}`} ref={listRef}>
         {games === null || booting ? (
-          Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
+          Array.from({ length: layout === 'grille' ? 9 : 5 }).map((_, i) =>
+            layout === 'grille' ? <div key={i} className="gtile-skeleton sk" /> : <SkeletonCard key={i} />
+          )
         ) : visible.length === 0 ? (
           <div className="empty">
             <p className="empty-emoji">🎲</p>
@@ -1463,7 +1516,25 @@ export default function App() {
             )}
           </div>
         ) : (
-          visible.map((g, i) => (
+          visible.map((g, i) =>
+            layout === 'grille' ? (
+              <GameTile
+                key={g.id}
+                game={g}
+                index={i}
+                online={online}
+                onCardClick={
+                  !online
+                    ? undefined
+                    : view === 'wishlist'
+                    ? () => window.open(philibertSearchUrl(g.name), '_blank', 'noopener')
+                    : () => setDetailGame(g)
+                }
+                metaLine={tileSortLabel(g)}
+                ownerMap={ownerMap}
+                tagMap={tagMap}
+              />
+            ) : (
             <GameCard
               key={g.id}
               game={g}
@@ -1495,7 +1566,8 @@ export default function App() {
               tagMap={tagMap}
               hasSheet={!!(scoresheets && scoresheets[g.id])}
             />
-          ))
+            )
+          )
         )}
       </main>
       )}

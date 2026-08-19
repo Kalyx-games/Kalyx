@@ -13,6 +13,7 @@
   --cta-glow: rgba(16, 24, 40, 0.16); /* une ombre est GRISE, jamais colorée */
   /* Élévation des cartes : en clair une ombre douce remplace la bordure ; en sombre les
      ombres sont invisibles → un liseré lumineux en haut fait « émerger » la surface. */
+  --backdrop-op: 0.5; /* fond d'ambiance de la fiche */
   --card-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 5px 14px -10px rgba(16, 24, 40, 0.12); /* courte : dans une liste serrée, une ombre longue fait un « trait » dans le gap */
   /* Rayons : 3 crans SEULEMENT (les gros arrondis uniformes partout = tic des applis IA).
      ctl = boutons/champs/chips · card = cartes/surfaces/menus · sheet = feuilles montantes. */
@@ -70,6 +71,7 @@
     --btn-ghost-bg: #26262a;
     --btn-ghost-border: #33333a;
     --cta-glow: rgba(0, 0, 0, 0.5);
+    --backdrop-op: 0.36; /* plus discret : le titre est blanc, la jaquette peut être claire */
     --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
     --input-bg: #26262a; /* se détache de --soft (les groupes imbriqués) sans bordure */
     --input-focus: #2e2e33;
@@ -103,6 +105,7 @@
   --btn-ghost-bg: #26262a;
   --btn-ghost-border: #33333a;
   --cta-glow: rgba(0, 0, 0, 0.5);
+  --backdrop-op: 0.36;
   --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   --input-bg: #26262a; /* se détache de --soft (les groupes imbriqués) sans bordure */
   --input-focus: #2e2e33;
@@ -536,7 +539,28 @@ body {
    Le « Ta bibliothèque » de Spotify : grand, à gauche, le chrome au-dessus reste discret. */
 .screen-head {
   padding: 10px 16px 2px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
+.screen-head-text { min-width: 0; }
+/* Bascule liste / grille : nue comme les boutons de la barre du haut (chantier 7). */
+.layout-btn {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin-top: -2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  border-radius: var(--r-ctl);
+  color: var(--muted);
+  cursor: pointer;
+}
+.layout-btn:active { transform: scale(0.94); }
 .screen-title {
   font-size: var(--fs-title);
   font-weight: 700;
@@ -1148,7 +1172,7 @@ body {
 }
 .game {
   display: grid;
-  grid-template-columns: 66px 1fr;
+  grid-template-columns: 88px 1fr;
   gap: 13px;
   align-items: start; /* tout le contenu aligné en haut (image, infos) */
   padding: 11px 22px 11px 11px; /* bande droite réservée au chevron */
@@ -1174,13 +1198,16 @@ body {
 /* Conteneur de l'image NON rogné : les bulles peuvent déborder à gauche. */
 .game-thumb-wrap {
   position: relative;
-  width: 66px;
-  height: 66px;
+  width: 88px;
+  height: 88px;
   flex-shrink: 0;
 }
 .game-thumb {
-  width: 66px;
-  height: 66px;
+  /* 88 px : la boîte de jeu redevient reconnaissable d'un coup d'œil (chantier 6).
+     La carte gagne quelques pixels de hauteur sur les jeux à 2 lignes d'infos — c'est
+     l'image qui la dicte désormais, pas le texte. */
+  width: 88px;
+  height: 88px;
   border-radius: 5px; /* l'ART est le plus serré : la jaquette redevient une vraie boîte de jeu */
   overflow: hidden;
   background: var(--soft); /* placeholder NEUTRE pendant le chargement (fini le flash violet) */
@@ -2859,7 +2886,12 @@ button { transition: transform 0.12s ease; }
    swipe entre fiches, un translateX de 100% = toute la largeur de l'écran ⇒ l'ancienne fiche sort
    COMPLÈTEMENT (plus de bande figée à gauche). */
 .detail-sheet { padding: 8px 0 calc(28px + env(safe-area-inset-bottom)); overflow-x: hidden; }
-.detail-sheet .settings-head { padding-left: 16px; padding-right: 16px; }
+.detail-sheet .settings-head {
+  padding-left: 16px;
+  padding-right: 16px;
+  position: relative;
+  z-index: 5; /* au-dessus du corps (4) : le fond d'ambiance passe DERRIÈRE le titre */
+}
 .detail-body { padding-left: 16px; padding-right: 16px; }
 .detail-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Changement de jeu au glissé = pager PLEIN ÉCRAN : le corps du NOUVEAU jeu entre en plein depuis un
@@ -2902,6 +2934,38 @@ button { transition: transform 0.12s ease; }
   .detail-body-leaving { display: none; }
 }
 
+/* Fond d'ambiance tiré de la jaquette (chantier 6). Il vit DANS .detail-body pour glisser
+   avec elle au changement de fiche. .detail-body ayant un fond opaque, un z-index négatif
+   le rendrait invisible → le fond reste à 0 et ce sont les frères qui passent devant. */
+.detail-backdrop {
+  position: absolute;
+  top: -72px; /* remonte DERRIÈRE l'en-tête (44 px + le padding de la feuille) */
+  left: -16px; /* annule le padding du corps : le fond va bord à bord */
+  right: -16px;
+  height: 372px;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.detail-backdrop img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(30px) saturate(1.3);
+  transform: scale(1.4); /* le flou mange les bords : on agrandit pour ne pas voir de vide */
+  opacity: var(--backdrop-op);
+}
+.detail-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 10%, var(--bg) 92%);
+}
+/* Tout le contenu de la fiche passe DEVANT le fond (le texte n'est jamais sur l'image). */
+.detail-body > *:not(.detail-backdrop) {
+  position: relative;
+  z-index: 1;
+}
 .detail-hero-wrap { position: relative; margin: 4px 0 12px; }
 .detail-hero {
   display: block;
@@ -4505,4 +4569,96 @@ input[type='number'] {
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
   background: var(--bg);
+}
+
+/* ---------- Vue GRILLE (chantier 6) : la jaquette d'abord, le nom dessous ---------- */
+.list.list-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px 10px;
+  align-content: start;
+}
+/* Sur large écran, on garde des tuiles de taille humaine plutôt que 3 colonnes géantes. */
+@media (min-width: 760px) {
+  .list.list-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+}
+/* Le message « aucun jeu » et les squelettes occupent toute la largeur. */
+.list.list-grid .empty { grid-column: 1 / -1; }
+.gtile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  animation: kx-card-in 0.34s ease both; /* même arrivée que les cartes de la liste */
+}
+.gtile:disabled { cursor: default; }
+.gtile:active { transform: scale(0.97); }
+.gtile-art {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 5px; /* l'art est le plus serré : une vraie boîte de jeu */
+  overflow: hidden;
+  background: var(--soft);
+  box-shadow: var(--card-shadow);
+}
+.gtile-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+.gtile-img.loaded { opacity: 1; }
+.gtile-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: var(--fs-title-s);
+  font-weight: 700;
+}
+/* Les bulles se posent DANS le coin de la jaquette (pas de débord : la tuile est l'art). */
+.gtile-bubbles {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+}
+.gtile-bubbles .owner-bubble {
+  width: 18px;
+  height: 18px;
+  font-size: 8px;
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.35);
+}
+.gtile-name {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* deux lignes puis « … » : les titres longs sont fréquents */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.gtile-sub {
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  color: var(--muted);
+  margin-top: -3px;
+}
+/* Squelette d'une tuile pendant le chargement (même forme que ce qui arrive). */
+.gtile-skeleton {
+  aspect-ratio: 1;
+  border-radius: 5px;
+  background: var(--soft); /* .sk ne pose que le scintillement : la surface vient d'ici */
 }

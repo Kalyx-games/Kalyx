@@ -1,13 +1,12 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { BackIcon, PlayersIcon, StarIcon, ClockIcon, BarsIcon, ExtIcon } from './icons'
 import SnapshotPane from './SnapshotPane'
+import { backdropSrc, heroSrc } from '../lib/img'
 import {
   parseOwners, parseTags, ownerDisplay, parseExtensions,
   basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText,
 } from '../lib/games'
 
-// Miniature optimisée (même image que la carte + le zoom), via l'optimiseur Vercel.
-const thumbSrc = (url, w) => `/_vercel/image?url=${encodeURIComponent(url)}&w=${w}&q=72`
 
 // Durée : identique à la carte ("30 min", "1 h", "1h30").
 function durationLabel(g) {
@@ -137,11 +136,24 @@ export default function GameDetail({
         />
       )}
       <div className="detail-body" key={game.id} data-dir={navDirRef.current} ref={bodyRef}>
+      {/* Fond d'ambiance : la jaquette, floutée, teinte le haut de la fiche puis se fond
+          dans le fond de page. L'image est demandée en 128 px de large — un flou de 30 px
+          n'a que faire de la définition, et ça ne coûte que quelques kilo-octets. */}
+      {showImg && (
+        <div className="detail-backdrop" aria-hidden="true">
+          <img
+            src={backdropSrc(fullImg)}
+            alt=""
+            // Repli sur l'image brute si l'optimiseur ne répond pas (domaine non listé, dev).
+            onError={(e) => { if (e.currentTarget.src !== fullImg) e.currentTarget.src = fullImg }}
+          />
+        </div>
+      )}
       <div className="detail-hero-wrap">
         {showImg ? (
           <button type="button" className="detail-hero" onClick={() => onZoomImage(fullImg)} aria-label="Agrandir l'image">
             <img
-              src={thumbSrc(fullImg, 512)}
+              src={heroSrc(fullImg)}
               alt=""
               onError={(e) => {
                 // 1er échec (optimiseur) → tente l'image brute ; 2e échec → repli sur le dé.
