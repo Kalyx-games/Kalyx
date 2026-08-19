@@ -4625,21 +4625,6 @@ input[type='number'] {
   font-size: var(--fs-title-s);
   font-weight: 700;
 }
-/* Les bulles se posent DANS le coin de la jaquette (pas de débord : la tuile est l'art). */
-.gtile-bubbles {
-  position: absolute;
-  left: 4px;
-  bottom: 4px;
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 3px;
-}
-.gtile-bubbles .owner-bubble {
-  width: 18px;
-  height: 18px;
-  font-size: 8px;
-  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.35);
-}
 .gtile-name {
   font-size: var(--fs-caption);
   font-weight: 600;

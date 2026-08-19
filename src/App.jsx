@@ -1536,8 +1536,6 @@ export default function App() {
                     : () => setDetailGame(g)
                 }
                 metaLine={tileSortLabel(g)}
-                ownerMap={ownerMap}
-                tagMap={tagMap}
               />
             ) : (
             <GameCard

@@ -1,5 +1,5 @@
-import { memo, useEffect, useState } from 'react'
-import { parseOwners, parseTags, ownerDisplay, ownerColor } from '../lib/games'
+import { memo, useEffect, useRef, useState } from 'react'
+import { ownerColor } from '../lib/games'
 import { thumbSrc } from '../lib/img'
 
 // Une TUILE de la vue grille : la jaquette d'abord, le nom dessous. Pas de gestes ici
@@ -18,24 +18,22 @@ function formatPrice(p) {
   return `${n.toFixed(2).replace('.', ',')} €`
 }
 
-function GameTile({ game, online, onCardClick, metaLine, ownerMap, tagMap, index = 0 }) {
+function GameTile({ game, online, onCardClick, metaLine, index = 0 }) {
   const [broken, setBroken] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const imgRef = useRef(null)
   const fullImg = game.image_url
   // L'image du jeu peut changer sans que la tuile soit remontée (correction d'une URL
   // cassée depuis la fiche) : sans ce reset, elle resterait bloquée sur le monogramme.
+  // ⚠️ Et si l'image est DÉJÀ en cache (actualisation !), `onLoad` ne se déclenche jamais :
+  // sans ce test de `complete`, la tuile resterait vide — c'est ce qu'on voyait au reload.
   useEffect(() => {
     setBroken(false)
     setLoaded(false)
+    const el = imgRef.current
+    if (el && el.complete && el.naturalWidth > 0) setLoaded(true)
   }, [fullImg])
   const showImg = Boolean(fullImg) && !broken
-
-  const owners = parseOwners(game.owner)
-  const tags = parseTags(game.tags)
-  const bubbles = [
-    ...owners.map((n) => ({ key: 'o:' + n, ...ownerDisplay(n, ownerMap) })),
-    ...tags.map((n) => ({ key: 't:' + n, ...ownerDisplay(n, tagMap) })),
-  ]
 
   // Sous le nom : la valeur du tri en cours si elle n'est pas déjà visible (prix en
   // wishlist, parties jouées…), sinon les deux repères de base.
@@ -53,11 +51,12 @@ function GameTile({ game, online, onCardClick, metaLine, ownerMap, tagMap, index
       <div className="gtile-art">
         {showImg ? (
           <img
+            ref={imgRef}
             src={thumbSrc(fullImg, 384)}
             alt=""
             loading="lazy"
             className={`gtile-img${loaded ? ' loaded' : ''}`}
-            onLoad={(e) => { if (e.currentTarget.complete) setLoaded(true) }}
+            onLoad={() => setLoaded(true)}
             onError={(e) => {
               // Optimiseur indisponible → image brute ; image brute cassée → monogramme.
               if (e.currentTarget.src !== fullImg) e.currentTarget.src = fullImg
@@ -66,13 +65,6 @@ function GameTile({ game, online, onCardClick, metaLine, ownerMap, tagMap, index
           />
         ) : (
           <span className="gtile-fallback" style={{ background: ownerColor(game.name) }}>{monogram(game.name)}</span>
-        )}
-        {bubbles.length > 0 && (
-          <span className="gtile-bubbles" aria-hidden="true">
-            {bubbles.slice(0, 3).map((b) => (
-              <span key={b.key} className="owner-bubble" style={{ background: b.color }}>{b.initials}</span>
-            ))}
-          </span>
         )}
       </div>
       <span className="gtile-name">{game.name}</span>
@@ -88,7 +80,5 @@ export default memo(
   (prev, next) =>
     prev.game === next.game &&
     prev.online === next.online &&
-    prev.ownerMap === next.ownerMap &&
-    prev.tagMap === next.tagMap &&
     prev.metaLine === next.metaLine
 )
