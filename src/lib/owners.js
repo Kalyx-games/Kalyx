@@ -1,3 +1,4 @@
+import { erreurUtilisateur } from './messages'
 import { supabase, writeDb } from './supabase'
 import { renameInGamesCsv } from './games'
 
@@ -40,9 +41,9 @@ export async function deleteOwner(id) {
 // le nouveau nom dans la colonne games.owner de tous les jeux concernés. Renvoie le nb de jeux.
 export async function renameOwner(id, oldName, newName, patch = {}) {
   const to = (newName || '').trim()
-  if (!to) throw new Error('Nom vide.')
+  if (!to) throw erreurUtilisateur('Nom vide.')
   const { data, error } = await writeDb().from('owners').update({ name: to, ...patch }).eq('id', id).select()
   if (error) throw error
-  if (!data || data.length === 0) throw new Error('Modification impossible (base non prête ?).')
+  if (!data || data.length === 0) throw erreurUtilisateur('Modification impossible (base non prête ?).')
   return renameInGamesCsv('owner', oldName, to)
 }

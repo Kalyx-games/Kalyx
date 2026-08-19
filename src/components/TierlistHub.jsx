@@ -13,7 +13,7 @@ export default function TierlistHub({ tierlists, online, closing = false, onOpen
 
       {missing ? (
         <p className="empty" style={{ padding: 24 }}>
-          Lance la migration <code>migration_tierlists.sql</code> dans Supabase pour activer les tierlists.
+          Les tierlists ne sont pas encore activées sur ta base.
         </p>
       ) : (
         <>

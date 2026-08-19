@@ -8,6 +8,7 @@ import { fetchTags, addTag, updateTag, renameTag, deleteTag } from './lib/tags'
 import { downloadBackup, downloadCsv, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup, restorePreview } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { EMPTY_FILTERS, PRICE_MIN, PRICE_MAX, norm, passesFilters } from './lib/filtering'
+import { messageUtilisateur } from './lib/messages'
 import { useExitLayer } from './lib/useExitLayer'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
 import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, computeAnecdoteList, emptyRanking, dedupeByName, repIdMap, remapRanking } from './lib/tierlists'
@@ -304,7 +305,7 @@ export default function App() {
   // depuis le cache local (hors ligne). Pas de message d'erreur technique.
   const loadGames = useCallback(() => {
     if (!isConfigured) {
-      setError('Base non configurée (voir le README).')
+      setError("La base n'est pas configurée sur cet hébergement.")
       setGames([])
       return
     }
@@ -754,7 +755,7 @@ export default function App() {
       }
       return true // succès → GameForm ferme en glissant vers le bas (animateClose)
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
       return false
     } finally {
       setSaving(false)
@@ -772,7 +773,7 @@ export default function App() {
       setEditing(null) // ferme aussi le formulaire d'édition si ouvert
       setDetailGame((d) => (d && d.id === confirming.id ? null : d)) // ferme la fiche du jeu supprimé
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     } finally {
       setDeletingBusy(false)
     }
@@ -783,7 +784,7 @@ export default function App() {
       await addOwner(name, initials, color)
       reloadOwners()
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     }
   }
   async function handleUpdateOwner(id, patch) {
@@ -791,7 +792,7 @@ export default function App() {
       await updateOwner(id, patch)
       reloadOwners()
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     }
   }
   async function handleRenameOwner(id, oldName, newName, patch) {
@@ -801,7 +802,7 @@ export default function App() {
       loadGames() // recharge les jeux : le nom propagé dans games.owner doit s'afficher
       showToast(n ? `« ${newName} » : ${n} jeu${n > 1 ? 'x' : ''} mis à jour.` : `Renommé en « ${newName} ».`)
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     }
   }
   async function handleConfirmDeleteOwner() {
@@ -813,7 +814,7 @@ export default function App() {
       reloadOwners()
       setConfirmingOwner(null)
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     } finally {
       setDeletingOwnerBusy(false)
     }
@@ -825,7 +826,7 @@ export default function App() {
       await addTag(name, initials, color)
       reloadTags()
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     }
   }
   async function handleUpdateTag(id, patch) {
@@ -833,7 +834,7 @@ export default function App() {
       await updateTag(id, patch)
       reloadTags()
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     }
   }
   async function handleRenameTag(id, oldName, newName, patch) {
@@ -843,7 +844,7 @@ export default function App() {
       loadGames() // recharge les jeux : le nom propagé dans games.tags doit s'afficher
       showToast(n ? `« ${newName} » : ${n} jeu${n > 1 ? 'x' : ''} mis à jour.` : `Renommé en « ${newName} ».`)
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     }
   }
   async function handleConfirmDeleteTag() {
@@ -855,7 +856,7 @@ export default function App() {
       reloadTags()
       setConfirmingTag(null)
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     } finally {
       setDeletingTagBusy(false)
     }
@@ -870,7 +871,7 @@ export default function App() {
       const n = await downloadBackup(games ?? [], ownersList ?? [], tagsList ?? [], dateStr)
       showToast(`Sauvegarde téléchargée : ${n.games} jeux, ${n.plays} parties, ${n.sheets} fiches, ${n.tierlists} tierlists.`)
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     }
   }
   // Export tableur : 2 fichiers CSV (jeux, parties) ouvrables dans Excel / LibreOffice.
@@ -881,7 +882,7 @@ export default function App() {
       const n = await downloadCsv(games ?? [], ownersList ?? [], tagsList ?? [], dateStr)
       showToast(`2 fichiers tableur téléchargés : ${n.games} jeux et ${n.lignesParties} lignes de parties.`)
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     }
   }
 
@@ -893,7 +894,7 @@ export default function App() {
       const parsed = parseBackup(text) // { games, owners }
       setImporting(parsed)
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     }
   }
   async function handleConfirmImport() {
@@ -912,7 +913,7 @@ export default function App() {
       const extra = res.plays ? ` et ${res.plays} partie${res.plays > 1 ? 's' : ''}` : ''
       showToast(`Import réussi : ${res.games} jeu${res.games > 1 ? 'x' : ''}${extra}.`)
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     } finally {
       setImportBusy(false)
     }
@@ -942,7 +943,7 @@ export default function App() {
         // Mieux vaut une sauvegarde ancienne mais saine qu'un instantané de l'accident.
         if (res && res.skipped === 'drop') {
           setError(
-            `⚠️ Sauvegarde automatique suspendue : ta collection est passée de ${res.before} à ${res.after} jeux ` +
+            `Sauvegarde automatique suspendue : ta collection est passée de ${res.before} à ${res.after} jeux ` +
               `(${res.lost} de moins). Si c'est normal, sauvegarde à la main dans Réglages. Sinon, tes anciennes ` +
               `sauvegardes sont intactes : tu peux restaurer.`
           )
@@ -974,13 +975,13 @@ export default function App() {
     setError(null)
     try {
       const ok = await createBackup(games ?? [], ownersList ?? [], tagsList ?? [], 'manual')
-      if (ok === null) setError("Lance d'abord la migration des sauvegardes (voir README).")
+      if (ok === null) setError("Les sauvegardes ne sont pas encore activées sur ta base.")
       else {
         await reloadBackups()
         showToast('Sauvegarde enregistrée.')
       }
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     } finally {
       setBackupBusy(false)
     }
@@ -1034,7 +1035,7 @@ export default function App() {
       if (historyGame) refreshHistory(historyGame)
       showToast(n ? `« ${to} » : ${n} partie${n > 1 ? 's' : ''} mise${n > 1 ? 's' : ''} à jour.` : 'Aucune partie à mettre à jour.')
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     } finally {
       setRenamingPlayer(false)
     }
@@ -1085,7 +1086,7 @@ export default function App() {
       fetchPlayMeta().then(setPlayMeta).catch(() => {})
       showToast(wasEditing ? 'Partie modifiée.' : 'Partie enregistrée.')
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     } finally {
       setSavingPlay(false)
     }
@@ -1156,7 +1157,7 @@ export default function App() {
       reloadTierlists()
       showToast('Tierlist supprimée.')
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
       setConfirmingTierlist(false)
     }
   }
@@ -1169,7 +1170,7 @@ export default function App() {
       setConfirmingPlay(null)
       refreshHistory(historyGame)
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     }
   }
 
@@ -1192,7 +1193,7 @@ export default function App() {
       setRestoring(null)
       showToast(`Sauvegarde restaurée : ${res.games} jeux, ${res.plays} parties. Une sauvegarde de l'état précédent a été créée.`)
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     } finally {
       setRestoreBusy(false)
     }
@@ -1207,7 +1208,7 @@ export default function App() {
       setGames((gs) => (gs ?? []).map((g) => (g.id === updated.id ? updated : g)))
       setMoving(null)
     } catch (e) {
-      setError(e.message)
+      setError(messageUtilisateur(e))
     } finally {
       setMovingBusy(false)
     }
@@ -1316,9 +1317,9 @@ export default function App() {
       </header>
 
       {!online && (
-        <p className="banner">📴 Hors ligne : lecture seule. Reconnecte-toi pour ajouter ou modifier.</p>
+        <p className="banner">Hors ligne : lecture seule. Reconnecte-toi pour ajouter ou modifier.</p>
       )}
-      {error && <p className="banner banner-err">⚠️ {error}</p>}
+      {error && <p className="banner banner-err">{error}</p>}
       {toast && (
         <div className="toast" role="status" onClick={() => setToast('')}>
           <span className="toast-ico"><CheckIcon size={16} /></span> {toast}

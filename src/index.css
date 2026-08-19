@@ -10,11 +10,16 @@
   --soft: #efeff1; /* surface neutre discrète (bannières, code, hovers) */
   --btn-ghost-bg: #ffffff; /* fond des boutons secondaires (.btn-ghost) — blanc, ressort sur le fond */
   --btn-ghost-border: #dcdce0;
-  --cta-glow: rgba(16, 24, 40, 0.16); /* une ombre est GRISE, jamais colorée */
   /* Élévation des cartes : en clair une ombre douce remplace la bordure ; en sombre les
      ombres sont invisibles → un liseré lumineux en haut fait « émerger » la surface. */
   --backdrop-op: 0.5; /* fond d'ambiance de la fiche */
-  --card-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 5px 14px -10px rgba(16, 24, 40, 0.12); /* courte : dans une liste serrée, une ombre longue fait un « trait » dans le gap */
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 5px 14px -10px rgba(0, 0, 0, 0.1);
+  /* Trois hauteurs, et trois seulement : posé / détaché / au-dessus de tout. Les ombres
+     étaient bleu marine (rgba(16,24,40) = teinte 220°) alors que la charte les veut grises. */
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --elev-2: 0 6px 18px -6px rgba(0, 0, 0, 0.18);
+  --elev-3: 0 18px 48px -12px rgba(0, 0, 0, 0.28);
+  --scrim: rgba(0, 0, 0, 0.45); /* voile derrière les feuilles et les dialogues */
   /* Rayons : 3 crans SEULEMENT (les gros arrondis uniformes partout = tic des applis IA).
      ctl = boutons/champs/chips · card = cartes/surfaces/menus · sheet = feuilles montantes. */
   --r-ctl: 6px;
@@ -70,9 +75,12 @@
     --soft: #202023;
     --btn-ghost-bg: #26262a;
     --btn-ghost-border: #33333a;
-    --cta-glow: rgba(0, 0, 0, 0.5);
     --backdrop-op: 0.36; /* plus discret : le titre est blanc, la jaquette peut être claire */
     --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    --elev-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --elev-2: 0 8px 22px -6px rgba(0, 0, 0, 0.55);
+    --elev-3: 0 20px 54px -12px rgba(0, 0, 0, 0.7);
+    --scrim: rgba(0, 0, 0, 0.6);
     --input-bg: #26262a; /* se détache de --soft (les groupes imbriqués) sans bordure */
     --input-focus: #2e2e33;
     --accent-soft: #232326;
@@ -104,9 +112,12 @@
   --soft: #202023;
   --btn-ghost-bg: #26262a;
   --btn-ghost-border: #33333a;
-  --cta-glow: rgba(0, 0, 0, 0.5);
   --backdrop-op: 0.36;
   --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --elev-2: 0 8px 22px -6px rgba(0, 0, 0, 0.55);
+  --elev-3: 0 20px 54px -12px rgba(0, 0, 0, 0.7);
+  --scrim: rgba(0, 0, 0, 0.6);
   --input-bg: #26262a; /* se détache de --soft (les groupes imbriqués) sans bordure */
   --input-focus: #2e2e33;
   --accent-soft: #232326;
@@ -212,9 +223,6 @@ body {
 .navtab svg {
   opacity: 0.5;
   transition: opacity 0.15s ease, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.navtab span {
-  transition: font-weight 0.15s ease;
 }
 /* Onglet actif : texte net + icône qui zoome (se marie avec la pastille glissante). */
 .navtab.active {
@@ -446,10 +454,16 @@ body {
   box-shadow: inset 0 0 0 2px transparent;
   transition: box-shadow 0.15s ease, background 0.15s ease;
   font-size: var(--fs-body-l);
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+/* Il n'avait AUCUN état de focus : la déclaration d'anneau était écrasée par une ombre
+   portée trois lignes plus bas. C'était le seul champ de l'app à ne pas s'allumer. */
+.search:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--primary);
+  background: var(--input-focus);
 }
 .search::placeholder {
-  color: #9aa4b2;
+  color: var(--muted); /* dernier gris bleuté du fichier : la charte les veut neutres */
 }
 
 /* ---- Menu de tri (maison) ---- */
@@ -464,13 +478,12 @@ body {
   gap: 7px;
   padding: 0 12px;
   border-radius: var(--r-ctl);
-  border: 1px solid var(--line);
-  background: var(--card);
+  border: 0; /* même grammaire que le champ voisin : deux styles collés se voyaient */
+  background: var(--input-bg);
   color: var(--ink);
   font-size: var(--fs-body);
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 .sortmenu-arrows {
   color: var(--primary);
@@ -493,7 +506,7 @@ body {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--r-card);
-  box-shadow: 0 14px 34px rgba(16, 24, 40, 0.16);
+  box-shadow: var(--elev-2);
   padding: 6px;
   z-index: 30;
 }
@@ -583,13 +596,12 @@ body {
   height: 46px;
   width: 46px;
   border-radius: var(--r-ctl);
-  border: 1px solid var(--line);
-  background: var(--card);
-  color: var(--primary);
+  border: 0; /* 3e contrôle de la rangée : même grammaire que le champ et le tri */
+  background: var(--input-bg);
+  color: var(--ink);
   font-size: 1.15rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 .sortdir:disabled {
   opacity: 0.4;
@@ -720,7 +732,7 @@ body {
   background: #fff;
   border: 3px solid var(--primary);
   border-radius: 50%;
-  box-shadow: 0 2px 6px rgba(16, 24, 40, 0.28);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.24);
 }
 
 /* ---- Cases à cocher "nombre de joueurs" (dans le formulaire) ---- */
@@ -1270,7 +1282,7 @@ body {
   max-width: 100%;
   max-height: 100%;
   border-radius: var(--r-card);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--elev-3);
   animation: kx-lightbox-img-in 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .lightbox.closing .lightbox-img {
@@ -1510,7 +1522,7 @@ body {
   font-size: 2rem;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.22); /* ombre NEUTRE (une ombre n'est pas colorée) */
+  box-shadow: var(--elev-2); /* ombre NEUTRE (une ombre n'est pas colorée) */
   z-index: 20;
   transition: transform 0.25s ease, opacity 0.25s ease;
 }
@@ -1533,7 +1545,7 @@ body {
 .fab-add-above {
   background: var(--primary);
   color: var(--on-primary);
-  box-shadow: 0 6px 16px rgba(16, 24, 40, 0.18);
+  box-shadow: var(--elev-2);
 }
 /* Les icônes des FAB héritent de la couleur du bouton (surclasse les fill="…" des SVG). */
 .fab svg, .fab svg * { fill: currentColor; }
@@ -1575,7 +1587,7 @@ body {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.42);
+  background: var(--scrim);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -1592,7 +1604,7 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 -10px 40px rgba(16, 24, 40, 0.2);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.18);
 }
 .modal > form {
   display: flex;
@@ -1771,7 +1783,7 @@ body {
   background: var(--card);
   border-radius: var(--r-sheet);
   padding: 24px 20px 18px;
-  box-shadow: 0 24px 60px rgba(16, 24, 40, 0.28);
+  box-shadow: var(--elev-3);
 }
 .confirm h2 {
   font-size: var(--fs-title-s);
@@ -2581,7 +2593,7 @@ body {
   background: var(--card);
   border-radius: var(--r-sheet);
   padding: 20px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--elev-3);
 }
 .chwazi-counter {
   display: flex;
@@ -3016,7 +3028,7 @@ button { transition: transform 0.12s ease; }
 .detail-ext { margin: 0 0 12px; font-size: var(--fs-body); color: var(--ink); }
 .detail-plays { margin: 0 0 14px; font-size: var(--fs-body); color: var(--muted); }
 .detail-actions { display: flex; flex-direction: column; gap: 8px; }
-.detail-primary { width: 100%; height: 46px; font-size: var(--fs-body-l); box-shadow: 0 4px 16px var(--cta-glow); }
+.detail-primary { width: 100%; height: 46px; font-size: var(--fs-body-l); }
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .detail-grid .btn-ghost { height: 44px; padding-left: 8px; padding-right: 8px; /* colonne étroite : le libellé tient sur une ligne */ }
 .detail-bgg-btn { gap: 7px; }
@@ -3162,7 +3174,7 @@ button { transition: transform 0.12s ease; }
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--r-ctl);
-  box-shadow: 0 8px 22px rgba(16, 24, 40, 0.18);
+  box-shadow: var(--elev-2);
   max-height: 220px;
   overflow-y: auto;
 }
@@ -3370,7 +3382,7 @@ button { transition: transform 0.12s ease; }
 }
 .cat-edit.dragging {
   border-color: var(--accent);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--elev-2);
   opacity: 0.95;
 }
 /* Champs de l'éditeur : MÊME recette que les champs de saisie (.input) — padding, taille,
@@ -3853,7 +3865,7 @@ input[type='number'] {
   font-size: var(--fs-body-l);
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.12);
+  box-shadow: var(--elev-2);
 }
 .tl-open-btn:active { transform: scale(0.99); }
 
@@ -4087,7 +4099,7 @@ input[type='number'] {
   height: 56px;
   border-radius: var(--r-ctl);
   overflow: hidden;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--elev-2);
   pointer-events: none;
   z-index: 3000;
   opacity: 0.92;
@@ -4107,7 +4119,7 @@ input[type='number'] {
   max-width: 70vw;
   pointer-events: none;
   z-index: 3000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--elev-2);
 }
 
 /* ============================================================
@@ -4168,7 +4180,7 @@ input[type='number'] {
   border: none;
   background: var(--primary);
   color: var(--on-primary);
-  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.12);
+  box-shadow: var(--elev-2);
 }
 
 /* Complexité en toutes lettres (tuile Stats) */
@@ -4204,7 +4216,7 @@ input[type='number'] {
 
 /* Barre d'enregistrement : meneur affiché en direct au-dessus du bouton */
 .sheet-save-bar { flex-direction: column; }
-.sheet-save-bar .btn-primary { flex: 0 0 auto; box-shadow: 0 4px 16px var(--cta-glow); }
+.sheet-save-bar .btn-primary { flex: 0 0 auto; }
 .sheet-leader {
   text-align: center;
   font-weight: 700;
@@ -4305,7 +4317,7 @@ input[type='number'] {
   border: 1px solid var(--line);
   border-radius: var(--r-card);
   padding: 16px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--elev-1);
 }
 .pcard-head {
   display: flex;
@@ -4432,15 +4444,14 @@ input[type='number'] {
   overflow-wrap: anywhere;
 }
 .pcard-navbtn:disabled { opacity: 0.4; cursor: default; }
-/* Boutons « jalon » (passer à la saisie / au récap) = plus accrocheurs : dégradé primaire + halo.
+/* Boutons « jalon » (passer à la saisie / au récap) = plus accrocheurs : fond encre plein.
    Les boutons de navigation entre items restent discrets (ghost) pour les différencier. */
 .pcard-navbtn-recap,
 .sheet-cta {
   background: var(--primary);
   color: var(--on-primary);
   border-color: transparent;
-  font-weight: 800;
-  box-shadow: 0 4px 16px var(--cta-glow);
+  font-weight: 800; /* le fond encre suffit à les distinguer : pas de halo (tic des gabarits) */
 }
 .pcard-navbtn-recap:disabled,
 .sheet-cta:disabled { box-shadow: none; }
@@ -4471,7 +4482,7 @@ input[type='number'] {
   border-radius: var(--r-card);
   font-size: var(--fs-body);
   font-weight: 600;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--elev-2);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -4537,7 +4548,7 @@ input[type='number'] {
   /* Même famille que .modal (feuille montante) → même fond, même arrondi, même ombre. */
   background: var(--card);
   border-radius: var(--r-sheet) var(--r-sheet) 0 0;
-  box-shadow: 0 -10px 40px rgba(16, 24, 40, 0.2);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.18);
   overflow: hidden;
   animation: kx-sheet-up 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }

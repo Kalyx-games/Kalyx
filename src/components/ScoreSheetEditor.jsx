@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { BackIcon, ExtIcon, PlusIcon } from './icons'
+import { messageUtilisateur } from '../lib/messages'
 import { parseExtensions } from '../lib/games'
 
 // Éditeur d'une fiche de score : on définit les catégories (nom + explication +
@@ -274,7 +275,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
       )
       onClose()
     } catch (e) {
-      setErr(e.message)
+      setErr(messageUtilisateur(e))
     } finally {
       setBusy(false)
     }

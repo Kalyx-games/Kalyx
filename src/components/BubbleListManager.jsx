@@ -8,7 +8,7 @@ import { PlusIcon, PencilIcon, XIcon } from './icons'
 // Palette de couleurs des bulles.
 const PALETTE = OWNER_COLORS // une seule palette pour toute l'app (tons sourds de la charte)
 
-export default function BubbleListManager({ title, items, migrationCode, namePlaceholder, addLabel, online = true, onAdd, onUpdate, onRename, onDelete }) {
+export default function BubbleListManager({ title, items, namePlaceholder, addLabel, online = true, onAdd, onUpdate, onRename, onDelete }) {
   // null = éditeur fermé (on ne voit que la liste + le bouton d'ajout) ;
   // 'new' = création ; sinon = la ligne en cours de modification.
   const [editing, setEditing] = useState(null)
@@ -57,9 +57,7 @@ export default function BubbleListManager({ title, items, migrationCode, namePla
     <section className="settings-card">
       <h3>{title}</h3>
       {items === null ? (
-        <p className="muted">
-          Lance d'abord la migration <code>{migrationCode}</code> dans Supabase pour gérer la liste ici.
-        </p>
+        <p className="muted">Cette liste n'est pas encore activée sur ta base.</p>
       ) : (
         <>
           {items.length > 0 && (

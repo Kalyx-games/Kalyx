@@ -1,3 +1,4 @@
+import { erreurUtilisateur } from './messages'
 import { supabase, writeDb } from './supabase'
 import { renameInGamesCsv } from './games'
 
@@ -26,7 +27,7 @@ export async function updateTag(id, patch) {
   const { data, error } = await writeDb().from('tags').update(patch).eq('id', id).select()
   if (error) throw error
   if (!data || data.length === 0) {
-    throw new Error('Modification impossible : lance la migration migration_tags.sql dans Supabase.')
+    throw erreurUtilisateur("Les tags ne sont pas encore activés sur ta base.")
   }
 }
 
@@ -39,9 +40,9 @@ export async function deleteTag(id) {
 // nom dans la colonne games.tags de tous les jeux concernés. Renvoie le nb de jeux modifiés.
 export async function renameTag(id, oldName, newName, patch = {}) {
   const to = (newName || '').trim()
-  if (!to) throw new Error('Nom vide.')
+  if (!to) throw erreurUtilisateur('Nom vide.')
   const { data, error } = await writeDb().from('tags').update({ name: to, ...patch }).eq('id', id).select()
   if (error) throw error
-  if (!data || data.length === 0) throw new Error('Modification impossible (base non prête ?).')
+  if (!data || data.length === 0) throw erreurUtilisateur('Modification impossible (base non prête ?).')
   return renameInGamesCsv('tags', oldName, to)
 }

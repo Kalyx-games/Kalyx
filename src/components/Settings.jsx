@@ -190,7 +190,6 @@ export default function Settings({
       <BubbleListManager
         title="Propriétaires"
         items={owners}
-        migrationCode="migration_proprietaires.sql"
         namePlaceholder="Nom du propriétaire (ex. Mathieu)"
         addLabel="Ajouter un propriétaire"
         online={online}
@@ -203,7 +202,6 @@ export default function Settings({
       <BubbleListManager
         title="Tags"
         items={tags}
-        migrationCode="migration_tags.sql"
         namePlaceholder="Nom du tag (ex. Coopératif)"
         addLabel="Ajouter un tag"
         online={online}

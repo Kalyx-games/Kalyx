@@ -1,3 +1,4 @@
+import { erreurUtilisateur } from './messages'
 import { supabase, writeDb } from './supabase'
 import { fetchAllPlays } from './plays'
 import { fetchAllScoresheets } from './scoresheets'
@@ -412,7 +413,7 @@ export async function restoreBackup(backupId) {
 
   // GARDE-FOU : une sauvegarde sans aucun jeu (données vides, ligne corrompue) effacerait
   // TOUTE la collection via deleteExtra ci-dessous. On refuse plutôt que d'effacer.
-  if (!games.length) throw new Error('Sauvegarde vide ou illisible — restauration annulée.')
+  if (!games.length) throw erreurUtilisateur('Sauvegarde vide ou illisible — restauration annulée.')
 
   // 1) ré-insère / met à jour tout ce qui est dans la sauvegarde (jeux d'abord). Les tierlists
   //    sont ADDITIVES (comme les parties) : restaurer la collection n'efface pas une tierlist.
