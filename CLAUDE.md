@@ -48,6 +48,33 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅ POINT 6 DE L’AUDIT — L’ÉCHELLE D’ESPACEMENT (2026-08-19) — ⚠️ LIRE LE VERDICT AVANT DE LE REFAIRE
+
+**Chantier demandé par l’user (« le 6 me paraît le plus important »). L’analyse a CONTREDIT le diagnostic que je lui avais vendu (« 28 valeurs, 0 token ») — c’est documenté ici pour que personne ne relance le chantier sur la même prémisse.**
+
+**Ce que l’inventaire a réellement trouvé** (workflow 8 agents : distribution + zones intouchables + 2 échelles + 4 jurés) :
+  - **424 déclarations d’espacement, 517 valeurs, 29 valeurs distinctes.** 8 valeurs (8/10/12/6/2/14/16/4) font **75 %** du total et forment déjà une suite de pas 2.
+  - ⚠️ **Une bonne part de la « dispersion » n’en est PAS** : **51 des 80 valeurs impaires sont des paddings qui construisent une HAUTEUR de contrôle**, pas du rythme. `padding: 11px 12px` apparaît **9 fois à l’identique** (la recette `.input`) et `padding: 9px 14px` **3 fois** (les boutons « Ajouter … »). Les normaliser = changer la hauteur de tous les champs et de onze boutons.
+  - **Coût des échelles courtes, mesuré** : grille 4px = **57 %** des espacements déplacés ; 2/4/6/8/12/16/24/32 = 41 % ; grille 2px = 19 % mais 11 crans (donc pas une contrainte).
+
+**Verdict des 4 jurés, unanime** : une échelle « fidèle » à 9 crans **n’est pas une échelle, c’est un inventaire nommé** — elle ne retire aucun choix, donc elle n’empêche pas la dérive, qui est le seul motif du chantier. Et les migrations de pixels qu’elle propose **désynchronisent des éléments écrits pour être jumeaux** (`.detail-owners`/`.detail-poll`, `.stats-sep`/`.stats-divider`) et rallongent trois boutons. Citation du proposant lui-même : « c’est le seul chantier de la refonte dont le meilleur résultat possible est *on ne voit pas la différence* ».
+
+**CE QUI A DONC ÉTÉ LIVRÉ — le sous-ensemble qui a de la valeur, à zéro pixel déplacé :**
+  1. **6 crans dans `:root`** — `--sp-1: 4px` … `--sp-6: 32px` — déclarés comme **RÈGLE POUR LE CODE FUTUR**, avec le rôle de chaque cran écrit en clair. Le fait que 10 et 14 n’y soient pas est le but. **L’existant n’est PAS réécrit** (le commentaire l’explique).
+  2. **`--gutter`** (= `--sp-4`) : le retrait latéral des écrans. **Ses trois annulations passent en `calc(-1 * var(--gutter))`** (`.detail-backdrop` left/right, `.sheet-editor-actions`) → ce n’est plus deux nombres à accorder à la main, c’est un couple qui se maintient seul.
+  3. **`--pad-champ` (11px 12px) et `--pad-btn-ajout` (9px 14px)** : ce sont des **ÉGALITÉS à tenir**, pas du rythme. 12 duplications supprimées. La hauteur des champs doit rester celle de la croix « retirer » posée à côté — un retour user là-dessus a déjà été traité une fois.
+  4. **Le verrou du fond d’ambiance est MARQUÉ dans le CSS** : les `8px` de `.detail-sheet` et les marges `6/14` de `.settings-head` font le `28` du `calc()` de `.detail-backdrop`. Commentaire « ⚠️ VERROU … HORS ÉCHELLE et le restent » posé juste au-dessus, pour que la prochaine passe ne les normalise pas.
+
+**PREUVE que rien n’a bougé** : empreinte géométrique (position, taille, margin, padding, gap de 45 sélecteurs) relevée AVANT puis APRÈS sur 4 écrans → **924 mesures comparées, 0 écart**. ⚠️ **C’est le protocole à réutiliser pour tout chantier « sans effet visible »** : sans lui, une faute de frappe dans un `var()` passe inaperçue des semaines.
+
+**GARDE-FOU** — cette commande doit rester stable ; toute hausse = une valeur inventée hors échelle :
+```bash
+grep -cE '^s*(margin|padding|gap|row-gap|column-gap)[a-z-]*s*:.*[0-9]px' src/index.css
+```
+**Valeur de référence au 19/08/2026 : 343.**
+
+**NON FAIT, et assumé** : le resserrement réel (faire tomber 10→8, 14→12, 6→4 …). Il déplacerait ~40 % des espacements pour un bénéfice invisible, sur une app que l’user a déjà fait itérer trois fois sur des retours visuels. À ne relancer QUE si l’user demande explicitement un rythme plus serré, écran par écran, et jamais en une passe globale.
+
 ## ✅ LA FICHE REMANIÉE + TOUTE L’APP AU VOUVOIEMENT (2026-08-19, 4 retours user)
 
 **1. « Le titre du jeu doit reprendre sa place initiale en haut de la fiche. »** Il retourne dans `.settings-head`, à côté du bouton retour — **mais il reste MULTILIGNE** (`-webkit-line-clamp: 3`) : mesuré sur les 146 jeux, une troncature laissait encore **11 titres coupés à 375px** même une fois les boutons partis de la rangée.

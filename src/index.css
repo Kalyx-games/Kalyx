@@ -41,6 +41,43 @@
   --players: var(--muted); /* budget d'accents : les joueurs ne sont plus bleus */
   --gold: #e0a106; /* or « remplissage » (barres, pastilles) */
   --gold-ink: #a16207; /* or « texte » : assez foncé pour le clair, éclairci en sombre */
+
+  /* ---- ESPACEMENT -------------------------------------------------------
+     RÈGLE pour tout NOUVEL espacement : une de ces six valeurs, rien entre.
+     Elles montent par pas de 4 (puis de 8) : c'est ce qui donne un rythme,
+     et le fait que 10 ou 14 ne soient PAS disponibles est le but, pas un oubli.
+
+       --sp-1  ce qui sépare deux mots d'une même ligne (une icône et son texte)
+       --sp-2  ce qui sépare deux éléments voisins (deux boutons, deux puces)
+       --sp-3  ce qui sépare un titre de son contenu
+       --sp-4  ce qui sépare deux blocs, et la gouttière des pages
+       --sp-5  ce qui sépare deux sections
+       --sp-6  ce qui aère un écran vide ou une fin de page
+
+     L'EXISTANT n'a PAS été réécrit : il compte 424 déclarations d'espacement sur
+     29 valeurs, dont une bonne part ne sont pas du rythme mais des recettes de
+     hauteur (voir --pad-champ) ou des mesures calées au pixel. Les faire tomber
+     de force sur ces six crans déplacerait 4 espacements sur 10 sans que rien ne
+     s'améliore à l'écran. Elles convergeront quand on retouchera leur écran.
+     ------------------------------------------------------------------------ */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  /* La GOUTTIÈRE : le retrait latéral des écrans et des feuilles. Tout décalage
+     négatif qui l'annule pour aller bord à bord s'écrit calc(-1 * var(--gutter))
+     et se maintient donc tout seul — c'est un couple, plus deux nombres à accorder. */
+  --gutter: var(--sp-4);
+
+  /* Des RECETTES, pas du rythme : ces paddings construisent une HAUTEUR. Les neuf
+     champs de saisie doivent faire la même hauteur que la croix « retirer » posée
+     à côté d'eux (un retour utilisateur là-dessus a déjà été traité une fois), et
+     les onze boutons « Ajouter … » doivent rester frères. Une seule source. */
+  --pad-champ: 11px 12px;
+  --pad-btn-ajout: 9px 14px;
   /* Les 3 onglets. Mêmes teintes qu'avant (sauge, framboise, prune) mais saturation
      doublée (22% → 51%) : c'est le seul endroit de l'app où la couleur a le droit de
      chanter — choix assumé de l'utilisateur. Déclinées par thème : figées, elles
@@ -560,7 +597,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 11px 12px;
+  padding: var(--pad-champ);
   border: none;
   background: none;
   border-radius: var(--r-ctl);
@@ -1058,7 +1095,7 @@ body {
 }
 .ext-add-btn {
   align-self: flex-start;
-  padding: 9px 14px;
+  padding: var(--pad-btn-ajout);
 }
 .save-actions {
   display: flex;
@@ -1737,7 +1774,7 @@ body {
 .modal select {
   width: 100%;
   min-width: 0;
-  padding: 11px 12px;
+  padding: var(--pad-champ);
   border-radius: var(--r-ctl);
   border: 0;
   background: var(--input-bg);
@@ -1801,7 +1838,7 @@ body {
 .btn-add {
   font-size: var(--fs-body-s);
   font-weight: 600;
-  padding: 9px 14px;
+  padding: var(--pad-btn-ajout);
 }
 .btn-ghost {
   background: var(--btn-ghost-bg);
@@ -2862,7 +2899,7 @@ body {
   overflow-y: auto;
   /* Pas de padding-bas : la barre d'actions sticky se colle au vrai bas de l'écran
      (elle gère elle-même la safe-area). L'historique (sans barre) rajoute son padding. */
-  padding: 8px 16px 0;
+  padding: 8px var(--gutter) 0;
   /* Ombre sur le BORD GAUCHE (le bord qui « avance ») : hors écran quand la page est en place
      (bord à gauche = x0), mais bien visible pendant le glissé → on voit un vrai écran passer
      PAR-DESSUS celui du dessous (séparation nette, comme une transition d'appli native). */
@@ -2954,6 +2991,9 @@ button {
 /* Le corps de la fiche est PLEINE LARGEUR (marge de 16px déplacée dans la tête + le corps) → au
    swipe entre fiches, un translateX de 100% = toute la largeur de l'écran ⇒ l'ancienne fiche sort
    COMPLÈTEMENT (plus de bande figée à gauche). */
+/* ⚠️ VERROU : ces 8px, avec les marges 6 et 14 de .settings-head, font le 28 du calc de
+   .detail-backdrop (top: calc(-28px - …)). Les trois valeurs sont HORS ÉCHELLE et le
+   restent : les toucher séparément décale le fond d’ambiance derrière le titre. */
 .detail-sheet { padding: 8px 0 calc(28px + env(safe-area-inset-bottom)); overflow-x: hidden; }
 .detail-sheet .settings-head {
   padding-left: 16px;
@@ -2961,7 +3001,7 @@ button {
   position: relative;
   z-index: 5; /* au-dessus du corps (4) : le fond d'ambiance passe DERRIÈRE le titre */
 }
-.detail-body { padding-left: 16px; padding-right: 16px; }
+.detail-body { padding-left: var(--gutter); padding-right: var(--gutter); }
 /* Le titre partage la rangée avec le seul bouton retour, et il REVIENT À LA LIGNE : c'est
    l'identité de l'écran, elle ne se tronque pas. Mesuré sur les 146 jeux : avec une
    troncature, 11 titres restaient coupés à 375px même sans les boutons. */
@@ -3069,8 +3109,8 @@ button {
   /* Remonte DERRIÈRE la tête. 28px = padding de la feuille (8) + marges de la tête (6+14) ;
      la hauteur de la tête, elle, est MESURÉE (le titre peut y passer sur deux lignes). */
   top: calc(-28px - var(--kx-head-h, 44px));
-  left: -16px; /* annule le padding du corps : le fond va bord à bord */
-  right: -16px;
+  left: calc(-1 * var(--gutter)); /* annule la gouttière : le fond va bord à bord */
+  right: calc(-1 * var(--gutter));
   height: calc(328px + var(--kx-head-h, 44px)); /* 372px pour une tête d’une ligne */
   z-index: 0;
   overflow: hidden;
@@ -3469,7 +3509,7 @@ button {
   flex: 1;
   display: flex;
   align-items: center;
-  padding: 11px 12px;
+  padding: var(--pad-champ);
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: var(--r-ctl);
   background: var(--input-bg);
@@ -3488,7 +3528,7 @@ button {
 
 /* ---- Éditeur de fiche de score ---- */
 .sheet .ext-row input {
-  padding: 11px 12px;
+  padding: var(--pad-champ);
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: var(--r-ctl);
   background: var(--input-bg);
@@ -3580,7 +3620,7 @@ button {
 .cat-edit-value,
 .cat-edit-ext {
   width: 100%;
-  padding: 11px 12px;
+  padding: var(--pad-champ);
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: var(--r-ctl);
   background: var(--input-bg);
@@ -3624,7 +3664,7 @@ button {
   bottom: 0;
   display: flex;
   gap: 10px;
-  margin: 14px -16px 0; /* étend le fond bord à bord (annule le padding de .sheet) */
+  margin: 14px calc(-1 * var(--gutter)) 0; /* étend le fond bord à bord (annule la gouttière) */
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   background: var(--bg);
   border-top: 1px solid var(--line);
@@ -3769,7 +3809,7 @@ button {
 }
 .input {
   width: 100%;
-  padding: 11px 12px;
+  padding: var(--pad-champ);
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: var(--r-ctl);
   background: var(--input-bg);
@@ -3785,7 +3825,7 @@ button {
 }
 .notes-area {
   width: 100%;
-  padding: 11px 12px;
+  padding: var(--pad-champ);
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: var(--r-ctl);
   background: var(--input-bg);
@@ -3964,7 +4004,7 @@ input[type='number'] {
 .team-size {
   width: 84px;
   flex-shrink: 0;
-  padding: 11px 12px;
+  padding: var(--pad-champ);
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
   border-radius: var(--r-ctl);
   background: var(--input-bg);
@@ -4145,7 +4185,7 @@ input[type='number'] {
   color: var(--on-primary);
   font-size: var(--fs-body);
   font-weight: 700;
-  padding: 9px 14px;
+  padding: var(--pad-btn-ajout);
   cursor: pointer;
 }
 /* Bandeau sous l'en-tête pendant l'édition. */
@@ -4625,7 +4665,7 @@ input[type='number'] {
 .pcard-navbtn {
   flex: 1;
   min-width: 0;
-  padding: 11px 12px;
+  padding: var(--pad-champ);
   border-radius: var(--r-ctl);
   border: 1px solid var(--btn-ghost-border);
   background: var(--btn-ghost-bg);
