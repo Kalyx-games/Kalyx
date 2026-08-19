@@ -1303,7 +1303,7 @@ body {
   letter-spacing: 0.02em;
 }
 .game-img.zoomable {
-  cursor: zoom-in;
+  cursor: pointer;
 }
 
 /* Image affichée en grand (lightbox) — clic n'importe où pour fermer. */
@@ -2962,11 +2962,13 @@ button {
   z-index: 5; /* au-dessus du corps (4) : le fond d'ambiance passe DERRIÈRE le titre */
 }
 .detail-body { padding-left: 16px; padding-right: 16px; }
-/* Le titre a TOUTE la largeur du corps et revient à la ligne : c'est l'identité de l'écran,
-   elle ne se tronque pas. Mesuré sur les 146 jeux : en partageant la rangée avec deux
-   boutons, 42 titres sur 146 étaient coupés à 375px ; ici, aucun. */
+/* Le titre partage la rangée avec le seul bouton retour, et il REVIENT À LA LIGNE : c'est
+   l'identité de l'écran, elle ne se tronque pas. Mesuré sur les 146 jeux : avec une
+   troncature, 11 titres restaient coupés à 375px même sans les boutons. */
 .detail-title {
-  margin: 0 0 14px;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
   font-size: var(--fs-title);
   font-weight: 700;
   letter-spacing: -0.022em;
@@ -2979,24 +2981,44 @@ button {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.detail-head-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; }
 .bgg-mark { display: block; border-radius: 4px; }
-/* Actions secondaires de la fiche : nues, comme les boutons de la barre du haut. */
-.detail-head-btn {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
+/* Actions de service, posées SUR la jaquette et révélées d'un tap dessus. Elles n'existent
+   visuellement que dans ce moment-là, donc elles peuvent se permettre un fond opaque : c'est
+   ce qui les rend lisibles sur n'importe quelle illustration, claire, sombre ou chargée. */
+.detail-hero-acts {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 26px 10px 10px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.62), transparent);
+  border-radius: 0 0 5px 5px;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.detail-hero-acts.on { opacity: 1; transform: none; pointer-events: auto; }
+.hero-act {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 14px;
   border: 0;
-  background: transparent;
-  color: var(--ink); /* la tête flotte au-dessus du fond d'ambiance : l'encre passe sur toutes les jaquettes */
   border-radius: var(--r-ctl);
+  background: rgba(255, 255, 255, 0.94);
+  color: #131316; /* posé sur la jaquette : cette paire ne dépend pas du thème */
+  font-size: var(--fs-body-s);
+  font-weight: 600;
   cursor: pointer;
 }
-.detail-head-btn:active { transform: scale(0.94); }
-.detail-head-btn:disabled { opacity: 0.4; cursor: default; }
+.hero-act:disabled { opacity: 0.5; cursor: default; }
+.hero-act:active { transform: scale(0.96); }
+
 /* Changement de jeu au glissé = pager PLEIN ÉCRAN : le corps du NOUVEAU jeu entre en plein depuis un
    bord PENDANT que l'ancien (instantané figé `.detail-body-leaving`) sort par l'autre bord, avec une
    ombre nette entre les deux → on voit vraiment une fiche remplacer l'autre. */
@@ -3042,10 +3064,12 @@ button {
    le rendrait invisible → le fond reste à 0 et ce sont les frères qui passent devant. */
 .detail-backdrop {
   position: absolute;
-  top: -72px; /* remonte DERRIÈRE l'en-tête (44 px + le padding de la feuille) */
+  /* Remonte DERRIÈRE la tête. 28px = padding de la feuille (8) + marges de la tête (6+14) ;
+     la hauteur de la tête, elle, est MESURÉE (le titre peut y passer sur deux lignes). */
+  top: calc(-28px - var(--kx-head-h, 44px));
   left: -16px; /* annule le padding du corps : le fond va bord à bord */
   right: -16px;
-  height: 372px;
+  height: calc(328px + var(--kx-head-h, 44px)); /* 372px pour une tête d’une ligne */
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
@@ -3069,10 +3093,12 @@ button {
   position: relative;
   z-index: 1;
 }
-.detail-hero-wrap { position: relative; margin: 4px 0 12px; }
+/* La boîte épouse l'image EN LARGEUR aussi (l'image est centrée et rarement pleine largeur) :
+   sans ça, le voile des actions, posé en absolu sur ce conteneur, débordait de la jaquette. */
+.detail-hero-wrap { position: relative; width: fit-content; max-width: 100%; margin: 4px auto 12px; }
 .detail-hero {
   display: block;
-  width: 100%;
+  width: auto;
   border: 0;
   padding: 0;
   background: transparent; /* pas de cadre : l'image « flotte » sur le fond, identique clair/sombre */
@@ -3094,16 +3120,6 @@ button {
   border: 1px solid var(--line);
   border-radius: var(--r-card);
 }
-/* Bulles propriétaires/tags superposées en bas à gauche de l'image, empilées vers le HAUT. */
-.detail-bubbles {
-  position: absolute;
-  left: 8px;
-  bottom: 8px;
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 4px;
-}
-.detail-bubbles .owner-bubble { box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.35); }
 /* Bande de stats : les cadres tombent (c'était le dernier écran à en avoir), il reste
    des filets verticaux et la typographie pour séparer — comme une fiche produit. */
 .detail-infos {
@@ -3141,6 +3157,19 @@ button {
   text-overflow: ellipsis;
 }
 .detail-info-v { font-size: var(--fs-body-l); font-weight: 600; letter-spacing: -0.01em; }
+/* Propriétaires et tags : sur la fiche on a la place d'écrire les VRAIS noms — deux
+   initiales sur un coin de jaquette n'apprenaient rien et salissaient l'illustration.
+   La pastille de couleur garde le lien visuel avec les bulles des cartes. */
+.detail-owners {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0 0 10px;
+  font-size: var(--fs-body-s);
+  color: var(--muted);
+}
+.detail-owner { display: inline-flex; align-items: center; gap: 7px; }
+.detail-owner i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .detail-ext { margin: 0 0 12px; font-size: var(--fs-body); color: var(--ink); }
 .detail-ext .detail-info-k { display: inline; text-transform: none; letter-spacing: 0; }
 /* Le nombre de parties est LA donnée vivante du jeu : elle mérite le corps d'un titre,
@@ -3164,7 +3193,7 @@ button {
 /* Place ICI (et non dans le bloc general l. 2876) : une media query n ajoute aucune
    specificite, elle doit donc suivre les regles qu elle neutralise. */
 @media (prefers-reduced-motion: reduce) {
-  .detail-head-btn:active, .detail-plays:active { transform: none; }
+  .detail-plays:active, .hero-act:active { transform: none; }
 }
 .detail-plays-n {
   font-size: var(--fs-title);

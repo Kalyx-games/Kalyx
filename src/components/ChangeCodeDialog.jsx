@@ -25,8 +25,8 @@ export default function ChangeCodeDialog({ onDone, onClose }) {
     if (res && res.error) {
       setErr(
         res.unauthorized
-          ? "Cet appareil n'est plus autorisé. Ressaisis d'abord le code d'accès actuel, puis réessaie."
-          : 'Changement impossible (base pas prête ?). Réessaie.'
+          ? "Cet appareil n'est plus autorisé. Ressaisissez d'abord le code d'accès actuel, puis réessayez."
+          : 'Changement impossible (base pas prête ?). Réessayez.'
       )
       return
     }
@@ -39,7 +39,7 @@ export default function ChangeCodeDialog({ onDone, onClose }) {
       <div className="confirm" onClick={(e) => e.stopPropagation()}>
         <h2>Changer le code d'accès</h2>
         <p className="confirm-msg">
-          Choisis un <strong>nouveau code</strong> pour toute l'appli. Ensuite, chaque appareil devra le
+          Choisissez un <strong>nouveau code</strong> pour toute l'appli. Ensuite, chaque appareil devra le
           re-saisir une fois pour pouvoir modifier la collection.
         </p>
         <input

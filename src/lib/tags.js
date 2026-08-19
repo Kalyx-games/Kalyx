@@ -27,7 +27,7 @@ export async function updateTag(id, patch) {
   const { data, error } = await writeDb().from('tags').update(patch).eq('id', id).select()
   if (error) throw error
   if (!data || data.length === 0) {
-    throw erreurUtilisateur("Les tags ne sont pas encore activés sur ta base.")
+    throw erreurUtilisateur("Les tags ne sont pas encore activés sur votre base.")
   }
 }
 

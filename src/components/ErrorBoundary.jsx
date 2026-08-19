@@ -43,8 +43,8 @@ export default class ErrorBoundary extends Component {
         <h1 className="crash-title">Oups, un souci est survenu</h1>
         <p className="crash-msg">
           {isChunk
-            ? "Une nouvelle version de l'appli est disponible. Recharge pour continuer."
-            : "L'appli a rencontré une erreur. Recharge pour repartir — tes données sont en sécurité."}
+            ? "Une nouvelle version de l'appli est disponible. Rechargez pour continuer."
+            : "L'appli a rencontré une erreur. Rechargez pour repartir — vos données sont en sécurité."}
         </p>
         <button type="button" className="btn-primary" onClick={reload}>
           Recharger l'appli

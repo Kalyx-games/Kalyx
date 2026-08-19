@@ -37,21 +37,21 @@ export function messageUtilisateur(e) {
   if (typeof console !== 'undefined') console.warn('[Kalyx]', brut || e)
 
   if (!navigator.onLine || m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed')) {
-    return 'Pas de connexion. Reconnecte-toi pour enregistrer.'
+    return 'Pas de connexion. Reconnectez-vous pour enregistrer.'
   }
   // Notre proxy répond « Code d'accès invalide. » (401) : le cas le plus courant, un appareil
   // qui n'a jamais reçu le code essaie d'écrire.
   if (m.includes("code d'accès") || m.includes('permission denied') || m.includes('row-level security') || m.includes('401') || m.includes('jwt')) {
-    return "Cet appareil n'a pas le droit de modifier la collection. Entre le code d'accès dans les Réglages."
+    return "Cet appareil n'a pas le droit de modifier la collection. Entrez le code d'accès dans les Réglages."
   }
   if (m.includes('duplicate key') || m.includes('already exists') || m.includes('23505')) {
     return 'Ce nom existe déjà.'
   }
   if (TABLE_ABSENTE.test(m)) {
-    return "Cette fonction n'est pas encore activée sur ta base."
+    return "Cette fonction n'est pas encore activée sur votre base."
   }
   if (m.includes('timeout') || m.includes('504') || m.includes('gateway') || m.includes('502')) {
-    return 'Le serveur met trop de temps à répondre. Réessaie dans un instant.'
+    return 'Le serveur met trop de temps à répondre. Réessayez dans un instant.'
   }
-  return "Ça n'a pas marché. Réessaie."
+  return "Ça n'a pas marché. Réessayez."
 }

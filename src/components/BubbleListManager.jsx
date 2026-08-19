@@ -57,7 +57,7 @@ export default function BubbleListManager({ title, items, namePlaceholder, addLa
     <section className="settings-card">
       <h3>{title}</h3>
       {items === null ? (
-        <p className="muted">Cette liste n'est pas encore activée sur ta base.</p>
+        <p className="muted">Cette liste n'est pas encore activée sur votre base.</p>
       ) : (
         <>
           {items.length > 0 && (

@@ -286,13 +286,13 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
           <p className="empty-emoji">📊</p>
           {hasCollection ? (
             <>
-              <p>Aucun jeu ne correspond à tes filtres.</p>
-              <p className="muted">Modifie ou réinitialise les filtres pour voir les statistiques.</p>
+              <p>Aucun jeu ne correspond à vos filtres.</p>
+              <p className="muted">Modifiez ou réinitialisez les filtres pour voir les statistiques.</p>
             </>
           ) : (
             <>
-              <p>Ta collection est vide pour l'instant.</p>
-              <p className="muted">Ajoute des jeux : les statistiques apparaîtront ici.</p>
+              <p>Votre collection est vide pour l'instant.</p>
+              <p className="muted">Ajoutez des jeux : les statistiques apparaîtront ici.</p>
             </>
           )}
         </div>

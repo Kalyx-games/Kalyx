@@ -448,7 +448,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
               </button>
             ))}
           </div>
-          <p className="field-hint" style={{ marginTop: 6 }}>Laisse vide = tous ex æquo gagnent.</p>
+          <p className="field-hint" style={{ marginTop: 6 }}>Laissez vide = tous ex æquo gagnent.</p>
         </div>
       </div>
     ) : null
@@ -871,7 +871,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           {triggerField}
           {playVariantField}
           <div className="field">
-            <label className="field-label">Joueurs — coche le(s) vainqueur(s)</label>
+            <label className="field-label">Joueurs — cochez le(s) vainqueur(s)</label>
             {playerList(true)}
           </div>
           {notesField}

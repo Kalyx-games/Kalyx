@@ -437,12 +437,12 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
 
           {duplicate && (
             <p className="dup-warn">
-              « {duplicate.name} » est déjà dans ta {duplicate.status === 'wishlist' ? 'wishlist' : 'collection'}. Tu peux quand même l'ajouter.
+              « {duplicate.name} » est déjà dans votre {duplicate.status === 'wishlist' ? 'wishlist' : 'collection'}. Vous pouvez quand même l'ajouter.
             </p>
           )}
 
           <div className="autofill">
-            <p className="bgg-hint">Tape le nom puis <b>Entrée</b>.</p>
+            <p className="bgg-hint">Tapez le nom puis <b>Entrée</b>.</p>
             {bggLoading && !bggResults && !bggFilled && (
               <div className="price-found"><span>Recherche sur BoardGameGeek…</span></div>
             )}
@@ -484,7 +484,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                 ))}
               </div>
             ) : (
-              <p className="field-hint">Ajoute des propriétaires depuis l'écran Réglages ⚙️</p>
+              <p className="field-hint">Ajoutez des propriétaires depuis l'écran Réglages ⚙️</p>
             )}
           </div>
 
@@ -500,7 +500,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                   ))}
                 </div>
               ) : (
-                <p className="field-hint">Ajoute des tags depuis l'écran Réglages ⚙️</p>
+                <p className="field-hint">Ajoutez des tags depuis l'écran Réglages ⚙️</p>
               )}
             </div>
           )}
@@ -591,7 +591,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
           {form.status !== 'wishlist' && (
             <div className="field">
               <span className="field-label"><ExtIcon size={13} /> Extensions</span>
-              <p className="field-hint ext-hint">Tape le nom puis <b>Entrée</b>.</p>
+              <p className="field-hint ext-hint">Tapez le nom puis <b>Entrée</b>.</p>
               {extList.map((x) => (
                 <div className="ext-item" key={x.id}>
                   <div className="ext-row">

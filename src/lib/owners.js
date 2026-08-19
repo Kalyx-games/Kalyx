@@ -28,7 +28,7 @@ export async function updateOwner(id, patch) {
   // Si aucune ligne n'est revenue, la modification a été bloquée (ex. policy RLS
   // UPDATE manquante) : on le signale au lieu de faire croire que c'est enregistré.
   if (!data || data.length === 0) {
-    throw erreurUtilisateur("Le renommage n'est pas encore activé sur ta base.")
+    throw erreurUtilisateur("Le renommage n'est pas encore activé sur votre base.")
   }
 }
 

@@ -26,7 +26,7 @@ const complexityWord = (n) => (n == null ? '' : n < 2 ? 'Simple' : n < 3 ? 'Moye
 export default function GameDetail({
   game, online, hasSheet, playCount = 0, lastPlayedLabel,
   ownerMap, tagMap, siblings = [], onNavigate, closing = false,
-  onClose, onZoomImage, onNewPlay, onStats, onHistory, onCreateSheet, onEdit, onBgg,
+  onClose, onNewPlay, onStats, onHistory, onCreateSheet, onEdit, onBgg,
 }) {
   const basePlayers = basePlayersSet(game)
   const extraPlayers = effectivePlayersSet(game).filter((n) => !basePlayers.includes(n))
@@ -56,6 +56,7 @@ export default function GameDetail({
   // Repli si l'image ne charge pas (optimiseur ET image brute en échec) → on montre le dé
   // au lieu d'une icône d'image cassée (cohérent avec la carte).
   const [imgBroken, setImgBroken] = useState(false)
+  const [heroActions, setHeroActions] = useState(false) // les actions posées sur la jaquette
   useEffect(() => setImgBroken(false), [fullImg])
   const showImg = Boolean(fullImg) && !imgBroken
 
@@ -63,12 +64,29 @@ export default function GameDetail({
   // Écouteurs tactiles natifs non-passifs (comme ailleurs). navRef reste frais à chaque rendu.
   const idx = siblings.findIndex((g) => g.id === game.id)
   const sheetRef = useRef(null)
+  const headRef = useRef(null)
   const swipeRef = useRef({ x: 0, y: 0, dragging: false })
   const navDirRef = useRef(0) // sens du dernier changement de jeu (0 = ouverture, 1 = suivant, -1 = précédent)
   // Transition PLEIN ÉCRAN (pager) : on fige un instantané du corps ACTUEL qui glisse dehors PENDANT
   // que le corps du NOUVEAU jeu glisse dedans → on voit vraiment une fiche remplacer l'autre.
   const bodyRef = useRef(null)
   const [bodyLeaving, setBodyLeaving] = useState(null) // { node, dir, top, left, width } | null
+  // On change de jeu (glissé) → les actions de la jaquette se referment.
+  useEffect(() => { setHeroActions(false) }, [game.id])
+  // Le fond d'ambiance remonte DERRIÈRE la tête : son décalage était la somme codée en dur
+  // 8+6+44+14, calée sur une tête d'une seule ligne. Depuis que le titre y revient et peut
+  // passer sur deux lignes, on mesure la tête pour de bon.
+  useEffect(() => {
+    const head = headRef.current
+    const sheet = sheetRef.current
+    if (!head || !sheet) return
+    const mesurer = () => sheet.style.setProperty('--kx-head-h', head.offsetHeight + 'px')
+    mesurer()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(mesurer)
+    ro.observe(head)
+    return () => ro.disconnect()
+  }, [])
   const leaveTimer = useRef(null)
   const startNav = (dir) => {
     const next = idx + dir
@@ -121,20 +139,12 @@ export default function GameDetail({
 
   return (
     <div className={`sheet detail-sheet${closing ? ' closing' : ''}`} ref={sheetRef}>
-      <div className="settings-head">
+      <div className="settings-head" ref={headRef}>
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
-        {/* La barre ne porte QUE la navigation : le titre descend dans le corps, où il a
-            toute la largeur (il était coupé dès « Abyss Conspiracy » en partageant la rangée). */}
-        <div className="detail-head-actions">
-          <button type="button" className="detail-head-btn" onClick={onEdit} disabled={!online} title="Modifier le jeu" aria-label="Modifier le jeu">
-            <PencilIcon size={18} />
-          </button>
-          {onBgg && (
-            <button type="button" className="detail-head-btn" onClick={onBgg} title="Voir sur BoardGameGeek" aria-label="Voir sur BoardGameGeek">
-              <img className="bgg-mark" src={BGG_LOGO} alt="" width="20" height="20" />
-            </button>
-          )}
-        </div>
+        {/* Le titre partage la rangée avec le seul bouton retour, et il REVIENT À LA LIGNE :
+            avec une troncature, 11 jeux sur 146 étaient encore coupés à 375px. La tête peut
+            donc grandir → le fond d'ambiance se recale dessus (voir --kx-head-h). */}
+        <h2 className="detail-title">{game.name}</h2>
       </div>
 
       {/* Corps du nouveau jeu qui GLISSE en entrée (plein écran). L'ancien corps (instantané figé)
@@ -148,7 +158,6 @@ export default function GameDetail({
         />
       )}
       <div className="detail-body" key={game.id} data-dir={navDirRef.current} ref={bodyRef}>
-        <h2 className="detail-title">{game.name}</h2>
       {/* Fond d'ambiance : la jaquette, floutée, teinte le haut de la fiche puis se fond
           dans le fond de page. L'image est demandée en 128 px de large — un flou de 30 px
           n'a que faire de la définition, et ça ne coûte que quelques kilo-octets. */}
@@ -164,7 +173,13 @@ export default function GameDetail({
       )}
       <div className="detail-hero-wrap">
         {showImg ? (
-          <button type="button" className="detail-hero" onClick={() => onZoomImage(fullImg)} aria-label="Agrandir l'image">
+          <button
+            type="button"
+            className="detail-hero"
+            onClick={() => setHeroActions((v) => !v)}
+            aria-expanded={heroActions}
+            aria-label={heroActions ? 'Masquer les actions' : 'Afficher les actions du jeu'}
+          >
             <img
               src={heroSrc(fullImg)}
               alt=""
@@ -176,21 +191,29 @@ export default function GameDetail({
             />
           </button>
         ) : (
-          <div className="detail-hero detail-hero-empty" aria-hidden="true">🎲</div>
+          <button
+            type="button"
+            className="detail-hero detail-hero-empty"
+            onClick={() => setHeroActions((v) => !v)}
+            aria-expanded={heroActions}
+            aria-label={heroActions ? 'Masquer les actions' : 'Afficher les actions du jeu'}
+          >
+            <span aria-hidden="true">🎲</span>
+          </button>
         )}
-        {/* Propriétaires + tags empilés en bas à gauche de l'image (comme les cartes) → gain de place. */}
-        {(owners.length > 0 || tags.length > 0) && (
-          <div className="detail-bubbles" onClick={(e) => e.stopPropagation()}>
-            {owners.map((o) => {
-              const d = ownerDisplay(o, ownerMap)
-              return <span key={`o-${o}`} className="owner-bubble" style={{ background: d.color }} title={o}>{d.initials}</span>
-            })}
-            {tags.map((t) => {
-              const d = ownerDisplay(t, tagMap)
-              return <span key={`t-${t}`} className="owner-bubble" style={{ background: d.color }} title={t}>{d.initials}</span>
-            })}
-          </div>
-        )}
+        {/* Les actions de service ne se montrent QUE si on touche la jaquette : elles ne pèsent
+            sur rien tant qu'on consulte, et restent à portée quand on les cherche. Rendues même
+            sans image : sinon, un jeu sans jaquette n'aurait plus aucun accès à Modifier ni BGG. */}
+        <div className={`detail-hero-acts${heroActions ? ' on' : ''}`} aria-hidden={!heroActions}>
+          <button type="button" className="hero-act" onClick={onEdit} disabled={!online} tabIndex={heroActions ? 0 : -1}>
+            <PencilIcon size={17} /> Modifier
+          </button>
+          {onBgg && (
+            <button type="button" className="hero-act" onClick={onBgg} tabIndex={heroActions ? 0 : -1}>
+              <img className="bgg-mark" src={BGG_LOGO} alt="" width="17" height="17" /> BGG
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="detail-infos">
@@ -203,6 +226,23 @@ export default function GameDetail({
           <span className="detail-info-v">{complexity ? complexityWord(complexity) : '—'}</span>
         </div>
       </div>
+
+      {/* Les propriétaires rejoignent les autres faits du jeu, sous forme de NOMS : la fiche a
+          la place que la carte n'a pas, deux initiales sur une jaquette n'apprenaient rien. */}
+      {(owners.length > 0 || tags.length > 0) && (
+        <p className="detail-owners">
+          {owners.map((o) => (
+            <span key={`o-${o}`} className="detail-owner">
+              <i style={{ background: ownerDisplay(o, ownerMap).color }} aria-hidden="true" />{o}
+            </span>
+          ))}
+          {tags.map((t) => (
+            <span key={`t-${t}`} className="detail-owner">
+              <i style={{ background: ownerDisplay(t, tagMap).color }} aria-hidden="true" />{t}
+            </span>
+          ))}
+        </p>
+      )}
 
       {extensions.length > 0 && (
         <p className="detail-ext"><span className="detail-info-k"><ExtIcon size={13} /></span> {extensions.join(', ')}</p>

@@ -320,7 +320,7 @@ export default function App() {
         setGames(cached || [])
         // On n'affiche une erreur que si on est en ligne ET sans rien à montrer.
         if ((!cached || cached.length === 0) && navigator.onLine) {
-          setError('Impossible de charger les jeux. Réessaie.')
+          setError('Impossible de charger les jeux. Réessayez.')
         } else {
           setError(null)
         }
@@ -943,9 +943,9 @@ export default function App() {
         // Mieux vaut une sauvegarde ancienne mais saine qu'un instantané de l'accident.
         if (res && res.skipped === 'drop') {
           setError(
-            `Sauvegarde automatique suspendue : ta collection est passée de ${res.before} à ${res.after} jeux ` +
-              `(${res.lost} de moins). Si c'est normal, sauvegarde à la main dans Réglages. Sinon, tes anciennes ` +
-              `sauvegardes sont intactes : tu peux restaurer.`
+            `Sauvegarde automatique suspendue : votre collection est passée de ${res.before} à ${res.after} jeux ` +
+              `(${res.lost} de moins). Si c'est normal, sauvegardez à la main dans Réglages. Sinon, vos anciennes ` +
+              `sauvegardes sont intactes : vous pouvez restaurer.`
           )
         }
       } catch {
@@ -975,7 +975,7 @@ export default function App() {
     setError(null)
     try {
       const ok = await createBackup(games ?? [], ownersList ?? [], tagsList ?? [], 'manual')
-      if (ok === null) setError("Les sauvegardes ne sont pas encore activées sur ta base.")
+      if (ok === null) setError("Les sauvegardes ne sont pas encore activées sur votre base.")
       else {
         await reloadBackups()
         showToast('Sauvegarde enregistrée.')
@@ -1317,7 +1317,7 @@ export default function App() {
       </header>
 
       {!online && (
-        <p className="banner">Hors ligne : lecture seule. Reconnecte-toi pour ajouter ou modifier.</p>
+        <p className="banner">Hors ligne : lecture seule. Reconnectez-vous pour ajouter ou modifier.</p>
       )}
       {error && <p className="banner banner-err">{error}</p>}
       {toast && (
@@ -1510,15 +1510,15 @@ export default function App() {
             <p className="empty-emoji">🎲</p>
             <p>
               {currentCount > 0
-                ? 'Aucun jeu ne correspond à ta recherche ou à tes filtres.'
+                ? 'Aucun jeu ne correspond à votre recherche ou à vos filtres.'
                 : !online
-                ? 'Hors ligne — reconnecte-toi une fois pour charger ta liste.'
+                ? 'Hors ligne — reconnectez-vous une fois pour charger votre liste.'
                 : view === 'wishlist'
-                ? 'Ta wishlist est vide pour l’instant.'
+                ? 'Votre wishlist est vide pour l’instant.'
                 : 'Aucun jeu pour l’instant.'}
             </p>
             {currentCount === 0 && online && (
-              <p className="muted">Touche le bouton + pour ajouter un jeu à {view === 'wishlist' ? 'ta wishlist' : 'ta collection'}.</p>
+              <p className="muted">Touchez le bouton + pour ajouter un jeu à {view === 'wishlist' ? 'votre wishlist' : 'votre collection'}.</p>
             )}
           </div>
         ) : (
@@ -1617,7 +1617,6 @@ export default function App() {
           siblings={visible}
           onNavigate={(g) => setDetailGame(g)}
           onClose={() => setDetailGame(null)}
-          onZoomImage={(url) => setZoomImage(url)}
           onNewPlay={() => handleNewPlayFromCard(detailLayer.value)}
           onStats={() => openHistory(detailLayer.value, 'stats')}
           onHistory={() => openHistory(detailLayer.value, 'plays')}
@@ -1696,7 +1695,7 @@ export default function App() {
       {moving && (
         <ConfirmDialog
           title="Déplacer vers la collection ?"
-          message={<><strong>{moving.name}</strong> passera de ta wishlist à ta collection.</>}
+          message={<><strong>{moving.name}</strong> passera de votre wishlist à votre collection.</>}
           confirmLabel="Déplacer"
           danger={false}
           busy={movingBusy}
@@ -1729,7 +1728,7 @@ export default function App() {
           message={
             <>
               L'état de cette sauvegarde (<strong>{restoring.games_count}</strong> jeu{restoring.games_count > 1 ? 'x' : ''})
-              va <strong>remplacer</strong> ta collection actuelle.
+              va <strong>remplacer</strong> votre collection actuelle.
               {restorePlan == null ? (
                 <> Vérification de ce qui sera supprimé…</>
               ) : restorePlan.games === 0 ? (

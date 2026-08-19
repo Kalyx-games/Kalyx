@@ -247,7 +247,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
     // Il faut au moins un moyen de gagner : au score OU pas de points.
     // (En coop le groupe gagne/perd de toute façon, donc aucune contrainte.)
     if (!isCoop && scoring === 'none' && !instant) {
-      setErr('Choisis au moins « au score » ou « pas de points ».')
+      setErr('Choisissez au moins « au score » ou « pas de points ».')
       return
     }
     const triggerNames = triggers.map((t) => t.name.trim()).filter(Boolean)
@@ -355,7 +355,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
         <section className="settings-card">
           <h3>Variantes</h3>
           <p className="field-hint" style={{ marginBottom: 12 }}>
-            Un héros, une faction, une carte, une mission… Tu peux en mettre une par joueur,
+            Un héros, une faction, une carte, une mission… Vous pouvez en mettre une par joueur,
             une pour toute la partie, les deux, ou aucune.
           </p>
 
@@ -374,7 +374,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
             <div style={{ margin: '10px 0 4px' }}>
               <label className="field-label">Valeurs proposées <span className="field-opt">(facultatif)</span></label>
               <p className="field-hint" style={{ margin: '2px 0 8px' }}>
-                Les choix rapides à la partie (tu pourras toujours en taper un autre).
+                Les choix rapides à la partie (vous pourrez toujours en taper un autre).
               </p>
               {variantOptions.map((o) => (
                 <div key={o.id} className="ext-chip-row">
@@ -401,7 +401,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
             <div style={{ margin: '10px 0 4px' }}>
               <label className="field-label">Valeurs proposées <span className="field-opt">(facultatif)</span></label>
               <p className="field-hint" style={{ margin: '2px 0 8px' }}>
-                Les choix rapides à la partie (tu pourras toujours en taper un autre).
+                Les choix rapides à la partie (vous pourrez toujours en taper un autre).
               </p>
               {playVariantOptions.map((o) => (
                 <div key={o.id} className="ext-chip-row">
@@ -419,7 +419,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
         <section className="settings-card">
           <h3>Équipes</h3>
           <p className="field-hint" style={{ marginBottom: 10 }}>
-            Définis les équipes à l'avance (avec un effectif si tu veux), ou laisse vide pour les créer au moment de la partie.
+            Définissez les équipes à l'avance (avec un effectif si vous voulez), ou laissez vide pour les créer au moment de la partie.
           </p>
           {teamList.map((t) => (
             <div key={t.id} className="team-edit">
@@ -500,7 +500,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
       {catsRelevant && (
       <section className="settings-card">
         <h3>Catégories de score</h3>
-        {cats.length === 0 && <p className="field-hint" style={{ marginBottom: 8 }}>Aucune catégorie. Ajoute-en une ci-dessous.</p>}
+        {cats.length === 0 && <p className="field-hint" style={{ marginBottom: 8 }}>Aucune catégorie. Ajoutez-en une ci-dessous.</p>}
         <div ref={listRef}>
         {cats.map((c) => (
           <div key={c.id} data-cat={c.id} className={`cat-edit ${dragId === c.id ? 'dragging' : ''}`}>
@@ -537,7 +537,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
                 value={c.value}
                 onChange={(e) => updCat(c.id, 'value', e.target.value)}
                 placeholder="Valeur fixe"
-                title="Si cette façon de scorer vaut toujours le même nombre de points, indique-le : à la partie, il n'y aura qu'une case à cocher."
+                title="Si cette façon de scorer vaut toujours le même nombre de points, indiquez-le : à la partie, il n'y aura qu'une case à cocher."
               />
             </div>
             {extNames.length > 0 && (

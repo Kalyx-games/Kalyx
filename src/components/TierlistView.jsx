@@ -342,7 +342,7 @@ export default function TierlistView({
                 setPlayer(v)
                 if (v.trim()) setNeedName(false)
               }}
-              placeholder="Ton nom"
+              placeholder="Votre nom"
               playerNames={playerNames}
               focused={focusedName}
               setFocused={setFocusedName}
@@ -382,7 +382,7 @@ export default function TierlistView({
       </div>
       {editing && (
         <div className="tl-editing-banner">
-          {needName ? 'Donne un nom à ta tierlist pour l’enregistrer, puis « Terminé ».' : 'Mode édition — glisse les jeux pour les classer'}
+          {needName ? 'Donnez un nom à votre tierlist pour l’enregistrer, puis « Terminé ».' : 'Mode édition — glissez les jeux pour les classer'}
         </div>
       )}
 

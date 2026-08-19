@@ -133,7 +133,7 @@ export default function Settings({
         <div className="share-row">
           {qrDataUrl && <img className="share-qr" src={qrDataUrl} alt="QR code vers l'app Kalyx" width="118" height="118" />}
           <div className="share-info">
-            <p className="muted share-hint">Scanne le QR ou copie le lien pour ajouter Kalyx sur un autre téléphone.</p>
+            <p className="muted share-hint">Scannez le QR ou copiez le lien pour ajouter Kalyx sur un autre téléphone.</p>
             <div className="share-link">{APP_URL.replace('https://', '')}</div>
             <button type="button" className={`btn-ghost share-copy ${copied ? 'copied' : ''}`} onClick={copyAppLink}>
               {copied ? 'Lien copié ✓' : 'Copier le lien'}
@@ -169,7 +169,7 @@ export default function Settings({
         <p className="muted" style={{ margin: '0 0 10px' }}>
           {deviceAuthorized
             ? 'Cet appareil est autorisé à modifier la collection.'
-            : "Cet appareil peut consulter mais pas modifier. Entre le code d'accès pour l'autoriser."}
+            : "Cet appareil peut consulter mais pas modifier. Entrez le code d'accès pour l'autoriser."}
         </p>
         {deviceAuthorized ? (
           <>
@@ -269,7 +269,7 @@ export default function Settings({
       {/* Sauvegarde en FICHIER : à garder sur l'appareil ou à ré-importer. */}
       <section className="settings-card">
         <h3>Sauvegarde en fichier</h3>
-        <p className="field-hint" style={{ marginTop: 0 }}>Un fichier à garder chez toi, ou à ré-importer plus tard.</p>
+        <p className="field-hint" style={{ marginTop: 0 }}>Un fichier à garder chez vous, ou à ré-importer plus tard.</p>
         <div className="save-actions">
           <button type="button" className="btn-ghost" onClick={onExport} title="Télécharger la sauvegarde complète (fichier .json)">
             Exporter
@@ -352,7 +352,7 @@ export default function Settings({
               ? 'Mise à jour…'
               : 'Vérifier les mises à jour'}
         </button>
-        {upd === "uptodate" && <p className="version-msg">Tu as déjà la dernière version.</p>}
+        {upd === "uptodate" && <p className="version-msg">Vous êtes à jour.</p>}
         {upd === "error" && <p className="version-msg">Vérification impossible (hors ligne ?).</p>}
       </div>
     </div>

@@ -13,7 +13,7 @@ export default function TierlistHub({ tierlists, online, closing = false, onOpen
 
       {missing ? (
         <p className="empty" style={{ padding: 24 }}>
-          Les tierlists ne sont pas encore activées sur ta base.
+          Les tierlists ne sont pas encore activées sur votre base.
         </p>
       ) : (
         <>
@@ -27,7 +27,7 @@ export default function TierlistHub({ tierlists, online, closing = false, onOpen
 
           <h3 className="tl-list-title">Tierlists des joueurs</h3>
           {list.length === 0 ? (
-            <p className="muted" style={{ padding: '4px 4px 16px' }}>Aucune tierlist pour l'instant. Crée la tienne !</p>
+            <p className="muted" style={{ padding: '4px 4px 16px' }}>Aucune tierlist pour l'instant. Créez la vôtre !</p>
           ) : (
             <div className="tl-list">
               {list.map((tl) => (

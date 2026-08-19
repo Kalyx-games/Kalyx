@@ -42,7 +42,7 @@ export default function PlayersManager({ roster, busy, online, onRename, onClose
         {roster == null ? (
           <p className="field-hint">Chargement…</p>
         ) : roster.length === 0 ? (
-          <p className="field-hint">Aucun joueur pour l'instant : ils apparaîtront ici dès ta première partie enregistrée.</p>
+          <p className="field-hint">Aucun joueur pour l'instant : ils apparaîtront ici dès votre première partie enregistrée.</p>
         ) : (
           <>
             <p className="field-hint" style={{ marginBottom: 10 }}>
