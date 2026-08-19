@@ -591,7 +591,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
           {form.status !== 'wishlist' && (
             <div className="field">
               <span className="field-label"><ExtIcon size={13} /> Extensions</span>
-              <p className="field-hint ext-hint">Tape le nom puis <b>Entrée</b> pour la chercher sur BoardGameGeek (remplit le nom, les joueurs et l'idéal).</p>
+              <p className="field-hint ext-hint">Tape le nom puis <b>Entrée</b>.</p>
               {extList.map((x) => (
                 <div className="ext-item" key={x.id}>
                   <div className="ext-row">
