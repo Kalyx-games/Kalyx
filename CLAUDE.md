@@ -253,6 +253,16 @@ Dernier écran resté à l'ancienne recette : blocs bordés + **4 boutons identi
 
 **Version prod : `19/08 · 8e83c4e`** (vérifié par contenu servi : `detail-head-btn`, `detail-plays-n`, `button{font-family:inherit}`, `@media (width<=389px)` — ⚠️ le minifieur réécrit `max-width: 389px` en `width<=389px`, ne pas grep le premier). ⚠️ rappel SW : fermer/rouvrir 2×.
 
+## ✅ CHWAZI DESCEND DANS LE POUCE (2026-08-20)
+
+Retour user : « Chwazi est la fonctionnalité que j'utilise le plus mais pour l'ouvrir c'est 3 petits points perdus en haut à droite ». **Piste écartée par l'user AVANT celle-ci : un 4e onglet dans le bac** (« je n'aime pas cette solution car la tap bar devient trop petite ») — implémentée puis ANNULÉE, ne pas la reproposer.
+
+- **Échange retenu** : Chwazi prend la place du bouton flottant **« + »** (`.fab-chwazi`, 52px, encre, 2e rang au-dessus du filtre or), et **« ajouter un jeu » monte dans la barre du haut** (`.icon-btn` + `PlusIcon`, masqué sur Stats et Réglages). Le bouton Chwazi de la barre du haut est SUPPRIMÉ.
+- ⚠️ **Le glyphe Chwazi est EXCLU du forçage `fill: currentColor`** des boutons flottants (`.fab:not(.fab-chwazi) svg…`) : ses 3 pastilles sont son identité (même choix que dans la barre du haut). Une 1re tentative en `fill: revert-layer` était un pari — `revert` remonte à l'origine précédente et emporte AUSSI les attributs de présentation `fill=` du SVG. **Exclure la règle, ne pas la contrarier.** Glyphe porté à **34px** (à 26 les pastilles se perdaient dans le disque).
+- ⚠️ **`.icon-btn` a gagné sa règle `:disabled`** : sa `color` explicite écrasait l'atténuation du navigateur → le « + » paraissait actif hors ligne (rappel de la règle générale : *tout bouton avec une `color` explicite DOIT avoir sa `:disabled`*).
+- **Le bouton Chwazi se masque au défilement comme le filtre** : une 1re version l'en exemptait (précédent des FAB d'overlay) → un bouton isolé qui flotte pendant que son voisin disparaît se lit comme un bug.
+- Vérifié dev clair+sombre : Chwazi s'ouvre, « + » ouvre le formulaire, « + » absent sur Stats/Réglages, aucun FAB dans les Réglages, hors ligne = « + » à 0,4 + `not-allowed`, pastilles bien multicolores (fills mesurés), barre du haut sans débordement à 320px (50px de marge). **Version prod : `20/08 01h20 · d1f0a18`.** ⚠️ rappel SW : fermer/rouvrir 2×.
+
 ## 🎨 APRÈS LES 7 CHANTIERS — audit « qu'est-ce qui fait encore IA ? » (2026-08-19)
 
 Audit multi-agents (4 lentilles : finition / écriture / hiérarchie / identité → 61 pistes → tri sans complaisance → 8 retenues). **L'user a validé et fait exécuter les points 1 à 3.**
