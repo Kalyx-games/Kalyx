@@ -675,10 +675,10 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
           <div className="field">
             <span className="field-label">Statut</span>
             <div className="chips">
-              <button type="button" className={`fchip icon-chip ${form.status === 'collection' ? 'on' : ''}`} onClick={() => setForm((f) => ({ ...f, status: 'collection' }))}>
+              <button type="button" className={`fchip icon-chip chip-collection ${form.status === 'collection' ? 'on' : ''}`} onClick={() => setForm((f) => ({ ...f, status: 'collection' }))}>
                 <CollectionIcon size={17} /> Collection
               </button>
-              <button type="button" className={`fchip icon-chip ${form.status === 'wishlist' ? 'on' : ''}`} onClick={() => setForm((f) => ({ ...f, status: 'wishlist' }))}>
+              <button type="button" className={`fchip icon-chip chip-wishlist ${form.status === 'wishlist' ? 'on' : ''}`} onClick={() => setForm((f) => ({ ...f, status: 'wishlist' }))}>
                 <WishlistIcon size={17} /> Wishlist
               </button>
             </div>

@@ -251,6 +251,14 @@ body {
 .navtab-stats svg * { fill: var(--nav-stats); }
 .navtab-collection svg * { fill: var(--nav-collection); }
 .navtab-wishlist svg * { fill: var(--nav-wishlist); }
+/* Mêmes icônes, même couleur : les puces de statut du formulaire suivent la barre
+   (sinon la même icône serait vive en bas de l'écran et terne dans le formulaire). */
+.chip-collection svg * { fill: var(--nav-collection); }
+.chip-wishlist svg * { fill: var(--nav-wishlist); }
+/* SÉLECTIONNÉE, la puce inverse son fond (encre) : la couleur de marque y tomberait à
+   1,9:1. Dans cet état l'icône suit la couleur du texte de la puce. */
+.fchip.on.chip-collection svg *,
+.fchip.on.chip-wishlist svg * { fill: currentColor; }
 /* Onglet actif : texte net + icône qui zoome (se marie avec la pastille glissante). */
 .navtab.active {
   color: var(--ink);
