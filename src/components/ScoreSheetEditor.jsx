@@ -323,7 +323,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
               <button type="button" className={`fchip ${entry === 'byPlayer' ? 'on' : ''}`} onClick={() => setEntry('byPlayer')}>Par joueur</button>
               <button type="button" className={`fchip ${entry === 'byItem' ? 'on' : ''}`} onClick={() => setEntry('byItem')}>Item par item</button>
             </div>
-            <p className="field-hint" style={{ marginTop: 6 }}>« Par joueur » = une carte plein écran par joueur (compteurs −/+). Basculable pendant la saisie.</p>
+            <p className="field-hint" style={{ marginTop: 6 }}>« Par joueur » = une page par joueur, avec toutes ses catégories. « Item par item » = une page par catégorie, avec tous les joueurs.</p>
           </>
         )}
 

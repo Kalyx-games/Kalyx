@@ -1123,7 +1123,13 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
 
   // Navigation du parcours : ← recule (ou revient aux noms) / → avance (ou va au récap). navDirRef pilote l'animation.
   const goPrev = () => { navDirRef.current = -1; if (idx > 0) setCardIndex(idx - 1); else setStep(1) }
-  const goNext = () => { navDirRef.current = 1; if (idx < pageCount - 1) setCardIndex(idx + 1); else setStep(3) }
+  const goNext = () => {
+    navDirRef.current = 1
+    if (idx < pageCount - 1) setCardIndex(idx + 1)
+    // Page unique : le récapitulatif ferait doublon et son retour ne ramène qu'à l'étape 1.
+    // Les boutons sont déjà masqués ; le glissé, lui, restait actif et y menait quand même.
+    else if (!singlePage) setStep(3)
+  }
   const jumpTo = (k) => { navDirRef.current = k >= idx ? 1 : -1; setCardIndex(k) }
   navRef.current = { goPrev, goNext }
 

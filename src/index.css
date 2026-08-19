@@ -1937,6 +1937,28 @@ body {
 }
 .settings-relink:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Ligne d'état de l'appareil : elle ouvre la page, avant tous les réglages, parce qu'elle
+   explique pourquoi cinq boutons plus bas sont grisés. Pas une carte : une bande, qui
+   disparaît complètement dès que l'appareil est autorisé. */
+.device-lock {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding: 14px 16px;
+  border: 0;
+  border-left: 3px solid var(--gold);
+  border-radius: var(--r-card);
+  background: var(--card);
+  box-shadow: var(--card-shadow);
+  text-align: left;
+  cursor: pointer;
+}
+.device-lock-txt { flex: 1; font-size: var(--fs-body-s); color: var(--muted); }
+.device-lock-cta { flex-shrink: 0; font-size: var(--fs-body-s); font-weight: 700; color: var(--ink); }
+.device-lock:active { transform: scale(0.995); }
+
 /* ---- Écran de secours (Error Boundary) ---- */
 .crash {
   min-height: 100vh;
@@ -4599,7 +4621,10 @@ input[type='number'] {
   padding: 10px 0;
   border-bottom: 1px solid var(--soft);
 }
-.pcard-row:last-of-type { border-bottom: none; }
+/* Le dernier filet tombe. ⚠️ `:last-of-type` ne marchait qu'en « item par item » : en
+   « par joueur », le dernier enfant de la carte est le total, pas une rangée — la rangée
+   au-dessus gardait donc son trait, collé à celui du total. */
+.pcard-row:last-child, .pcard-row:has(+ .pcard-total) { border-bottom: none; }
 .pcard-cat {
   flex: 1;
   min-width: 0;

@@ -130,6 +130,15 @@ export default function Settings({
         <h2>Réglages</h2>
       </div>
 
+      {/* Pas un réglage : l'ÉTAT qui commande cinq boutons plus bas. Sans lui, ils sont
+          grisés sans que rien n'explique pourquoi. Disparaît une fois l'appareil autorisé. */}
+      {!deviceAuthorized && (
+        <button type="button" className="device-lock" onClick={onEnterCode}>
+          <span className="device-lock-txt">Cet appareil peut consulter, mais pas modifier.</span>
+          <span className="device-lock-cta">Autoriser</span>
+        </button>
+      )}
+
       <section className="settings-card share-card">
         <h3>Partager Kalyx</h3>
         <div className="share-row">
@@ -166,28 +175,6 @@ export default function Settings({
         </div>
       </section>
 
-      <section className="settings-card">
-        <h3>Accès de l'appareil</h3>
-        <p className="muted" style={{ margin: '0 0 10px' }}>
-          {deviceAuthorized
-            ? 'Cet appareil est autorisé à modifier la collection.'
-            : "Cet appareil peut consulter mais pas modifier. Entrez le code d'accès pour l'autoriser."}
-        </p>
-        {deviceAuthorized ? (
-          <>
-            <button type="button" className="btn-ghost settings-open" onClick={onChangeCode} disabled={!online}>
-              Changer le code d'accès
-            </button>
-            <button type="button" className="settings-relink" onClick={onEnterCode}>
-              Ressaisir le code sur cet appareil
-            </button>
-          </>
-        ) : (
-          <button type="button" className="btn-ghost settings-open" onClick={onEnterCode}>
-            Autoriser cet appareil
-          </button>
-        )}
-      </section>
 
       <BubbleListManager
         title="Propriétaires"
@@ -308,6 +295,20 @@ export default function Settings({
           />
         </div>
       </section>
+
+      {deviceAuthorized && (
+        <section className="settings-card">
+          <h3>Code d'accès</h3>
+          <div className="links">
+            <button type="button" className="link-row" onClick={onChangeCode} disabled={!online}>
+              <span className="link-label">Changer le code d'accès</span>
+            </button>
+            <button type="button" className="link-row" onClick={onEnterCode}>
+              <span className="link-label">Ressaisir le code sur cet appareil</span>
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="settings-card">
         <h3>Liens utiles</h3>
