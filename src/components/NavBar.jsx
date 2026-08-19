@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { StatsIcon, CollectionIcon, WishlistIcon, ChwaziIcon } from './icons'
+import { StatsIcon, CollectionIcon, WishlistIcon } from './icons'
 
 // Barre d'onglets fixée en bas : Stats · Collection · Wishlist (tailles égales).
 // L'onglet actif est mis en avant dynamiquement (pastille glissante + zoom via le CSS).
@@ -10,13 +10,7 @@ const TABS = [
   { key: 'wishlist', label: 'Wishlist', Icon: WishlistIcon },
 ]
 
-// Chwazi occupe un 4e emplacement du bac, mais ce n'est PAS une vue : il recouvre l'écran
-// courant et vous y ramène. Il ne prend donc jamais la pastille, jamais l'état actif, et le
-// glissé ne l'atteint pas. Il est ici parce que c'est la fonction la plus utilisée et que le
-// bac est la seule surface qui ne disparaît jamais au défilement — la barre du haut, si.
-const SLOTS = TABS.length + 1
-
-export default function NavBar({ view, onChange, onChwazi }) {
+export default function NavBar({ view, onChange }) {
   const activeIndex = TABS.findIndex((t) => t.key === view)
   const navRef = useRef(null)
   const idxRef = useRef(activeIndex)
@@ -67,10 +61,7 @@ export default function NavBar({ view, onChange, onChwazi }) {
   return (
     <nav className="navbar" ref={navRef}>
       {activeIndex >= 0 && (
-        <span
-          className="navbar-pill"
-          style={{ width: `calc(${100 / SLOTS}% - 12px)`, transform: `translateX(calc(${activeIndex} * (100% + 12px)))` }}
-        />
+        <span className="navbar-pill" style={{ transform: `translateX(calc(${activeIndex} * (100% + 12px)))` }} />
       )}
       {TABS.map(({ key, label, Icon }) => (
         <button
@@ -84,15 +75,6 @@ export default function NavBar({ view, onChange, onChwazi }) {
           <span>{label}</span>
         </button>
       ))}
-      <button
-        type="button"
-        className="navtab navtab-chwazi"
-        onClick={() => { if (swipedRef.current) return; onChwazi() }}
-        aria-haspopup="dialog"
-      >
-        <ChwaziIcon size={24} />
-        <span>Chwazi</span>
-      </button>
     </nav>
   )
 }

@@ -56,7 +56,15 @@ En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/
   3. Coin haut-droit = le plus hostile au pouce sur un 6,7".
   4. **Trois pastilles à gauche d'un engrenage se lisent « menu ⋯ »** — le glyphe n'est pas en cause, c'est son contexte. D'où le mot exact de l'user.
 
-**Solution retenue : un 4e EMPLACEMENT dans le bac — mais PAS un onglet.** Chwazi n'est pas une vue : il recouvre l'écran courant et y ramène. Il ne prend donc **jamais la pastille, jamais l'état actif, et le glissé ne l'atteint pas** (`TABS` reste à 3 ; `SLOTS = TABS.length + 1`).
+⛔ **SOLUTION ESSAYÉE PUIS REFUSÉE PAR L'USER : le 4e emplacement dans le bac.** Motif, mot pour mot : « **Je n'aime pas cette solution car la tap bar devient trop petite** ». Les onglets passaient de 137 à 103px. **Ne pas reproposer.** Annulé ; le bac est revenu à 3 onglets.
+
+  Ce qui a été GARDÉ de ce lot, parce que ce sont de vrais défauts indépendants du placement :
+  · la cible de `.icon-btn` passe de **38 à 44px** (la norme de l'app), le padding de `.topbar` compensant de 13 à 10 pour que la barre garde ses 64px ;
+  · le **garde du glissé** de NavBar (`swipedRef` posé AVANT le seuil de 45px) : un glissé trop court laissait passer son clic de fin de geste.
+
+  **Le problème RESTE entier** : le bouton disparaît au défilement (`.app.bars-hidden .topbar`), il est dans le coin le plus loin du pouce, et il est inaccessible depuis tout écran plein écran (`.sheet` z-1000 > `.topbar` z-10).
+
+  Description de la solution refusée, pour mémoire : un 4e EMPLACEMENT dans le bac — mais PAS un onglet. Chwazi n'est pas une vue : il recouvre l'écran courant et y ramène. Il ne prend donc **jamais la pastille, jamais l'état actif, et le glissé ne l'atteint pas** (`TABS` reste à 3 ; `SLOTS = TABS.length + 1`).
   - `NavBar.jsx` : nouvelle prop `onChwazi`, bouton `.navtab.navtab-chwazi` après le `.map()`. **La pastille reçoit sa largeur EN LIGNE** (`calc(100/SLOTS% - 12px)`) — le `translateX(i * (100% + 12px))` était déjà générique, seule la largeur était figée à 33,333 %.
   - CSS : filet vertical `::before` (pas un `border-left`, qui fausserait le calcul flex), `color: var(--ink)` et `svg { opacity: 1 }` — sans ces deux règles il hériterait du traitement « onglet inactif » et paraîtrait **désactivé en permanence**.
   - `App.jsx` : le bouton de la barre du haut est SUPPRIMÉ (elle ne garde que l’engrenage), `ChwaziIcon` retiré de son import. `enterFullscreen()` reste dans le geste de tap (obligatoire, cf. l’historique du plein écran).

@@ -247,7 +247,6 @@ body {
 }
 /* Pastille de surbrillance qui glisse sous l'onglet actif. */
 .navbar-pill {
-  /* largeur posée en ligne par NavBar : elle dépend du nombre d’emplacements */
   position: absolute;
   top: 5px;
   bottom: calc(5px + env(safe-area-inset-bottom));
@@ -316,21 +315,6 @@ body {
   40% { transform: scale(1.34); }
   100% { transform: scale(1.18); }
 }
-/* Chwazi n'est pas une VUE : il ne prend jamais la pastille. Un filet vertical dit
-   « celui-ci n'est pas du même ordre » — même motif que les filets de la bande d'infos
-   de la fiche jeu. Et sans les deux règles suivantes, il hériterait du traitement
-   « onglet inactif » (gris + icône à 0,62) et paraîtrait désactivé en permanence. */
-.navtab-chwazi::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 12px;
-  bottom: 12px;
-  width: 1px;
-  background: var(--line);
-}
-.navtab-chwazi { color: var(--ink); }
-.navtab-chwazi svg { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   .navtab svg {
@@ -354,8 +338,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 13px 16px;
-  padding-top: max(13px, env(safe-area-inset-top));
+  padding: 10px 16px;
+  padding-top: max(10px, env(safe-area-inset-top));
   /* Le chrome s'efface : même fond que la page (la barre ne se voit pas quand on est en
      haut), opaque quand même car le contenu défile DERRIÈRE. Pas de backdrop-filter :
      le fond est opaque, le flou serait calculé pour rien. */
@@ -479,8 +463,11 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  /* 44px comme partout ailleurs dans l app (.back-btn, .ext-row-x…) : 38 en faisait la
+     plus petite cible, sur la fonction la plus utilisee. La barre garde sa hauteur : son
+     padding descend de 13 a 10 (10+44+10 = 13+38+13 = 64px). */
+  width: 44px;
+  height: 44px;
   border-radius: var(--r-ctl);
   border: 0; /* un cadre autour d'une icône, c'est du chrome : l'icône se voit déjà */
   background: transparent;
