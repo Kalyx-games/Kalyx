@@ -236,22 +236,6 @@ export default function GameDetail({
         </div>
       </div>
 
-      {/* Les propriétaires rejoignent les autres faits du jeu, sous forme de NOMS : la fiche a
-          la place que la carte n'a pas, deux initiales sur une jaquette n'apprenaient rien. */}
-      {(owners.length > 0 || tags.length > 0) && (
-        <p className="detail-owners">
-          {owners.map((o) => (
-            <span key={`o-${o}`} className="detail-owner">
-              <i style={{ background: ownerDisplay(o, ownerMap).color }} aria-hidden="true" />{o}
-            </span>
-          ))}
-          {tags.map((t) => (
-            <span key={`t-${t}`} className="detail-owner">
-              <i style={{ background: ownerDisplay(t, tagMap).color }} aria-hidden="true" />{t}
-            </span>
-          ))}
-        </p>
-      )}
 
       {extensions.length > 0 && (
         <p className="detail-ext"><span className="detail-info-k"><ExtIcon size={13} /></span> {extensions.join(', ')}</p>
@@ -335,6 +319,23 @@ export default function GameDetail({
           <div className="detail-poll-head">Nombre de joueurs</div>
           <p className="detail-poll-none">Aucun sondage sur BoardGameGeek pour ce jeu.</p>
         </div>
+      )}
+      {/* Qui possède le jeu : la dernière chose qu'on cherche sur une fiche, donc la dernière
+          de la page. Les noms en entier (la fiche a la place que la carte n'a pas), avec la
+          pastille de couleur des bulles pour garder le lien avec la liste. */}
+      {(owners.length > 0 || tags.length > 0) && (
+        <p className="detail-owners">
+          {owners.map((o) => (
+            <span key={`o-${o}`} className="detail-owner">
+              <i style={{ background: ownerDisplay(o, ownerMap).color }} aria-hidden="true" />{o}
+            </span>
+          ))}
+          {tags.map((t) => (
+            <span key={`t-${t}`} className="detail-owner">
+              <i style={{ background: ownerDisplay(t, tagMap).color }} aria-hidden="true" />{t}
+            </span>
+          ))}
+        </p>
       )}
       </div>
     </div>
