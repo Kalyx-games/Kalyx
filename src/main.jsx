@@ -29,6 +29,28 @@ if ('serviceWorker' in navigator) {
   }
   document.addEventListener('visibilitychange', checkForUpdate)
   window.addEventListener('focus', checkForUpdate)
+
+  // 3) FILET : un service worker peut se coincer et resservir l'ancienne page indéfiniment,
+  //    sans que rien ne le signale (vécu). Au démarrage, on compare donc nous-mêmes le bundle
+  //    référencé par l'index.html EN LIGNE à celui que la page a chargé ; s'ils diffèrent, on
+  //    renouvelle de force. Un verrou de session interdit toute boucle de rechargement, et on
+  //    attend le premier rendu pour ne pas ralentir l'ouverture.
+  const SELF_HEAL = 'kx-selfheal'
+  window.addEventListener('load', () => {
+    setTimeout(async () => {
+      if (!navigator.onLine) return
+      try {
+        if (sessionStorage.getItem(SELF_HEAL)) return
+        const { checkForUpdate: check, forceUpdate } = await import('./lib/update')
+        const { aJour } = await check()
+        if (aJour) return
+        sessionStorage.setItem(SELF_HEAL, '1') // posé AVANT le rechargement → une seule tentative
+        await forceUpdate()
+      } catch {
+        /* hors ligne, réseau capricieux… : on réessaiera au prochain démarrage */
+      }
+    }, 2500)
+  })
 }
 
 // Point d'entrée : React prend le contrôle de la <div id="root"> du index.html.

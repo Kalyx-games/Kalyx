@@ -3,6 +3,7 @@ import { Fragment, useMemo, useRef, useState } from 'react'
 import { BackIcon } from './icons'
 import qrcode from 'qrcode-generator'
 import { getTheme, applyTheme } from '../lib/theme'
+import { checkForUpdate, forceUpdate } from '../lib/update'
 import BubbleListManager from './BubbleListManager'
 import SortMenu from './SortMenu'
 
@@ -68,6 +69,23 @@ export default function Settings({
   const fileRef = useRef(null)
   const [theme, setThemeState] = useState(getTheme())
   const [copied, setCopied] = useState(false)
+  // Vérification manuelle de mise à jour : le service worker peut se coincer et resservir
+  // l'ancienne version indéfiniment ; ce bouton interroge le réseau puis renouvelle tout.
+  const [upd, setUpd] = useState(null)
+  const runUpdateCheck = async () => {
+    setUpd('checking')
+    try {
+      const { aJour } = await checkForUpdate()
+      if (aJour) {
+        setUpd('uptodate')
+        return
+      }
+      setUpd('updating')
+      await forceUpdate() // vide le service worker + les caches, puis recharge
+    } catch {
+      setUpd('error')
+    }
+  }
 
   // QR code du lien de l'app (généré une fois, sans réseau ni service externe).
   const qrDataUrl = useMemo(() => {
@@ -327,7 +345,18 @@ export default function Settings({
         </div>
       </section>
 
-      <p className="app-version">Version {__APP_VERSION__}</p>
+      <div className="app-version">
+        <p>Version {__APP_VERSION__}</p>
+        <button type="button" className="version-check" onClick={runUpdateCheck} disabled={upd === "checking" || upd === "updating"}>
+          {upd === "checking"
+            ? 'Vérification…'
+            : upd === "updating"
+              ? 'Mise à jour…'
+              : 'Vérifier les mises à jour'}
+        </button>
+        {upd === "uptodate" && <p className="version-msg">Tu as déjà la dernière version.</p>}
+        {upd === "error" && <p className="version-msg">Vérification impossible (hors ligne ?).</p>}
+      </div>
     </div>
   )
 }

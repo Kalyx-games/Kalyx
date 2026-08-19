@@ -478,6 +478,11 @@ export default function App() {
     // On ne restaure l'écran ouvert QU'À l'actualisation ; au démarrage à froid (« quitter et revenir »)
     // on reste sur la Collection en haut.
     const page = isReload ? loadPage() : null
+    // Démarrage à froid : on est reparti sur la Collection, donc l'écran mémorisé de la
+    // session précédente ne vaut plus rien. Sans cet effacement il survit (l'effet de
+    // mémorisation ne se rejoue pas, ses dépendances n'ayant pas bougé) et la PREMIÈRE
+    // actualisation rouvrirait les Réglages qu'on vient justement de ne pas restaurer.
+    if (!page) savePage({})
     if (page) {
       if (page.detail) { const g = games.find((x) => x.id === page.detail); if (g) setDetailGame(g) }
       if (page.settings) setSettingsOpen(true)

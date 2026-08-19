@@ -4662,3 +4662,32 @@ input[type='number'] {
   border-radius: 5px;
   background: var(--soft); /* .sk ne pose que le scintillement : la surface vient d'ici */
 }
+
+/* Pied des Réglages : numéro de version + vérification manuelle de mise à jour. */
+.app-version {
+  text-align: center;
+  padding: 4px 0 8px;
+}
+.app-version p {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+.version-check {
+  margin-top: 8px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: var(--r-ctl);
+  background: var(--soft);
+  color: var(--ink);
+  font-size: var(--fs-footnote);
+  font-weight: 600;
+  cursor: pointer;
+}
+.version-check:disabled { opacity: 0.55; cursor: default; }
+.version-check:active { transform: scale(0.96); }
+.version-msg {
+  margin-top: 6px;
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
