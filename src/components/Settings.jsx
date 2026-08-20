@@ -299,14 +299,12 @@ export default function Settings({
       {deviceAuthorized && (
         <section className="settings-card">
           <h3>Code d'accès</h3>
-          <div className="links">
-            <button type="button" className="link-row" onClick={onChangeCode} disabled={!online}>
-              <span className="link-label">Changer le code d'accès</span>
-            </button>
-            <button type="button" className="link-row" onClick={onEnterCode}>
-              <span className="link-label">Ressaisir le code sur cet appareil</span>
-            </button>
-          </div>
+          <button type="button" className="btn-ghost settings-open" onClick={onChangeCode} disabled={!online}>
+            Changer le code d'accès
+          </button>
+          <button type="button" className="settings-relink" onClick={onEnterCode}>
+            Ressaisir le code sur cet appareil
+          </button>
         </section>
       )}
 

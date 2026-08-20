@@ -288,9 +288,6 @@ body {
   font-weight: 600;
   transition: transform 0.12s ease;
 }
-.navtab:active {
-  transform: scale(0.92);
-}
 .navtab svg {
   opacity: 0.62; /* 0.5 délavait des teintes déjà douces : l'onglet actif se distingue
                     de toute façon par la pastille, la graisse et le zoom */
@@ -2280,26 +2277,6 @@ body {
   flex-shrink: 0;
 }
 /* Bouton "copier le lien de l'app" (dernier des liens). */
-.link-copy {
-  width: 100%;
-  cursor: pointer;
-  font-family: inherit;
-  text-align: left;
-}
-.link-copy:active {
-  transform: scale(0.99);
-}
-.link-copy.copied {
-  background: var(--ok-bg);
-  border-color: var(--ok-border);
-  color: var(--ok-ink);
-}
-.link-copy-icon {
-  flex-shrink: 0;
-  width: 20px;
-  text-align: center;
-  font-size: var(--fs-body-l);
-}
 
 /* ---- Statistiques ---- */
 .stats {

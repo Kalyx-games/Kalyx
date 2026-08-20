@@ -253,6 +253,11 @@ Dernier écran resté à l'ancienne recette : blocs bordés + **4 boutons identi
 
 **Version prod : `19/08 · 8e83c4e`** (vérifié par contenu servi : `detail-head-btn`, `detail-plays-n`, `button{font-family:inherit}`, `@media (width<=389px)` — ⚠️ le minifieur réécrit `max-width: 389px` en `width<=389px`, ne pas grep le premier). ⚠️ rappel SW : fermer/rouvrir 2×.
 
+## ✅ DEUX RETOURS ÉCLAIR (2026-08-20)
+
+- ⚠️ **La carte « Code d'accès » était affreuse** : j'y avais mis deux `<button className="link-row">`. `.link-row` est le style d'un LIEN (`<a>`) : il ne remet à zéro NI le fond NI la bordure, donc sur un `<button>` le gris et le cadre du navigateur passaient au travers, avec un filet noir sur le côté. Retour aux deux boutons validés de l'app (`.btn-ghost.settings-open` + `.settings-relink`). **RÈGLE : `.link-row` ne s'emploie que sur un `<a>`.** (Au passage : `.link-copy` et `.link-copy-icon`, styles d'un bouton retiré du JSX depuis longtemps, supprimés.)
+- **Le bac : l'onglet ne s'enfonce plus au toucher.** `.navtab:active { transform: scale(0.92) }` et le zoom de l'onglet actif (icône 1,18, libellé 1,08) se suivaient à 100 ms : deux mouvements contraires sur le même onglet, « épileptique » selon l'user. Il ne reste que l'agrandissement. Mesuré : transform `none` pendant l'appui.
+
 ## ✅ IMAGE DEPUIS BGG · LES PARCOURS MULTI-PAGES AUDITÉS (2026-08-20)
 
 ### 1. Le champ image a deux sources — et Okkazeo est INFAISABLE (démontré)
