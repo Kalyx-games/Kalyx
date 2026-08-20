@@ -149,6 +149,9 @@ export async function fetchPlayerRoster() {
   ;(data ?? []).forEach((row) => {
     ;(row.players || []).forEach((p) => {
       const n = (p?.name || '').trim()
+      // ⚠️ « Joueur 1 », « Joueur 2 » (noms de remplacement d'une partie saisie sans nommer
+      // personne) sont GARDÉS exprès : les filtrer ici les rendrait invisibles dans l'écran
+      // Joueurs, donc impossibles à renommer.
       if (n) counts[n] = (counts[n] || 0) + 1
     })
   })
@@ -159,7 +162,11 @@ export async function fetchPlayerRoster() {
 
 // Noms seuls, dans le même ordre (les joueurs habituels d'abord) → auto-complétion.
 export async function fetchPlayerNames() {
-  return (await fetchPlayerRoster()).map((p) => p.name)
+  // « Joueur 1 », « Joueur 2 »… sont les noms de remplacement d'une partie saisie sans
+  // nommer personne. Ils restent dans le RÉFÉRENTIEL (écran Joueurs → on peut les
+  // renommer, et le podium doit bien les montrer : ils ont joué), mais ils n'ont rien à
+  // faire dans les propositions de saisie.
+  return (await fetchPlayerRoster()).map((p) => p.name).filter((n) => !/^Joueur d+$/.test(n))
 }
 
 // Nb minimum de parties sur un jeu pour qu'il puisse être le « meilleur jeu » d'un joueur

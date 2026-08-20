@@ -2048,6 +2048,14 @@ body {
   flex-shrink: 0;
 }
 .back-btn svg { width: 22px; height: 22px; display: block; }
+/* ⚠️ .back-btn pose une `color` explicite : elle écrase l'atténuation que le navigateur
+   applique à :disabled. Sans cette règle, le crayon « modifier la fiche » paraissait
+   actif pendant la saisie alors qu'il ne fait plus rien. */
+.back-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.back-btn:disabled:active { transform: none; }
 .settings-head h2 {
   font-size: var(--fs-title);
   color: var(--ink);
@@ -4528,6 +4536,12 @@ input[type='number'] {
   color: var(--gold-ink); /* le meneur porte l'or (🏆) */
   font-size: var(--fs-body);
 }
+/* Prend la place du meneur quand le bouton est grisé : ce qui manque pour enregistrer. */
+.sheet-hint {
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--fs-body-s);
+}
 
 /* ===== Saisie d'une partie : assistant en 2 étapes (compétitif à points) ===== */
 
@@ -4579,22 +4593,36 @@ input[type='number'] {
   justify-content: center;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 14px;
+  gap: 0; /* les boutons se touchent : plus d'espace mort entre deux pointillés */
+  margin-bottom: 0; /* les 20 px de garde du bouton remplacent la marge */
 }
+/* Le trait garde ses 8 × 4 px, mais il est porté par un bouton de 44 px de haut : c'était
+   la seule navigation directe du parcours, et elle était intouchable au doigt. Le trait
+   descend donc dans un ::after. */
 .pcard-dot {
+  width: 20px; /* la CIBLE ; le trait, lui, garde ses 8 px */
+  height: 44px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: width 0.18s ease;
+}
+.pcard-dot::after {
+  content: '';
   width: 8px;
   height: 4px;
   border-radius: 2px;
-  border: none;
   background: var(--muted);
   opacity: 0.4; /* inactif = discret mais bien visible (clair ET sombre) */
-  cursor: pointer;
-  padding: 0;
   transition: width 0.18s ease, background 0.18s ease, opacity 0.18s ease;
 }
-.pcard-dot.on { width: 24px; background: var(--primary); opacity: 1; }
-.pcard-dot.win { background: var(--gold); opacity: 1; }
+.pcard-dot.on { width: 36px; }
+.pcard-dot.on::after { width: 24px; background: var(--primary); opacity: 1; }
+.pcard-dot.win::after { background: var(--gold); opacity: 1; }
 
 /* Animation de changement de page (sens du glissé). */
 @keyframes pcard-slide-r { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }

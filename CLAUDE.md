@@ -169,7 +169,7 @@ Audit en workflow (3 lentilles : cohérence / composition / finition, puis synth
 ```bash
 grep -cE '^s*(margin|padding|gap|row-gap|column-gap)[a-z-]*s*:.*[0-9]px' src/index.css
 ```
-**Valeur de référence au 19/08/2026 : 343.**
+**Valeur de référence au 20/08/2026 : 348** (343 le 19/08 ; la hausse vient de la ligne d’état des Réglages, du repli des sauvegardes et de la phrase d’aide de la barre d’enregistrement).
 
 **NON FAIT, et assumé** : le resserrement réel (faire tomber 10→8, 14→12, 6→4 …). Il déplacerait ~40 % des espacements pour un bénéfice invisible, sur une app que l’user a déjà fait itérer trois fois sur des retours visuels. À ne relancer QUE si l’user demande explicitement un rythme plus serré, écran par écran, et jamais en une passe globale.
 
@@ -252,6 +252,59 @@ Dernier écran resté à l'ancienne recette : blocs bordés + **4 boutons identi
   4. **4 imports d'icônes morts** (PlayersIcon/StarIcon/ClockIcon/BarsIcon) laissés par la recomposition.
 
 **Version prod : `19/08 · 8e83c4e`** (vérifié par contenu servi : `detail-head-btn`, `detail-plays-n`, `button{font-family:inherit}`, `@media (width<=389px)` — ⚠️ le minifieur réécrit `max-width: 389px` en `width<=389px`, ne pas grep le premier). ⚠️ rappel SW : fermer/rouvrir 2×.
+
+## ✅ IMAGE DEPUIS BGG · LES PARCOURS MULTI-PAGES AUDITÉS (2026-08-20)
+
+### 1. Le champ image a deux sources — et Okkazeo est INFAISABLE (démontré)
+
+- **Bouton « image depuis BoardGameGeek »** à côté de celui de Philibert (`GameForm.jsx`, `fetchImage(source)`) : par `/api/bgg?id=` si la fiche a déjà un `bgg_id` (donc SA jaquette), sinon `/api/bgg?q=` puis la fiche du premier résultat. Un message nomme la source (« Image prise sur BoardGameGeek. ») ou dit pourquoi elle manque — y compris le texte d'erreur de BGG quand il throttle (202). Logo pris dans `logos.js` (local). Vérifié EN PROD sur les trois états.
+- ⛔ **OKKAZEO : impossible, vérifié des deux côtés. Ne pas réessayer sans lire ceci.**
+  - **Serveur** : `https://www.okkazeo.com/jeux/resultats?rech_nom=NOM` renvoie **403 « Forbidden » (14 octets, text/plain, depuis l'ORIGINE — pas un défi Cloudflare)** à toute requête ordinaire. Un jeu d'en-têtes Chrome COMPLET (`sec-ch-ua` + `Sec-Fetch-*` + `Upgrade-Insecure-Requests`) le fait passer à **200 depuis une IP résidentielle française** — mais **toujours 403 depuis Vercel** : le filtre porte aussi sur l'origine. Mesuré en déployant réellement un `api/okkazeo.js` en production (403 sur les 6 jeux essayés) ; le fichier a été supprimé.
+  - **Navigateur** : `fetch` direct depuis l'app = `Failed to fetch` (aucun en-tête CORS).
+  - **Images** : les FICHIERS (`/images/jeux/thumbs/{id}.png`, `/images/jeux/{id}.png` en 300 px) sont servis à tout le monde, mais leur URL demande **l'identifiant Okkazeo** du jeu, qui n'existe que dans la page bloquée. La variante par slug (`thumbs/azul.webp`) n'existe que pour **6 jeux sur 17** essayés.
+  - Et `robots.txt` interdit `/jeux/recherche`, `/jeux/autocomplete` et `/api/`.
+
+### 2. Aucune charge tierce ne reste (inventaire complet)
+
+Vérifié fichier par fichier (src, index.html, public, api, vite.config, vercel.json) : **0 police distante, 0 CDN, 0 favicon Google**. Les 7 logos vivent en `data:` dans `src/lib/logos.js`. Trois dettes trouvées au passage, toutes corrigées :
+- **3 hôtes de jaquettes manquaient à `vercel.json`** (`upload.wikimedia.org`, `www.fetedujeu.org`, `static.fnac-static.com`) → l'optimiseur renvoyait **400** et le repli `onError` rechargeait l'**image BRUTE** chez le tiers : 155 Ko, 139 Ko, 62 Ko pour une vignette de 88 px. Même piège que les largeurs hors `images.sizes`, mais sur l'HÔTE. Après correctif : 200 / webp / 7 à 17 Ko sur les 9 jeux concernés.
+- **Une URL de jaquette portait une chaîne `utm_` de Wikipédia** (Belote) → nettoyée en base. **Règle : une `image_url` collée à la main se débarrasse de sa chaîne de requête.**
+- **Les jaquettes n'étaient mises en cache NULLE PART** : demandées à l'exécution (`/_vercel/image`), elles échappaient au précache. Hors ligne, cache navigateur purgé, toutes les cartes retombaient sur leur monogramme. → `runtimeCaching` **CacheFirst** sur `/_vercel/image` (cache `kalyx-jaquettes`, 200 entrées / 30 jours).
+
+### 3. Les parcours multi-pages (« item par item » et « par joueur »)
+
+**Ce qui restait à faire** : le lot précédent avait aligné les QUATRE branches d'une seule page (coop / équipes / sans points / une colonne) **sur** les parcours multi-pages, sans jamais auditer ces derniers. Ils avaient donc divergé de ce qu'ils étaient censés incarner. Audit en workflow (5 agents + une synthèse qui a rouvert chaque fichier et interrogé la base : 61 fiches, 146 jeux, 209 parties), puis **revue adversariale du correctif** (3 lentilles + un juge par trouvaille) qui a réfuté trois de mes propres corrections.
+
+**Cadrage mesuré** : 10 fiches passent par le parcours multi-pages (Abyss 9 catégories/25 parties, Château Combo 10/5, Faraway 9/17, 7 Wonders Duel 8/18…). **Toutes en `byItem` et en « plus haut score ». AUCUNE fiche n'est en `byPlayer`.**
+
+**Ce qui abîmait la donnée**
+1. ⚠️ **Rééditer une partie départagée à la main la transformait en victoire partagée.** `forcedWinnerId` repartait à `null` (ses deux voisins, `instantWinnerId` et `winnerIds`, ont pourtant un initialiseur depuis la partie relue) → les deux ex æquo étaient recouronnés et un « Enregistrer les modifications » réécrivait `winner` avec les deux noms. **2 parties en base étaient dans ce cas** (Abyss : « Clémence » alors que Nazim et elle sont à 62 ; The Vale of Eternity : « Mathieu » alors que Clémence et lui sont à 57).
+   ⚠️ **Ma première version rechargeait le départage dès qu'UN SEUL nom était enregistré — vrai sur 150 des 209 parties.** Le garde « ≥ 2 ex æquo » ne faisait que différer le déclenchement : rien ne remet `forcedWinnerId` à null quand les scores changent, donc **la moindre correction créant une égalité couronnait l'ancien vainqueur en silence**. Corrigé : on exige que la partie relue ait bien EU une égalité au sommet (`ip.players[].total`).
+2. ⚠️ **`anyScore` comptait les catégories MASQUÉES.** Sur Abyss : on saisit dans une catégorie Kraken, on revient à l'étape 1, on décoche Kraken → tous les totaux valent 0 mais l'écran se croit rempli → **tous les joueurs vainqueurs**, bouton actif. Corrigé : « avoir un score » = avoir rempli une case **visible**.
+   ⛔ **Piste ESSAYÉE PUIS ABANDONNÉE** : exclure aussi du calcul du vainqueur les joueurs « pas encore saisis ». Ça contredit la règle « case vide = 0 » qu'annonce le « 0 » grisé — à **Odin** (plus petit score gagne) celui qui vide sa main marque 0 et GAGNE, et en plus haut score un 0 bat des scores négatifs. Le meneur se calcule donc à nouveau sur TOUS les joueurs, à l'écran comme à l'enregistrement.
+3. **Le crayon « modifier la fiche » restait offert en pleine saisie** : il ouvre l'éditeur PAR-DESSUS, et le `key` de `<ScoreSheet>` ne contient pas le template → le parcours changeait de longueur et des points disparaissaient sous une clé orpheline, sans un mot. ⛔ **Le MASQUER (1re version) était pire** : l'en-tête sautait au premier caractère tapé, et c'était la seule façon de corriger la fiche. Il reste donc **à sa place, désactivé** pendant la saisie, avec le `title` qui l'explique.
+
+**Ce qui gênait à chaque saisie**
+4. **La garde anti-perte voyait la moitié de l'écran** : ni la note, ni les variantes, ni les extensions cochées. Une Dice Throne où l'on avait renseigné les héros sans les noms se fermait sans rien demander. ⚠️ **`instantTrigger` est volontairement EXCLU** : il est pré-rempli au montage quand la fiche n'a qu'un déclencheur → l'écran serait « sale » dès son ouverture.
+5. **Une seule barre d'enregistrement pour les cinq modes.** Le récapitulatif avait la sienne : bouton sans `.sheet-cta` (le jalon final était donc MOINS marqué que le « Récapitulatif → » qui le précède), barre muette sur une victoire directe alors que le bouton était actif, et **rien qui explique un bouton grisé** au bout de 9 pages. `saveBar(onSave, disabled, live, aide)` prend un 4e argument : la phrase qui dit ce qui manque. Les quatre autres branches en profitent — elles avaient le même trou (« Dites si la partie est gagnée ou perdue. », « Touchez la couronne du vainqueur. », « Renseignez un score, ou désignez l'équipe gagnante. »).
+6. **Les pointillés de progression étaient des cibles de 8 × 4 px** — la seule navigation directe du parcours (10 pages pour Château Combo). Le trait garde ses 8 px mais descend dans un `::after` : le bouton fait **44 px de haut**, **20 px de large** (36 pour l'actif) et les boutons **se touchent** (`gap: 0`) → plus aucun espace mort entre deux pointillés (mesuré : 0 px).
+7. **L'étape 1 recopiait les blocs partagés** (« Qui joue ? » et « Extensions jouées », caractère pour caractère) et y avait **déjà perdu `variantHint`** — visible sur Mystic Vale (14 parties, variante « Héros ») : le champ existe sous chaque nom mais la phrase qui l'explique manquait, alors que son placeholder disparaît dès qu'il est rempli.
+8. **L'étape 1 n'offrait jamais les Notes**, alors qu'une victoire directe s'y enregistre sans passer par le récapitulatif (7 Wonders Duel, 18 parties). La note apparaît dès qu'un vainqueur direct est désigné.
+9. **Le glissé du parcours ne neutralisait pas son clic de fin de geste** : les boutons −/+ (40 px) sont sous le doigt. Même défaut que NavBar, même correctif (`swipedRef` posé AVANT le seuil).
+10. **La page affichée se reclampait sur le nombre de JOUEURS** alors qu'en « item par item » les pages sont les CATÉGORIES : l'effet ramenait Abyss (9 pages) à sa page 1.
+11. **La branche équipes n'ouvrait sur aucune question** (le premier élément était un bloc d'équipe nu) → « Qui joue ? », dans un `.field` comme ses quatre jumelles.
+12. **Le départage s'auto-enveloppait** d'un `.coop-form`, d'où un `.coop-form` imbriqué et 6 px de plus qu'ailleurs. Il rend un `.field` nu, comme `teamTieBreak`.
+13. **Le bandeau d'erreur de l'éditeur de fiche est le DERNIER élément d'un formulaire long**, alors que « Enregistrer » flotte en bas : on tapait, rien ne bougeait, le bouton passait pour mort. Il se **fait défiler à l'écran** (`errRef` + `scrollIntoView`) dès qu'une erreur paraît.
+
+**Latents (le code était fautif, aucune fiche ne le déclenchait) — corrigés quand même**
+14. **Deux catégories homonymes** : les scores sont rangés PAR LIBELLÉ → deux pages éditant la même valeur, comptée deux fois dans le total. L'éditeur refuse désormais (0 doublon dans les 61 fiches).
+15. **Une catégorie à valeur fixe valant 0** restait cochée pour toujours (`Number('')` vaut 0). Comparaison sur la chaîne, aux trois endroits.
+16. **« Joueur 1 », « Joueur 2 »** (noms de remplacement d'une partie saisie sans nommer personne) entraient dans l'auto-complétion. Ils en sont retirés (`fetchPlayerNames`) mais **restent dans le référentiel** (`fetchPlayerRoster`) : ⛔ les filtrer là aussi (1re version) les rendait **invisibles dans l'écran Joueurs, donc impossibles à renommer** — on remplaçait une gêne par une impasse.
+17. **Le réglage « Par joueur / Item par item » était proposé sur 22 fiches sur 61 où il ne peut rien faire** (en dessous de 2 catégories la saisie passe par la liste plate). Masqué — c'est probablement une des raisons pour lesquelles `byPlayer` n'a jamais été essayé.
+
+**Le mode « par joueur » a été éprouvé de bout en bout** en basculant temporairement Kingdomino (3 catégories, 0 partie) : 2 pages, totaux 45 / 20, récapitulatif juste, puis **template restauré à l'identique** (comparaison caractère par caractère) et 0 partie créée. Les cinq autres branches ont été rejouées en dev (Abyss, Tarot, Vale of Eternity, Belote, Bomb Busters) et les deux parties réelles à égalité rouvertes SANS enregistrer pour vérifier le départage.
+
+**NON FAIT, assumé** : (a) un tap sur une puce d'extension peut faire changer de PARCOURS si une fiche tombe à une seule catégorie visible — impossible avec les 61 fiches actuelles, et figer le choix routerait vers l'écran « page unique », le moins éprouvé de tous ; (b) les trois défauts de cet écran « page unique » (bande vide, récapitulatif inatteignable après « Modifier les scores », partie solo toujours gagnée) — il n'est atteignable que par une fiche `byPlayer` à un joueur, il n'y en a aucune ; (c) rien n'exige de NOMMER les joueurs pour enregistrer (le placeholder « Joueur N » part en base) ; (d) le code mort du scénario (`wantScenario` est une constante `false`), laissé comme dans GameHistory.
 
 ## ✅ CHWAZI DESCEND DANS LE POUCE (2026-08-20)
 

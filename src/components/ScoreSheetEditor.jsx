@@ -90,6 +90,13 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
   const [notes, setNotes] = useState(() => template?.notes || '')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  // Le bandeau d'erreur est le DERNIER élément du formulaire, sous une page longue, alors
+  // que le bouton « Enregistrer » flotte en bas : sans ça, on tape Enregistrer, rien ne
+  // bouge à l'écran, et le bouton passe pour mort.
+  const errRef = useRef(null)
+  useEffect(() => {
+    if (err) errRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [err])
 
   const extNames = exts
   const remaining = availableExts.filter((n) => !exts.includes(n))
@@ -250,6 +257,14 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
       setErr('Choisissez au moins « au score » ou « pas de points ».')
       return
     }
+    // Les scores d'une partie sont rangés PAR LIBELLÉ de catégorie : deux homonymes
+    // écriraient la même valeur, comptée deux fois dans le total.
+    const vus = new Set()
+    const doublon = categories.find((c) => (vus.has(c.label) ? true : (vus.add(c.label), false)))
+    if (doublon) {
+      setErr(`Deux catégories portent le même nom (« ${doublon.label} »). Renommez-en une.`)
+      return
+    }
     const triggerNames = triggers.map((t) => t.name.trim()).filter(Boolean)
     setBusy(true)
     setErr('')
@@ -316,7 +331,9 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
         </div>
 
         {/* Mode de saisie (compétitif à points uniquement) : cartes par joueur ou tableau. */}
-        {!isCoop && !teamsOn && scoring !== 'none' && (
+        {/* En dessous de deux catégories, la saisie passe par la liste plate : le réglage
+            ne pourrait rien faire. Il était pourtant proposé sur 22 fiches sur 61. */}
+        {!isCoop && !teamsOn && scoring !== 'none' && cats.filter((c) => c.label.trim()).length >= 2 && (
           <>
             <label className="field-label" style={{ marginTop: 14 }}>Saisie des scores</label>
             <div className="chips">
@@ -569,7 +586,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
         />
       </section>
 
-      {err && <p className="banner banner-err" style={{ margin: '4px 0 12px' }}>{err}</p>}
+      {err && <p ref={errRef} className="banner banner-err" style={{ margin: '4px 0 12px' }}>{err}</p>}
 
       <div className="sheet-editor-actions">
         <button type="button" className="btn-ghost" onClick={onClose}>Annuler</button>

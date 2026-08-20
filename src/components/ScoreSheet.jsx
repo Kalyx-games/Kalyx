@@ -95,6 +95,9 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const [cardIndex, setCardIndex] = useState(0) // page du parcours affichée (joueur ou item selon le mode)
   const walkRef = useRef(null) // conteneur du parcours (pour le glissé)
   const swipeRef = useRef({ x: 0, y: 0, dragging: false })
+  const swipedRef = useRef(false) // un glissé vient d'avoir lieu → son clic de fin est ignoré
+  // Mode de saisie du parcours multi-catégories : une page par joueur, ou une par catégorie.
+  const entry = template?.entry === 'byPlayer' ? 'byPlayer' : 'byItem'
   const navRef = useRef({ goPrev: () => {}, goNext: () => {} }) // maj à chaque rendu → toujours frais
   const navDirRef = useRef(1) // sens du dernier changement de page (animation de glissé)
   // Variante « pour toute la partie » : valeur unique, relue depuis n'importe quel joueur de
@@ -108,7 +111,23 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   )
   const [scenario, setScenario] = useState(ip?.scenario || '')
   const [notes, setNotes] = useState(ip ? ip.notes || '' : template?.notes || '')
-  const [forcedWinnerId, setForcedWinnerId] = useState(null) // vainqueur forcé en cas d'égalité
+  // Vainqueur forcé en cas d'égalité. À la RÉÉDITION on le retrouve : une partie sans
+  // déclencheur dont un seul nom est enregistré vainqueur a forcément été départagée à la
+  // main (sinon tous les ex æquo y seraient). Sans cette relecture, un simple
+  // ré-enregistrement transformait ce vainqueur unique en N vainqueurs.
+  const [forcedWinnerId, setForcedWinnerId] = useState(() => {
+    if (!ip || ip.trigger || scoring === 'none' || isTeams) return null
+    const wn = winnerNamesOf(ip)
+    if (wn.size !== 1) return null
+    // …et il faut qu'il y ait EU égalité : sinon un vainqueur net serait pris pour un
+    // départage, et la moindre correction de score le recouronnerait en silence.
+    const tot = (ip.players || []).map((pl) => Number(pl?.total)).filter(Number.isFinite)
+    if (tot.length < 2) return null
+    const ex = scoring === 'low' ? Math.min(...tot) : Math.max(...tot)
+    if (tot.filter((t) => t === ex).length < 2) return null
+    const p = players.find((pl) => wn.has((pl.name || '').trim()))
+    return p ? p.id : null
+  })
   // Victoire directe (déclencheur) : le déclencheur choisi + (si score) le vainqueur direct.
   const [instantTrigger, setInstantTrigger] = useState(ip?.trigger || null)
   const [instantWinnerId, setInstantWinnerId] = useState(() => {
@@ -263,8 +282,14 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     }, 0)
 
   const totals = players.map(totalOf)
-  const anyScore = players.some((p) => Object.values(p.scores).some((v) => v !== '' && v != null))
-  // Meilleur score selon le sens (plus haut / plus petit).
+  // ⚠️ « avoir un score » = avoir rempli une case VISIBLE. Compter `p.scores` en entier
+  // gardait les catégories masquées par une extension décochée : une feuille vide à l'écran
+  // pouvait activer le bouton d'enregistrement et désigner un vainqueur.
+  const aUnScore = (p) => visibleCats.some((c) => { const v = p.scores[c.label]; return v !== '' && v != null })
+  const anyScore = players.some(aUnScore)
+  // Meilleur score selon le sens (plus haut / plus petit). ⚠️ sur TOUS les joueurs : une
+  // case vide vaut 0 (c'est ce qu'annonce le « 0 » grisé), et un 0 est un score qui peut
+  // gagner — à Odin, vider sa main est justement la victoire.
   const best = anyScore ? (scoring === 'low' ? Math.min(...totals) : Math.max(...totals)) : null
   // Égalité au sommet → on peut FORCER le vainqueur (départage secondaire du jeu).
   const tiedPlayers = best != null ? players.filter((p) => totalOf(p) === best) : []
@@ -289,7 +314,15 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       teams.some((t) => t.win || t.score.trim() !== '' || t.players.some((p) => (p.name || '').trim() !== '')) ||
       winnerIds.size > 0 ||
       outcome != null ||
-      anyGroupScore)
+      anyGroupScore ||
+      // …et le reste de l'écran : les variantes, la note, les extensions cochées.
+      // Une partie où l'on n'avait rempli QUE ça se fermait sans un mot.
+      // ⚠️ PAS instantTrigger : il est pré-rempli au montage quand la fiche n'a qu'un
+      // déclencheur → l'écran serait « sale » dès son ouverture.
+      playVariant.trim() !== '' ||
+      players.some((p) => (p.variant || '').trim() !== '') ||
+      notes !== (template?.notes || '') ||
+      [...activeExts].sort().join('|') !== resolveDefaultExts(template, exts).slice().sort().join('|'))
   useEffect(() => {
     if (dirtyRef) dirtyRef.current = dirtyEntry
     return () => {
@@ -464,9 +497,11 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       </div>
     ) : null
 
+  // ⚠️ rend un .field NU, comme teamTieBreak : c'est l'appelant qui fournit le .coop-form.
+  // S'auto-envelopper l'imbriquait dans celui de la liste plate, avec 6 px de plus.
   const renderTieBreak = () =>
     tiedPlayers.length >= 2 && instantWinnerId == null ? (
-      <div className="coop-form">
+      <>
         <div className="field">
           <label className="field-label">Égalité — vainqueur <span className="field-opt">(départage secondaire)</span></label>
           <div className="chips">
@@ -483,7 +518,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           </div>
           <p className="field-hint" style={{ marginTop: 6 }}>Laissez vide = tous ex æquo gagnent.</p>
         </div>
-      </div>
+      </>
     ) : null
 
   // Barre d'enregistrement COMMUNE : le résultat en direct au-dessus du bouton. Seul le mode
@@ -522,43 +557,59 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     return <><CrownIcon size={14} /> {tetes.map(teamName).join(", ")} · <b>{ex}</b></>
   })()
 
-  const saveBar = (onSave, disabled, live) =>
+  const saveBar = (onSave, disabled, live, aide) =>
     onSavePlay ? (
       <div className="sheet-editor-actions sheet-save-bar">
-        {live ? <div className="sheet-leader">{live}</div> : null}
+        {live ? (
+          <div className="sheet-leader">{live}</div>
+        ) : disabled && aide ? (
+          // Le bouton est mort : on dit ce qui manque, au lieu de laisser chercher.
+          <div className="sheet-hint">{aide}</div>
+        ) : null}
         <button type="button" className="btn-primary sheet-cta" onClick={onSave} disabled={saving || disabled}>
           {saving ? '…' : saveLabel}
         </button>
       </div>
     ) : null
 
-  const renderSaveBar = () =>
-    onSavePlay && visibleCats.length > 0 ? (
-      <div className="sheet-editor-actions sheet-save-bar">
-        {anyScore &&
-          (() => {
-            const leaders = players.filter((p) => isTopWinner(p))
-            if (!leaders.length) return null
-            const total = totals[players.indexOf(leaders[0])]
-            return (
-              <div className="sheet-leader">
-                <CrownIcon size={14} /> {leaders.map((p) => nameOf(p, players.indexOf(p))).join(', ')} · <b>{total}</b>
-              </div>
-            )
-          })()}
-        <button type="button" className="btn-primary" onClick={saveScored} disabled={saving || (!anyScore && !instantWinnerId)}>
-          {saving ? '…' : saveLabel}
-        </button>
-      </div>
-    ) : null
+  // Résultat en direct du mode à points : le meneur, ou le vainqueur direct désigné.
+  const scoredLive = (() => {
+    const leaders = players.filter((p) => isTopWinner(p))
+    if (!leaders.length) return null
+    const noms = leaders.map((p) => nameOf(p, players.indexOf(p))).join(', ')
+    // Sur une victoire directe il n'y a pas de score à annoncer — la barre restait muette
+    // alors que son bouton était actif.
+    if (!anyScore) return <><CrownIcon size={14} /> {noms}</>
+    return <><CrownIcon size={14} /> {noms} · <b>{totals[players.indexOf(leaders[0])]}</b></>
+  })()
+
+  const renderSaveBar = () => {
+    if (!onSavePlay || visibleCats.length === 0) return null
+    const bloque = !anyScore && !instantWinnerId
+    const aide = `Saisissez au moins un score${hasInstant ? ' ou désignez une victoire directe' : ''} pour enregistrer.`
+    return saveBar(saveScored, bloque, scoredLive, aide)
+  }
 
   const titleHead = (
     <>
       <div className="settings-head">
         <button type="button" className="back-btn" onClick={onClose} aria-label="Retour"><BackIcon /></button>
         <h2 className="sheet-title">{game?.name}{isEdit ? ' — modifier' : ''}</h2>
+        {/* Modifier la fiche PENDANT la saisie change la longueur du parcours et fait
+            disparaître des points déjà saisis, sans un mot. Le bouton reste à sa place (le
+            masquer faisait sauter l'en-tête au premier caractère tapé) mais devient
+            inopérant, et dit pourquoi. */}
         {onEdit && !isEdit && (
-          <button type="button" className="back-btn sheet-edit-btn" onClick={onEdit} title="Modifier la fiche" aria-label="Modifier la fiche"><PencilIcon size={18} /></button>
+          <button
+            type="button"
+            className="back-btn sheet-edit-btn"
+            onClick={onEdit}
+            disabled={dirtyEntry}
+            title={dirtyEntry ? 'Terminez ou quittez la saisie pour modifier la fiche' : 'Modifier la fiche'}
+            aria-label="Modifier la fiche"
+          >
+            <PencilIcon size={18} />
+          </button>
         )}
       </div>
     </>
@@ -631,10 +682,14 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   useEffect(() => {
     if (triggerAsked && triggers.length === 1) setInstantTrigger((t) => t ?? triggers[0])
   }, [triggerAsked])
-  // Réaligne la page affichée si le nombre de joueurs a diminué (retour à l'étape 1 puis retrait).
+  // Réaligne la page affichée quand le parcours raccourcit (joueur retiré, extension
+  // décochée). ⚠️ les pages, ce sont les JOUEURS en « par joueur » et les CATÉGORIES en
+  // « item par item » : clamper sur players.length ramenait Abyss (9 catégories) à sa
+  // page 1 dès qu'on repassait par l'étape 1.
+  const pagesDuParcours = entry === 'byPlayer' ? players.length : visibleCats.length
   useEffect(() => {
-    setCardIndex((k) => Math.min(k, Math.max(0, players.length - 1)))
-  }, [players.length])
+    setCardIndex((k) => Math.min(k, Math.max(0, pagesDuParcours - 1)))
+  }, [pagesDuParcours])
   // Glissé horizontal pour changer de page pendant le parcours (étape 2). Écouteurs tactiles natifs
   // non-passifs (les Pointer Events React sont passifs → preventDefault impossible). navRef reste frais.
   useEffect(() => {
@@ -642,12 +697,18 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     const el = walkRef.current
     if (!el) return
     const st = swipeRef.current
-    const onStart = (e) => { const t = e.touches[0]; st.x = t.clientX; st.y = t.clientY; st.dragging = false }
+    const onStart = (e) => { const t = e.touches[0]; st.x = t.clientX; st.y = t.clientY; st.dragging = false; swipedRef.current = false }
     const onMove = (e) => {
       const t = e.touches[0]
       const dx = t.clientX - st.x
       const dy = t.clientY - st.y
-      if (!st.dragging && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) + 4) st.dragging = true
+      if (!st.dragging && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) + 4) {
+        st.dragging = true
+        // Posé AVANT le seuil de navigation : même un glissé trop court ne doit pas finir
+        // en tap sur le −/+ qui se trouve sous le doigt (même défaut que dans NavBar).
+        swipedRef.current = true
+        setTimeout(() => { swipedRef.current = false }, 220)
+      }
       if (st.dragging) e.preventDefault()
     }
     const onEnd = (e) => {
@@ -819,7 +880,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                           <input
                             className="sheet-check"
                             type="checkbox"
-                            checked={Number(groupScores[c.label]) === c.value}
+                            checked={String(groupScores[c.label] ?? '') === String(c.value)}
                             onChange={(e) => setGroupScoreCat(c.label, e.target.checked ? String(c.value) : '')}
                             aria-label={`${c.label} — ${c.value} points`}
                           />
@@ -846,7 +907,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           )}
           {notesField}
         </div>
-        {saveBar(saveCoop, !outcome, coopLive)}
+        {saveBar(saveCoop, !outcome, coopLive, 'Dites si la partie est gagnée ou perdue.')}
       </div>
     )
   }
@@ -857,6 +918,9 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       <div className={`sheet${closing ? ' closing' : ''}`}>
         {titleHead}
         <div className="coop-form">
+          {/* Même question d'ouverture que partout — et dans un .field, comme ses jumelles. */}
+          <div className="field">
+          {playersLabel}
           {teams.map((t, ti) => (
             <div key={t.id} className="team-block">
               <div className="team-block-head">
@@ -938,13 +1002,14 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           {!predefined && teams.length < 8 && (
             <button type="button" className="btn-ghost btn-add team-add" onClick={addTeam}><PlusIcon size={14} /> Ajouter une équipe</button>
           )}
+          </div>
           {extField}
           {playVariantField}
           {triggerField}
           {teamTieBreak()}
           {notesField}
         </div>
-        {saveBar(saveTeams, !canSaveTeams, teamLive)}
+        {saveBar(saveTeams, !canSaveTeams, teamLive, noPoints ? 'Touchez la couronne de l’équipe gagnante.' : 'Renseignez un score, ou désignez l’équipe gagnante.')}
       </div>
     )
   }
@@ -966,7 +1031,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           {triggerField}
           {notesField}
         </div>
-        {saveBar(saveNoPoints, !winnerIds.size, noPointsLive)}
+        {saveBar(saveNoPoints, !winnerIds.size, noPointsLive, 'Touchez la couronne du vainqueur.')}
       </div>
     )
   }
@@ -1038,8 +1103,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   }
 
   // ---------- COMPÉTITIF AVEC POINTS, PLUSIEURS COLONNES (assistant : noms → parcours → récap) ----------
-  const entry = template?.entry === 'byPlayer' ? 'byPlayer' : 'byItem'
-  const pageCount = entry === 'byPlayer' ? players.length : visibleCats.length
+  const pageCount = pagesDuParcours
   const idx = Math.min(cardIndex, Math.max(0, pageCount - 1))
   // Une seule page dans le parcours (byPlayer avec 1 seul joueur, plusieurs catégories → le
   // byItem à 1 colonne passe par la liste plate plus haut) : le récapitulatif ferait doublon,
@@ -1052,13 +1116,13 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       <input
         className="sheet-check pcard-check"
         type="checkbox"
-        checked={Number(p.scores[c.label]) === c.value}
+        checked={String(p.scores[c.label] ?? '') === String(c.value)}
         onChange={(e) => setScore(p.id, c.label, e.target.checked ? String(c.value) : '')}
         aria-label={`${c.label} — ${c.value} points`}
       />
     ) : (
       <div className="pcard-stepper">
-        <button type="button" className="pcard-pm" onClick={() => bump(p.id, c.label, -1)} aria-label="Moins 1">−</button>
+        <button type="button" className="pcard-pm" onClick={() => { if (swipedRef.current) return; bump(p.id, c.label, -1) }} aria-label="Moins 1">−</button>
         <input
           className="pcard-value"
           type="number"
@@ -1067,7 +1131,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           value={p.scores[c.label] ?? ''}
           onChange={(e) => setScore(p.id, c.label, e.target.value)}
         />
-        <button type="button" className="pcard-pm" onClick={() => bump(p.id, c.label, +1)} aria-label="Plus 1">+</button>
+        <button type="button" className="pcard-pm" onClick={() => { if (swipedRef.current) return; bump(p.id, c.label, +1) }} aria-label="Plus 1">+</button>
       </div>
     )
 
@@ -1179,7 +1243,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                     <input
                       className="sheet-check"
                       type="checkbox"
-                      checked={Number(p.scores[c.label]) === c.value}
+                      checked={String(p.scores[c.label] ?? '') === String(c.value)}
                       onChange={(e) => setScore(p.id, c.label, e.target.checked ? String(c.value) : '')}
                       aria-label={`${c.label} — ${c.value} points`}
                     />
@@ -1220,23 +1284,16 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         {titleHead}
         <div className="coop-form">
           <div className="field">
-            <label className="field-label"><PlayersIcon size={13} /> Qui joue ?</label>
+            {playersLabel}
             {playerList(false)}
+            {variantHint}
           </div>
-          {exts.length > 0 && (
-            <div className="field">
-              <label className="field-label"><ExtIcon size={13} /> Extensions jouées</label>
-              <div className="chips">
-                {exts.map((name) => (
-                  <button key={name} type="button" className={`fchip ${activeExts.has(name) ? 'on' : ''}`} onClick={() => toggleExt(name)}>
-                    {name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {extField}
           {playVariantField}
           {instantField}
+          {/* La note est le seul champ qui manquait ici, alors qu'une victoire directe
+              s'enregistre depuis cet écran sans jamais passer par le récapitulatif. */}
+          {instantWinnerId != null && notesField}
         </div>
         {instantWinnerId != null ? (
           // Vainqueur désigné : on peut enregistrer tout de suite — mais rien n'empêche
@@ -1279,9 +1336,10 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           </div>
         )}
 
-        {renderTieBreak()}
-
-        <div className="coop-form">{notesField}</div>
+        <div className="coop-form">
+          {renderTieBreak()}
+          {notesField}
+        </div>
 
         {renderSaveBar()}
       </div>
@@ -1316,8 +1374,10 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
               {instantField}
             </div>
           )}
-          {renderTieBreak()}
-          <div className="coop-form">{notesField}</div>
+          <div className="coop-form">
+            {renderTieBreak()}
+            {notesField}
+          </div>
           {renderSaveBar()}
         </>
       )}
