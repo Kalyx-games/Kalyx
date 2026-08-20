@@ -4,7 +4,7 @@ import { PlayersIcon, StarIcon, ExtIcon, PlusIcon, TrashIcon } from './icons'
 import { CollectionIcon, WishlistIcon } from './icons'
 import { expandRange, parseCounts, countsToText, parseOwners, ownersToText, parseTags, tagsToText, parseExtensions, serializeExtensions } from '../lib/games'
 import { philibertSearchUrl } from '../lib/philibert'
-import { PHILIBERT_LOGO } from '../lib/logos'
+import { BGG_LOGO, PHILIBERT_LOGO } from '../lib/logos'
 
 // Formulaire d'ajout / modification d'un jeu (fenêtre modale).
 // Propriétaires : cases multi-sélection (un jeu peut en avoir plusieurs) + ajout.
@@ -37,6 +37,9 @@ function extPickMessage(name, players, best) {
   return `« ${name} » importée (BoardGameGeek n'a pas d'info sur le nombre de joueurs).`
 }
 
+// Le nom de chaque source, pour le message sous le champ.
+const SOURCES_IMAGE = { bgg: 'BoardGameGeek', philibert: 'Philibert' }
+
 export default function GameForm({ game, owners, tags, existingGames = [], saving, onSave, onCancel, onDelete, defaultStatus, prefill, closeRef }) {
   const [form, setForm] = useState(() => toForm(game, defaultStatus, prefill))
   const [playersSet, setPlayersSet] = useState(() =>
@@ -62,8 +65,8 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
   }
   const [priceLoading, setPriceLoading] = useState(false)
   const [pricePhil, setPricePhil] = useState(null) // résultat du remplissage PRIX depuis Philibert (wishlist)
-  const [imgLoading, setImgLoading] = useState(false)
-  const [imgPhil, setImgPhil] = useState(null) // résultat de la recherche d'IMAGE Philibert (null | {found})
+  const [imgLoading, setImgLoading] = useState(null) // 'bgg' | 'philibert' — la source en cours
+  const [imgMsg, setImgMsg] = useState(null) // { source, found } — résultat de la dernière recherche d'image
   // Import BoardGameGeek : recherche → liste de résultats → fiche pré-remplie.
   const [bggLoading, setBggLoading] = useState(false)
   const [bggResults, setBggResults] = useState(null) // null | [] | [{id,name,year}]
@@ -222,25 +225,43 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
     }
   }
 
-  // Cherche l'IMAGE sur Philibert (secours si l'image BGG ne marche pas).
-  const fetchPhilibertImage = async () => {
+  // Va chercher la jaquette chez l'une ou l'autre source et la met dans le champ.
+  // BoardGameGeek d'abord si le jeu en vient (on a son identifiant, donc SA fiche) ;
+  // sinon on prend le premier résultat de la recherche par nom.
+  // (Okkazeo a été essayé : son site refuse toute requête venant d'un serveur — 403 —
+  //  et le navigateur ne peut pas l'appeler non plus, faute d'en-têtes CORS.)
+  const fetchImage = async (source) => {
     const q = form.name.trim()
-    if (!q) return
-    setImgLoading(true)
-    setImgPhil(null)
+    if (!q || imgLoading) return
+    setImgLoading(source)
+    setImgMsg(null)
     try {
-      const r = await fetch(`/api/price?name=${encodeURIComponent(q)}`)
-      const data = await r.json()
-      if (data && data.found && data.image) {
+      const depart =
+        source === 'bgg'
+          ? form.bgg_id
+            ? `/api/bgg?id=${encodeURIComponent(form.bgg_id)}`
+            : `/api/bgg?q=${encodeURIComponent(q)}`
+          : `/api/price?name=${encodeURIComponent(q)}`
+      let data = await (await fetch(depart)).json()
+      // Recherche BGG : la liste ne porte que des noms, l'image est dans la fiche.
+      if (source === 'bgg' && !form.bgg_id) {
+        const premier = Array.isArray(data.results) ? data.results[0] : null
+        if (!premier) {
+          setImgMsg({ source, found: false, error: data.error })
+          return
+        }
+        data = await (await fetch(`/api/bgg?id=${premier.id}`)).json()
+      }
+      if (data && data.image) {
         setForm((f) => ({ ...f, image_url: data.image }))
-        setImgPhil({ found: true })
+        setImgMsg({ source, found: true })
       } else {
-        setImgPhil({ found: false })
+        setImgMsg({ source, found: false, error: data && data.error })
       }
     } catch {
-      setImgPhil({ found: false })
+      setImgMsg({ source, found: false, error: 'Recherche impossible (pas de connexion ?).' })
     } finally {
-      setImgLoading(false)
+      setImgLoading(null)
     }
   }
 
@@ -575,15 +596,31 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
               <button
                 type="button"
                 className="price-btn price-phil-btn"
-                onClick={fetchPhilibertImage}
-                disabled={!form.name.trim() || imgLoading}
-                title="Chercher l'image sur Philibert"
-                aria-label="Chercher l'image sur Philibert"
+                onClick={() => fetchImage('bgg')}
+                disabled={!form.name.trim() || !!imgLoading}
+                title="Prendre l'image sur BoardGameGeek"
+                aria-label="Prendre l'image sur BoardGameGeek"
               >
-                {imgLoading ? '…' : <img className="phil-logo" src={PHILIBERT_LOGO} alt="" width="18" height="18" />}
+                {imgLoading === 'bgg' ? '…' : <img className="phil-logo" src={BGG_LOGO} alt="" width="18" height="18" />}
+              </button>
+              <button
+                type="button"
+                className="price-btn price-phil-btn"
+                onClick={() => fetchImage('philibert')}
+                disabled={!form.name.trim() || !!imgLoading}
+                title="Prendre l'image sur Philibert"
+                aria-label="Prendre l'image sur Philibert"
+              >
+                {imgLoading === 'philibert' ? '…' : <img className="phil-logo" src={PHILIBERT_LOGO} alt="" width="18" height="18" />}
               </button>
             </div>
-            {imgPhil && !imgPhil.found && <span className="price-phil-msg muted">Image introuvable sur Philibert.</span>}
+            {imgMsg && (
+              <span className="price-phil-msg muted">
+                {imgMsg.found
+                  ? `Image prise sur ${SOURCES_IMAGE[imgMsg.source]}.`
+                  : imgMsg.error || `Image introuvable sur ${SOURCES_IMAGE[imgMsg.source]}.`}
+              </span>
+            )}
           </div>
           {form.image_url.trim() && (
             <img className="img-preview" src={form.image_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none' }} />

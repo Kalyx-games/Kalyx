@@ -63,6 +63,22 @@ export default defineConfig({
       workbox: {
         // Fichiers mis en cache par le service worker (l'app marche hors ligne)
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        // Les jaquettes ne font pas partie du build : elles sont demandées à l'exécution
+        // (/_vercel/image, cf. src/lib/img.js) et n'étaient donc mises en cache NULLE PART.
+        // Hors ligne, le cache du navigateur une fois purgé, chaque carte retombait sur son
+        // monogramme — alors que la consultation hors ligne est la promesse de l'app.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/_vercel/image'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'kalyx-jaquettes',
+              // ~200 vignettes : la collection tient largement dedans.
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
     }),
   ],

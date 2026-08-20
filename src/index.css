@@ -300,8 +300,22 @@ body {
 .navtab.active {
   color: var(--ink);
 }
+.navtab span {
+  /* Enfant d'un flex → déjà blockifié, le transform s'applique. */
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
 .navtab.active span {
-  font-weight: 700; /* la pastille + le zoom d'icône portent déjà l'état actif */
+  font-weight: 700;
+  /* Le libellé zoome COMME l'icône. Sans ça il partait en arrière avec l'enfoncement
+     du toucher puis revenait à sa taille de départ, pendant que l'icône finissait plus
+     grosse : deux gestes contraires sur le même onglet. */
+  transform: scale(1.08);
+  animation: kx-tab-pop-label 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes kx-tab-pop-label {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.16); }
+  100% { transform: scale(1.08); }
 }
 .navtab.active svg {
   opacity: 1;
@@ -320,9 +334,13 @@ body {
   .navtab svg {
     transition: opacity 0.15s ease;
   }
-  .navtab.active svg {
+  .navtab.active svg,
+  .navtab.active span {
     transform: none;
     animation: none;
+  }
+  .navtab span {
+    transition: none;
   }
 }
 

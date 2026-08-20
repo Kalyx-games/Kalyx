@@ -37,6 +37,18 @@
       {
         "protocol": "https",
         "hostname": "i0.wp.com"
+      },
+      {
+        "protocol": "https",
+        "hostname": "upload.wikimedia.org"
+      },
+      {
+        "protocol": "https",
+        "hostname": "www.fetedujeu.org"
+      },
+      {
+        "protocol": "https",
+        "hostname": "static.fnac-static.com"
       }
     ]
   }
