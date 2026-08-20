@@ -232,9 +232,13 @@ export function FilterIcon({ size = 22, color = '#fff' }) {
 export function ChwaziIcon({ size = 20 }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false">
-      <circle cx="7" cy="8.5" r="3.2" fill="#b4553f" />
-      <circle cx="16.5" cy="7" r="3.2" fill="#3e6c8e" />
-      <circle cx="12" cy="16" r="3.2" fill="#4e7a5c" />
+      {/* Positions choisies pour que le CENTRE D'ENCRE des trois pastilles tombe pile au
+          centre du cadre (x 4,05→19,95 et y 4,3→19,7 : centre 12/12), sinon le glyphe
+          paraît décalé dans son bouton rond. Les couleurs ne sont que le repli : sur le
+          bouton flottant, elles viennent des tokens --chwazi-* (voir index.css). */}
+      <circle className="chw-1" cx="7.25" cy="9" r="3.2" fill="#b4553f" />
+      <circle className="chw-2" cx="16.75" cy="7.5" r="3.2" fill="#3e6c8e" />
+      <circle className="chw-3" cx="12.25" cy="16.5" r="3.2" fill="#4e7a5c" />
     </svg>
   )
 }

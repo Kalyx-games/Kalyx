@@ -85,6 +85,11 @@
   --nav-collection: #2f8f5b;
   --nav-wishlist: #c2456f;
   --nav-stats: #7250c8;
+  /* Pastilles du bouton Chwazi. ⚠️ posées sur --primary, qui S'INVERSE d'un thème à
+     l'autre : ici le disque est presque NOIR, il leur faut des tons clairs. */
+  --chwazi-1: #ef8055;
+  --chwazi-2: #4aa6e0;
+  --chwazi-3: #3cb47c;
   /* ÉCHELLE TYPOGRAPHIQUE (chantier typo) : 9 crans nommés, à utiliser PARTOUT à la place de
      valeurs libres. Hors échelle tolérés : tailles de GLYPHES (croix, +, emojis d'illustration)
      et l'univers Chwazi (plein écran à part). Identiques dans les 2 thèmes → définis ici seulement. */
@@ -140,6 +145,10 @@
   --nav-collection: #4fc98d;
   --nav-wishlist: #f2789f;
   --nav-stats: #a98bf5;
+  /* Ici le disque est presque BLANC : il leur faut des tons soutenus. */
+  --chwazi-1: #c9502e;
+  --chwazi-2: #2277b8;
+  --chwazi-3: #2a8f5b;
     --bar-on: #d8d8dc;
     --bar-off: #2a2a2e;
     --danger: #fb7185;
@@ -180,6 +189,10 @@
   --nav-collection: #4fc98d;
   --nav-wishlist: #f2789f;
   --nav-stats: #a98bf5;
+  /* Ici le disque est presque BLANC : il leur faut des tons soutenus. */
+  --chwazi-1: #c9502e;
+  --chwazi-2: #2277b8;
+  --chwazi-3: #2a8f5b;
   --bar-on: #d8d8dc;
   --bar-off: #2a2a2e;
   --danger: #fb7185;
@@ -1627,6 +1640,11 @@ body {
 /* ---- Bouton flottant + ---- */
 .fab {
   position: fixed;
+  /* ⚠️ sans flex, le SVG (élément en ligne) se pose sur la ligne de base du texte et
+     remonte de ~1,4 px : le glyphe paraît décalé dans le disque. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   right: max(18px, calc((100vw - var(--app-w)) / 2 + 18px));
   bottom: calc(74px + env(safe-area-inset-bottom));
   width: 60px;
@@ -1672,6 +1690,9 @@ body {
    Chwazi est exclu : ses trois pastilles SONT son identité (même choix que dans la barre
    du haut, où le logo est resté multicolore). */
 .fab:not(.fab-chwazi) svg, .fab:not(.fab-chwazi) svg * { fill: currentColor; }
+.fab-chwazi .chw-1 { fill: var(--chwazi-1); }
+.fab-chwazi .chw-2 { fill: var(--chwazi-2); }
+.fab-chwazi .chw-3 { fill: var(--chwazi-3); }
 .fab-badge {
   position: absolute;
   top: -2px;
