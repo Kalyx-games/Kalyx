@@ -4351,11 +4351,13 @@ input[type='number'] {
   /* Dépliage à l'arrivée sur l'onglet Stats (repère « on a changé d'onglet »). Se déroule de GAUCHE
      à DROITE, DEPUIS le trait vertical (ancrage) → transform-origin gauche, clip qui découvre vers la droite. */
   animation: kx-anec-unfold 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-  transform-origin: left center;
 }
+/* ⚠️ PAS de `transform` ici : il promeut l'encart sur sa propre couche, le texte y est
+   rasterisé autrement, et le retour à l'état normal en fin d'animation se voit comme un
+   petit saut (la géométrie, elle, ne bouge pas d'un centième de pixel — mesuré). */
 @keyframes kx-anec-unfold {
-  from { opacity: 0.2; clip-path: inset(0 100% 0 0); transform: scaleX(0.96); }
-  to { opacity: 1; clip-path: inset(0 0 0 0); transform: scaleX(1); }
+  from { opacity: 0.2; clip-path: inset(0 100% 0 0); }
+  to { opacity: 1; clip-path: inset(0 0 0 0); }
 }
 @media (prefers-reduced-motion: reduce) {
   .tl-anec-hero { animation: none; }
@@ -4570,6 +4572,9 @@ input[type='number'] {
   flex: 1 0 auto; /* remplit la hauteur restante → le glissé marche dans la « zone morte » */
   touch-action: pan-y; /* le glissé horizontal change de page, le vertical scrolle */
 }
+/* Page unique : pas de glissé, donc pas de zone morte à remplir — sinon les champs de
+   partie sont repoussés tout en bas, derrière une bande vide. */
+.pcard-wrap-single { flex: 0 0 auto; }
 /* Visualiseur : pointillés courts + un long sur la page active (doré si gagnant, mode joueur). */
 .pcard-dots {
   display: flex;

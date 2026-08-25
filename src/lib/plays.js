@@ -183,11 +183,17 @@ const BEST_GAME_MIN_PLAYS = 3
 // `knownGames` : les jeux déjà chargés par l'app. On les réutilise pour nommer le
 // « meilleur jeu » plutôt que de re-télécharger la liste (économie de réseau à chaque
 // visite de l'onglet Stats). On ne va la chercher que si elle n'est pas fournie.
-export async function fetchPlayerOverall(knownGames = null) {
-  const { data, error } = await supabase.from('plays').select('game_id, players, winner, outcome')
-  if (error) {
-    if (tableMissing(error)) return []
-    throw error
+export async function fetchPlayerOverall(knownGames = null, knownPlays = null) {
+  // knownPlays : les parties déjà chargées par l'appelant (l'écran Stats les lit pour les
+  // anecdotes) → on évite un second balayage complet de la table.
+  let data = knownPlays
+  if (!data) {
+    const res = await supabase.from('plays').select('game_id, players, winner, outcome')
+    if (res.error) {
+      if (tableMissing(res.error)) return []
+      throw res.error
+    }
+    data = res.data
   }
   // Noms des jeux, pour pouvoir nommer le « meilleur jeu ».
   let nameOf = new Map()
@@ -329,6 +335,9 @@ export function playWinners(play) {
   if (typeof play?.winner === 'string' && play.winner.trim()) {
     return play.winner.split(',').map((s) => s.trim()).filter(Boolean)
   }
+  // Partie SOLO : il n'y a personne à battre. Le repli « plus haut score » couronnerait le
+  // joueur d'office et lui donnerait 100 % de victoires en jouant tout seul.
+  if ((play?.players || []).length < 2) return []
   return winnersOf(play?.players)
 }
 

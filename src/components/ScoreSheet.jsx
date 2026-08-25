@@ -295,7 +295,12 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const tiedPlayers = best != null ? players.filter((p) => totalOf(p) === best) : []
   const forcedWinner = tiedPlayers.length >= 2 && forcedWinnerId && tiedPlayers.some((p) => p.id === forcedWinnerId) ? forcedWinnerId : null
   const isTopWinner = (p) =>
-    instantWinnerId ? p.id === instantWinnerId : forcedWinner ? p.id === forcedWinner : best != null && totalOf(p) === best
+    instantWinnerId
+      ? p.id === instantWinnerId
+      : forcedWinner
+        ? p.id === forcedWinner
+        : // Solo : pas de vainqueur au score (cf. saveScored) → pas de couronne non plus.
+          players.length > 1 && best != null && totalOf(p) === best
 
   const nameOf = (p, i) => (p.name || '').trim() || `Joueur ${i + 1}`
   const namesOf = () => players.map(nameOf)
@@ -411,6 +416,10 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     } else if (forcedWinner) {
       const fp = players.find((p) => p.id === forcedWinner)
       winners = [nameOf(fp, players.indexOf(fp))]
+    } else if (built.length === 1) {
+      // Solo : personne à battre. Sans victoire directe, la partie n'a pas de vainqueur —
+      // le seul joueur ne peut pas gagner « contre lui-même » (et gonfler son taux à 100 %).
+      winners = []
     } else {
       winners = built.filter((b) => b.total === extreme).map((b) => b.name)
     }
@@ -1109,6 +1118,10 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // byItem à 1 colonne passe par la liste plate plus haut) : le récapitulatif ferait doublon,
   // on enregistre directement depuis la page unique.
   const singlePage = pageCount === 1
+  // ⚠️ En page unique le récapitulatif n'existe pas (goNext ne s'y rend jamais) : ouvrir la
+  // réédition dessus menait dans une impasse dès qu'on touchait « Modifier les scores ».
+  // Ajustement PENDANT le rendu (pas dans un effet) → pas d'affichage transitoire du récap.
+  if (singlePage && step === 3) setStep(2)
 
   // Champ de saisie d'une case : cochable si la catégorie a une valeur fixe, sinon compteur −/+ (et clavier).
   const inputFor = (p, c) =>
@@ -1356,7 +1369,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           <button type="button" className="entry-back" onClick={() => { navDirRef.current = -1; setStep(1) }}><BackIcon />Joueurs</button>
         </div>
       )}
-      <div className="pcard-wrap" ref={walkRef}>
+      <div className={`pcard-wrap${singlePage ? ' pcard-wrap-single' : ''}`} ref={walkRef}>
         {!singlePage && walkDots}
         {walkPage}
         {!singlePage && (

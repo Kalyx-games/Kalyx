@@ -253,6 +253,53 @@ Dernier écran resté à l'ancienne recette : blocs bordés + **4 boutons identi
 
 **Version prod : `19/08 · 8e83c4e`** (vérifié par contenu servi : `detail-head-btn`, `detail-plays-n`, `button{font-family:inherit}`, `@media (width<=389px)` — ⚠️ le minifieur réécrit `max-width: 389px` en `width<=389px`, ne pas grep le premier). ⚠️ rappel SW : fermer/rouvrir 2×.
 
+## ✅ L'ANECDOTE DU JOUR REFONDUE + LA PAGE UNIQUE RÉPARÉE (2026-08-25)
+
+### 1. « Le saviez-vous ? » : un PARCOURS, plus un tirage — et de la matière neuve
+
+Retour user : « les anecdotes ne se renouvellent pas assez ; il faut de la diversité et quelque chose qui assure qu'elles ne puissent pas boucler avant un mois (donc pas de l'aléatoire pur) ».
+
+**Ce qui n'allait pas, mesuré** : l'ancien choix tirait un GROUPE au hasard (graine du jour) puis une anecdote dedans. Sept groupes ne contenaient qu'UNE anecdote (chouchou, mal-aimé, plus classé, plus enthousiaste, plus sévère, goûts proches, goûts opposés) → chacun revenait environ tous les 12 jours. Simulé sur 60 jours : **27 anecdotes différentes seulement**, certaines vues 5 fois. Et la matière venait uniquement des **tierlists**, alors que la base contient 213 parties.
+
+**Nouveau fichier `src/lib/anecdotes.js`**, deux fonctions :
+- **`buildAnecdotes({plays, games, repById, tierAnecdotes})`** : construit À PLAT toutes les anecdotes disponibles, **sans le moindre hasard**, chacune avec une `key` stable. Sept familles tirées des PARTIES (ce qu'on joue · le temps · les joueurs · les scores · les coopératifs · les séries) + les anecdotes de tierlists, qui arrivent déjà rédigées. Mesuré sur la vraie base : **76 anecdotes** (25 des parties, 51 des tierlists) au lieu de 51 dont 27 atteignables.
+- **`anecdoteDuJour(liste, date)`** : range la liste par le haché de la clé (**ordre FIXE**) et sert `ordre[jour % n]`. ⚠️ **NE PAS re-mélanger à chaque tour** : une première version mélangeait par cycle, et une anecdote de la fin d'un tour ressortait au début du suivant (**mesuré : répétition au 13e jour**). Avec un ordre fixe, **TOUTE** fenêtre de n jours consécutifs contient chaque anecdote une fois et une seule → vérifié : 45 jours, 45 anecdotes différentes, **première répétition au 76e jour**.
+- Tout reste déterministe : même jour = même anecdote sur tous les appareils, et deux visites le même jour donnent la même.
+
+⚠️ **Trois chiffres qui MENTAIENT et qu'il a fallu plafonner** : l'historique a été saisi d'un bloc (213 parties sur 41 jours), donc « 102 parties le 17 juillet », « 146 parties en juillet » et « 35,9 parties par semaine » mesuraient la SAISIE, pas les soirées. Plafonds posés (12 parties/jour, 60/mois) et le rythme hebdomadaire attend **120 jours de recul**. **RÈGLE : une statistique sur les parties doit rester plausible comme SOIRÉE, sinon elle raconte la saisie.**
+
+⚠️ Les parties d'un jeu possédé **en double** (même nom, deux propriétaires) étaient purement ignorées — le total annonçait 210 au lieu de 213. `buildAnecdotes` ramène chaque partie au jeu « représentant » via `repById` (`repIdMap` renvoie une **Map**, pas un objet).
+
+App charge **`fetchAllPlays()`** à l'ouverture des Stats (à côté de `fetchPlayerOverall`), et `computeAnecdoteList` est désormais appelée avec une graine **FIXE** (1) : les textes des tierlists doivent être stables, c'est le parcours qui apporte la variété.
+
+**Formulations** : rien qui suppose le genre de quelqu'un (« Clémence a joué le plus de parties » et non « la plus assidue »).
+
+**Revue adversariale (3 lentilles + un juge par trouvaille) : 15 trouvailles, presque toutes justes.** Ce que ça a changé, et qui vaut comme RÈGLES :
+- ⚠️ **Aucune partie CONNUE ≠ aucune partie JOUÉE.** Hors ligne (ou tant que le chargement n'a pas abouti), `allPlays` est vide → l'ancienne version annonçait tranquillement que **toute la collection n'avait jamais été jouée**, et l'anecdote clignotait entre trois textes. Le moteur se TAIT désormais sur les parties quand il n'en connaît aucune (il se rabat sur les tierlists : vérifié, 51 anecdotes, aucune sur les parties).
+- ⚠️ **En coopératif, `playWinners` couronne TOUTE LA TABLE.** Le taux de victoire et les séries comptaient donc les coop → « Mathieu T gagne 67 % » venait de là (hors coop il est à 20 %), et un jeu coop réussi 7 fois donnait une « série de 7 victoires » à quatre joueurs à la fois. Les deux calculs excluent maintenant le coopératif.
+- ⚠️ **`played_at` est l'heure de SAISIE.** Une série de 13 victoires « d'affilée » venait d'un historique tapé en 188 secondes. Une série doit désormais s'étaler sur **au moins trois journées différentes** — la plus longue passe de 12 (fantôme) à 5 (réelle).
+- ⚠️ **En équipes, le score de l'équipe est recopié sur chaque membre** : les deux plus hauts totaux sont deux coéquipiers, donc l'écart valait 0 et toute partie en équipes passait pour « une égalité parfaite ». Les parties en équipes (et en coop) sont exclues du calcul d'écart.
+- **« jamais joué » voulait dire « jamais SAISI »** : les phrases disent maintenant « n'a encore aucune partie enregistrée ».
+- **Les anecdotes « cette année » ne paraissent que s'il existe une AUTRE année** : sinon elles sont des doublons exacts du total, vrais par construction.
+- **Un nom qui contient un chiffre n'est pas une personne** : cinq codes tapés de travers (`103ch221`…) et les « Joueur 2 » de remplacement gonflaient le compte (31 → **26 personnes**).
+- **Accords** : « 1 partie enregistrées » et « 1 jeu … n'ont … joués » — les phrases à une seule occurrence sont écrites en entier.
+- **« X résiste » ne se dit que si le jeu a résisté** (moins de 60 % de réussite), sinon un coop gagné à 100 % se voyait décerner le titre.
+- ⚠️ **Le « solo sans vainqueur » était INERTE** : `saveScored` écrivait bien `winner: ''`, mais à la relecture `playWinners` ne trouvait ni `outcome` ni `winner` et retombait sur « le plus haut score » — c'est-à-dire le joueur unique. Le garde est passé dans `playWinners` : **moins de deux joueurs ⇒ aucun vainqueur**.
+- **Un seul balayage de la table des parties par visite** : `fetchPlayerOverall` la relisait juste après `fetchAllPlays`. Elle accepte désormais les lignes déjà chargées (`knownPlays`). Mesuré : une requête au lieu de deux.
+
+⚠️ **Deux anecdotes au texte identique sont écartées** (`dejaDit`) : la clé des anecdotes de tierlist DÉRIVE de leur texte, donc deux textes identiques partageaient une clé — et la même phrase pouvait sortir deux fois dans un tour. Trouvé en éprouvant les cas limites (collection vide, partie sans joueurs, date invalide, jeu inconnu, scores nuls) : tous rendent une liste saine, aucun texte ne contient « undefined » ou « NaN ».
+
+### 2. Le dépliage de l'anecdote ne saute plus
+
+Retour user : « quand le texte se déroule il se téléporte de quelques pixels vers le haut à la fin de son animation ». **La géométrie ne bougeait PAS** (mesuré : `top` constant au centième de pixel pendant toute l'animation). C'est le `transform: scaleX()` des keyframes qui **promeut l'encart sur sa propre couche de composition** : le texte y est rasterisé autrement, et le retour à l'état normal en fin d'animation se voit comme un saut. Le `transform` est retiré — le dépliage tient au `clip-path` seul. **RÈGLE : une animation qui se termine sur du texte ne doit pas laisser de `transform`.**
+
+### 3. Les trois défauts de l'écran « page unique » (mode par joueur, un seul joueur)
+
+Ils étaient connus et laissés de côté faute de fiche qui les atteigne. Corrigés et **éprouvés pour de bon** : jeu jetable « ZZ Solo Test » (1-2 joueurs, fiche `byPlayer` à 2 catégories) créé, parcouru, puis **entièrement supprimé** (jeu, fiche, partie — 0 résidu, Kingdomino restauré à l'identique).
+- **Une bande vide** séparait la carte des champs de partie : `.pcard-wrap` prend toute la hauteur restante pour que le glissé marche dans la zone morte, or en page unique il n'y a pas de glissé. → `.pcard-wrap-single { flex: 0 0 auto }`. Mesuré : 14 px entre la carte et les champs, au lieu de tout l'écran.
+- **Le récapitulatif était inatteignable** : `goNext` ne s'y rend jamais en page unique (il ferait doublon), mais la RÉÉDITION ouvrait dessus → dès qu'on touchait « Modifier les scores », plus moyen d'y revenir. La réédition d'une page unique ouvre maintenant sur la saisie (`if (singlePage && step === 3) setStep(2)`, ajustement **pendant le rendu** — pas dans un effet, sinon le récap s'afficherait une frame).
+- **Une partie solo était toujours enregistrée gagnée** : avec un seul joueur, l'extrême c'est lui. Sans victoire directe, une partie solo n'a plus de vainqueur (ni couronne à l'écran, ni nom en base) — sinon le taux de victoire du joueur montait à 100 % en jouant seul.
+
 ## ✅ DEUX RETOURS ÉCLAIR (2026-08-20)
 
 - ⚠️ **La carte « Code d'accès » était affreuse** : j'y avais mis deux `<button className="link-row">`. `.link-row` est le style d'un LIEN (`<a>`) : il ne remet à zéro NI le fond NI la bordure, donc sur un `<button>` le gris et le cadre du navigateur passaient au travers, avec un filet noir sur le côté. Retour aux deux boutons validés de l'app (`.btn-ghost.settings-open` + `.settings-relink`). **RÈGLE : `.link-row` ne s'emploie que sur un `<a>`.** (Au passage : `.link-copy` et `.link-copy-icon`, styles d'un bouton retiré du JSX depuis longtemps, supprimés.)

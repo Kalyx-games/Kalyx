@@ -12,7 +12,8 @@ import { messageUtilisateur } from './lib/messages'
 import { useExitLayer } from './lib/useExitLayer'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
 import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, computeAnecdoteList, emptyRanking, dedupeByName, repIdMap, remapRanking } from './lib/tierlists'
-import { fetchPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayMeta, renameCategories, fetchPlayerRoster, fetchPlayerOverall, renamePlayer } from './lib/plays'
+import { buildAnecdotes, anecdoteDuJour } from './lib/anecdotes'
+import { fetchPlays, fetchAllPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayMeta, renameCategories, fetchPlayerRoster, fetchPlayerOverall, renamePlayer } from './lib/plays'
 import GameCard from './components/GameCard'
 import GameForm from './components/GameForm'
 import GameDetail from './components/GameDetail'
@@ -213,6 +214,7 @@ export default function App() {
   const [renamingPlayer, setRenamingPlayer] = useState(false)
   const [statsOpen, setStatsOpen] = useState(savedView === 'stats') // écran Stats
   const [playerOverall, setPlayerOverall] = useState(null) // [{name, games, wins, winRate}] tous jeux | null
+  const [allPlays, setAllPlays] = useState([]) // toutes les parties — matière des anecdotes
   // Tierlists : menu (hub) + écran d'une tierlist (view/edit/global).
   const [tierlistHub, setTierlistHub] = useState(false)
   const [tierlists, setTierlists] = useState(null) // [{id,player,ranking,updated_at}] | null (table absente/pas chargé)
@@ -225,7 +227,17 @@ export default function App() {
   // On passe les jeux déjà en mémoire → évite de re-télécharger la liste à chaque visite.
   useEffect(() => {
     if (!statsOpen) return
-    fetchPlayerOverall(games).then(setPlayerOverall).catch(() => setPlayerOverall([]))
+    // Les parties nourrissent À LA FOIS les anecdotes et le bilan par joueur : on ne lit
+    // la table qu'UNE fois, et le bilan se calcule sur ces mêmes lignes.
+    fetchAllPlays()
+      .then((ps) => {
+        setAllPlays(ps)
+        return fetchPlayerOverall(games, ps)
+      })
+      // Sans les parties (hors ligne, table absente), l'anecdote se rabat sur les tierlists.
+      .catch(() => { setAllPlays([]); return fetchPlayerOverall(games).catch(() => []) })
+      .then(setPlayerOverall)
+      .catch(() => setPlayerOverall([]))
     // Les tierlists alimentent l'anecdote du jour affichée en haut des Stats → on les charge
     // à l'ouverture de l'onglet (et pas seulement en ouvrant le hub Tierlists).
     fetchTierlists().then(setTierlists).catch(() => setTierlists(null))
@@ -1107,31 +1119,22 @@ export default function App() {
   // Ids de jeux valides (représentants) → sert à retirer des classements les jeux supprimés.
   const validTlIds = useMemo(() => new Set(collectionIds), [collectionIds])
   const reloadTierlists = () => fetchTierlists().then(setTierlists).catch(() => setTierlists(null))
-  // « Anecdote du jour » : une graine calculée à partir de la DATE (locale). Même jour →
-  // même graine pour tout le monde → même anecdote sur tous les appareils. Change chaque jour.
-  const daySeed = useMemo(() => {
-    const d = new Date()
-    const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
-    let h = 2166136261 // FNV-1a
-    for (let i = 0; i < key.length; i++) {
-      h ^= key.charCodeAt(i)
-      h = Math.imul(h, 16777619)
-    }
-    return h >>> 0
-  }, [])
-  // Anecdotes groupées par TYPE (recalculées quand les tierlists/la collection/le jour changent).
-  const anecGroups = useMemo(() => {
+  // Les anecdotes tirées des TIERLISTS (qui aime quoi). Graine FIXE : les textes doivent
+  // être stables d'un jour à l'autre, c'est le parcours ci-dessous qui apporte la variété.
+  const tierAnecdotes = useMemo(() => {
     if (!tierlists || !tierlists.length) return []
     const nameById = new Map(collectionGames.map((g) => [g.id, g.name]))
-    return computeAnecdoteList(tierlists, collectionIds, repById, nameById, daySeed)
-  }, [tierlists, collectionGames, collectionIds, repById, daySeed])
-  // L'anecdote du jour : choix DÉTERMINISTE (graine du jour) d'un TYPE (groupe) puis d'une
-  // anecdote dedans → chaque type a la même chance, et le résultat est identique pour tous.
-  const anecShown = useMemo(() => {
-    if (!anecGroups.length) return null
-    const g = anecGroups[daySeed % anecGroups.length]
-    return g[((daySeed >>> 7) % g.length + g.length) % g.length]
-  }, [anecGroups, daySeed])
+    return computeAnecdoteList(tierlists, collectionIds, repById, nameById, 1).flat().map((a) => a.text)
+  }, [tierlists, collectionGames, collectionIds, repById])
+  // Toute la matière disponible : les parties (qui joue à quoi, qui gagne, quand) + les goûts.
+  const anecPool = useMemo(
+    () => buildAnecdotes({ plays: allPlays, games: collectionGames, repById, tierAnecdotes }),
+    [allPlays, collectionGames, repById, tierAnecdotes]
+  )
+  // L'anecdote du jour. Ce n'est PAS un tirage : les anecdotes sont mélangées une fois par
+  // cycle puis servies une par jour → chacune passe exactement une fois avant que la
+  // première revienne (donc pas de répétition en un mois tant qu'il y en a au moins 30).
+  const anecShown = useMemo(() => anecdoteDuJour(anecPool), [anecPool])
   function handleOpenTierlists() {
     setTierlistHub(true)
     reloadTierlists()
