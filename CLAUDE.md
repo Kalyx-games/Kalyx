@@ -253,6 +253,22 @@ Dernier écran resté à l'ancienne recette : blocs bordés + **4 boutons identi
 
 **Version prod : `19/08 · 8e83c4e`** (vérifié par contenu servi : `detail-head-btn`, `detail-plays-n`, `button{font-family:inherit}`, `@media (width<=389px)` — ⚠️ le minifieur réécrit `max-width: 389px` en `width<=389px`, ne pas grep le premier). ⚠️ rappel SW : fermer/rouvrir 2×.
 
+## ✅ DU VERRE SUR LE CHROME (2026-08-25, demande user « glassmorphism à la Apple »)
+
+Recette actuelle d'Apple, pas le verre dépoli de 2020 : voile translucide + `blur` + **`saturate(180%)`** (c'est la saturation qui fait vivre la matière — un flou seul rend gris) + une **arête claire** sur le bord supérieur + une ombre qui décolle la surface. Posé sur les trois surfaces qui flottent au-dessus du contenu : le **bac**, la **barre du haut**, les **deux boutons flottants**. Pas sur les cartes : posées sur un fond uni, elles n'auraient rien à flouter.
+
+⚠️ **LE POINT DUR EST LA LISIBILITÉ, et il est sérieux.** Avec une jaquette très sombre derrière, le libellé d'un onglet inactif tombait à **2,55** de contraste. Deux réglages, tous deux mesurés :
+  · voiles densifiés — bac 0,84 clair / 0,78 sombre, barre du haut 0,86, boutons **0,9** (un petit disque n'a pas la surface d'une barre pour absorber ce qui passe derrière) ;
+  · **les textes et icônes montent d'un cran SOUS le verre uniquement** (`--verre-libelle` : #5b5b63 clair / #bcbcc4 sombre). Pire cas après réglage : libellés du bac **4,7 / 4,6**, icônes de la barre du haut **4,7 / 6,9**, glyphe du bouton filtre **6,8 à 9,3**, pastilles de Chwazi **≥ 2,9**.
+
+⚠️ **DEUX PIÈGES DE CASCADE, revécus tous les deux** :
+  1. **`@supports` n'ajoute AUCUNE spécificité** — exactement comme `@media (prefers-reduced-motion)`. Les règles de base (`.topbar`, `.fab`, `.fab-filter`…) étant déclarées PLUS BAS dans le fichier, elles gagnaient à spécificité égale. D'où `header.topbar`, `button.fab`, `button.fab-filter`, `.navbar .navtab`.
+  2. **Repli obligatoire** : le verre ne vit QUE dans le `@supports (backdrop-filter…)`. Sans lui, un voile translucide laisserait le texte des cartes traverser les libellés.
+
+**Le bouton de filtre se comporte à l'identique partout** (exigence user) : il existe aussi sur l'historique et les tierlists sous `fab fab-filter hist-fab-filter` / `tl-fab-filter`. Le verre est donc posé sur `.fab` (la BASE) et sur `.fab-filter`, jamais sur les variantes d'écran. Vérifié en mesurant les styles calculés sur les deux écrans : fond, flou et arête strictement identiques.
+
+**RÈGLE** : le verre ne se pose que sur une surface qui FLOTTE au-dessus d'un contenu qui défile, et jamais sans avoir mesuré le contraste de ce qu'elle porte, dans les deux thèmes, avec la jaquette la plus contrariante derrière.
+
 ## ✅ L'ANECDOTE DU JOUR REFONDUE + LA PAGE UNIQUE RÉPARÉE (2026-08-25)
 
 ### 1. « Le saviez-vous ? » : un PARCOURS, plus un tirage — et de la matière neuve

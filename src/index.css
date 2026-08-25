@@ -115,6 +115,10 @@
   /* Verre du bac : le blanc de la carte, mais translucide, + l'arête claire du dessus. */
   --verre: rgba(255, 255, 255, 0.84);
   --verre-libelle: #5b5b63; /* le libellé inactif, un cran plus soutenu sous le verre */
+  --verre-haut: rgba(244, 244, 245, 0.86); /* barre du haut : le fond de page, translucide */
+  --verre-or: rgba(224, 161, 6, 0.9); /* bouton filtre */
+  --verre-encre: rgba(28, 28, 33, 0.9); /* bouton Chwazi */
+  --verre-arete-bouton: rgba(255, 255, 255, 0.35);
   --verre-arete: rgba(255, 255, 255, 0.75);
   --verre-ombre: 0 -1px 24px rgba(0, 0, 0, 0.07);
   --app-w: 640px; /* largeur max de l'app (élargie en grille sur tablette/desktop) */
@@ -167,6 +171,10 @@
   /* En sombre le voile est plus dense : un fond noir translucide laisse tout passer. */
   --verre: rgba(22, 22, 24, 0.78);
   --verre-libelle: #bcbcc4;
+  --verre-haut: rgba(11, 11, 12, 0.86);
+  --verre-or: rgba(245, 197, 66, 0.9);
+  --verre-encre: rgba(242, 242, 244, 0.9);
+  --verre-arete-bouton: rgba(255, 255, 255, 0.22);
   --verre-arete: rgba(255, 255, 255, 0.1);
   --verre-ombre: 0 -1px 24px rgba(0, 0, 0, 0.45);
     color-scheme: dark;
@@ -216,6 +224,10 @@
   /* En sombre le voile est plus dense : un fond noir translucide laisse tout passer. */
   --verre: rgba(22, 22, 24, 0.78);
   --verre-libelle: #bcbcc4;
+  --verre-haut: rgba(11, 11, 12, 0.86);
+  --verre-or: rgba(245, 197, 66, 0.9);
+  --verre-encre: rgba(242, 242, 244, 0.9);
+  --verre-arete-bouton: rgba(255, 255, 255, 0.22);
   --verre-arete: rgba(255, 255, 255, 0.1);
   --verre-ombre: 0 -1px 24px rgba(0, 0, 0, 0.45);
   color-scheme: dark;
@@ -288,6 +300,32 @@ body {
        du contenu — c'est ce couple qui distingue le verre d'un simple voile. */
     box-shadow: inset 0 1px 0 var(--verre-arete), var(--verre-ombre);
   }
+  /* La barre du haut : le contenu défile dessous, donc le flou a de quoi travailler.
+     Son filet n'apparaît toujours qu'une fois qu'on a défilé (règle .app.scrolled). */
+  /* ⚠️ `header.topbar` et non `.topbar` : @supports n'ajoute AUCUNE spécificité, et la
+     règle de base est déclarée PLUS BAS dans le fichier. Idem pour les boutons. */
+  header.topbar {
+    background: var(--verre-haut);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+  }
+  /* Ses deux boutons d'icône ne peuvent plus compter sur un fond connu : même remontée
+     que les libellés du bac (mesuré : 2,8 → 4,7 dans le pire cas, en clair). */
+  .topbar .icon-btn { color: var(--verre-libelle); }
+  .topbar .icon-btn.active { color: var(--ink); }
+
+  /* Les boutons flottants. Voile plus dense (0,9) : un petit disque n'a pas la surface
+     d'une barre pour absorber ce qui passe derrière, et son glyphe doit rester net.
+     Mesuré au pire : glyphe du filtre 6,8 · pastilles de Chwazi ≥ 2,9. */
+  button.fab {
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    backdrop-filter: blur(18px) saturate(180%);
+  }
+  button.fab-filter { background: var(--verre-or); }
+  button.fab-chwazi { background: var(--verre-encre); }
+  /* L'arête claire du dessus, comme sur le bac — c'est elle qui fait la matière. */
+  button.fab-filter, button.fab-chwazi { box-shadow: inset 0 1px 0 var(--verre-arete-bouton), var(--elev-2); }
+
   /* Le libellé inactif ne peut plus compter sur un fond connu : il monte d'un cran.
      L'onglet actif, lui, est en encre pleine — il n'a jamais eu de problème.
      ⚠️ `.navbar .navtab` et pas `.navtab` : @supports n'ajoute AUCUNE spécificité, et la
