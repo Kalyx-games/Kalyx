@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { vibre } from '../lib/haptique'
-import { useCouronneQuiVoyage } from '../lib/couronne'
+import { useCouronnes } from '../lib/couronne'
 import { BackIcon, PlayersIcon, ExtIcon, FlagIcon, CrownIcon, PlusIcon, PencilIcon } from './icons'
 import { parseExtensions, effectivePlayersSet } from '../lib/games'
 import { resolveDefaultExts } from '../lib/scoresheets'
@@ -335,19 +335,20 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         : // Solo : pas de vainqueur au score (cf. saveScored) → pas de couronne non plus.
           players.length > 1 && best != null && totalOf(p) === best
 
-  // ── La couronne du meneur, qui VOYAGE ──────────────────────────────────────────────
-  // ⚠️ à plusieurs ex æquo, « la » couronne n'existe pas : rien ne voyage, toutes s'allument
-  // ensemble. Le voyage reprend quand l'égalité se dénoue.
+  // ── Les couronnes du meneur, décantées et mobiles ──────────────────────────────────
+  // ⚠️ On passe l'ENSEMBLE des meneurs au hook, égalités comprises : c'est lui, et lui seul,
+  // qui décide de ce qui est peint. Une version antérieure gardait deux sources — l'ensemble
+  // en direct pendant une égalité, le meneur unique en différé sinon — et l'affichage sautait
+  // de l'une à l'autre : à 4-5 → 5-5 → 6-5, les deux couronnes surgissaient d'un coup, puis
+  // l'une s'éteignait net, puis la bonne clignotait.
   const listeRef = useRef(null)
-  const meneurs = players.filter(isTopWinner)
-  const cleMeneur = meneurs.length === 1 ? meneurs[0].id : null
-  const meneurAffiche = useCouronneQuiVoyage(cleMeneur, {
+  const meneursAffiches = useCouronnes(players.filter(isTopWinner).map((p) => p.id), {
     conteneur: listeRef,
     // Une désignation explicite (victoire directe, départage d'égalité) vient d'un TAP :
     // la différer se lirait comme de la latence.
     immediat: instantWinnerId != null || forcedWinner != null,
   })
-  const porteCouronne = (p) => (meneurs.length > 1 ? isTopWinner(p) : meneurAffiche === p.id)
+  const porteCouronne = (p) => meneursAffiches.has(String(p.id))
 
   const nameOf = (p, i) => (p.name || '').trim() || `Joueur ${i + 1}`
   const namesOf = () => players.map(nameOf)
@@ -1115,7 +1116,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
               {players.map((p, i) => (
                 <div key={p.id} className="coop-player">
                   <div className="coop-player-row score-row">
-                    <span className="score-crown" data-couronne={anyScore && porteCouronne(p) ? 'on' : 'off'} aria-hidden="true"><CrownIcon size={16} /></span>
+                    <span className="score-crown" data-joueur={p.id} data-couronne={anyScore && porteCouronne(p) ? 'on' : 'off'} aria-hidden="true"><CrownIcon size={16} /></span>
                     <NameField
                       id={p.id}
                       className="input"
@@ -1256,7 +1257,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                       ternaire qui la faisait apparaître décalait le nom horizontalement, et
                       surtout il n'y avait aucun nœud à faire voyager. */}
                   <span className="pcard-cat-label">
-                    <span className="score-crown score-crown-inline" data-couronne={porteCouronne(p) ? 'on' : 'off'} aria-hidden="true"><CrownIcon size={12} /></span>
+                    <span className="score-crown score-crown-inline" data-joueur={p.id} data-couronne={porteCouronne(p) ? 'on' : 'off'} aria-hidden="true"><CrownIcon size={12} /></span>
                     {nameOf(p, i)}
                   </span>
                   {variantPerPlayer && p.variant ? <span className="hist-variant">{p.variant}</span> : null}

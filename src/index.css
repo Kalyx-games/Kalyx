@@ -4283,8 +4283,11 @@ button {
   color: var(--muted); /* couronne SVG : grise au repos… */
   opacity: 0.45;
   /* ⚠️ PAS de `transform` dans cette transition : le voyage de la couronne l'écrit EN LIGNE
-     (FLIP), et une transition déclarée ici entrerait en concurrence avec la sienne. */
-  transition: opacity 0.15s ease, color 0.15s ease;
+     (FLIP), et une transition déclarée ici entrerait en concurrence avec la sienne.
+     0,26 s et pas 0,15 : l'or est une couleur franche, et un allumage trop court se lit comme
+     un clignotement — c'est le mot qu'a employé l'utilisateur. On aligne sur la durée du vol,
+     pour qu'une couronne qui s'allume et une couronne qui se déplace aillent au même rythme. */
+  transition: opacity 0.26s ease, color 0.26s ease;
 }
 /* Devant un nom, dans le parcours : place réservée plus courte, sinon le nom part trop loin. */
 .score-crown-inline {

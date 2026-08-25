@@ -269,6 +269,37 @@ Recette actuelle d'Apple, pas le verre dépoli de 2020 : voile translucide + `bl
 
 **RÈGLE** : le verre ne se pose que sur une surface qui FLOTTE au-dessus d'un contenu qui défile, et jamais sans avoir mesuré le contraste de ce qu'elle porte, dans les deux thèmes, avec la jaquette la plus contrariante derrière.
 
+## ✅ LA COURONNE REFONDUE : L'ÉGALITÉ CONTOURNAIT LA DÉCANTATION (2026-08-25, retour user)
+
+**Retour user, mot pour mot** : « si je suis à 4-5 et que je fais +1 sur le 4, on arrive à égalité donc les deux joueurs ont la couronne dorée qui pop. Puis +1, une couronne s'éteint net, la couronne du meilleur clignote. »
+
+**La cause, structurelle** : la première version avait **DEUX sources de vérité** pour ce qui est peint.
+```js
+porteCouronne = (p) => (meneurs.length > 1 ? isTopWinner(p) : meneurAffiche === p.id)
+```
+Une égalité passait par `isTopWinner` — **en direct, sans décantation** — pendant que le cas à un meneur passait par la valeur différée. L'affichage sautait donc d'une source à l'autre : les deux couronnes surgissaient d'un coup, puis l'une s'éteignait net (le rendu rebasculait sur la source différée, restée sur l'ancien meneur), puis la bonne arrivait 450 ms plus tard.
+
+**RÈGLE, générale et à retenir : une valeur décantée et une valeur en direct ne peuvent pas alimenter le même pixel.** Dès qu'un affichage est différé, TOUT ce qui le compose doit l'être.
+
+**La refonte** : `useCouronnes(meneurs, …)` décante **l'ENSEMBLE** des meneurs, égalités comprises (clé = `meneurs.map(String).join('|')`). Une seule source, un seul minuteur, réarmé à chaque changement.
+  - **Une égalité TRAVERSÉE en chemin n'est jamais peinte** ; une égalité sur laquelle on s'arrête l'est, une fois, en fondu.
+  - **Le VOYAGE ne se déclenche que pour « une couronne qui devient une autre couronne »** (`avant.length === 1 && apres.length === 1 && avant[0] !== apres[0]`). Une couronne qui s'ajoute ou qui part ne vient de nulle part — la faire voler depuis sa voisine serait un mensonge visuel. Le départ est relevé sur `[data-joueur="…"]`, pas sur « la première couronne allumée » : à deux couronnes, « la première » n'est pas celle qui bouge.
+  - **Pas de décantation quand rien n'est allumé d'un côté ou de l'autre** (`!avant.length || !apres.length`) : la toute première couronne d'une saisie doit paraître tout de suite, attendre se lirait comme de la latence.
+  - ⚠️ **Les identifiants de joueurs sont des NOMBRES.** `join`/`split` les rend en chaînes → l'ensemble renvoyé ne reconnaissait plus personne et **aucune couronne ne s'allumait**. Normalisé à l'entrée (`map(String)`), interrogé avec `String(p.id)`. Attrapé en mesure, pas à la relecture.
+  - **Le fondu passe de 0,15 s à 0,26 s**, la durée du vol : l'or est une couleur franche, et un allumage trop court se lit comme un clignotement — c'est le mot qu'a employé l'user.
+
+**Mesuré, les trois cas** :
+  · **égalité traversée vite** (4-5 → 5-5 → 6-5) : à +80, +200, +320 ms la couronne n'a pas bougé du tout ; elle passe à l'autre joueur à +500 ms après le second +1. **Un seul mouvement, rien qui surgit.**
+  · **égalité sur laquelle on s'arrête** (9-5 → 5-5) : rien à +100 et +300, **les deux couronnes à +500**, et ça ne bouge plus.
+  · **égalité qu'on dénoue** (5-5 → 6-5) : la perdante s'éteint à +450, **`transform` vide sur les trois couronnes** — rien n'a volé.
+
+## ✅ « MODIFIER » DEVIENT « ÉDITER » POUR UN JEU (2026-08-25, retour user)
+
+« pour être cohérent avec le bouton qui apparaît au swipe, j'aimerais que le menu d'édition d'un jeu soit appelé "éditer le jeu" et que le bouton qui permette d'y accéder soit labellisé "éditer" ». Le menu de glissement dit **Éditer** depuis toujours ; le dos de la boîte et le titre de la feuille disaient **Modifier**. Une seule action, un seul mot :
+  - `GameForm` : le titre passe à **« Éditer le jeu »** (l'ajout garde « Ajouter un jeu ») ;
+  - `GameDetail` : la tuile du dos passe à **« Éditer »**, et l'étiquette du recto à « Retourner la boîte : éditer le jeu… ».
+  - **NON touchés, et c'est voulu** : « Modifier la fiche de score », « Modifier cette partie », « Modifier les scores », « Modifier « X » » (une bulle), « Modifier » (une tierlist). Ce sont d'autres objets — l'unification demandée porte sur le JEU.
+
 ## ✅ LES FAITS NOTABLES + LA COURONNE QUI VOYAGE (2026-08-25, choix user)
 
 L'user a tranché la section « à discuter » du document de travail : **Chwazi on ne touche à rien**, et **oui** aux trois autres — la couronne qui change de main, le nouveau record qui se fête, les faits notables.

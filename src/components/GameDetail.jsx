@@ -120,8 +120,8 @@ export default function GameDetail({
   // à quelqu'un qui a simplement tapé du doigt ailleurs.
   // Le dos ne porte BGG que si le jeu a une fiche BoardGameGeek et qu'on est en ligne.
   const etiquetteRecto = onBgg
-    ? 'Retourner la boîte : modifier le jeu, ouvrir BoardGameGeek'
-    : 'Retourner la boîte : modifier le jeu'
+    ? 'Retourner la boîte : éditer le jeu, ouvrir BoardGameGeek'
+    : 'Retourner la boîte : éditer le jeu'
   const flipRef = useRef(null)
   const premierRendu = useRef(true)
   useLayoutEffect(() => {
@@ -300,7 +300,7 @@ export default function GameDetail({
             />
             <div className="hero-back-acts">
               <button type="button" className="hero-act-tile hero-act-edit" onClick={actionDuDos(onEdit)} disabled={!online} tabIndex={heroActions ? 0 : -1}>
-                <PencilIcon size={18} /> Modifier
+                <PencilIcon size={18} /> Éditer
               </button>
               {onBgg && (
                 <button type="button" className="hero-act-tile hero-act-bgg" onClick={actionDuDos(onBgg)} tabIndex={heroActions ? 0 : -1}>

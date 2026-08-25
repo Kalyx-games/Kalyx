@@ -429,7 +429,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
         >
           <div className="modal-scroll" ref={scrollRef}>
           <div className="modal-head">
-            <h2>{isEdit ? 'Modifier le jeu' : 'Ajouter un jeu'}</h2>
+            <h2>{isEdit ? 'Éditer le jeu' : 'Ajouter un jeu'}</h2>
             {isEdit && onDelete && (
               <button type="button" className="modal-del" onClick={onDelete} disabled={saving} title="Supprimer ce jeu" aria-label="Supprimer ce jeu">
                 <TrashIcon size={18} />
