@@ -214,7 +214,9 @@ export default function App() {
   const [renamingPlayer, setRenamingPlayer] = useState(false)
   const [statsOpen, setStatsOpen] = useState(savedView === 'stats') // écran Stats
   const [playerOverall, setPlayerOverall] = useState(null) // [{name, games, wins, winRate}] tous jeux | null
-  const [allPlays, setAllPlays] = useState([]) // toutes les parties — matière des anecdotes
+  // ⚠️ null = PAS ENCORE CONNU (≠ [] qui AFFIRMERAIT « aucune partie n'a jamais été jouée »).
+  const [allPlays, setAllPlays] = useState(null) // toutes les parties — matière des anecdotes
+  const [tierlistsLues, setTierlistsLues] = useState(false) // répondu, même par un échec
   // Tierlists : menu (hub) + écran d'une tierlist (view/edit/global).
   const [tierlistHub, setTierlistHub] = useState(false)
   const [tierlists, setTierlists] = useState(null) // [{id,player,ranking,updated_at}] | null (table absente/pas chargé)
@@ -234,13 +236,13 @@ export default function App() {
         setAllPlays(ps)
         return fetchPlayerOverall(games, ps)
       })
-      // Sans les parties (hors ligne, table absente), l'anecdote se rabat sur les tierlists.
-      .catch(() => { setAllPlays([]); return fetchPlayerOverall(games).catch(() => []) })
+      // Hors ligne, on laisse « inconnu » : mieux vaut pas d'anecdote qu'une anecdote fausse.
+      .catch(() => { setAllPlays(null); return fetchPlayerOverall(games).catch(() => []) })
       .then(setPlayerOverall)
       .catch(() => setPlayerOverall([]))
     // Les tierlists alimentent l'anecdote du jour affichée en haut des Stats → on les charge
     // à l'ouverture de l'onglet (et pas seulement en ouvrant le hub Tierlists).
-    fetchTierlists().then(setTierlists).catch(() => setTierlists(null))
+    fetchTierlists().then(setTierlists).catch(() => setTierlists(null)).finally(() => setTierlistsLues(true))
     // volontairement pas de dépendance sur `games` : on ne veut recharger qu'à l'ouverture
     // de l'onglet, pas à chaque modification de la collection.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1128,8 +1130,11 @@ export default function App() {
   }, [tierlists, collectionGames, collectionIds, repById])
   // Toute la matière disponible : les parties (qui joue à quoi, qui gagne, quand) + les goûts.
   const anecPool = useMemo(
-    () => buildAnecdotes({ plays: allPlays, games: collectionGames, repById, tierAnecdotes }),
-    [allPlays, collectionGames, repById, tierAnecdotes]
+    () =>
+      allPlays && tierlistsLues
+        ? buildAnecdotes({ plays: allPlays, games: collectionGames, repById, tierAnecdotes })
+        : [],
+    [allPlays, tierlistsLues, collectionGames, repById, tierAnecdotes]
   )
   // L'anecdote du jour. Ce n'est PAS un tirage : les anecdotes sont mélangées une fois par
   // cycle puis servies une par jour → chacune passe exactement une fois avant que la
