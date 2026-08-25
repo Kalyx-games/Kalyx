@@ -169,7 +169,7 @@ Audit en workflow (3 lentilles : cohérence / composition / finition, puis synth
 ```bash
 grep -cE '^s*(margin|padding|gap|row-gap|column-gap)[a-z-]*s*:.*[0-9]px' src/index.css
 ```
-**Valeur de référence au 25/08/2026 : 344** (348 au 20/08 ; la baisse vient du voile des actions de la jaquette, dont les px codés en dur ont disparu avec lui) (343 le 19/08 ; la hausse vient de la ligne d’état des Réglages, du repli des sauvegardes et de la phrase d’aide de la barre d’enregistrement).
+**Valeur de référence au 25/08/2026 : 347** (348 au 20/08, puis 344 : la baisse venait du voile des actions de la jaquette, dont les px codés en dur ont disparu avec lui ; la remontée à 347 vient de la bande « fait notable », dont la géométrie est RECOPIÉE de `.tl-anec-hero` — une égalité à tenir, pas des valeurs inventées) (343 le 19/08 ; la hausse vient de la ligne d’état des Réglages, du repli des sauvegardes et de la phrase d’aide de la barre d’enregistrement).
 
 **NON FAIT, et assumé** : le resserrement réel (faire tomber 10→8, 14→12, 6→4 …). Il déplacerait ~40 % des espacements pour un bénéfice invisible, sur une app que l’user a déjà fait itérer trois fois sur des retours visuels. À ne relancer QUE si l’user demande explicitement un rythme plus serré, écran par écran, et jamais en une passe globale.
 
@@ -268,6 +268,65 @@ Recette actuelle d'Apple, pas le verre dépoli de 2020 : voile translucide + `bl
 **Le bouton de filtre se comporte à l'identique partout** (exigence user) : il existe aussi sur l'historique et les tierlists sous `fab fab-filter hist-fab-filter` / `tl-fab-filter`. Le verre est donc posé sur `.fab` (la BASE) et sur `.fab-filter`, jamais sur les variantes d'écran. Vérifié en mesurant les styles calculés sur les deux écrans : fond, flou et arête strictement identiques.
 
 **RÈGLE** : le verre ne se pose que sur une surface qui FLOTTE au-dessus d'un contenu qui défile, et jamais sans avoir mesuré le contraste de ce qu'elle porte, dans les deux thèmes, avec la jaquette la plus contrariante derrière.
+
+## ✅ LES FAITS NOTABLES + LA COURONNE QUI VOYAGE (2026-08-25, choix user)
+
+L'user a tranché la section « à discuter » du document de travail : **Chwazi on ne touche à rien**, et **oui** aux trois autres — la couronne qui change de main, le nouveau record qui se fête, les faits notables.
+
+### 1. `src/lib/faits.js` — QUATRE faits, un seul annoncé à la fois
+
+⚠️⚠️ **TOUT CE FICHIER EST ÉCRIT CONTRE UNE BASE QU'ON A MESURÉE** (workflow : 4 relevés dont un qui a interrogé la vraie base, puis une synthèse qui a tout revérifié). **Un fait FAUX est bien pire que pas de fait**, et cette base piège de cinq façons :
+  · **`played_at` est l'heure de SAISIE** — `played_at === created_at` sur **213 lignes sur 213**. Une seule journée porte 48 % de la base, 46 % des parties partagent leur minute avec une autre, et sur les 18 parties dont la vraie date est écrite à la main dans les notes, **65 % des paires consécutives sont dans le mauvais ordre**. → **AUCUN fait ne parle de « quand »** (pas de « ce soir », pas de « à l'instant », pas de série, pas de meilleure soirée).
+  · le coopératif couronne toute la table · les équipes recopient le score sur chaque membre · une victoire directe a des scores nuls (2 parties ont TOUS les totaux à 0) · un nom qui contient un chiffre n'est pas une personne.
+
+**Le détecteur naïf aurait crié une fois sur quatre** (51 fois sur 213, dont **46 % aux parties 2-3 d'un jeu** : c'était un détecteur de nouveauté déguisé en détecteur d'exploit, et 26 de ses 51 déclenchements tombaient le même jour). Les quatre faits retenus, **rejoués sur les 213 parties réelles** :
+
+| fait | déclenchements | garde décisive |
+|---|---|---|
+| **Record du jeu** | 4 (1,9 %) | **≥ 3 parties antérieures À LA MÊME TABLE** — 9 jeux mélangent les tailles de table (Fantasy Realms va de 178 pts à 2 joueurs à 354 à 5) |
+| **Palier 10/25/50/100** | 5 (2,3 %) | le seul fait qui ne peut structurellement pas mentir : il compte des lignes. Le palier 5 est écarté (15 fois, presque le double) |
+| **Record personnel** | 3 (1,4 %) | ≥ 3 parties antérieures du même joueur à la même table — sans le seuil : 29 % |
+| **Première victoire** | 7 (3,3 %) | hors coop (les 18 coops gagnées décerneraient **61 titres d'un coup**) et **≥ 2 défaites** |
+
+**Total : 19 sur 213, soit 8,9 %** — et **20 % sur les seules journées calmes**, qui ressemblent le plus à l'usage à venir. Quatre parties sur cinq gardent « Partie enregistrée. »
+  - **Deux gardes de contexte** en plus : la **rafale** (moins de 120 s depuis la partie précédente du même jeu → on se tait, on ne crie pas pendant qu'on tape un historique) et **un seul fait par jeu et par jour** (Map de session, jamais persistée).
+  - ⚠️ **Aucun fait sur une ÉDITION** : corriger une faute de frappe n'est pas jouer une partie, et le fait se rejouerait à chaque correction.
+  - **ÉCARTÉ : « première partie de ce jeu »** — 13 % de la base mais **22,5 % en régime calme** (une soirée calme est justement celle où l'on sort un jeu neuf) : avec lui, le total passait de 20 % à 42,5 %. Il reste **indispensable comme GARDE** (c'est lui qui empêche d'annoncer un record sur la 1re partie).
+  - Élision : « Record **d'**Abyss » et non « de Abyss » (`de()` élide devant une voyelle, jamais devant un h — trop imprévisible sur un nom propre).
+
+### 2. Trois endroits, jamais de cérémonie
+
+  a. **Le toast passe à deux niveaux** quand il porte un fait (5 200 ms au lieu de 2 800) : le titre, puis la sous-ligne ET « Partie enregistrée. » — la confirmation n'est jamais perdue, elle descend d'un rang. `showToast(msg, { fait, ms })`, l'état `toast` devient un objet.
+    ⚠️ **PAS D'OR DANS LE TOAST.** `.toast` a `background: var(--ink)`, une surface qui **S'INVERSE** (#18181b clair / #f3f3f4 sombre) : l'or y tombe à **1,46** de contraste en sombre. Même règle que `.fchip.on`. **La couronne y suit `currentColor`** (mesuré 16,3). L'or vit sur `--card` — la fiche et l'historique.
+  b. **Une bande sur la fiche du jeu** (`.detail-fait`), entre les extensions et le compte de parties : filet or, libellé en micro-capitales, titre, sous-ligne. Même grammaire que l'anecdote du jour, **même animation** (`kx-anec-unfold`) — et donc **aucun `transform`** (il promeut l'encart sur sa couche et le texte saute en fin d'animation, piège déjà vécu). Mesuré : label 12,1 · titre 17,7 · sous-ligne 7,1.
+    ⚠️ **Placée là et pas plus haut** : la boîte qui se retourne déborde de son gabarit et porte `z-index: 2` — un bloc inséré avant la bande d'infos serait tranché en plein tour.
+    **Elle ne vit que le temps de la session** (`dernierFait` dans App, rien n'est écrit nulle part) : une nouvelle qu'on relit une semaine plus tard n'en est plus une, et la persister obligerait à une colonne en base ou à un localStorage qui mentirait dès qu'on change d'appareil.
+  c. **Un filet or dans la marge de l'historique**, sur la ou les parties qui portent le meilleur score. ⚠️ **calculé sur `allList` et surtout pas sur `filtered`** : filtrer par joueur ferait apparaître un faux record. Un `inset` et non un `border-left` (pour ne pas décaler le contenu de 3 px), avec `--card-shadow` redéclarée (`box-shadow` n'est pas cumulatif). **Le mot « Record » accompagne le filet exprès** : une information ne doit jamais reposer sur la seule couleur. Ex æquo : toutes les parties concernées sont marquées.
+
+### 3. ⚠️ UN DÉFAUT LATENT DES ANECDOTES, TROUVÉ ET CORRIGÉ
+
+`buildAnecdotes` calculait ses records avec `t > best.t` **sans lire `scoring`** et **sans exclure les équipes**. Deux mensonges en attente :
+  · **Odin** est en `scoring: 'low'` → dès sa 1re partie, l'anecdote aurait annoncé comme record **le PIRE score de la table** ;
+  · la partie de **Belote** en base porte `total: 1010` recopié sur Christophe **et** Bruno (score d'équipe) → dès la 3e partie, « Record à Belote : 1010 points, par Christophe » aurait été faux.
+`buildAnecdotes` prend donc un nouveau champ **`scoringById`** (Map, construite depuis `scoresheets` dans App), interrogée **après** le remappage des doublons, avec repli `'high'`. Les records excluent désormais coop, équipes et solo.
+
+**Deux familles nouvelles**, vérifiées sur la vraie base :
+  · **`record-tenu`** — « Le record à Fantasy Realms (354 points) tient depuis 12 parties. » Elle compte des PARTIES et pas des jours : immunisée contre `played_at`.
+  · **`revanche`** — « Mathieu a perdu 14 fois à The Vale of Eternity avant de gagner sa première partie. » Hors coop, sinon tout le monde « gagnerait sa première partie » d'un coup.
+
+### 4. La couronne qui change de main
+
+`src/lib/couronne.js` — `useCouronneQuiVoyage(cle, { conteneur, immediat })`. FLIP, la même technique que le réordonnancement des catégories : on relève la position AVANT le changement, on repose l'élément à son ancienne place, une transition de 260 ms le ramène.
+  - ⚠️ **LA DÉCANTATION DE 450 ms EST LE CŒUR DU MÉCANISME**, pas un confort : le meneur change à chaque caractère tapé, et la tenue du bouton « + » ajoute un point **toutes les 45 ms** — saisir 141 à Abyss ferait battre la couronne une centaine de fois. Le minuteur est **réarmé** à chaque changement : si la tête change deux fois en 300 ms, **un seul voyage a lieu, de A vers C** — B n'est jamais affiché, donc jamais animé.
+  - ⚠️ **Le FLIP NE PASSE PAS par `requestAnimationFrame`** (contrairement à celui de `ScoreSheetEditor`) : rAF **ne s'exécute pas quand la page est cachée**, et la couronne restait alors **figée à son décalage de départ, pour toujours** — mesuré. Une lecture de `getBoundingClientRect()` force le calcul et rend tout synchrone.
+  - **Où elle voyage** : la **liste plate à une colonne** (`.score-crown`, le nœud existait déjà avec sa place réservée) et la **page de catégorie du parcours** (`byItem`, le mode des 61 fiches réelles). Là, la couronne devient **persistante** (`data-couronne="on|off"`) — ce qui corrige au passage un défaut existant : le ternaire qui la faisait apparaître **décalait le nom horizontalement** (mesuré : les deux noms sont maintenant au même x).
+  - **Où elle NE voyage pas, et pourquoi** : parcours « par joueur » (un seul joueur à l'écran, rien à parcourir — le changement y est déjà signalé par `.pcard-dot.win`) · coop (pas de couronne par joueur) · sans points et équipes (le 🏆 y est une **commande** qu'on pose du doigt : l'animer le ferait passer pour un bug) · barre d'enregistrement (du texte, pas une place).
+  - **Ex æquo** : « la » couronne n'existe pas — `cleMeneur` vaut null, aucun voyage, toutes s'allument ensemble. Le voyage reprend quand l'égalité se dénoue.
+  - **Désignation explicite** (victoire directe, départage) : `immediat` court-circuite la décantation — elle vient d'un tap, la différer se lirait comme de la latence.
+  - **reduced-motion** : repli DOUBLE, et c'est voulu — le CSS coupe le fondu de couleur, le hook sort avant d'animer. La décantation, elle, **reste active** : ce n'est pas une animation, c'est une règle de lecture.
+  - CSS : `.score-crown.on` devient `[data-couronne='on']`, et la transition **ne porte plus `transform`** (le FLIP l'écrit en ligne, les deux entreraient en concurrence).
+
+**Vérifié** : les 213 parties rejouées à travers le vrai détecteur (19 faits, aux fréquences annoncées, aucune phrase avec undefined/NaN/faute d'accord) ; les deux nouvelles anecdotes produites sur les vraies données ; le parcours des anecdotes ne boucle toujours pas avant un mois ; la couronne mesurée dans les deux branches (décantation respectée à 120 ms, main changée à 720 ms, noms alignés au même pixel, FLIP posé à −57,7 px puis rendu à 0) ; la bande et le toast mesurés en contraste.
 
 ## ✅ LE DOS DE LA BOÎTE, REFAIT (2026-08-25) — ⚠️ la 1re version était « ABSOLUMENT IMMONDE »
 

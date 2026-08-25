@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { vibre } from '../lib/haptique'
+import { useCouronneQuiVoyage } from '../lib/couronne'
 import { BackIcon, PlayersIcon, ExtIcon, FlagIcon, CrownIcon, PlusIcon, PencilIcon } from './icons'
 import { parseExtensions, effectivePlayersSet } from '../lib/games'
 import { resolveDefaultExts } from '../lib/scoresheets'
@@ -333,6 +334,20 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         ? p.id === forcedWinner
         : // Solo : pas de vainqueur au score (cf. saveScored) → pas de couronne non plus.
           players.length > 1 && best != null && totalOf(p) === best
+
+  // ── La couronne du meneur, qui VOYAGE ──────────────────────────────────────────────
+  // ⚠️ à plusieurs ex æquo, « la » couronne n'existe pas : rien ne voyage, toutes s'allument
+  // ensemble. Le voyage reprend quand l'égalité se dénoue.
+  const listeRef = useRef(null)
+  const meneurs = players.filter(isTopWinner)
+  const cleMeneur = meneurs.length === 1 ? meneurs[0].id : null
+  const meneurAffiche = useCouronneQuiVoyage(cleMeneur, {
+    conteneur: listeRef,
+    // Une désignation explicite (victoire directe, départage d'égalité) vient d'un TAP :
+    // la différer se lirait comme de la latence.
+    immediat: instantWinnerId != null || forcedWinner != null,
+  })
+  const porteCouronne = (p) => (meneurs.length > 1 ? isTopWinner(p) : meneurAffiche === p.id)
 
   const nameOf = (p, i) => (p.name || '').trim() || `Joueur ${i + 1}`
   const namesOf = () => players.map(nameOf)
@@ -1096,11 +1111,11 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
               {scoring === 'low' ? ' · le plus petit score gagne' : ''}
             </p>
             {cat.hint ? <p className="field-hint">{cat.hint}</p> : null}
-            <div className="coop-players">
+            <div className="coop-players" ref={listeRef}>
               {players.map((p, i) => (
                 <div key={p.id} className="coop-player">
                   <div className="coop-player-row score-row">
-                    <span className={`score-crown ${anyScore && isTopWinner(p) ? 'on' : ''}`} aria-hidden="true"><CrownIcon size={16} /></span>
+                    <span className="score-crown" data-couronne={anyScore && porteCouronne(p) ? 'on' : 'off'} aria-hidden="true"><CrownIcon size={16} /></span>
                     <NameField
                       id={p.id}
                       className="input"
@@ -1229,7 +1244,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       (() => {
         const c = visibleCats[idx]
         return (
-          <div className="pcard" data-dir={navDirRef.current} key={`c${idx}`}>
+          <div className="pcard" data-dir={navDirRef.current} key={`c${idx}`} ref={listeRef}>
             <div className="pcard-head">
               <span className="pcard-name">{c.label}{catValueTag(c)}</span>
             </div>
@@ -1237,7 +1252,13 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
             {players.map((p, i) => (
               <div key={p.id} className="pcard-row">
                 <div className="pcard-cat">
-                  <span className="pcard-cat-label">{isTopWinner(p) ? <><CrownIcon size={12} />{' '}</> : ''}{nameOf(p, i)}</span>
+                  {/* La couronne est PERSISTANTE (une place réservée, allumée ou non) : le
+                      ternaire qui la faisait apparaître décalait le nom horizontalement, et
+                      surtout il n'y avait aucun nœud à faire voyager. */}
+                  <span className="pcard-cat-label">
+                    <span className="score-crown score-crown-inline" data-couronne={porteCouronne(p) ? 'on' : 'off'} aria-hidden="true"><CrownIcon size={12} /></span>
+                    {nameOf(p, i)}
+                  </span>
                   {variantPerPlayer && p.variant ? <span className="hist-variant">{p.variant}</span> : null}
                 </div>
                 {inputFor(p, c)}

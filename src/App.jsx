@@ -9,6 +9,7 @@ import { downloadBackup, downloadCsv, parseBackup, importBackup, fetchBackups, c
 import { philibertSearchUrl } from './lib/philibert'
 import { EMPTY_FILTERS, PRICE_MIN, PRICE_MAX, norm, passesFilters } from './lib/filtering'
 import { messageUtilisateur } from './lib/messages'
+import { faitNotable } from './lib/faits'
 import { useExitLayer } from './lib/useExitLayer'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
 import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, computeAnecdoteList, emptyRanking, dedupeByName, repIdMap, remapRanking } from './lib/tierlists'
@@ -40,7 +41,7 @@ import SkeletonCard from './components/SkeletonCard'
 import GameTile from './components/GameTile'
 import { enterFullscreen } from './lib/fullscreen'
 import NavBar from './components/NavBar'
-import { SettingsIcon, ChwaziIcon, FilterIcon, PlusIcon, ClockIcon, DieIcon, CheckIcon, GridIcon, ListIcon } from './components/icons'
+import { SettingsIcon, ChwaziIcon, FilterIcon, PlusIcon, ClockIcon, DieIcon, CheckIcon, CrownIcon, GridIcon, ListIcon } from './components/icons'
 
 
 // Le filtre propriétaire est PERSISTANT (un seul propriétaire regarde en général ses
@@ -254,14 +255,22 @@ export default function App() {
   const [deletingTagBusy, setDeletingTagBusy] = useState(false)
   const [importing, setImporting] = useState(null) // sauvegarde à confirmer | null
   const [importBusy, setImportBusy] = useState(false)
-  const [toast, setToast] = useState('') // message de confirmation éphémère (toast en bas)
+  const [toast, setToast] = useState(null) // { texte, fait } | null — confirmation éphémère
   const toastTimer = useRef(null)
   // Affiche un toast qui disparaît tout seul (visible même par-dessus les overlays).
-  const showToast = useCallback((msg) => {
-    setToast(msg)
+  // `opts.fait` = { titre, sous } : le toast passe alors à deux niveaux et dure plus longtemps.
+  const showToast = useCallback((msg, opts) => {
+    setToast(msg ? { texte: msg, fait: opts?.fait || null } : null)
     if (toastTimer.current) clearTimeout(toastTimer.current)
-    if (msg) toastTimer.current = setTimeout(() => setToast(''), 2800)
+    if (msg) toastTimer.current = setTimeout(() => setToast(null), opts?.ms || 2800)
   }, [])
+  // Le fait notable de la DERNIÈRE partie enregistrée. Mémoire de session : rien n'est écrit
+  // nulle part. Un fait est une nouvelle — une nouvelle qu'on relit une semaine plus tard n'en
+  // est plus une, et la persister obligerait à une colonne en base ou à un localStorage qui
+  // mentirait dès qu'on change d'appareil.
+  const [dernierFait, setDernierFait] = useState(null) // { gameId, titre, sous } | null
+  // Un seul fait par jeu et par jour : Map(game_id → 'AAAA-M-J'), jamais persistée non plus.
+  const faitsDuJourRef = useRef(new Map())
   // Sauvegardes automatiques (table `backups` Supabase)
   const [backupFreq, setBackupFreq] = useState(loadBackupFreq)
   const [backupsList, setBackupsList] = useState(null) // liste des sauvegardes, ou null si table absente
@@ -1088,8 +1097,9 @@ export default function App() {
     setError(null)
     try {
       const wasEditing = !!editingPlay
+      let inserted = null
       if (wasEditing) await updatePlay(editingPlay.id, play)
-      else await savePlay(scoringGame.id, play)
+      else inserted = await savePlay(scoringGame.id, play)
       const g = scoringGame
       setScoringGame(null)
       setEditingPlay(null)
@@ -1102,7 +1112,31 @@ export default function App() {
       }
       // Met à jour le résumé « N parties · dernière le … » de la fiche.
       fetchPlayMeta().then(setPlayMeta).catch(() => {})
-      showToast(wasEditing ? 'Partie modifiée.' : 'Partie enregistrée.')
+      // ⚠️ AUCUN fait sur une ÉDITION : corriger une faute de frappe n'est pas jouer une
+      // partie, et le fait se rejouerait à chaque correction.
+      let fait = null
+      if (!wasEditing && inserted?.id) {
+        try {
+          const parties = await fetchPlays(g.id)
+          const f = faitNotable({
+            jeu: g,
+            parties: parties || [],
+            nouvelleId: inserted.id,
+            template: scoresheets?.[g.id],
+            dejaDit: faitsDuJourRef.current,
+          })
+          if (f) {
+            fait = f
+            setDernierFait({ gameId: g.id, titre: f.titre, sous: f.sous })
+          }
+        } catch {
+          // Un fait est un bonus : il ne doit JAMAIS faire échouer un enregistrement.
+        }
+      }
+      const message = wasEditing ? 'Partie modifiée.' : 'Partie enregistrée.'
+      // 5 200 ms pour un fait : deux lignes demandent deux fixations du regard. Et on atterrit
+      // sur la fiche, où la même information reste lisible — le toast n'est pas la dernière chance.
+      showToast(message, fait ? { fait, ms: 5200 } : undefined)
     } catch (e) {
       setError(messageUtilisateur(e))
     } finally {
@@ -1132,7 +1166,17 @@ export default function App() {
   const anecPool = useMemo(
     () =>
       allPlays && tierlistsLues
-        ? buildAnecdotes({ plays: allPlays, games: collectionGames, repById, tierAnecdotes })
+        ? buildAnecdotes({
+            plays: allPlays,
+            games: collectionGames,
+            repById,
+            tierAnecdotes,
+            // Le sens du score de chaque jeu : sans lui, « Record à Odin » couronnerait le
+            // PIRE score de la table (cette fiche est en « le plus petit score gagne »).
+            scoringById: scoresheets
+              ? new Map(Object.entries(scoresheets).map(([id, t]) => [id, t?.scoring || 'high']))
+              : null,
+          })
         : [],
     [allPlays, tierlistsLues, collectionGames, repById, tierAnecdotes]
   )
@@ -1337,8 +1381,18 @@ export default function App() {
       )}
       {error && <p className="banner banner-err">{error}</p>}
       {toast && (
-        <div className="toast" role="status" onClick={() => setToast('')}>
-          <span className="toast-ico"><CheckIcon size={16} /></span> {toast}
+        <div className={`toast${toast.fait ? ' toast-fait' : ''}`} role="status" onClick={() => setToast(null)}>
+          <span className="toast-ico" aria-hidden="true">
+            {toast.fait ? <CrownIcon size={18} /> : <CheckIcon size={16} />}
+          </span>
+          {toast.fait ? (
+            <span className="toast-corps">
+              <span className="toast-titre">{toast.fait.titre}</span>
+              <span className="toast-sous">{[toast.fait.sous, toast.texte].filter(Boolean).join(' · ')}</span>
+            </span>
+          ) : (
+            toast.texte
+          )}
         </div>
       )}
 
@@ -1631,6 +1685,7 @@ export default function App() {
           lastPlayedLabel={playMeta[detailLayer.value.id]?.last ? formatDay(playMeta[detailLayer.value.id].last) : null}
           ownerMap={ownerMap}
           tagMap={tagMap}
+          fait={dernierFait?.gameId === detailLayer.value.id ? dernierFait : null}
           siblings={visible}
           onNavigate={(g) => setDetailGame(g)}
           onClose={() => setDetailGame(null)}

@@ -3516,6 +3516,48 @@ button {
 .detail-owner { display: inline-flex; align-items: center; gap: 7px; }
 .detail-owner i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .detail-ext { margin: 0 0 12px; font-size: var(--fs-body); color: var(--ink); }
+
+/* Le fait notable de la dernière partie : encart ÉDITORIAL, la même grammaire que l'anecdote
+   du jour (filet or à gauche, libellé en micro-capitales). Volontairement PAS un bouton :
+   pas de fond plein, pas de contour, pas d'ombre — c'est une nouvelle, pas un dialogue. */
+.detail-fait {
+  /* ⚠️ Géométrie RECOPIÉE de `.tl-anec-hero` au pixel près (filet 3, padding 2/4/2/14,
+     libellé à 7 de marge) : les deux encarts sont des jumeaux, c'est une ÉGALITÉ À TENIR
+     et non des valeurs inventées hors échelle. Les toucher séparément les désaccorderait. */
+  border-left: 3px solid var(--gold);
+  padding: 2px 4px 2px 14px;
+  margin: 0 0 var(--sp-4);
+  animation: kx-anec-unfold 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* ⚠️ comme `.tl-anec-hero` : AUCUN `transform` dans cette animation. Il promeut l'encart sur
+   sa propre couche de composition, le texte y est rasterisé autrement, et le retour à l'état
+   normal en fin d'animation se voit comme un saut (mesuré, et corrigé une fois déjà). */
+.detail-fait-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--gold-ink);
+  margin-bottom: 7px;
+}
+.detail-fait-titre {
+  margin: 0;
+  font-size: var(--fs-body-l);
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--ink);
+}
+.detail-fait-sous {
+  margin: 3px 0 0;
+  font-size: var(--fs-footnote);
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .detail-fait { animation: none; }
+}
 .detail-ext .detail-info-k { display: inline; text-transform: none; letter-spacing: 0; }
 /* Le nombre de parties est LA donnée vivante du jeu : elle mérite le corps d'un titre,
    et la rangée entière ouvre les statistiques. */
@@ -4022,6 +4064,25 @@ button {
   display: inline-flex;
   gap: 6px;
 }
+
+/* La partie qui détient le meilleur score du jeu. Filet OR dans la marge : un `inset` et non
+   un `border-left`, pour ne pas décaler le contenu de 3 px — `.hist-row` n'a pas de bordure,
+   seulement son ombre de carte, qu'il faut donc redéclarer (box-shadow n'est pas cumulatif).
+   Calculé à la volée sur TOUTES les parties, jamais stocké. */
+.hist-row.hist-record {
+  box-shadow: inset 3px 0 0 var(--gold), var(--card-shadow);
+}
+.hist-record-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin-left: var(--sp-2);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--gold-ink);
+}
 /* Notes de la partie, affichées en petit sous les joueurs. */
 .hist-note {
   margin-top: 8px;
@@ -4221,11 +4282,25 @@ button {
   justify-content: center;
   color: var(--muted); /* couronne SVG : grise au repos… */
   opacity: 0.45;
+  /* ⚠️ PAS de `transform` dans cette transition : le voyage de la couronne l'écrit EN LIGNE
+     (FLIP), et une transition déclarée ici entrerait en concurrence avec la sienne. */
   transition: opacity 0.15s ease, color 0.15s ease;
 }
-.score-crown.on {
+/* Devant un nom, dans le parcours : place réservée plus courte, sinon le nom part trop loin. */
+.score-crown-inline {
+  width: 18px;
+  vertical-align: -0.15em;
+}
+.score-crown[data-couronne='on'] {
   color: var(--gold); /* …OR pour le meneur */
   opacity: 1;
+}
+/* Une media query n'ajoute AUCUNE spécificité : ce bloc doit SUIVRE les règles ci-dessus.
+   Le repli est double, et c'est voulu — le CSS coupe le fondu de couleur, et le hook sort
+   avant d'animer. La couronne s'allume et s'éteint, sans voyage. La décantation, elle,
+   reste active : ce n'est pas une animation, c'est une règle de lecture. */
+@media (prefers-reduced-motion: reduce) {
+  .score-crown { transition: none; }
 }
 /* Retire les petites flèches haut/bas natives des champs numériques : on tape la valeur,
    elles ne servent à rien ici (et sont minuscules / inutilisables au doigt). */
@@ -5055,6 +5130,22 @@ input[type='number'] {
   animation: kx-toast-in 0.22s ease;
 }
 .toast-ico { color: var(--ok-ink); }
+/* Le toast porte un FAIT NOTABLE : deux niveaux — la nouvelle, puis l'accusé de réception,
+   qu'on ne veut jamais perdre.
+   ⚠️ PAS d'or ici. `.toast` a `background: var(--ink)`, une surface qui S'INVERSE (#18181b en
+   clair, #f3f3f4 en sombre) : l'or y tombe à 1,46 de contraste en sombre. C'est exactement la
+   règle déjà écrite pour `.fchip.on` — un fond qui s'inverse ne peut pas porter une couleur de
+   marque calée sur le thème de la page. La couronne suit donc le texte ; l'or vit sur --card,
+   c'est-à-dire sur la fiche et dans l'historique. */
+.toast-fait {
+  align-items: flex-start;
+  padding: var(--sp-3) var(--sp-4);
+  text-align: left;
+}
+.toast-fait .toast-ico { color: currentColor; margin-top: 1px; }
+.toast-corps { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.toast-titre { font-size: var(--fs-body-l); font-weight: 700; letter-spacing: -0.01em; }
+.toast-sous { font-size: var(--fs-footnote); font-weight: 500; opacity: 0.72; }
 @keyframes kx-toast-in {
   from { opacity: 0; transform: translate(-50%, 12px); }
   to { opacity: 1; transform: translate(-50%, 0); }

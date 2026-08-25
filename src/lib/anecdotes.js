@@ -61,7 +61,7 @@ const estEquipes = (p) => (p?.players || []).some((x) => x && x.team)
  * Chaque entrée : { key, text }. `key` identifie l'anecdote indépendamment de sa
  * formulation → c'est elle qui sert au rangement, pas la position dans le tableau.
  */
-export function buildAnecdotes({ plays = [], games = [], repById = null, tierAnecdotes = [] } = {}) {
+export function buildAnecdotes({ plays = [], games = [], repById = null, tierAnecdotes = [], scoringById = null } = {}) {
   const out = []
   // Deux anecdotes au texte identique feraient double emploi — et, si elles partagent leur
   // clé (cas des tierlists, dont la clé DÉRIVE du texte), la même phrase pourrait sortir
@@ -249,22 +249,94 @@ export function buildAnecdotes({ plays = [], games = [], repById = null, tierAne
   }
 
   // ===== 4. Les scores =====
+  // ⚠️ Le sens du score, jeu par jeu. À défaut : « le plus haut gagne », le cas des 33 fiches
+  // sur 61. La table est interrogée APRÈS le remappage des doublons (`memeJeu`), avec repli.
+  const sensDe = (id) => (scoringById && scoringById.get ? scoringById.get(id) : null) || 'high'
+  // ⚠️ Un score n'est comparable que s'il désigne QUELQU'UN et qu'il y avait quelqu'un à
+  // battre : ni en coopératif (c'est le groupe), ni en équipes (le total de l'équipe est
+  // recopié sur chaque membre → on couronnerait un joueur pour le score de son binôme —
+  // la partie de Belote en base porte le même 1010 sur deux joueurs), ni en solo.
+  const partiesScorables = (e) =>
+    e.plays.filter((p) => scoreCounts(p) && !estCoop(p) && !estEquipes(p) && (p.players || []).length >= 2)
   const records = []
   parJeu.forEach((e, id) => {
+    const sens = sensDe(id)
+    if (sens === 'none') return
     let best = null
-    e.plays.filter(scoreCounts).forEach((p) => {
+    partiesScorables(e).forEach((p) => {
       ;(p.players || []).forEach((pl) => {
         const t = Number(pl?.total)
         const n = (pl?.name || '').trim()
-        if (Number.isFinite(t) && vraiNom(n) && (!best || t > best.t)) best = { t, nom: n }
+        if (!Number.isFinite(t) || !vraiNom(n)) return
+        if (!best || (sens === 'low' ? t < best.t : t > best.t)) best = { t, nom: n }
       })
     })
-    if (best && e.n >= 3) records.push({ id, ...best })
+    if (best && e.n >= 3) records.push({ id, sens, ...best })
   })
   records.sort((a, b) => b.t - a.t || String(a.id).localeCompare(String(b.id)))
   records.slice(0, 3).forEach((r, i) =>
-    add(`record-${i}`, `Record à ${gname(r.id)} : ${nb(r.t)}${NBSP}points, par ${r.nom}.`)
+    add(`record-${i}`, r.sens === 'low'
+      ? `Record à ${gname(r.id)} : ${nb(r.t)}${NBSP}points, par ${r.nom} — le plus petit score gagne.`
+      : `Record à ${gname(r.id)} : ${nb(r.t)}${NBSP}points, par ${r.nom}.`)
   )
+
+  // ── Le record qui TIENT ────────────────────────────────────────────────────────────────
+  // Elle compte des PARTIES, pas des jours : elle est donc immunisée contre `played_at`,
+  // qui est l'heure de saisie. Et elle se tait si le record vient de tomber.
+  let tenu = null
+  parJeu.forEach((e, id) => {
+    const sens = sensDe(id)
+    if (sens === 'none') return
+    const chrono = partiesScorables(e)
+      .map((p) => {
+        const t = (p.players || [])
+          .filter((x) => vraiNom((x?.name || '').trim()))
+          .map((x) => Number(x?.total))
+          .filter(Number.isFinite)
+        return t.length ? { p, v: sens === 'low' ? Math.min(...t) : Math.max(...t) } : null
+      })
+      .filter(Boolean)
+      .sort((a, b) => new Date(a.p.played_at) - new Date(b.p.played_at))
+    if (chrono.length < 6) return
+    const meilleur = sens === 'low'
+      ? Math.min(...chrono.map((x) => x.v))
+      : Math.max(...chrono.map((x) => x.v))
+    const pos = chrono.findIndex((x) => x.v === meilleur)
+    const depuis = chrono.length - 1 - pos
+    if (depuis >= 5 && (!tenu || depuis > tenu.depuis)) tenu = { id, v: meilleur, depuis }
+  })
+  if (tenu) {
+    add('record-tenu', `Le record à ${gname(tenu.id)} (${nb(tenu.v)}${NBSP}points) tient depuis ${pluriel(tenu.depuis, 'partie')}.`)
+  }
+
+  // ── La revanche : combien de défaites avant la première victoire ───────────────────────
+  // ⚠️ hors coopératif : `playWinners` y couronne toute la table, tout le monde aurait
+  // « gagné sa première partie » d'un coup. Elle ne parle d'aucune date : l'ordre de saisie
+  // peut la décaler, jamais la contredire.
+  let revanche = null
+  parJeu.forEach((e, id) => {
+    const chrono = e.plays
+      .filter((p) => !estCoop(p) && playWinners(p).length > 0)
+      .sort((a, b) => new Date(a.played_at) - new Date(b.played_at))
+    const defaites = new Map()
+    const gagne = new Set()
+    chrono.forEach((p) => {
+      const gagnants = new Set(playWinners(p))
+      ;[...new Set((p.players || []).map((x) => (x?.name || '').trim()).filter(vraiNom))].forEach((n) => {
+        if (gagne.has(n)) return
+        if (gagnants.has(n)) {
+          const d = defaites.get(n) || 0
+          if (d >= 3 && (!revanche || d > revanche.d)) revanche = { id, nom: n, d }
+          gagne.add(n)
+        } else {
+          defaites.set(n, (defaites.get(n) || 0) + 1)
+        }
+      })
+    })
+  })
+  if (revanche) {
+    add('revanche', `${revanche.nom} a perdu ${pluriel(revanche.d, 'fois', 'fois')} à ${gname(revanche.id)} avant de gagner sa première partie.`)
+  }
 
   // Écart entre le 1er et le 2e. ⚠️ ni en coopératif (personne à battre) ni en équipes (le
   // score de l'équipe est recopié sur chaque membre → les deux premiers sont coéquipiers).

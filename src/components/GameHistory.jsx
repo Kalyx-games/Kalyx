@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { computePlayStats, computeEntityStats, playWinners } from '../lib/plays'
+import { computePlayStats, computeEntityStats, playWinners, scoreCounts } from '../lib/plays'
 import { effectivePlayersSet } from '../lib/games'
 import SortMenu from './SortMenu'
 import FilterSheet from './FilterSheet'
@@ -93,6 +93,33 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
   const [showFilters, setShowFilters] = useState(false)
   const [showOccasional, setShowOccasional] = useState(false)
   const allList = plays || []
+  // ── Les parties qui portent le MEILLEUR SCORE du jeu ──────────────────────────────────
+  // ⚠️ calculé sur `allList` — TOUTES les parties — et surtout pas sur `filtered` : filtrer
+  // par joueur ou par période ferait apparaître un faux record, sans le dire.
+  // Rien n'est stocké en base : le filet marque OÙ EST le record, pas l'instant où il est tombé.
+  const idsRecord = useMemo(() => {
+    if (noPoints) return null // rien à comparer
+    const valeurDe = (p) => {
+      // Les mêmes exclusions que partout : coop (le score est celui du groupe), équipes (il
+      // est recopié sur chaque membre), victoire directe (scores incomplets), solo, et les
+      // noms qui contiennent un chiffre (ce sont des codes tapés de travers, pas des gens).
+      if (p.outcome || (p.players || []).some((x) => x && x.team) || !scoreCounts(p)) return null
+      if ((p.players || []).length < 2) return null
+      const t = (p.players || [])
+        .filter((x) => { const n = (x?.name || '').trim(); return n && !/\d/.test(n) })
+        .map((x) => Number(x?.total))
+        .filter(Number.isFinite)
+      if (!t.length) return null
+      return scoring === 'low' ? Math.min(...t) : Math.max(...t)
+    }
+    const avecValeur = allList.map((p) => [p, valeurDe(p)]).filter(([, v]) => v != null)
+    if (avecValeur.length < 2) return null // un seul score n'est pas un record
+    const vals = avecValeur.map(([, v]) => v)
+    const best = scoring === 'low' ? Math.min(...vals) : Math.max(...vals)
+    // Ex æquo : TOUTES les parties qui portent la valeur reçoivent le filet. En taire une
+    // donnerait deux lignes au même score dont une seule marquée, ce qui se remarque.
+    return new Set(avecValeur.filter(([, v]) => v === best).map(([p]) => p.id))
+  }, [allList, scoring, noPoints])
 
   // Nombres de joueurs POSSIBLES pour ce jeu (extensions comprises) — ex. 2, 3, 4.
   // C'est la plage du jeu, pas seulement les configurations déjà jouées.
@@ -711,9 +738,15 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                 // Variante « pour toute la partie » : une seule valeur, affichée en tête de ligne.
                 const rowVariant = playVariantLabel ? playVariantOf(pl) : ''
                 return (
-                  <div key={pl.id} className="hist-row">
+                  <div key={pl.id} className={`hist-row${idsRecord?.has(pl.id) ? ' hist-record' : ''}`}>
                     <div className="hist-row-head">
                       <span className="hist-date">{playDate(pl.played_at)}</span>
+                      {/* Le MOT accompagne le filet exprès : une information ne doit jamais
+                          reposer sur la seule couleur, et un filet à 2,3 de contraste est un
+                          repère, pas un message. */}
+                      {idsRecord?.has(pl.id) && (
+                        <span className="hist-record-mark"><CrownIcon size={12} /> Record</span>
+                      )}
                       {coop && (
                         <span className={`coop-badge ${pl.outcome === 'win' ? 'win' : 'loss'}`}>
                           {pl.outcome === 'win' ? 'Gagné' : 'Perdu'}

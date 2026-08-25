@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { BackIcon, ExtIcon, PencilIcon, DieIcon } from './icons'
+import { BackIcon, ExtIcon, PencilIcon, DieIcon, CrownIcon } from './icons'
 import { BGG_LOGO } from '../lib/logos'
 import { vibre } from '../lib/haptique'
 import SnapshotPane from './SnapshotPane'
@@ -26,7 +26,7 @@ const complexityWord = (n) => (n == null ? '' : n < 2 ? 'Simple' : n < 3 ? 'Moye
 // l'image. TOUTES les actions renvoient vers les écrans existants (rien n'est perdu).
 export default function GameDetail({
   game, online, hasSheet, playCount = 0, lastPlayedLabel,
-  ownerMap, tagMap, siblings = [], onNavigate, closing = false,
+  fait, ownerMap, tagMap, siblings = [], onNavigate, closing = false,
   onClose, onNewPlay, onStats, onHistory, onCreateSheet, onEdit, onBgg,
 }) {
   const basePlayers = basePlayersSet(game)
@@ -329,6 +329,20 @@ export default function GameDetail({
 
       {extensions.length > 0 && (
         <p className="detail-ext"><span className="detail-info-k"><ExtIcon size={13} /></span> {extensions.join(', ')}</p>
+      )}
+
+      {/* Le fait notable de la dernière partie enregistrée sur CE jeu. Encart éditorial, même
+          grammaire que l'anecdote du jour — pas un bouton : ni fond, ni contour, ni ombre.
+          Il ne vit que le temps de la session : une nouvelle qu'on relit une semaine plus tard
+          n'en est plus une.
+          ⚠️ PLACÉ ICI, et pas plus haut : la boîte qui se retourne déborde de son gabarit et
+          porte z-index 2 — un bloc inséré avant la bande d'infos serait tranché en plein tour. */}
+      {fait && (
+        <div className="detail-fait">
+          <span className="detail-fait-label"><CrownIcon size={13} /> Fait notable</span>
+          <p className="detail-fait-titre">{fait.titre}</p>
+          {fait.sous && <p className="detail-fait-sous">{fait.sous}</p>}
+        </div>
       )}
 
       {/* La donnée vivante du jeu, traitée comme telle : le nombre en grand, et toute la
