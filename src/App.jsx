@@ -11,7 +11,7 @@ import { EMPTY_FILTERS, PRICE_MIN, PRICE_MAX, norm, passesFilters } from './lib/
 import { messageUtilisateur } from './lib/messages'
 import { faitNotable } from './lib/faits'
 import { lettreDe, useLettreDefilement } from './lib/lettre'
-import GrandeLettre from './components/GrandeLettre'
+import Ascenseur from './components/Ascenseur'
 import { useExitLayer } from './lib/useExitLayer'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
 import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, computeAnecdoteList, emptyRanking, dedupeByName, repIdMap, remapRanking } from './lib/tierlists'
@@ -673,7 +673,9 @@ export default function App() {
   // Sous 30 cartes on voit la liste entière en deux gestes — un repère n'apprend rien (ce
   // garde couvre aussi la wishlist, qui en compte neuf).
   const lettreRef = useRef(null)
-  const lettresActives = sort === 'name' && !grille && !statsOpen && !settingsOpen && visible.length >= 30
+  // La grille y a droit aussi (retour user) : l'observateur suit des NŒUDS, et les tuiles
+  // sont les enfants de la liste au même titre que les cartes.
+  const lettresActives = sort === 'name' && !statsOpen && !settingsOpen && visible.length >= 30
   const ancresLettres = useMemo(() => {
     if (!lettresActives) return null
     const m = new Map()
@@ -1402,7 +1404,7 @@ export default function App() {
         <p className="banner">Hors ligne : lecture seule. Reconnectez-vous pour ajouter ou modifier.</p>
       )}
       {error && <p className="banner banner-err">{error}</p>}
-      {ancresLettres && <GrandeLettre ref={lettreRef} />}
+      {ancresLettres && <Ascenseur ref={lettreRef} />}
 
       {toast && (
         <div className={`toast${toast.fait ? ' toast-fait' : ''}`} role="status" onClick={() => setToast(null)}>

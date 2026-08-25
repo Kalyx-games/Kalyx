@@ -4668,7 +4668,9 @@ input[type='number'] {
   gap: 4px;
   padding: 4px;
 }
-.tl-slots.tl-over { background: var(--accent-soft); outline: 2px dashed var(--accent); outline-offset: -3px; border-radius: 6px; }
+/* La ligne visée par le glissé : un simple voile — la FENTE porte l'information de position,
+   la ligne n'a plus besoin de crier (les pointillés « faisaient brouillon », retour user). */
+.tl-slots.tl-over { background: var(--accent-soft); border-radius: 6px; }
 
 /* Bac des jeux à classer / zone « Non classés ». */
 .tl-tray-wrap { flex-shrink: 0; border-top: 1px solid var(--border); padding-top: 6px; }
@@ -4761,9 +4763,15 @@ input[type='number'] {
   height: 48px;
   flex-shrink: 0;
   border-radius: 5px; /* le rayon de l'ART, celui de .tl-chip — surtout pas --r-ctl */
-  background: var(--accent-soft);
-  box-shadow: inset 0 0 0 2px var(--gold-ink);
+  /* La teinte, c'est la COULEUR DOMINANTE de la jaquette qu'on tient (posée en variable au
+     moment de la prise ; repli : l'encre, quand le canvas ne peut pas lire l'image). La case
+     annonce ainsi QUEL jeu va s'y poser, pas seulement qu'une place s'ouvre. */
+  background: color-mix(in srgb, var(--fente-c, var(--ink)) 16%, var(--card));
+  box-shadow: inset 0 0 0 2px var(--fente-c, var(--ink));
 }
+/* La vignette en cours de glissé : elle quitte la MISE EN PAGE, jamais le DOM (sinon le
+   geste tactile se fige — les touchmove sont livrés à l'élément du touchstart). */
+.tl-chip.tl-prise { display: none; }
 /* Le clone qui vole vers la fente : sa transition est écrite EN LIGNE au moment du lâcher
    (elle porte des valeurs calculées). Ici on ne fait que la neutraliser. */
 @media (prefers-reduced-motion: reduce) {
@@ -5181,42 +5189,67 @@ input[type='number'] {
   animation: kx-toast-in 0.22s ease;
 }
 
-/* ══ La grande lettre du défilement ══
-   Un repère de position dans cent cartes, qui ne vit que pendant la traversée.
-   ⚠️ PAS un cercle : dans cette app les cercles sont des boutons (les FAB). Ceci ne se tape pas.
-   ⚠️ AUCUN `transform` autre que le centrage, et surtout pas de `scale` : un glyphe de 36 px
-   est du texte, et une animation qui se termine sur du texte ne doit pas laisser de transform
-   (elle promeut le nœud sur sa propre couche, le texte y est rasterisé autrement, et le retour
-   se voit comme un saut — piège mesuré et documenté). */
-.kx-lettre {
+/* ══ L’ascenseur du défilement ══
+   Une poignée sur le bord droit, la lettre du groupe qu'on traverse dedans, saisissable
+   au pouce pour sauter n'importe où — le patron des Contacts d'Android. Il n'existe que
+   pendant le défilement.
+   ⚠️ AUCUN transform animé : la poignée est positionnée par `top`, écrit directement.
+   Le seul transform est le centrage statique de la bulle. */
+.kx-asc {
   position: fixed;
-  left: 50%;
-  top: 34vh;
-  transform: translateX(-50%);
-  z-index: 40; /* au-dessus des boutons flottants (20) et du bac (30), sous les feuilles (1000) */
-  width: 64px;
-  height: 64px;
+  top: 110px;
+  bottom: calc(150px + env(safe-area-inset-bottom));
+  right: 0;
+  width: 40px; /* la zone de saisie du pouce — plus large que la poignée visible */
+  z-index: 40; /* au-dessus des boutons flottants (20) et du bac (30), sous les feuilles */
+  opacity: 0;
+  pointer-events: none; /* invisible = insaisissable : le glissé des cartes garde le bord */
+  transition: opacity 0.2s ease;
+  touch-action: none; /* le rail pilote la liste ; le défilement natif se tairait mal */
+}
+.kx-asc.on {
+  opacity: 1;
+  pointer-events: auto;
+}
+.kx-asc-poignee {
+  position: absolute;
+  top: 0;
+  right: 5px;
+  width: 32px;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--r-card);
   background: var(--card);
   box-shadow: var(--elev-2);
-  font-size: var(--fs-display);
+  font-size: var(--fs-body-l);
   font-weight: 700;
   color: var(--ink);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.26s ease;
 }
-.kx-lettre.on {
-  opacity: 1;
-  transition: opacity 0.14s ease;
+/* La bulle pendant la saisie : la même lettre, en grand, à GAUCHE du pouce (qui masque
+   la poignée). Enfant de la poignée → elle la suit sans une ligne de JS. */
+.kx-asc-bulle {
+  position: absolute;
+  right: 44px;
+  top: 50%;
+  transform: translateY(-50%); /* centrage statique, pas une animation */
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-card);
+  background: var(--card);
+  box-shadow: var(--elev-2);
+  font-size: var(--fs-title);
+  font-weight: 700;
+  color: var(--ink);
 }
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  /* ⚠️ `@supports` n'ajoute AUCUNE spécificité : le sélecteur est qualifié pour battre la
-     règle de base, déclarée plus haut à égalité. */
-  div.kx-lettre {
+  /* ⚠️ @supports n'ajoute AUCUNE spécificité : sélecteurs qualifiés pour battre la base. */
+  div.kx-asc-poignee,
+  .kx-asc-poignee .kx-asc-bulle {
     background: var(--verre);
     backdrop-filter: blur(18px) saturate(180%);
     -webkit-backdrop-filter: blur(18px) saturate(180%);
@@ -5224,7 +5257,7 @@ input[type='number'] {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .kx-lettre, .kx-lettre.on { transition: none; }
+  .kx-asc { transition: none; }
 }
 .toast-ico { color: var(--ok-ink); }
 /* Le toast porte un FAIT NOTABLE : deux niveaux — la nouvelle, puis l'accusé de réception,

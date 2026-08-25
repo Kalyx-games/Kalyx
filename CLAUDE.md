@@ -269,6 +269,36 @@ Recette actuelle d'Apple, pas le verre dépoli de 2020 : voile translucide + `bl
 
 **RÈGLE** : le verre ne se pose que sur une surface qui FLOTTE au-dessus d'un contenu qui défile, et jamais sans avoir mesuré le contraste de ce qu'elle porte, dans les deux thèmes, avec la jaquette la plus contrariante derrière.
 
+## ✅ L'ASCENSEUR REMPLACE LE PANNEAU + LA FENTE DÉBOGUÉE ET TEINTÉE (2026-08-25, 3 retours user)
+
+### 1. ⚠️⚠️ LE BUG DE LA FENTE EN PROD — un piège tactile à CONNAÎTRE
+
+**Retour user** : « quand je saisis un jeu il reste à sa place, sans possibilité de le bouger » (capture à l'appui : clone figé, fente figée).
+
+**LA CAUSE** : ma fente retirait la vignette saisie du flux par un `filter()` React — donc la DÉMONTAIT du DOM. Or **les événements tactiles sont livrés à l'élément du `touchstart` pendant TOUTE la vie du doigt** : un nœud détaché ne fait plus remonter les `touchmove`/`touchend` jusqu'à l'écouteur posé sur le conteneur → le glissé se FIGE net (clone immobile, fente immobile, lâcher jamais vu).
+  - ⚠️ **INVISIBLE AUX TESTS SYNTHÉTIQUES qui dispatchent sur le conteneur** — c'est comme ça qu'il m'a échappé. **RÈGLE DE TEST : un geste tactile synthétique se dispatche sur LA CIBLE du touchstart (la vignette), jamais sur le conteneur.** Vérifié ensuite par ce chemin : prise → fente → dépôt → remise, tout aboutit.
+  - **Fix** : `Chip` prend une prop `cachee` (`.tl-prise { display: none }`) — la vignette quitte la MISE EN PAGE, jamais le DOM. Le comparateur du memo inclut `cachee`. L'index de la fente compte les vignettes visibles ; la prise est rendue quand même.
+  - **2e défaut trouvé en mesurant** : l'auto-défilement s'armait DÈS LA PRISE — saisir une vignette près du bord faisait dériver la liste de 84 px sous un doigt immobile. Il ne s'arme plus qu'après un vrai déplacement (`drag.aBouge`, seuil 24 px).
+
+### 2. La fente prend la COULEUR DOMINANTE de la jaquette saisie (demande user)
+
+Le contour `--gold-ink` (« marron ») et les pointillés de `.tl-over` ne plaisaient pas.
+  - **`.tl-over` perd son `outline: 2px dashed`** : la fente porte l'information de position, la ligne n'a plus qu'un voile `--accent-soft`.
+  - **`couleurDominante(img)`** au moment de la prise : canvas 10×10, moyenne pondérée vers les tons saturés ni noirs ni blancs, posée en `--fente-c` sur la racine. La fente : `box-shadow: inset 2px var(--fente-c, var(--ink))` + fond `color-mix(… 16 %, var(--card))` — la case annonce QUEL jeu va s'y poser.
+  - ⚠️ **En PROD ça marche parce que les vignettes passent par `/_vercel/image` (MÊME origine → canvas propre).** En DEV le repli sert l'image geekdo brute SANS CORS → canvas « tainted », `getImageData` JETTE → le try/catch retombe sur l'encre. C'est le piège « Canvas client IMPOSSIBLE » déjà documenté — ici il ne coûte qu'un repli.
+
+### 3. L'ASCENSEUR remplace le panneau central (retour user : « je m'attendais à un ascenseur avec grande lettre intégrée, saisissable au pouce »)
+
+`GrandeLettre.jsx` est SUPPRIMÉ ; `src/components/Ascenseur.jsx` le remplace : une poignée de 32×46 en verre sur le bord droit, la lettre du groupe dedans, **saisissable au pouce** pour sauter n'importe où (le patron des Contacts d'Android — oui, ça se fait toujours). Pendant la saisie, une bulle de 56×56 répète la lettre à GAUCHE du pouce (qui masque la poignée). Il disparaît 1,2 s après le dernier geste.
+  - **Toujours zéro coût** : la position de la poignée = `scrollY / (scrollHeight − innerHeight)`, deux scalaires, écrite DIRECTEMENT en style (aucun setState par frame — un `setVue(true)` déjà vrai est ignoré par React). La saisie fait l'inverse : la fraction du doigt devient un `scrollTo`. **La lettre continue de venir de l'IntersectionObserver** → elle reste juste même si les cartes n'ont pas la même hauteur. `App` ne rend toujours JAMAIS pendant le défilement.
+  - **La GRILLE y a droit** (demande user) : le garde `!grille` est retiré — l'observateur suit des NŒUDS, les tuiles sont les enfants de la liste au même titre que les cartes.
+  - La zone de saisie (40 px) n'est interactive QUE visible (`pointer-events: none` sinon) → le glissé horizontal des cartes garde le bord droit au repos. `touch-action: none` sur le rail. La bulle est un ENFANT de la poignée (elle la suit sans une ligne de JS).
+  - Le sommet ne la réveille pas (`scrollY > 48`), le `resize` replace la poignée.
+  - **Mesuré** : poignée à 253/506 px à mi-liste, 506/506 en bas ; saisie au milieu → scrollY 6000, en bas → 11348, en haut → 0 ; disparue à 1,2 s ; montée en grille (préférence intacte au retour).
+  - ⚠️ **Deux limites de banc d'essai** (page cachée) : les événements `scroll` réels ne sont PAS émis (les émettre à la main : `window.dispatchEvent(new Event('scroll'))`) et `requestAnimationFrame`/`IntersectionObserver` ne tournent pas (shims `setTimeout` / pilotage manuel de la callback).
+
+**Le document de travail** : la roulette supprimée sans trace (« non » de l'user), la section « Écartées » supprimée ENTIÈREMENT (demande explicite), les cartes livrées retirées. Ne restent que les trois idées expliquées en « aujourd'hui / proposé » : le glissé jusqu'au bout, le face-à-face, le glissé qui suit le doigt.
+
 ## ✅ LA FENTE DES TIERLISTS + LA GRANDE LETTRE DU DÉFILEMENT (2026-08-25, choix user)
 
 L'user a trié le document de travail : « la fente » et « la grande lettre » mises en chantier, la roulette de l'étagère supprimée du document sans trace, et trois idées réécrites en clair (il ne les comprenait pas : le glissé jusqu'au bout, le face-à-face, le glissé qui suit le doigt).

@@ -12,11 +12,16 @@ const thumbSrc = (url, w = 128) => `/_vercel/image?url=${encodeURIComponent(url)
 
 // Une vignette de jeu (image seule). Tap = infobulle avec le nom (géré par le parent via
 // data-game). En cas d'image cassée : repli sur l'image brute, puis sur le dé 🎲.
-const Chip = memo(function Chip({ game }) {
+const Chip = memo(function Chip({ game, cachee = false }) {
   const [broken, setBroken] = useState(false)
   const url = game.image_url
   return (
-    <div className="tl-chip" data-game={game.id} data-name={game.name}>
+    // ⚠️ `cachee` = la vignette en cours de glissé : display:none, PAS un démontage. Les
+    // événements tactiles sont livrés à l'élément du touchstart pendant TOUTE la vie du
+    // doigt — un nœud retiré du DOM ne fait plus remonter les touchmove/touchend jusqu'à
+    // l'écouteur, et le glissé se FIGE (vécu en prod : clone immobile, fente immobile,
+    // lâcher jamais vu ; invisible aux tests synthétiques qui dispatchent sur le conteneur).
+    <div className={`tl-chip${cachee ? ' tl-prise' : ''}`} data-game={game.id} data-name={game.name}>
       {url && !broken ? (
         <img
           src={thumbSrc(url)}
@@ -33,7 +38,7 @@ const Chip = memo(function Chip({ game }) {
       )}
     </div>
   )
-}, (a, b) => a.game === b.game)
+}, (a, b) => a.game === b.game && a.cachee === b.cachee)
 // ⚠️ Mémoïsée : la fente se déplace 10 à 25 fois par glissé, et sans ce comparateur chaque
 // déplacement re-rendrait les 133 vignettes de l'écran. Le `broken` interne reste privé à
 // chaque instance — rien ne casse.
@@ -260,7 +265,10 @@ export default function TierlistView({
       if (sale) { reconstruireBandes(); sale = false }
       // Auto-défilement aux bords : sans lui, on ne peut pas amener une vignette du bac vers
       // la ligne S quand S est sorti de l'écran — c'est aujourd'hui simplement impossible.
-      const rows = root.querySelector('.tl-rows')
+      // ⚠️ SEULEMENT une fois que le doigt a réellement bougé : saisir une vignette près du
+      // bord déclenchait sinon le défilement dès la prise, et la liste dérivait toute seule
+      // sous un doigt immobile (mesuré : 84 px pendant les 280 premières millisecondes).
+      const rows = drag?.aBouge ? root.querySelector('.tl-rows') : null
       if (rows) {
         const r = rows.getBoundingClientRect()
         let d = 0
@@ -283,12 +291,43 @@ export default function TierlistView({
       moveClone(dernier.x, dernier.y)
     }
 
+    // La couleur dominante de la jaquette saisie : elle teinte la fente (retour user — le
+    // contour or « marron » ne plaisait pas). Moyenne des pixels sur un canvas de 10×10,
+    // pondérée vers les tons saturés ni noirs ni blancs.
+    // ⚠️ En prod les vignettes passent par /_vercel/image (MÊME origine) → le canvas est
+    // propre. En dev, le repli sert l'image geekdo brute SANS CORS → canvas « tainted »,
+    // getImageData JETTE → le try/catch retombe sur l'encre. C'est le piège déjà documenté
+    // (« Canvas client IMPOSSIBLE » pour l'import d'images) — ici il ne coûte qu'un repli.
+    const couleurDominante = (img) => {
+      try {
+        const cv = document.createElement('canvas')
+        cv.width = cv.height = 10
+        const ctx = cv.getContext('2d', { willReadFrequently: true })
+        ctx.drawImage(img, 0, 0, 10, 10)
+        const d = ctx.getImageData(0, 0, 10, 10).data
+        let R = 0, G = 0, B = 0, W = 0
+        for (let i = 0; i < d.length; i += 4) {
+          const r = d[i], g = d[i + 1], b = d[i + 2]
+          const mx = Math.max(r, g, b), mn = Math.min(r, g, b)
+          const lum = (mx + mn) / 2
+          const w = 1 + ((mx - mn) * 2) / 255 + (lum > 40 && lum < 215 ? 1 : 0)
+          R += r * w; G += g * w; B += b * w; W += w
+        }
+        if (!W) return null
+        return `rgb(${Math.round(R / W)}, ${Math.round(G / W)}, ${Math.round(B / W)})`
+      } catch {
+        return null
+      }
+    }
     const begin = (x, y) => {
       if (!drag) return
       drag.active = true
       vibre('prise') // on saisit un objet
       const src = root.querySelector(`[data-game="${CSS.escape(drag.id)}"]`)
       drag.depart = src ? src.getBoundingClientRect() : null
+      const image = src?.querySelector('img')
+      const teinte = image && image.complete && image.naturalWidth > 0 ? couleurDominante(image) : null
+      root.style.setProperty('--fente-c', teinte || 'var(--ink)')
       const clone = document.createElement('div')
       clone.className = 'tl-drag'
       const img = src?.querySelector('img')
@@ -314,7 +353,7 @@ export default function TierlistView({
       if (!chip) return
       const isTouch = e.type === 'touchstart'
       const { x, y } = point(e)
-      drag = { id: chip.dataset.game, active: false, clone: null, startX: x, startY: y, hold: null, isTouch, depart: null }
+      drag = { id: chip.dataset.game, active: false, clone: null, startX: x, startY: y, hold: null, isTouch, depart: null, aBouge: false }
       if (isTouch) {
         // Appui maintenu ~160 ms → on saisit (sinon un swipe = défilement).
         drag.hold = setTimeout(() => begin(x, y), 160)
@@ -337,6 +376,7 @@ export default function TierlistView({
       }
       e.preventDefault() // empêche le défilement pendant le glissé
       // Un touchmove ne fait QUE ça : tout le reste vit dans la boucle d'animation.
+      if (dist > 24) drag.aBouge = true // arme l'auto-défilement des bords
       dernier = { x, y }
     }
     // Le clone VOLE jusqu'à la fente (ou revient à son point de départ si on lâche dans le
@@ -535,17 +575,25 @@ export default function TierlistView({
                 {!editing && <span className={`tl-sort-ind ${az ? 'on' : ''}`}>A↓Z</span>}
               </div>
               <div className={`tl-slots${fente && fente.tier === t.key ? ' tl-over' : ''}`}>
-                {shown
-                  .filter((g) => g.id !== prise)
-                  .map((g, i) => (
-                    <Fragment key={g.id}>
-                      {fente && fente.tier === t.key && fente.index === i && <div className="tl-fente" aria-hidden="true" />}
-                      <Chip game={g} />
-                    </Fragment>
-                  ))}
-                {fente && fente.tier === t.key && fente.index >= shown.filter((g) => g.id !== prise).length && (
-                  <div className="tl-fente" aria-hidden="true" />
-                )}
+                {(() => {
+                  // L'index de la fente compte les vignettes VISIBLES ; la prise, elle, reste
+                  // rendue (display:none) pour que le geste tactile ne se fige pas.
+                  let vis = 0
+                  const enFente = fente && fente.tier === t.key
+                  const rendu = shown.map((g) => {
+                    const cachee = g.id === prise
+                    const avant = enFente && !cachee && fente.index === vis
+                    if (!cachee) vis++
+                    return (
+                      <Fragment key={g.id}>
+                        {avant && <div className="tl-fente" aria-hidden="true" />}
+                        <Chip game={g} cachee={cachee} />
+                      </Fragment>
+                    )
+                  })
+                  if (enFente && fente.index >= vis) rendu.push(<div key="fin" className="tl-fente" aria-hidden="true" />)
+                  return rendu
+                })()}
               </div>
             </div>
           )
@@ -577,7 +625,7 @@ export default function TierlistView({
         <div className="tl-tray-wrap">
           <div className={`tl-tray${fente && fente.tray ? ' tl-over' : ''}`} data-tray>
             {tray.length ? (
-              tray.map((g) => <Chip key={g.id} game={g} />)
+              tray.map((g) => <Chip key={g.id} game={g} cachee={g.id === prise} />)
             ) : (
               <p className="muted" style={{ padding: 12 }}>Tous les jeux sont classés 🎉</p>
             )}
