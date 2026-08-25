@@ -276,6 +276,19 @@ export default function GameDetail({
           {/* Le dos. Rendu même sans jaquette : sinon un jeu sans image n'aurait plus AUCUN
               accès à Modifier ni à BGG. */}
           <div className="hero-back" aria-hidden={!heroActions}>
+            {/* Le fond du dos, c'est la jaquette elle-même, floutée : le dos d'une boîte
+                appartient au même monde de couleurs que sa face. MÊME URL que le fond
+                d'ambiance de la page (128 px), donc déjà en cache : zéro requête de plus. */}
+            {showImg && (
+              <span className="hero-back-fond" aria-hidden="true">
+                <img
+                  src={backdropSrc(fullImg)}
+                  alt=""
+                  // Repli sur l'image brute si l'optimiseur ne répond pas (comme le fond d'ambiance).
+                  onError={(e) => { if (e.currentTarget.src !== fullImg) e.currentTarget.src = fullImg }}
+                />
+              </span>
+            )}
             {/* Toute la plaque hors boutons ramène au recto : le geste de retour est le geste
                 d'aller. Pas de croix, pas de phrase. */}
             <button
@@ -286,11 +299,11 @@ export default function GameDetail({
               aria-label="Revenir à la jaquette"
             />
             <div className="hero-back-acts">
-              <button type="button" className="btn-ghost hero-back-btn" onClick={actionDuDos(onEdit)} disabled={!online} tabIndex={heroActions ? 0 : -1}>
+              <button type="button" className="hero-act-tile hero-act-edit" onClick={actionDuDos(onEdit)} disabled={!online} tabIndex={heroActions ? 0 : -1}>
                 <PencilIcon size={18} /> Modifier
               </button>
               {onBgg && (
-                <button type="button" className="btn-ghost hero-back-btn" onClick={actionDuDos(onBgg)} tabIndex={heroActions ? 0 : -1}>
+                <button type="button" className="hero-act-tile hero-act-bgg" onClick={actionDuDos(onBgg)} tabIndex={heroActions ? 0 : -1}>
                   <img className="bgg-mark" src={BGG_LOGO} alt="" width="18" height="18" /> BGG
                 </button>
               )}

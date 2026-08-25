@@ -124,6 +124,13 @@
      du blanc donne un contraste de 1,01 — la pastille disparaît. Mesuré. Ce qui la fait lire
      comme du verre, c'est son ARÊTE et son ombre, pas la couleur du voile. */
   --verre-pastille: rgba(28, 28, 33, 0.1);
+  /* ⚠️ Ces deux jetons sont VOLONTAIREMENT identiques dans les deux thèmes, et ils sont donc
+     déclarés dans `:root` SEULEMENT : le dos de la boîte est un OBJET qu'on retourne, pas une
+     surface de l'app. Comme les tuiles du menu de glissement, il porte ses propres couleurs et
+     du texte blanc — c'est ce qui le laisse lisible sur n'importe quelle jaquette, et ce qui le
+     détache du fond d'ambiance de la page, qui est la MÊME image floutée. */
+  --dos-fond: #14161b; /* le dos d'un jeu sans jaquette */
+  --dos-voile: rgba(12, 14, 18, 0.52); /* la jaquette, assombrie, derrière les actions */ /* le dos de la boîte : la jaquette ramenée vers la surface du thème */
   --verre-arete: rgba(255, 255, 255, 0.75);
   --verre-ombre: 0 -1px 24px rgba(0, 0, 0, 0.07);
   --app-w: 640px; /* largeur max de l'app (élargie en grille sur tablette/desktop) */
@@ -3109,7 +3116,7 @@ button {
 .cc-btn:active, .tl-global-btn:active, .tl-create-btn:active, .tl-edit-btn:active,
 .tl-del-btn:active, .tl-done-btn:active, .tl-label-btn:active,
 .owner-edit:active, .owner-del:active,
-.filters-reset-top:active, .filters-see:active {
+.filters-reset-top:active, .filters-see:active, .hero-act-tile:active {
   transform: scale(0.96);
 }
 /* 3) Surfaces cliquables NON-<button> ou pleine largeur (liens réglages, lignes de stats/tierlist,
@@ -3128,7 +3135,7 @@ button {
   .cc-btn:active, .tl-global-btn:active, .tl-create-btn:active, .tl-edit-btn:active,
   .tl-del-btn:active, .tl-done-btn:active, .tl-label-btn:active,
   .owner-edit:active, .owner-del:active, .sheet-del:active,
-  .filters-reset-top:active, .filters-see:active,
+  .filters-reset-top:active, .filters-see:active, .hero-act-tile:active,
   .link-row:active, .bar-row-btn:active, .tl-list-item:active, .active-chip:active { transform: none; }
 }
 
@@ -3347,11 +3354,64 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* --sp-2 et pas --sp-3 : sur la jaquette la plus étroite de la collection (Tarot, 124 px
+     rendus) chaque tuile tombe à 100 px, et « Modifier » en demande 95 — mesuré. */
   padding: var(--sp-2);
-  background: var(--card);
+  background: var(--dos-fond);
   border-radius: 5px;
-  box-shadow: var(--card-shadow);
+  overflow: hidden; /* le fond flouté suit la découpe de la boîte */
+  /* l'élévation la plus haute : le dos doit se détacher du fond d'ambiance de la page, qui
+     est la même jaquette floutée — sans quoi on ne voit plus où finit l'objet. */
+  box-shadow: var(--elev-3);
 }
+/* Le fond : la jaquette, floutée et ramenée vers la surface du thème (voile clair en clair,
+   sombre en sombre) → le dos porte les couleurs DU JEU sans jamais devenir imprévisible. */
+.hero-back-fond {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.hero-back-fond img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* le flou mange les bords : on agrandit pour qu'aucun liseré transparent n'apparaisse */
+  transform: scale(1.45);
+  filter: blur(14px) saturate(2.1);
+}
+.hero-back-fond::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--dos-voile);
+}
+/* Les deux actions, en TUILES pleines : même grammaire que le menu de glissement des cartes,
+   qui est déjà l'endroit où l'app cache des actions derrière un objet.
+   ⚠️ Couleurs FIXES et texte blanc, comme là-bas : elles sont posées sur un fond imprévisible
+   (une jaquette), elles ne peuvent donc pas suivre le thème de la page. */
+.hero-act-tile {
+  pointer-events: auto;
+  flex: 1 1 116px;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: 56px;
+  padding: 0 var(--sp-1);
+  border: 0;
+  border-radius: var(--r-ctl);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  white-space: nowrap;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: var(--elev-1);
+}
+.hero-act-tile:disabled { opacity: 0.5; cursor: not-allowed; }
+.hero-act-edit { background: #3e6c8e; } /* ardoise : la couleur d'« Éditer » au glissement */
+.hero-act-bgg { background: #6b5a8e; } /* prune : assez loin de l'ardoise pour se distinguer */
+
 .hero-back-return {
   position: absolute;
   inset: 0;
@@ -3376,23 +3436,12 @@ button {
 /* `flex: 1 1 116px` : les deux boutons se posent côte à côte quand la boîte est large, et
    s'empilent tout seuls sur une jaquette portrait — la plus étroite de la collection fait
    124 px rendus (Tarot). */
-.hero-back-btn {
-  pointer-events: auto;
-  flex: 1 1 116px;
-  min-width: 0;
-  height: 44px;
-  /* --sp-1 et pas --sp-2 : sur la jaquette la plus étroite de la collection (Tarot, 124 px
-     rendus) le bouton ne fait que 108 px, et « Modifier » en demande 87 — mesuré. */
-  padding: 0 var(--sp-1);
-  font-size: var(--fs-body);
-  white-space: nowrap;
-}
 .hero-back-offline {
   flex: 1 0 100%;
   margin: 0;
   text-align: center;
   font-size: var(--fs-caption);
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.72); /* la plaque est sombre dans les deux thèmes */
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-flip { transition: none; }

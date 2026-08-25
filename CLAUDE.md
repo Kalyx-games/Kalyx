@@ -269,6 +269,32 @@ Recette actuelle d'Apple, pas le verre dépoli de 2020 : voile translucide + `bl
 
 **RÈGLE** : le verre ne se pose que sur une surface qui FLOTTE au-dessus d'un contenu qui défile, et jamais sans avoir mesuré le contraste de ce qu'elle porte, dans les deux thèmes, avec la jaquette la plus contrariante derrière.
 
+## ✅ LE DOS DE LA BOÎTE, REFAIT (2026-08-25) — ⚠️ la 1re version était « ABSOLUMENT IMMONDE »
+
+**Retour user, mot pour mot** : « Je trouve le dos de la jaquette absolument immonde. Soit tu fais quelque chose de très marqué en bicolore, un peu comme le menu de swipe, soit tu intègres un fond avec des couleurs similaires à la jaquette du jeu, soit tu trouves une autre solution. »
+
+**Ce qui n'allait pas** : une plaque `--card` NUE avec deux boutons secondaires au milieu. Le raisonnement qui l'avait fait choisir (« le plaisir est dans la rotation, le décor serait un tic ») était juste sur le principe et faux en pratique : à l'endroit où il y avait une illustration, on tombait sur un grand rectangle blanc vide. **Un dos ne doit pas être une absence.**
+
+**Ce qui a été livré — LES DEUX pistes de l'user à la fois** :
+  · **Le fond, c'est la jaquette elle-même**, floutée (`blur(14px) saturate(2.1)`, `scale(1.45)` pour que le flou ne laisse pas de liseré) et assombrie. Le dos d'une boîte appartient au même monde de couleurs que sa face. **MÊME URL que le fond d'ambiance de la page** (`backdropSrc`, 128 px) → déjà en cache, **zéro requête de plus** ; avec le même repli `onError` sur l'image brute.
+  · **Les deux actions en TUILES PLEINES bicolores**, 56 px, texte blanc : ardoise `#3e6c8e` (la couleur d'« Éditer » au glissement) et prune `#6b5a8e`. Même grammaire que le menu de glissement des cartes — qui est déjà, dans cette app, l'endroit où des actions se cachent derrière un objet.
+
+⚠️ **DEUX JETONS VOLONTAIREMENT HORS THÈME**, déclarés dans `:root` SEULEMENT (et pas dans les trois portées) : `--dos-fond: #14161b` (le dos d'un jeu sans jaquette) et `--dos-voile: rgba(12,14,18,.52)`. **Le dos est un OBJET qu'on retourne, pas une surface de page** : comme les tuiles du menu de glissement, il porte ses propres couleurs et du texte blanc. C'est ce qui le rend lisible sur n'importe quelle jaquette — et surtout ce qui le **détache du fond d'ambiance de la page, qui est la MÊME image floutée**. Une première version à voile CLAIR (`rgba(255,255,255,.34)`) se fondait dans ce fond : on ne voyait plus où finissait l'objet.
+  - `box-shadow: var(--elev-3)` pour la même raison (l'élévation la plus haute de l'app).
+  - **Padding `--sp-2` et pas `--sp-3`** : sur la plus étroite de la collection (Tarot, 124 px rendus) chaque tuile tombe à 100 px et « Modifier » en demande 95 — mesuré. À `--sp-2` : 108 px de tuile, **12,8 px de marge**.
+  - La phrase « Hors ligne : lecture seule. » passe en `rgba(255,255,255,.72)` : la plaque est sombre dans les DEUX thèmes.
+  - `.hero-back` gagne un `overflow: hidden` (le fond flouté doit suivre la découpe). **Sans danger pour la 3D** : la règle d'aplatissement ne vaut que pour un élément qui porte `preserve-3d`, et le `preserve-3d` vit sur `.hero-flip`, pas sur les faces.
+  - `.hero-back-btn` (l'ancienne recette `.btn-ghost`) est **supprimée** ; `.hero-act-tile:active` rejoint la liste groupée des enfoncements, qui précède sa neutralisation reduced-motion.
+
+**Mesuré** : blanc sur ardoise **5,61**, blanc sur prune **6,04** ; testé sur la jaquette la plus CLAIRE de la collection (Cozy Stickerville) et sur une très sombre (Abyss), en clair et en sombre ; Tarot (124 px) et un jeu sans jaquette (240×150, plaque d'encre pleine) tiennent tous les deux.
+  - ⚠️ **Les deux tons ne se distinguent que par la TEINTE** (ardoise/prune : 1,08 de rapport de luminance). C'est assumé — deux aplats voisins de teintes franches se lisent, et monter le contraste de luminance obligerait à sortir des six tons sourds des bulles. À revoir si l'user trouve que ça ne « claque » pas assez.
+
+## ✅ LE BAC REMONTE EN HAUT, STATS COMPRISE (2026-08-25, retour user)
+
+« Quand on clique sur la tap bar il faut que ça remonte en haut de la page. Ce n'est pas le cas pour les stats. » Vrai, et la cause était nette : dans `onChange` du `<NavBar>`, **la branche `v === 'stats'` sortait AVANT le `window.scrollTo`** — Stats n'y avait donc jamais eu droit, ni en y arrivant ni en retapant l'onglet.
+
+Un seul `window.scrollTo` est désormais posé **en tête du gestionnaire**, pour toutes les branches : `behavior: 'smooth'` quand on est déjà sur l'écran (c'est le geste « retour en haut »), `'auto'` quand on en change (le contenu est remplacé, une glissade n'aurait rien à suivre). Vérifié : Stats à 900 px de défilement → tap sur Stats → 0.
+
 ## ✅ LA BOÎTE DU JEU SE RETOURNE + L'INDICE DE LA TUILE (2026-08-25, demande user)
 
 **Retour user** : « Le mieux serait que le jeu se retourne avec derrière les deux boutons modifier et BGG » et « il faudrait un petit indice sur le bouton meilleur score des stats qui indique subtilement qu'on peut cliquer sur la tuile pour la retourner ».

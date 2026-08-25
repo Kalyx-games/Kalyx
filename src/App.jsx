@@ -1793,7 +1793,12 @@ export default function App() {
       <NavBar
         view={statsOpen ? 'stats' : settingsOpen ? null : view}
         onChange={(v) => {
-          const overlayOpen = statsOpen || settingsOpen
+          // Un tap sur le bac remonte TOUJOURS en haut de la page — y compris sur Stats, qui
+          // n'y avait jamais eu droit (sa branche sortait avant le scroll). En douceur quand
+          // on est déjà sur l'écran (c'est le geste « retour en haut »), sec quand on en
+          // change (le contenu est remplacé, une glissade n'aurait rien à suivre).
+          const dejaLa = v === 'stats' ? statsOpen : !statsOpen && !settingsOpen && v === view
+          window.scrollTo({ top: 0, behavior: dejaLa ? 'smooth' : 'auto' })
           if (v === 'stats') {
             setStatsOpen(true)
             setSettingsOpen(false)
@@ -1801,11 +1806,7 @@ export default function App() {
           }
           setSettingsOpen(false)
           setStatsOpen(false)
-          if (v === view) {
-            // On est déjà sur cet onglet : on remonte en haut de la liste.
-            if (!overlayOpen) window.scrollTo({ top: 0, behavior: 'smooth' })
-            return
-          }
+          if (v === view) return
           goToView(v)
         }}
       />
