@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, memo, useEffect, useMemo, useRef, useState } from 'react'
 import { vibre } from '../lib/haptique'
 import { TIERS } from '../lib/tierlists'
 import { passesFilters } from '../lib/filtering'
@@ -12,7 +12,7 @@ const thumbSrc = (url, w = 128) => `/_vercel/image?url=${encodeURIComponent(url)
 
 // Une vignette de jeu (image seule). Tap = infobulle avec le nom (géré par le parent via
 // data-game). En cas d'image cassée : repli sur l'image brute, puis sur le dé 🎲.
-function Chip({ game }) {
+const Chip = memo(function Chip({ game }) {
   const [broken, setBroken] = useState(false)
   const url = game.image_url
   return (
@@ -33,7 +33,10 @@ function Chip({ game }) {
       )}
     </div>
   )
-}
+}, (a, b) => a.game === b.game)
+// ⚠️ Mémoïsée : la fente se déplace 10 à 25 fois par glissé, et sans ce comparateur chaque
+// déplacement re-rendrait les 133 vignettes de l'écran. Le `broken` interne reste privé à
+// chaque instance — rien ne casse.
 
 // Affiche / édite une tierlist. `mode` : 'view' (lecture seule) | 'edit' (glisser-déposer +
 // auto-save) | 'global' (moyenne, lecture seule, avec zone « Non classés »).
@@ -73,6 +76,21 @@ export default function TierlistView({
   const [az, setAz] = useState(false) // tri A→Z de TOUTES les lignes (lecture seule)
   const idRef = useRef(savedId)
   const rootRef = useRef(null)
+  // ── La fente qui s'ouvre sous le doigt ────────────────────────────────────────────────
+  // ⚠️ `prise` et `fente` sont de la VUE PURE. Ils ne doivent JAMAIS entrer dans les
+  // dépendances de l'enregistrement automatique : chaque millimètre de doigt programmerait
+  // sinon une écriture réseau.
+  const [prise, setPrise] = useState(null) // id en cours de glissé : sa vignette quitte le flux
+  const [fente, setFente] = useState(null) // { tier, index } | { tray: true } | null
+  // L'ordre AFFICHÉ de chaque ligne, filtre compris. Le calcul de la cible lit CE miroir,
+  // jamais le DOM : savoir ce qu'il y a dans une ligne est une question de données.
+  const vuesRef = useRef({})
+  // Le bandeau d'édition ne disparaît pas à la sortie : il DEVIENT le bilan, au même endroit,
+  // à la même hauteur — donc sans décaler quoi que ce soit. Il se replie tout seul au bout de
+  // trois secondes, et c'est le seul décalage, animé.
+  const [bilan, setBilan] = useState(null) // { classes, restants } | null
+  const bilanRef = useRef(null)
+  useEffect(() => () => clearTimeout(bilanRef.current), [])
 
   // Jeux déjà placés (dans n'importe quelle ligne).
   const placed = useMemo(() => {
@@ -181,34 +199,109 @@ export default function TierlistView({
       const t = e.touches?.[0] || e.changedTouches?.[0]
       return t ? { x: t.clientX, y: t.clientY } : { x: e.clientX, y: e.clientY }
     }
-    const clearHighlight = () => root.querySelectorAll('.tl-over').forEach((el) => el.classList.remove('tl-over'))
-    const zoneAt = (x, y) => {
-      const el = document.elementFromPoint(x, y)
-      if (!el) return null
-      const tierEl = el.closest('[data-tier]')
-      if (tierEl) return { kind: 'tier', key: tierEl.dataset.tier, el: tierEl }
-      const trayEl = el.closest('[data-tray]')
-      if (trayEl) return { kind: 'tray', el: trayEl }
-      return null
+    // ── LA GÉOMÉTRIE, CALCULÉE ET NON MESURÉE ────────────────────────────────────────
+    // `.tl-slots` est un flex-wrap de boîtes RIGOUREUSEMENT identiques : la position de la
+    // n-ième case est donc une formule. C'est ce qui permet d'ouvrir une fente sans mesurer
+    // les 38 vignettes de la ligne la plus chargée à chaque frame (2 280 lectures/seconde).
+    // ⚠️ CES TROIS NOMBRES SUIVENT LE CSS (.tl-chip 48, .tl-slots gap 4 / padding 4).
+    // Si une vignette devient de largeur variable, tout ce calcul s'effondre.
+    const CHIP = 48
+    const GAP = 4
+    const PAD = 4
+    const HYST = 0.2 // zone morte d'un cinquième de case : sans elle, un doigt posé sur une
+                     // médiane fait clignoter la fente entre deux positions.
+
+    let bandes = []
+    let sale = true
+    const reconstruireBandes = () => {
+      // La SEULE mesure du mécanisme : 7 lignes + le bac = 8 rectangles, relus uniquement
+      // quand la fente a changé (elle peut faire gagner une rangée à une ligne).
+      bandes = []
+      root.querySelectorAll('[data-tier]').forEach((el) => {
+        const slots = el.querySelector('.tl-slots') || el
+        const r = slots.getBoundingClientRect()
+        bandes.push({ tier: el.dataset.tier, top: r.top, left: r.left, w: r.width, h: r.height })
+      })
+      const bac = root.querySelector('[data-tray]')
+      if (bac) {
+        const r = bac.getBoundingClientRect()
+        bandes.push({ tray: true, top: r.top, left: r.left, w: r.width, h: r.height })
+      }
     }
+
+    const cibleRef = { current: null }
+    const cible = (x, y) => {
+      const b = bandes.find((b) => y >= b.top && y < b.top + b.h && x >= b.left && x < b.left + b.w)
+      if (!b) return null
+      // Le bac est trié alphabétiquement : une fente y promettrait une place que le tri
+      // écrase dans la même frame. Il n'a droit qu'au surlignage.
+      if (b.tray) return { tray: true }
+      const W = b.w - 2 * PAD
+      const parLigne = Math.max(1, Math.floor((W + GAP) / (CHIP + GAP)))
+      const fx = (x - b.left - PAD + GAP / 2) / (CHIP + GAP)
+      const fy = (y - b.top - PAD + GAP / 2) / (CHIP + GAP)
+      let col = Math.floor(fx)
+      const lig = Math.max(0, Math.floor(fy))
+      const prec = cibleRef.current
+      if (prec && prec.tier === b.tier && prec.col != null && Math.abs(fx - (prec.col + 0.5)) < 0.5 + HYST) col = prec.col
+      col = Math.min(Math.max(col, 0), parLigne - 1)
+      const n = (vuesRef.current[b.tier] || []).filter((id) => id !== drag?.id).length
+      return { tier: b.tier, col, index: Math.min(lig * parLigne + col, n) }
+    }
+
+    const memeCible = (a, b) =>
+      a === b || (a && b && a.tray === b.tray && a.tier === b.tier && a.index === b.index)
+
+    let boucle = null
+    let dernier = { x: 0, y: 0 }
+    const tourner = () => {
+      if (!drag?.active) { boucle = null; return }
+      boucle = requestAnimationFrame(tourner)
+      if (sale) { reconstruireBandes(); sale = false }
+      // Auto-défilement aux bords : sans lui, on ne peut pas amener une vignette du bac vers
+      // la ligne S quand S est sorti de l'écran — c'est aujourd'hui simplement impossible.
+      const rows = root.querySelector('.tl-rows')
+      if (rows) {
+        const r = rows.getBoundingClientRect()
+        let d = 0
+        if (dernier.y < r.top + 60) d = -12
+        else if (dernier.y > r.bottom - 60) d = 12
+        if (d) {
+          const avant = rows.scrollTop
+          rows.scrollTop += d
+          const vrai = rows.scrollTop - avant
+          // Les bandes se décalent par soustraction : aucun rectangle n'est relu.
+          if (vrai) bandes.forEach((b) => { if (!b.tray) b.top -= vrai })
+        }
+      }
+      const c = cible(dernier.x, dernier.y)
+      if (!memeCible(c, cibleRef.current)) {
+        cibleRef.current = c
+        setFente(c)
+        sale = true // la fente peut faire gagner une rangée → les bandes du dessous bougent
+      }
+      moveClone(dernier.x, dernier.y)
+    }
+
     const begin = (x, y) => {
       if (!drag) return
       drag.active = true
       vibre('prise') // on saisit un objet
       const src = root.querySelector(`[data-game="${CSS.escape(drag.id)}"]`)
+      drag.depart = src ? src.getBoundingClientRect() : null
       const clone = document.createElement('div')
       clone.className = 'tl-drag'
       const img = src?.querySelector('img')
-      if (img) {
-        const c = img.cloneNode(true)
-        clone.appendChild(c)
-      } else {
-        clone.textContent = '🎲'
-      }
+      if (img) clone.appendChild(img.cloneNode(true))
+      else clone.textContent = '🎲'
       document.body.appendChild(clone)
       drag.clone = clone
-      src?.classList.add('tl-dragging')
+      // La vignette QUITTE le flux : la place se libère à l'instant de la prise, pas à la fin.
+      setPrise(drag.id)
+      dernier = { x, y }
+      sale = true
       moveClone(x, y)
+      if (!boucle) boucle = requestAnimationFrame(tourner)
     }
     const moveClone = (x, y) => {
       if (drag?.clone) {
@@ -221,7 +314,7 @@ export default function TierlistView({
       if (!chip) return
       const isTouch = e.type === 'touchstart'
       const { x, y } = point(e)
-      drag = { id: chip.dataset.game, active: false, clone: null, startX: x, startY: y, hold: null, isTouch }
+      drag = { id: chip.dataset.game, active: false, clone: null, startX: x, startY: y, hold: null, isTouch, depart: null }
       if (isTouch) {
         // Appui maintenu ~160 ms → on saisit (sinon un swipe = défilement).
         drag.hold = setTimeout(() => begin(x, y), 160)
@@ -243,39 +336,52 @@ export default function TierlistView({
         return
       }
       e.preventDefault() // empêche le défilement pendant le glissé
-      moveClone(x, y)
-      clearHighlight()
-      const z = zoneAt(x, y)
-      if (z) (z.kind === 'tier' ? z.el.querySelector('.tl-slots') || z.el : z.el).classList.add('tl-over')
+      // Un touchmove ne fait QUE ça : tout le reste vit dans la boucle d'animation.
+      dernier = { x, y }
+    }
+    // Le clone VOLE jusqu'à la fente (ou revient à son point de départ si on lâche dans le
+    // vide) : la vignette atterrit sur sa destination au lieu de disparaître.
+    const poser = (clone, vers, ms) => {
+      if (!clone) return
+      if (!vers) { clone.remove(); return }
+      clone.style.transition = `transform ${ms}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${ms}ms ease`
+      clone.style.transform = `translate(-50%, -50%) translate(${vers.dx}px, ${vers.dy}px) scale(${vers.k})`
+      clone.style.opacity = '1'
+      setTimeout(() => clone.remove(), ms + 40)
     }
     const finish = (e) => {
       if (!drag) return
       const d = drag
       drag = null
       if (d.hold) clearTimeout(d.hold)
+      if (boucle) { cancelAnimationFrame(boucle); boucle = null }
       if (d.active) {
-        const { x, y } = point(e)
-        const z = zoneAt(x, y)
-        clearHighlight()
-        if (d.clone) d.clone.remove()
-        root.querySelector(`[data-game="${CSS.escape(d.id)}"]`)?.classList.remove('tl-dragging')
-        if (z && z.kind === 'tier') {
-          // Insertion AVANT la 1re vignette « après » le point de dépôt (ordre de lecture) →
-          // tri libre dans la ligne. On repère par l'ID (robuste même si un filtre masque des
-          // vignettes déjà classées).
-          const slots = z.el.querySelector('.tl-slots') || z.el
-          const chips = [...slots.querySelectorAll('[data-game]')].filter((c) => c.dataset.game !== d.id)
-          let beforeId = null
-          for (let i = 0; i < chips.length; i++) {
-            const r = chips[i].getBoundingClientRect()
-            if (y < r.top - 2 || (y <= r.bottom + 2 && x < r.left + r.width / 2)) {
-              beforeId = chips[i].dataset.game
-              break
-            }
-          }
-          moveGame(d.id, z.key, beforeId)
-        } else if (z) {
+        const c = cibleRef.current
+        cibleRef.current = null
+        setFente(null)
+        setPrise(null)
+        if (c && !c.tray) {
+          // La fente occupait déjà exactement la case d'arrivée : le clone y vole, et la vraie
+          // vignette apparaît au pixel près.
+          const trou = root.querySelector('.tl-fente')
+          const r = trou?.getBoundingClientRect()
+          if (r && d.clone) {
+            const cl = d.clone.getBoundingClientRect()
+            poser(d.clone, { dx: r.left + r.width / 2 - (cl.left + cl.width / 2), dy: r.top + r.height / 2 - (cl.top + cl.height / 2), k: 48 / 56 }, 200)
+          } else if (d.clone) d.clone.remove()
+          const beforeId = (vuesRef.current[c.tier] || []).filter((id) => id !== d.id)[c.index] ?? null
+          moveGame(d.id, c.tier, beforeId)
+          vibre('prise')
+        } else if (c && c.tray) {
+          if (d.clone) { d.clone.style.transition = 'opacity 140ms ease'; d.clone.style.opacity = '0'; setTimeout(() => d.clone.remove(), 180) }
           moveGame(d.id, null) // lâché sur le bac → retour aux non-classés
+          vibre('prise')
+        } else if (d.clone) {
+          // Lâché dans le vide : le clone RETOURNE à son point de départ. Rien ne bouge, et
+          // l'annulation se lit.
+          const cl = d.clone.getBoundingClientRect()
+          const dep = d.depart
+          poser(d.clone, dep ? { dx: dep.left + dep.width / 2 - (cl.left + cl.width / 2), dy: dep.top + dep.height / 2 - (cl.top + cl.height / 2), k: 48 / 56 } : null, 180)
         }
       } else {
         // Pas de glissé = un tap → infobulle avec le nom du jeu.
@@ -299,6 +405,9 @@ export default function TierlistView({
       root.removeEventListener('mousedown', onDown)
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', finish)
+      if (boucle) cancelAnimationFrame(boucle)
+      // Démontage en plein vol : pas de clone orphelin dans le body.
+      document.querySelectorAll('.tl-drag').forEach((el) => el.remove())
     }
   }, [editing]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -369,6 +478,9 @@ export default function TierlistView({
                     return
                   }
                   setEditing(false)
+                  setBilan({ classes: placed.size, restants: games.length - placed.size })
+                  clearTimeout(bilanRef.current)
+                  bilanRef.current = setTimeout(() => setBilan(null), 3000)
                 }}
               >
                 Terminé
@@ -381,23 +493,38 @@ export default function TierlistView({
           )}
         </div>
       </div>
-      {editing && (
+      {editing ? (
         <div className="tl-editing-banner">
           {needName ? 'Donnez un nom à votre tierlist pour l’enregistrer, puis « Terminé ».' : 'Mode édition — glissez les jeux pour les classer'}
         </div>
-      )}
+      ) : bilan ? (
+        <div className="tl-editing-banner tl-bilan">
+          <b>{bilan.classes}</b> {bilan.classes > 1 ? 'jeux classés' : 'jeu classé'}
+          {bilan.restants > 0 && <> · {bilan.restants} {bilan.restants > 1 ? 'restants' : 'restant'}</>}
+        </div>
+      ) : null}
 
       {/* Les lignes (drop-zones en édition). La ligne « Pas d'avis » (score null) est
           masquée dans la tierlist GLOBALE (elle n'entre pas dans la moyenne). */}
       <div className="tl-rows">
-        {TIERS.filter((t) => !isGlobal || t.score != null).map((t) => {
+        {TIERS.filter((t) => !isGlobal || t.score != null).map((t, rang) => {
           const list = gamesOf(ranking[t.key] || [], true)
-          const shown = az ? [...list].sort((a, b) => a.name.localeCompare(b.name, 'fr')) : list
+          // ⚠️ BUG PRÉEXISTANT, révélé par la fente : `az` n'était jamais remis à faux en
+          // entrant en édition. On voyait alors l'ordre ALPHABÉTIQUE tout en manipulant le
+          // tableau réel → `beforeId` visait le voisin alphabétique et la vignette « sautait »
+          // après le lâcher. En édition on voit et on manipule toujours l'ordre réel.
+          const shown = az && !editing ? [...list].sort((a, b) => a.name.localeCompare(b.name, 'fr')) : list
+          vuesRef.current[t.key] = shown.map((g) => g.id)
           // En lecture, toute la case-lettre bascule le tri A→Z de TOUTES les lignes (zone
           // de clic large, une seule action pour tout trier).
           const labelClick = !editing ? () => setAz((v) => !v) : undefined
           return (
-            <div key={t.key} className="tl-row" data-tier={t.key}>
+            <div
+              key={t.key}
+              className={`tl-row${bilan ? ' tl-pose' : ''}`}
+              data-tier={t.key}
+              style={bilan ? { animationDelay: `${rang * 40}ms` } : undefined}
+            >
               <div
                 className={`tl-label ${!editing ? 'tl-label-btn' : ''}`}
                 style={{ background: t.color }}
@@ -407,10 +534,18 @@ export default function TierlistView({
                 <span className="tl-label-letter">{t.label}</span>
                 {!editing && <span className={`tl-sort-ind ${az ? 'on' : ''}`}>A↓Z</span>}
               </div>
-              <div className="tl-slots">
-                {shown.map((g) => (
-                  <Chip key={g.id} game={g} />
-                ))}
+              <div className={`tl-slots${fente && fente.tier === t.key ? ' tl-over' : ''}`}>
+                {shown
+                  .filter((g) => g.id !== prise)
+                  .map((g, i) => (
+                    <Fragment key={g.id}>
+                      {fente && fente.tier === t.key && fente.index === i && <div className="tl-fente" aria-hidden="true" />}
+                      <Chip game={g} />
+                    </Fragment>
+                  ))}
+                {fente && fente.tier === t.key && fente.index >= shown.filter((g) => g.id !== prise).length && (
+                  <div className="tl-fente" aria-hidden="true" />
+                )}
               </div>
             </div>
           )
@@ -440,7 +575,7 @@ export default function TierlistView({
       {/* Bac des jeux à classer (édition) : panneau épinglé en bas (pour glisser vers le haut). */}
       {editing && (
         <div className="tl-tray-wrap">
-          <div className="tl-tray" data-tray>
+          <div className={`tl-tray${fente && fente.tray ? ' tl-over' : ''}`} data-tray>
             {tray.length ? (
               tray.map((g) => <Chip key={g.id} game={g} />)
             ) : (

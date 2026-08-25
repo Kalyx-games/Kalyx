@@ -269,6 +269,38 @@ Recette actuelle d'Apple, pas le verre dépoli de 2020 : voile translucide + `bl
 
 **RÈGLE** : le verre ne se pose que sur une surface qui FLOTTE au-dessus d'un contenu qui défile, et jamais sans avoir mesuré le contraste de ce qu'elle porte, dans les deux thèmes, avec la jaquette la plus contrariante derrière.
 
+## ✅ LA FENTE DES TIERLISTS + LA GRANDE LETTRE DU DÉFILEMENT (2026-08-25, choix user)
+
+L'user a trié le document de travail : « la fente » et « la grande lettre » mises en chantier, la roulette de l'étagère supprimée du document sans trace, et trois idées réécrites en clair (il ne les comprenait pas : le glissé jusqu'au bout, le face-à-face, le glissé qui suit le doigt).
+
+### 1. La FENTE qui s'ouvre sous le doigt (`TierlistView`)
+
+La vignette qu'on déplace fait s'ouvrir sa place AVANT qu'on lâche, à l'endroit exact où elle va atterrir, et le clone VOLE jusqu'à la fente au lâcher.
+
+**LE CŒUR : la géométrie est CALCULÉE, jamais mesurée.** `.tl-slots` est un flex-wrap de boîtes rigoureusement identiques (48×48, gap 4, padding 4) → la position de la n-ième case est une formule. L'ancien mécanisme mesurait TOUTES les vignettes de la ligne au lâcher (`getBoundingClientRect` en boucle) ; le naïf « fente à chaque frame » aurait fait 2 280 lectures/seconde sur la ligne la plus chargée (38 vignettes, Clémence/C — mesuré en base). Le nouveau : **8 rectangles** (7 lignes + le bac), relus SEULEMENT quand la fente a changé.
+  - ⚠️ **Les constantes `CHIP=48 / GAP=4 / PAD=4` SUIVENT le CSS.** Si une vignette devient de largeur variable, tout le calcul s'effondre — commenté aux deux endroits.
+  - **Une boucle `requestAnimationFrame`** : le `touchmove` ne fait qu'enregistrer `{x,y}`. Hystérésis d'un cinquième de case (sans elle, un doigt posé sur une médiane fait clignoter la fente). **Auto-défilement aux bords** (±12 px/frame sous 60 px) : sans lui, amener une vignette du bac vers S quand S est hors écran était simplement IMPOSSIBLE. Les bandes se décalent par soustraction du delta de scroll — aucun rect relu.
+  - **La prise quitte le flux** (`filter(g => g.id !== prise)`) : la place se libère à l'instant de la prise. La fente est un `<div class="tl-fente">` de 48×48, rayon 5 (l'art), fond `--accent-soft`, **contour `--gold-ink` et PAS `--gold`** (sous 3:1 sur --accent-soft en clair). Pas de fondu : elle est là ou elle n'est pas.
+  - **Le bac n'a JAMAIS de fente** : il est trié alphabétiquement, elle promettrait une place que le tri écrase dans la même frame. Surlignage seul.
+  - **Au lâcher** : le clone vole vers le rect de la fente (200 ms, `scale(48/56)` — il approche son repos par au-dessus sans le dépasser) ; lâché dans le vide → il RETOURNE à son point de départ (l'annulation se lit) ; `beforeId` sort du miroir `vuesRef` (les listes affichées, tenues pendant le rendu), plus du DOM.
+  - **Ce qui meurt** : `elementFromPoint`, `zoneAt`, `clearHighlight`, les `classList`. Effet de bord heureux : `elementFromPoint` renvoyait l'élément du DESSUS — le FAB des filtres (z-1100) et l'infobulle (z-3000) **avalaient les dépôts sous eux**. Une géométrie calculée ne connaît pas ce bug.
+  - **`Chip` est mémoïsée** (`(a,b) => a.game === b.game`) : sans ça, chaque déplacement de fente re-rendait les 133 vignettes.
+  - ⚠️ **BUG PRÉEXISTANT corrigé, révélé par la fente** : `az` (tri A→Z de lecture) n'était jamais remis à faux en entrant en édition → on VOYAIT l'ordre alphabétique en manipulant l'ordre réel, et `beforeId` visait le voisin alphabétique (la vignette « sautait » au lâcher). `shown = az && !editing ? trié : list`.
+  - **La moitié gratuite** : à « Terminé », le bandeau d'édition DEVIENT le bilan (« 133 jeux classés · N restants »), même boîte même hauteur (rien ne se décale), replié au bout de 3 s ; les 7 lignes se posent de S vers F (40 ms de décalage), **opacité seule, aucun transform** (le libellé est du texte en graisse 800).
+  - **Pièges de banc d'essai (deux, vécus ce jour)** : (a) `requestAnimationFrame` et `IntersectionObserver` **ne tournent PAS dans une page cachée** (banc headless) → shims `setTimeout` / pilotage manuel de la callback pour vérifier ; (b) ⚠️ un test de glissé dans une VRAIE tierlist déplace une vraie donnée — l'écriture était bloquée par le RLS du dev (base vérifiée intacte, Small World en S:0 chez Nazim, maj du 14/08), mais **toujours vérifier la base après un test de geste**.
+
+### 2. La GRANDE LETTRE pendant le défilement de la collection
+
+Un panneau de 64×64 en verre, centré à 34vh, qui affiche la lettre du groupe qu'on traverse — et qui s'éteint 900 ms après le dernier changement. **Au repos, il n'existe pas.**
+
+**Elle avait été écartée** (« exactement le calcul que l'audit d'énergie a fait retirer ») ; l'user l'a repêchée. **La contrainte était donc : la faire SANS refaire ce calcul.** Ce que l'audit avait retiré : une écriture de style qui invalide la mise en page + 2×N `getBoundingClientRect` (288 lectures sur 144 cartes, ~20 ms, à chaque frappe). Ce qui est fait :
+  - **`IntersectionObserver`** (le premier du projet), `rootMargin: '-96px 0px 0px 0px'` : on observe LA PREMIÈRE CARTE de chaque groupe (23 nœuds, 26 max), zéro nœud créé, zéro `getBoundingClientRect` à nous, zéro écriture de style. `entry.boundingClientRect` est un objet que le navigateur a DÉJÀ calculé pour sa propre passe. Travail par déclenchement : un balayage de ≤26 booléens.
+  - ⚠️ **`App` ne rend JAMAIS pendant le défilement** : `GrandeLettre` possède son état et l'observateur l'appelle par sa ref (`montre('C')`). Remonter cet état dans App re-rendrait les 100 cartes à chaque lettre — et sur les tris « parties »/« dernière partie », `metaLine` est un JSX recréé à chaque rendu → **leur memo ne retient plus rien**. On aurait refait le calcul retiré, par une autre porte.
+  - **`lettreDe(nom)`** (`src/lib/lettre.js`) : la lettre TELLE QUE LE TRI LA RANGE. Les 7 jeux à chiffre (5 groupes distincts dans les 7 premières cartes !) fusionnent en « # » ; « Les Aventuriers du Rail » donne **L** — la lettre suit le tri, sinon elle ment sur l'endroit où l'on est. Si l'article doit être ignoré un jour, c'est la clé de TRI qu'il faut changer.
+  - **Éteinte partout où elle mentirait** : tri ≠ nom (aucune version grisée : `ancres = null`, rien n'existe), vue grille, ≥760px (la liste y est multi-colonnes), <30 cartes (couvre la wishlist), `scrollY ≤ 48`, et la PREMIÈRE salve de l'observateur est consommée sans afficher (sinon flash au montage).
+  - **Mesuré** : 23 cibles observées (1001 Iles, Abyss, Belote… Zenith), G après 8 groupes, M après 14, éteinte à 900 ms ; boîte 64×64 rayon 8 exactement centrée à 34vh, `pointer-events: none`, `aria-hidden` ; contraste au pire cas (jaquette noire/blanche derrière le verre) : **12,2 clair / 8,1 sombre**.
+  - **Écarté, et pourquoi** : en-têtes de section collants (un en-tête toutes les 4 cartes, 9 groupes d'UNE carte — plus de chrome que de contenu) ; rail A→Z tirable (exige la hauteur de chaque groupe = LA mesure retirée, en pire) ; vibration au changement (23 par traversée, le plancher de 55 ms en avalerait la moitié).
+
 ## ✅ LA COURONNE REFONDUE : L'ÉGALITÉ CONTOURNAIT LA DÉCANTATION (2026-08-25, retour user)
 
 **Retour user, mot pour mot** : « si je suis à 4-5 et que je fais +1 sur le 4, on arrive à égalité donc les deux joueurs ont la couronne dorée qui pop. Puis +1, une couronne s'éteint net, la couronne du meilleur clignote. »

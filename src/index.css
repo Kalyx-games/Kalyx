@@ -4578,6 +4578,35 @@ input[type='number'] {
   margin-bottom: 8px;
 }
 
+/* Le même bandeau, à la sortie de l'édition : le bilan. Même boîte, même hauteur — il ne
+   décale rien en apparaissant, et le seul décalage est celui de son repli, animé. */
+.tl-bilan {
+  color: var(--ink);
+  animation: kx-bilan 3.2s ease forwards;
+}
+@keyframes kx-bilan {
+  0% { opacity: 0; }
+  6% { opacity: 1; }
+  88% { opacity: 1; max-height: 40px; margin-bottom: 8px; }
+  100% { opacity: 0; max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
+}
+/* Les lignes se posent de S vers F. OPACITÉ SEULE, aucun `transform` : `.tl-label-letter`
+   est du texte en graisse 800, et une animation qui se termine sur du texte ne doit pas
+   laisser de transform (elle promeut le nœud sur sa couche et le retour se voit comme un
+   saut — piège mesuré et documenté sur le dépliage de l’anecdote). */
+.tl-pose {
+  animation: kx-pose 0.22s ease-out backwards;
+}
+@keyframes kx-pose {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
+/* Une media query n’ajoute AUCUNE spécificité : ce bloc doit SUIVRE ce qu’il neutralise. */
+@media (prefers-reduced-motion: reduce) {
+  .tl-pose { animation: none; }
+  .tl-bilan { animation: none; }
+}
+
 /* Les lignes de tiers (zone défilante). Espace en bas pour que le contenu défilé jusqu'en
    bas passe AU-DESSUS du bouton flottant des filtres (fixé en bas à droite). */
 .tl-rows {
@@ -4720,6 +4749,25 @@ input[type='number'] {
   pointer-events: none;
   z-index: 3000;
   opacity: 0.92;
+}
+
+/* La FENTE : la place qui s'ouvre sous le doigt, à l'endroit exact où la vignette se posera.
+   Elle a la boîte d'une vignette — c'est ce qui garantit que le rectangle d'arrivée EST celui
+   qu'elle occupait. Pas d'apparition en fondu : elle est là, ou elle n'est pas.
+   ⚠️ contour en --gold-ink et NON --gold : sur --accent-soft en clair, --gold tombe sous les
+   3:1 exigés d'un élément graphique porteur de sens ; --gold-ink y tient largement. */
+.tl-fente {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 5px; /* le rayon de l'ART, celui de .tl-chip — surtout pas --r-ctl */
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 2px var(--gold-ink);
+}
+/* Le clone qui vole vers la fente : sa transition est écrite EN LIGNE au moment du lâcher
+   (elle porte des valeurs calculées). Ici on ne fait que la neutraliser. */
+@media (prefers-reduced-motion: reduce) {
+  .tl-drag { transition: none !important; }
 }
 .tl-drag img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
@@ -5131,6 +5179,52 @@ input[type='number'] {
   gap: 8px;
   cursor: pointer;
   animation: kx-toast-in 0.22s ease;
+}
+
+/* ══ La grande lettre du défilement ══
+   Un repère de position dans cent cartes, qui ne vit que pendant la traversée.
+   ⚠️ PAS un cercle : dans cette app les cercles sont des boutons (les FAB). Ceci ne se tape pas.
+   ⚠️ AUCUN `transform` autre que le centrage, et surtout pas de `scale` : un glyphe de 36 px
+   est du texte, et une animation qui se termine sur du texte ne doit pas laisser de transform
+   (elle promeut le nœud sur sa propre couche, le texte y est rasterisé autrement, et le retour
+   se voit comme un saut — piège mesuré et documenté). */
+.kx-lettre {
+  position: fixed;
+  left: 50%;
+  top: 34vh;
+  transform: translateX(-50%);
+  z-index: 40; /* au-dessus des boutons flottants (20) et du bac (30), sous les feuilles (1000) */
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-card);
+  background: var(--card);
+  box-shadow: var(--elev-2);
+  font-size: var(--fs-display);
+  font-weight: 700;
+  color: var(--ink);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.26s ease;
+}
+.kx-lettre.on {
+  opacity: 1;
+  transition: opacity 0.14s ease;
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  /* ⚠️ `@supports` n'ajoute AUCUNE spécificité : le sélecteur est qualifié pour battre la
+     règle de base, déclarée plus haut à égalité. */
+  div.kx-lettre {
+    background: var(--verre);
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    box-shadow: inset 0 1px 0 var(--verre-arete), var(--elev-2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kx-lettre, .kx-lettre.on { transition: none; }
 }
 .toast-ico { color: var(--ok-ink); }
 /* Le toast porte un FAIT NOTABLE : deux niveaux — la nouvelle, puis l'accusé de réception,

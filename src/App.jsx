@@ -10,6 +10,8 @@ import { philibertSearchUrl } from './lib/philibert'
 import { EMPTY_FILTERS, PRICE_MIN, PRICE_MAX, norm, passesFilters } from './lib/filtering'
 import { messageUtilisateur } from './lib/messages'
 import { faitNotable } from './lib/faits'
+import { lettreDe, useLettreDefilement } from './lib/lettre'
+import GrandeLettre from './components/GrandeLettre'
 import { useExitLayer } from './lib/useExitLayer'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
 import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, computeAnecdoteList, emptyRanking, dedupeByName, repIdMap, remapRanking } from './lib/tierlists'
@@ -664,6 +666,26 @@ export default function App() {
   // assumée : après un filtrage, la colonne garde la largeur calculée sur la liste
   // complète — au pire quelques pixels de trop, invisibles à l'usage.
   const listRef = useRef(null)
+  // ── La grande lettre pendant le défilement ────────────────────────────────────────────
+  // Elle n'existe QUE sur un tri par nom : à « durée » ou « complexité », la carte du haut
+  // n'a aucun rapport avec une position alphabétique — l'afficher serait un mensonge.
+  // Le sens décroissant, lui, marche sans rien faire : les groupes restent contigus.
+  // Sous 30 cartes on voit la liste entière en deux gestes — un repère n'apprend rien (ce
+  // garde couvre aussi la wishlist, qui en compte neuf).
+  const lettreRef = useRef(null)
+  const lettresActives = sort === 'name' && !grille && !statsOpen && !settingsOpen && visible.length >= 30
+  const ancresLettres = useMemo(() => {
+    if (!lettresActives) return null
+    const m = new Map()
+    let prec = null
+    visible.forEach((g, i) => {
+      const l = lettreDe(g.name)
+      if (l !== prec) { m.set(i, l); prec = l }
+    })
+    return m
+  }, [visible, lettresActives])
+  const montreLettre = useCallback((l) => lettreRef.current?.montre(l), [])
+  useLettreDefilement(listRef, ancresLettres, visible.length, montreLettre)
   useLayoutEffect(() => {
     const list = listRef.current
     // En grille il n'y a aucune cellule à aligner : on sort avant de payer le reflow.
@@ -1380,6 +1402,8 @@ export default function App() {
         <p className="banner">Hors ligne : lecture seule. Reconnectez-vous pour ajouter ou modifier.</p>
       )}
       {error && <p className="banner banner-err">{error}</p>}
+      {ancresLettres && <GrandeLettre ref={lettreRef} />}
+
       {toast && (
         <div className={`toast${toast.fait ? ' toast-fait' : ''}`} role="status" onClick={() => setToast(null)}>
           <span className="toast-ico" aria-hidden="true">
