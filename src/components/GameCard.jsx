@@ -2,6 +2,7 @@ import { memo, useEffect, useRef, useState } from 'react'
 import { parseOwners, parseTags, ownerDisplay, ownerColor, parseExtensions, basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText } from '../lib/games'
 import { CollectionIcon, PlayersIcon, StarIcon, ClockIcon, ExtIcon, BarsIcon, PencilIcon, DieIcon } from './icons'
 import { thumbSrc } from '../lib/img'
+import { mou } from '../lib/geste'
 import { BGG_LOGO } from '../lib/logos'
 
 // Une carte compacte représentant un jeu dans la liste.
@@ -39,6 +40,19 @@ function durationLabel(g) {
 // Une seule carte « swipée » ouverte à la fois : on garde une référence vers la
 // dernière ouverte pour la refermer quand une autre s'ouvre.
 let openCard = null // { close: () => void }
+
+// Au-delà d'une butée, la carte SUIT toujours le doigt, de moins en moins : elle résiste
+// au lieu de buter. La courbe est asymptotique — on peut tirer aussi fort qu'on veut, on
+// n'ira jamais bien loin — et elle démarre à 0,42 pour que le premier millimètre au-delà
+// de la butée reste franchement perceptible (mesuré : à 400 px de doigt, 28 px de carte).
+// ⚠️ le débord vers la DROITE est plafonné plus court : `.swipe-row` est en overflow:hidden
+// et porte l'ombre de la carte, donc au-delà la carte glisserait dans un cadre immobile.
+const DEBORD_DROITE = 14
+function retenue(x, ouvert) {
+  if (x > 0) return Math.min(DEBORD_DROITE, mou(x))
+  if (x < ouvert) return ouvert + mou(x - ouvert)
+  return x
+}
 
 function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick, onImageClick, metaLine, ownerMap, tagMap, index = 0 }) {
   const complexity = game.complexity ? Number(game.complexity) : null
@@ -213,7 +227,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
       if (g.dir === 'h') {
         e.preventDefault() // on prend le geste (pas de scroll)
         g.moved = true
-        setOffset(Math.max(openRef.current, Math.min(0, g.base + dx)))
+        setOffset(retenue(g.base + dx, openRef.current))
       }
     }
     const onEnd = () => {

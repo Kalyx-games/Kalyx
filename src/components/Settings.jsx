@@ -3,6 +3,7 @@ import { Fragment, useMemo, useRef, useState } from 'react'
 import { BackIcon } from './icons'
 import qrcode from 'qrcode-generator'
 import { getTheme, applyTheme } from '../lib/theme'
+import { haptiqueDisponible, haptiqueActive, setHaptique } from '../lib/haptique'
 import { checkForUpdate, forceUpdate } from '../lib/update'
 import BubbleListManager from './BubbleListManager'
 import SortMenu from './SortMenu'
@@ -69,6 +70,7 @@ export default function Settings({
 }) {
   const fileRef = useRef(null)
   const [theme, setThemeState] = useState(getTheme())
+  const [vibrations, setVibrations] = useState(haptiqueActive)
   const [copied, setCopied] = useState(false)
   // Vérification manuelle de mise à jour : le service worker peut se coincer et resservir
   // l'ancienne version indéfiniment ; ce bouton interroge le réseau puis renouvelle tout.
@@ -173,6 +175,30 @@ export default function Settings({
             </button>
           ))}
         </div>
+        {/* Un seul interrupteur coupe TOUTES les vibrations de l'app.
+            ⚠️ formulation prudente : Firefox Android répond « oui je sais vibrer » puis ne
+            fait rien — on ne promet donc pas que ça marchera. */}
+        {haptiqueDisponible && (
+          <>
+            <label className="field-label" style={{ marginTop: 16 }}>Vibrations</label>
+            <div className="chips">
+              {[[true, 'Activées'], [false, 'Coupées']].map(([v, label]) => (
+                <button
+                  key={String(v)}
+                  type="button"
+                  className={`fchip ${vibrations === v ? 'on' : ''}`}
+                  onClick={() => { setHaptique(v); setVibrations(v) }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="field-hint" style={{ marginTop: 6 }}>
+              De petits retours au toucher pendant les gestes. Selon le navigateur : Firefox
+              ne les joue pas, et votre téléphone peut les couper de son côté.
+            </p>
+          </>
+        )}
       </section>
 
 

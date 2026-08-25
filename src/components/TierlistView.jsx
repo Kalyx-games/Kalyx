@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { vibre } from '../lib/haptique'
 import { TIERS } from '../lib/tierlists'
 import { passesFilters } from '../lib/filtering'
 import FilterSheet from './FilterSheet'
@@ -193,7 +194,7 @@ export default function TierlistView({
     const begin = (x, y) => {
       if (!drag) return
       drag.active = true
-      try { navigator.vibrate?.(40) } catch { /* ignore */ } // retour haptique à la prise (Android ; iOS n'a pas l'API)
+      vibre('prise') // on saisit un objet
       const src = root.querySelector(`[data-game="${CSS.escape(drag.id)}"]`)
       const clone = document.createElement('div')
       clone.className = 'tl-drag'

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { vibre } from '../lib/haptique'
 import { enterFullscreen, exitFullscreen } from '../lib/fullscreen'
 import { playFinger, startRiser, stopRiser, playReveal, closeAudio } from '../lib/sound'
 
@@ -57,13 +58,6 @@ const WINNER_MAX = 8
 const TEAM_MIN = 2
 const TEAM_MAX = 8
 
-function vibrate(pattern) {
-  try {
-    if (navigator.vibrate) navigator.vibrate(pattern)
-  } catch {
-    /* pas de vibreur : tant pis */
-  }
-}
 function shuffle(arr) {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -195,7 +189,9 @@ export default function Chwazi({ onClose }) {
     // (La sélection est remise à zéro quand l'écran redevient vide, cf. useEffect.)
     // Vibration EN PREMIER (avant le plein écran et le son) → latence minimale : le retour
     // haptique se déclenche à l'instant précis où le doigt se pose.
-    vibrate(18)
+    // « insiste » : poser un doigt est un geste DISCRET, il ne doit pas être avalé par le
+    // limiteur de cadence quand deux doigts se posent presque en même temps.
+    vibre('seuil', { insiste: true })
     enterFullscreen() // 1er doigt (geste utilisateur) → masque la barre système
     setMenuOpen(false)
     const hue = nextHue(usedHuesRef.current)

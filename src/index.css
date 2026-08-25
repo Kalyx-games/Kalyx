@@ -119,6 +119,11 @@
   --verre-or: rgba(224, 161, 6, 0.9); /* bouton filtre */
   --verre-encre: rgba(28, 28, 33, 0.9); /* bouton Chwazi */
   --verre-arete-bouton: rgba(255, 255, 255, 0.35);
+  /* ⚠️ La pastille du bac reste un LAVIS D'ENCRE en clair, et surtout PAS un voile blanc :
+     la barre en verre est déjà presque blanche (0,84 de blanc sur #f4f4f5), donc du blanc sur
+     du blanc donne un contraste de 1,01 — la pastille disparaît. Mesuré. Ce qui la fait lire
+     comme du verre, c'est son ARÊTE et son ombre, pas la couleur du voile. */
+  --verre-pastille: rgba(28, 28, 33, 0.1);
   --verre-arete: rgba(255, 255, 255, 0.75);
   --verre-ombre: 0 -1px 24px rgba(0, 0, 0, 0.07);
   --app-w: 640px; /* largeur max de l'app (élargie en grille sur tablette/desktop) */
@@ -175,6 +180,7 @@
   --verre-or: rgba(245, 197, 66, 0.9);
   --verre-encre: rgba(242, 242, 244, 0.9);
   --verre-arete-bouton: rgba(255, 255, 255, 0.22);
+  --verre-pastille: rgba(255, 255, 255, 0.09);
   --verre-arete: rgba(255, 255, 255, 0.1);
   --verre-ombre: 0 -1px 24px rgba(0, 0, 0, 0.45);
     color-scheme: dark;
@@ -228,6 +234,7 @@
   --verre-or: rgba(245, 197, 66, 0.9);
   --verre-encre: rgba(242, 242, 244, 0.9);
   --verre-arete-bouton: rgba(255, 255, 255, 0.22);
+  --verre-pastille: rgba(255, 255, 255, 0.09);
   --verre-arete: rgba(255, 255, 255, 0.1);
   --verre-ombre: 0 -1px 24px rgba(0, 0, 0, 0.45);
   color-scheme: dark;
@@ -332,6 +339,14 @@ body {
      règle `.navtab { color: var(--muted) }` est déclarée PLUS BAS dans le fichier — à
      spécificité égale, c'est l'ordre qui tranche (même piège que les blocs reduced-motion). */
   .navbar .navtab { color: var(--verre-libelle); }
+  /* La pastille était la dernière pièce du bac restée en lavis d'encre : sur du verre, un
+     aplat mat se voit comme un autocollant. Elle devient une LENTILLE — un voile clair, une
+     arête en haut, une ombre courte — et surtout PAS un second backdrop-filter : flouter un
+     fond déjà flouté ne fait que de la bouillie. */
+  .navbar .navbar-pill {
+    background: var(--verre-pastille);
+    box-shadow: inset 0 1px 0 var(--verre-arete-bouton), 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
 }
 /* Pastille de surbrillance qui glisse sous l'onglet actif. */
 .navbar-pill {
@@ -3083,7 +3098,7 @@ button {
 .cc-btn:active, .tl-global-btn:active, .tl-create-btn:active, .tl-edit-btn:active,
 .tl-del-btn:active, .tl-done-btn:active, .tl-label-btn:active,
 .owner-edit:active, .owner-del:active,
-.filters-reset-top:active, .filters-see:active, .detail-hero:active {
+.filters-reset-top:active, .filters-see:active {
   transform: scale(0.96);
 }
 /* 3) Surfaces cliquables NON-<button> ou pleine largeur (liens réglages, lignes de stats/tierlist,
@@ -3102,7 +3117,7 @@ button {
   .cc-btn:active, .tl-global-btn:active, .tl-create-btn:active, .tl-edit-btn:active,
   .tl-del-btn:active, .tl-done-btn:active, .tl-label-btn:active,
   .owner-edit:active, .owner-del:active, .sheet-del:active,
-  .filters-reset-top:active, .filters-see:active, .detail-hero:active,
+  .filters-reset-top:active, .filters-see:active,
   .link-row:active, .bar-row-btn:active, .tl-list-item:active, .active-chip:active { transform: none; }
 }
 
@@ -3281,6 +3296,28 @@ button {
   overflow: hidden;
   cursor: pointer; /* un tap révèle les actions ; la fiche ne zoome plus */
 }
+/* ⚠️ La jaquette n'est PAS une commande, c'est un OBJET — elle était prise dans la liste des
+   boutons qui s'enfoncent, où elle n'avait rien à faire. Elle se SOULÈVE au toucher, avec
+   l'ombre qui s'allonge (loi d'élévation maison, `--elev-2`).
+   RÈGLE, qui ne vaut que tant qu'elle reste UNIQUE dans l'app : ce qui est une commande
+   s'enfonce, ce qui est un objet se lève.
+   ⚠️ le mouvement est porté par le WRAP, pas par le bouton : `.detail-hero-wrap` est en
+   overflow:hidden (le voile des actions ne doit pas déborder d'une jaquette portrait) — un
+   soulèvement posé sur `.detail-hero` se ferait rogner ses 4 px du haut. */
+.detail-hero-wrap {
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease;
+}
+.detail-hero-wrap:has(.detail-hero:active) {
+  transform: translateY(-4px) scale(1.015);
+  box-shadow: var(--elev-2);
+}
+/* ⚠️ dans SA PROPRE règle, et pas dans la liste groupée plus haut : un navigateur sans :has()
+   invaliderait toute la liste, donc tous les autres retours au toucher avec elle. */
+@media (prefers-reduced-motion: reduce) {
+  .detail-hero-wrap { transition: none; }
+  .detail-hero-wrap:has(.detail-hero:active) { transform: none; box-shadow: none; }
+}
+
 /* Image à sa taille naturelle (pas pleine largeur → moins imposante), plafonnée à 240px de haut,
    CENTRÉE. La boîte épouse l'image (pas de letterbox) → les coins arrondis se voient bien. */
 .detail-hero img { display: block; width: auto; height: auto; max-width: 100%; max-height: 240px; border-radius: 5px; margin: 0 auto; } /* comme les jaquettes : l'art est le plus serré */

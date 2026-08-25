@@ -269,6 +269,45 @@ Recette actuelle d'Apple, pas le verre dépoli de 2020 : voile translucide + `bl
 
 **RÈGLE** : le verre ne se pose que sur une surface qui FLOTTE au-dessus d'un contenu qui défile, et jamais sans avoir mesuré le contraste de ce qu'elle porte, dans les deux thèmes, avec la jaquette la plus contrariante derrière.
 
+## ✅ CINQ GESTES QUI RENDENT L'APP AGRÉABLE À MANIPULER (2026-08-25)
+
+Feuille de route « Kalyx joueuse » (artifact https://claude.ai/code/artifact/f52cc849-8eff-4d48-9e3c-157d2f9e1f45) : cinq gestes petits, sans risque pour la charte, **quatre invisibles sur une capture d'écran** — ils ne se voient qu'au doigt. Livrés d'un bloc.
+
+**1. Un VOCABULAIRE haptique, pas des vibrations éparpillées** — `src/lib/haptique.js`.
+  Cinq niveaux nommés : `touche` 8 ms · `cran` 12 · `seuil` 22 · `prise` 40 · `refus` [16,40,16]. `vibre(nom)` est le seul point d'entrée.
+  - ⚠️ **Un plancher de 55 ms entre deux vibrations** : sous ce seuil ce n'est plus du grain, c'est un bourdonnement. `{ insiste: true }` le contourne pour les gestes DISCRETS qui doivent tous s'entendre (deux doigts posés presque en même temps sur Chwazi).
+  - **Un seul interrupteur coupe tout** (Réglages → Apparence → Vibrations, `localStorage kalyx-haptique`). Formulation prudente : **Firefox Android répond « oui je sais vibrer » puis ne fait rien** (documenté plus haut), on ne promet donc pas que ça marchera.
+  - Les deux vibrations qui existaient (Chwazi, prise d'une vignette de tierlist) passent par le vocabulaire ; leurs `navigator.vibrate` locaux sont supprimés.
+  - **RÈGLE : plus aucun `navigator.vibrate` en direct dans un composant.**
+
+**2. La carte tire à l'élastique** — `src/lib/geste.js` (`mou`), utilisé par GameCard **et** NavBar.
+  Le geste le plus répété de l'app tapait dans **deux murs muets** (`Math.max(ouvert, Math.min(0, …))`). La carte suit maintenant toujours le doigt au-delà des butées, de moins en moins : `(d × 0,42) / (1 + |d| / 90)`, asymptotique — on peut tirer aussi fort qu'on veut, on n'ira jamais loin.
+  - ⚠️ **le débord vers la DROITE est plafonné à 14 px** : `.swipe-row` est en `overflow:hidden` et porte l'ombre de la carte → au-delà, la carte glisserait à l'intérieur d'un cadre immobile.
+  - Mesuré : 20→−20, 120→−120, 240→**−232**, 340→−249, 400→−253, puis retour à −228 au relâché.
+
+**3. Le − et le + tiennent sous le doigt** (saisie des scores).
+  Le record d'Abyss est à 141 points : c'était 141 taps. Le tap unitaire est conservé ; la tenue accélère (armement 380 ms puis 260→45 ms).
+  - ⚠️ **Trois gardes, chacune pour une raison** : `tenuRef` fait ignorer le **clic de fin de geste** (sans lui la tenue ajoute un point de trop — même famille que le `swipedRef` du glissé) ; **plancher à 45 ms** (un compteur qu'on n'arrive plus à arrêter est pire qu'un compteur lent) ; un cran haptique tous les 5 pas, un `seuil` toutes les dizaines.
+  - Le minuteur est arrêté au démontage.
+  - Mesuré : un tap = **+1 exactement** ; deux secondes de tenue = **+22**, sans point parasite à la fin.
+
+**4. La pastille du bac annonce l'arrivée** (et passe au verre).
+  Le glissé entre onglets existait mais **rien ne bougeait avant le relâché** → personne ne pouvait le découvrir. La pastille penche désormais dès les premiers millimètres.
+  - ⚠️ **Elle penche à CONTRE-SENS du doigt** : glisser vers la gauche mène à l'onglet de DROITE (mécanique du carrousel, déjà en place). Elle annonce la **destination** ; la faire suivre le doigt l'enverrait du côté opposé à celui où elle va se poser.
+  - **1:1 jusqu'à la moitié du pas**, puis résistance (`mou`) → c'est un aperçu, jamais une arrivée anticipée. **Au bord** (pas d'onglet voisin) : résistance pure, asymptote ~28 px.
+  - Technique : la position vient d'un `transform` en ligne posé par React, le geste écrit **une variable CSS `--kx-glisse`** sur l'élément + coupe la transition. Au relâché on remet 0 **et** on rend la transition : l'aperçu et le changement d'onglet se font en **un seul mouvement**. React ne se bat jamais avec le geste (il ne gère pas ces deux propriétés).
+  - ⚠️ **La pastille reste un LAVIS D'ENCRE en clair** : la barre en verre est déjà presque blanche (0,84 de blanc sur #f4f4f5) → un voile blanc donne **1,01 de contraste**, la pastille disparaît (mesuré). Ce qui la fait lire comme du verre, c'est son **arête** (`inset 0 1px 0`) et son ombre courte, pas la couleur du voile. Jeton `--verre-pastille` : `rgba(28,28,33,.1)` clair / `rgba(255,255,255,.09)` sombre → **1,22 / 1,27** sur la barre (l'ancienne était à 1,17).
+  - ⚠️ **PAS de second `backdrop-filter`** sur la pastille : flouter un fond déjà flouté ne donne que de la bouillie.
+
+**5. La jaquette se soulève au lieu de s'enfoncer.**
+  Elle était prise dans la liste des boutons qui rétrécissent au toucher. Or ce n'est pas une commande, c'est un **objet** : `translateY(-4px) scale(1.015)` + l'ombre `--elev-2` qui s'allonge.
+  - **RÈGLE, qui ne vaut que tant qu'elle reste UNIQUE : ce qui est une commande s'enfonce, ce qui est un objet se lève.**
+  - ⚠️ **Le mouvement est porté par le WRAP, pas par le bouton** : `.detail-hero-wrap` est en `overflow:hidden` (le voile des actions ne doit pas déborder d'une jaquette portrait) → un soulèvement posé sur `.detail-hero` se ferait rogner ses 4 px du haut. D'où `.detail-hero-wrap:has(.detail-hero:active)`.
+  - ⚠️ **La neutralisation reduced-motion est dans SA PROPRE règle**, pas dans la liste groupée : un navigateur sans `:has()` **invaliderait toute la liste**, donc tous les autres retours au toucher avec elle.
+  - Vérifié : `.detail-hero:active` a bien quitté les deux listes, la règle `:has()` est présente dans la feuille servie, la jaquette monte de 5,8 px (4 de translation + 1,8 de mise à l'échelle).
+
+**Vérifié en dev, clair + sombre**, mesures à l'appui pour chacun des cinq. La carte, le bac et la fiche ont été rejoués après coup : aucun geste existant n'a bougé.
+
 ## ✅ L'ANECDOTE DU JOUR REFONDUE + LA PAGE UNIQUE RÉPARÉE (2026-08-25)
 
 ### 1. « Le saviez-vous ? » : un PARCOURS, plus un tirage — et de la matière neuve

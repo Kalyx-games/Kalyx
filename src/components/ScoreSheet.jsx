@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { vibre } from '../lib/haptique'
 import { BackIcon, PlayersIcon, ExtIcon, FlagIcon, CrownIcon, PlusIcon, PencilIcon } from './icons'
 import { parseExtensions, effectivePlayersSet } from '../lib/games'
 import { resolveDefaultExts } from '../lib/scoresheets'
@@ -251,6 +252,37 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       const cur = Number(p.scores[key])
       return { ...p, scores: { ...p.scores, [key]: String((Number.isFinite(cur) ? cur : 0) + delta) } }
     }))
+  // ---- Appui maintenu sur −/+ : la valeur monte, puis accélère ----
+  // ⚠️ TROIS gardes, chacune pour une raison vécue :
+  //  · `tenuRef` fait ignorer le clic de fin de geste — sans lui, une tenue ajoute un point
+  //    de trop en se terminant (même famille que le `swipedRef` du glissé, juste à côté) ;
+  //  · un PLANCHER à 45 ms : un compteur qu'on n'arrive plus à arrêter est pire qu'un
+  //    compteur lent ;
+  //  · un cran haptique tous les 5 pas, un plus marqué à chaque dizaine — pas à chaque pas,
+  //    sinon ce n'est plus du grain mais un bourdonnement.
+  const tenueRef = useRef({ minuteur: null, tenu: false, pas: 0 })
+  useEffect(() => () => clearTimeout(tenueRef.current.minuteur), [])
+  const arreteTenue = () => {
+    clearTimeout(tenueRef.current.minuteur)
+    tenueRef.current.minuteur = null
+  }
+  const demarreTenue = (playerId, key, delta) => {
+    const t = tenueRef.current
+    t.tenu = false
+    t.pas = 0
+    const cadences = [260, 180, 120, 90, 70, 55, 45]
+    const suivant = (i) => {
+      t.minuteur = setTimeout(() => {
+        t.tenu = true
+        t.pas++
+        bump(playerId, key, delta)
+        if (t.pas % 10 === 0) vibre('seuil')
+        else if (t.pas % 5 === 0) vibre('cran')
+        suivant(Math.min(i + 1, cadences.length - 1))
+      }, i === -1 ? 380 : cadences[i]) // 380 ms d'armement : un tap normal ne déclenche rien
+    }
+    suivant(-1)
+  }
   const setName = (playerId, name) =>
     setPlayers((ps) => ps.map((p) => (p.id === playerId ? { ...p, name } : p)))
   const setVariant = (playerId, value) =>
@@ -1135,7 +1167,16 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
       />
     ) : (
       <div className="pcard-stepper">
-        <button type="button" className="pcard-pm" onClick={() => { if (swipedRef.current) return; bump(p.id, c.label, -1) }} aria-label="Moins 1">−</button>
+        <button
+          type="button"
+          className="pcard-pm"
+          onClick={() => { if (swipedRef.current || tenueRef.current.tenu) return; bump(p.id, c.label, -1) }}
+          onPointerDown={() => demarreTenue(p.id, c.label, -1)}
+          onPointerUp={arreteTenue}
+          onPointerLeave={arreteTenue}
+          onPointerCancel={arreteTenue}
+          aria-label="Moins 1"
+        >−</button>
         <input
           className="pcard-value"
           type="number"
@@ -1144,7 +1185,16 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           value={p.scores[c.label] ?? ''}
           onChange={(e) => setScore(p.id, c.label, e.target.value)}
         />
-        <button type="button" className="pcard-pm" onClick={() => { if (swipedRef.current) return; bump(p.id, c.label, +1) }} aria-label="Plus 1">+</button>
+        <button
+          type="button"
+          className="pcard-pm"
+          onClick={() => { if (swipedRef.current || tenueRef.current.tenu) return; bump(p.id, c.label, +1) }}
+          onPointerDown={() => demarreTenue(p.id, c.label, +1)}
+          onPointerUp={arreteTenue}
+          onPointerLeave={arreteTenue}
+          onPointerCancel={arreteTenue}
+          aria-label="Plus 1"
+        >+</button>
       </div>
     )
 
