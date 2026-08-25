@@ -169,7 +169,7 @@ Audit en workflow (3 lentilles : cohérence / composition / finition, puis synth
 ```bash
 grep -cE '^s*(margin|padding|gap|row-gap|column-gap)[a-z-]*s*:.*[0-9]px' src/index.css
 ```
-**Valeur de référence au 20/08/2026 : 348** (343 le 19/08 ; la hausse vient de la ligne d’état des Réglages, du repli des sauvegardes et de la phrase d’aide de la barre d’enregistrement).
+**Valeur de référence au 25/08/2026 : 344** (348 au 20/08 ; la baisse vient du voile des actions de la jaquette, dont les px codés en dur ont disparu avec lui) (343 le 19/08 ; la hausse vient de la ligne d’état des Réglages, du repli des sauvegardes et de la phrase d’aide de la barre d’enregistrement).
 
 **NON FAIT, et assumé** : le resserrement réel (faire tomber 10→8, 14→12, 6→4 …). Il déplacerait ~40 % des espacements pour un bénéfice invisible, sur une app que l’user a déjà fait itérer trois fois sur des retours visuels. À ne relancer QUE si l’user demande explicitement un rythme plus serré, écran par écran, et jamais en une passe globale.
 
@@ -268,6 +268,42 @@ Recette actuelle d'Apple, pas le verre dépoli de 2020 : voile translucide + `bl
 **Le bouton de filtre se comporte à l'identique partout** (exigence user) : il existe aussi sur l'historique et les tierlists sous `fab fab-filter hist-fab-filter` / `tl-fab-filter`. Le verre est donc posé sur `.fab` (la BASE) et sur `.fab-filter`, jamais sur les variantes d'écran. Vérifié en mesurant les styles calculés sur les deux écrans : fond, flou et arête strictement identiques.
 
 **RÈGLE** : le verre ne se pose que sur une surface qui FLOTTE au-dessus d'un contenu qui défile, et jamais sans avoir mesuré le contraste de ce qu'elle porte, dans les deux thèmes, avec la jaquette la plus contrariante derrière.
+
+## ✅ LA BOÎTE DU JEU SE RETOURNE + L'INDICE DE LA TUILE (2026-08-25, demande user)
+
+**Retour user** : « Le mieux serait que le jeu se retourne avec derrière les deux boutons modifier et BGG » et « il faudrait un petit indice sur le bouton meilleur score des stats qui indique subtilement qu'on peut cliquer sur la tuile pour la retourner ».
+
+Conception en workflow (4 relevés + 3 propositions de DA jugées : « dos de vraie boîte » / « dos de carte à jouer » / « sobre »). **Les deux premières ont été écartées** — un code-barres en `repeating-linear-gradient`, un liseré d'impression et une mention d'éditeur, c'est le décor gratuit que sept chantiers ont servi à retirer ; et peindre le dos en `var(--primary)` en fait **une plaque quasi blanche plein cadre** en thème sombre, le point le plus lumineux de l'écran.
+
+**LE DOS** : `.hero-back` = surface `--card` opaque (le fond d'ambiance flouté vit juste derrière), `--card-shadow`, **rayon 5px comme le recto** — un objet qui tourne garde sa découpe (`.detail-hero` et `.detail-hero-empty` sont descendus de `--r-card` à 5px pour ça). Au centre, deux `.btn-ghost` de 44px et rien d'autre ; tout le reste de la plaque est un `<button>` transparent qui ramène au recto — le geste de retour est le geste d'aller. Une ligne « Hors ligne : lecture seule. » paraît quand elle a lieu d'être, sinon on retournerait la boîte pour tomber sur un bouton mort et un bouton absent, sans un mot.
+  - `.detail-hero-acts` (le voile sombre) et **toute la classe `.hero-act`** sont supprimées — avec leurs deux couleurs FIGÉES hors thème (`rgba(255,255,255,.94)` / `#131316`), qui n'existaient que parce qu'elles étaient posées sur une illustration imprévisible.
+  - Boutons en `flex: 1 1 116px` : côte à côte sur une boîte large, empilés tout seuls sur un portrait. **Padding `--sp-1` et pas `--sp-2`** : sur la plus étroite de la collection (Tarot, 124px rendus) le bouton ne fait que 108px et « Modifier » en demande 87 — mesuré.
+
+**LA MÉCANIQUE 3D**, et ses trois pièges :
+  1. ⚠️ **`overflow: hidden` RETIRÉ de `.detail-hero-wrap`** — non pas pour la 3D (le wrap ne porte que la `perspective`, pas le `preserve-3d`, donc il n'aplatit rien) mais pour le CLIP : pendant la rotation l'arête proche grossit d'environ 11 % (1200/(1200−120)) et un clip la trancherait net. Mesuré : la boîte déborde de **3,5px en haut et en bas** à mi-course.
+  2. ⚠️ **`.detail-body > .detail-hero-wrap { z-index: 2 }`** : sans ce cran, la bande d'infos — frère POSTÉRIEUR au même z-index 1 — repeint par-dessus et tranche l'objet en plein tour.
+  3. ⚠️ **`preserve-3d` ne vit que sur `.hero-flip`**, qui ne doit donc porter NI overflow ≠ visible, NI opacity < 1, NI filter/clip-path/mask/mix-blend-mode/isolation/contain:paint, NI `will-change` (chacune APLATIT la scène — et `will-change` a déjà figé une transition dans ce projet).
+  - **Le RECTO reste dans le flux** (il dimensionne le retourneur), le verso l'épouse en `inset: 0` — sans ça il faudrait une hauteur de rattrapage, comme `.stat-tile-flip` a dû en poser une.
+  - **Durée et courbe reprises AU CARACTÈRE PRÈS de la tuile** (`0.55s cubic-bezier(0.2,0.7,0.3,1)`) : un même geste ne se réinvente pas d'un écran à l'autre. Une TRANSITION, jamais une keyframe (une animation CSS démarre à la première résolution de style, elle se rejouerait à chaque ouverture).
+  - Le soulèvement `:has(.detail-hero:active)` est **étendu à `:has(.hero-back-return:active)`** : il vit sur le wrap, la rotation sur `.hero-flip` → deux éléments, deux `transform`, aucune collision. Il devient le préambule du geste : on prend l'objet, il se lève ; on lâche, la rotation part.
+
+**REVUE ADVERSARIALE (19 agents, 3 lentilles + un réfutateur par trouvaille) : 11 confirmées, toutes corrigées ; 4 réfutées.**
+  1. ⚠️⚠️ **Le jeu suivant arrivait DOS À L'ÉCRAN.** `.detail-body` porte `key={game.id}` → le corps du jeu suivant est un nœud NEUF créé avec `flipped`, et le `useLayoutEffect` voisin appelle `getBoundingClientRect` → la boîte est RÉSOLUE à 180° avant que la classe ne tombe → la transition de 0,55 s se joue. Mesuré : **180° à 37 ms, 87° à 202 ms, 0° seulement à 653 ms**. **Fix : remise à l'endroit PENDANT LE RENDU** (`if (idPrec !== game.id) { setIdPrec(...); setHeroActions(false) }`). ⚠️ **un `useLayoutEffect` NE SUFFIT PAS** (mesuré) : il passe après ce reflow. Vérifié après correctif : 0° sur toutes les frames.
+  2. ⚠️ **`aria-hidden` posé sur l'élément qui a le FOCUS.** Les deux faces échangent `aria-hidden` sans que le focus bouge → Chrome refuse d'appliquer l'attribut (« Blocked aria-hidden … descendant retained focus »), le lecteur d'écran n'annonce rien, et un second Entrée sur le bouton toujours focalisé retourne encore la boîte (`pointer-events: none` ne bloque pas le clavier). **Fix : un `useLayoutEffect([heroActions])` déplace le focus sur la face qui apparaît — SEULEMENT s'il se trouvait dans la face qui part**, sinon on le volerait à quelqu'un qui a tapé du doigt.
+  3. ⚠️ **Après « Modifier » ou « BGG », on revenait sur une plaque vide** : `GameDetail` n'est pas démonté par l'ouverture du formulaire (frère sans `key`) → la jaquette avait purement disparu. **Fix : `actionDuDos(fn)` remet la boîte à l'endroit en partant.**
+  4. ⚠️ **`pointer-events` est HÉRITÉE** : une valeur héritée ne s'applique QUE si l'élément ne déclare rien. `.hero-back-btn { pointer-events: auto }` (indispensable, le champ du dos est en `none` pour laisser passer le tap vers le retour) **ANNULAIT** le `none` du parent → les deux boutons du dos restaient tapables face cachée. **Fix : les nommer explicitement dans le garde `:not(.flipped)`.**
+  5. Le `swipedRef` ne couvrait que le retournement, pas les deux boutons qui occupent la même surface → un glissé pouvait ouvrir le formulaire. Ils passent par `actionDuDos`, qui le lit.
+  6. L'étiquette du recto promettait BGG même sans fiche BGG (`onBgg` est `undefined` hors ligne ou sans `bgg_id`) → `etiquetteRecto` conditionnelle. Vérifié hors ligne : « Retourner la boîte : modifier le jeu ».
+  7. Trois commentaires CSS décrivaient le mécanisme supprimé, dont un qui affirmait encore « `.detail-hero-wrap` est en overflow:hidden » à 100 lignes du commentaire qui dit l'avoir retiré. Corrigés.
+  **Réfutées** : la plaque « vide à 60 % » et l'empilement des boutons (c'est la zone de retour, et l'empilement donne des cibles plus grandes) ; les boutons du dos « en costume de l'action secondaire » (prémisse causale fausse) ; la couronne du verso « sous le seuil » (`--gold` et `--gold-ink` sont une paire remplissage/texte, pas un seuil unique) ; les « trois retours contradictoires » entre la tuile et la boîte (la tuile est une commande, la jaquette un objet — la règle maison prescrit l'écart).
+
+**L'INDICE DE LA TUILE « MEILLEUR SCORE »** : un `<CrownIcon size={14}>` dans le coin haut-droit de la face RECTO (`.tile-hint`, `--gold-ink`, opacité 0,55), calé sur les marges optiques de `.stat-tile` (14/16) — il aligne son haut sur celui des chiffres et se lit comme leur annotation, pas comme un badge.
+  - **Pourquoi la couronne et pas une flèche circulaire** : elle annonce le CONTENU (« il y a quelqu'un derrière ce nombre »), pas le mécanisme. Et elle se lit parce que **la tuile n'est jamais seule** : sa jumelle « score moyen » est nue, l'indice n'a donc qu'à dire « celle-ci n'est pas comme sa voisine ».
+  - Posé DANS la face recto : sur `.tile-inner` il tournerait avec la carte, sur le bouton il resterait au-dessus des deux faces.
+  - **Mesuré** : contraste composite **2,21 clair / 4,16 sombre** ; 58,6px de blanc entre le chiffre et la couronne ; présent sur la seule tuile retournable, absent de sa jumelle et du coopératif (où `bestScoreBy` est vide par construction).
+  - **Deux dettes soldées au passage** : `.tile-holder-name` était du texte en `--gold` sur `--card`, soit **2,3:1 en clair** → passe à `--gold-ink` (**4,92**) ; et `.tile-back { border-color: var(--gold) }` était inerte (`.stat-tile` ne déclare aucune `border-width`) → supprimée.
+
+**Vérifié en dev, clair + sombre** : structure 3D, empreintes identiques recto/dos sur Abyss (240×240), Tarot (124×240) et sans jaquette (240×150), rayons tous à 5px, mi-rotation sans rognage, aria/tabIndex/focus dans les deux sens, glissé court qui ne retourne pas, clone du pager, hors ligne. **Garde-fou d'espacement : 348 → 344** (baisse : les px codés en dur du voile disparaissent).
 
 ## ✅ CINQ GESTES QUI RENDENT L'APP AGRÉABLE À MANIPULER (2026-08-25)
 

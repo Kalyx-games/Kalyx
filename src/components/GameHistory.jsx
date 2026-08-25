@@ -49,6 +49,11 @@ function Tile({ value, label, holder }) {
     >
       <span className="tile-inner">
         <span className="tile-face stat-tile">
+          {/* L'indice : la couronne en chuchotement. Elle annonce le CONTENU du verso (« il y
+              a quelqu'un derrière ce nombre »), pas le mécanisme — une flèche circulaire
+              dirait « ça tourne » sans dire pourquoi on tournerait. Et elle se lit parce que
+              la tuile n'est JAMAIS seule : sa jumelle « score moyen », à sa droite, est nue. */}
+          <span className="tile-hint" aria-hidden="true"><CrownIcon size={14} /></span>
           <span className="stat-tile-value">{value}</span>
           <span className="stat-tile-label">{label}</span>
         </span>

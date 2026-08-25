@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { BackIcon, ExtIcon, PencilIcon, DieIcon } from './icons'
 import { BGG_LOGO } from '../lib/logos'
+import { vibre } from '../lib/haptique'
 import SnapshotPane from './SnapshotPane'
 import { backdropSrc, heroSrc } from '../lib/img'
 import {
@@ -56,7 +57,19 @@ export default function GameDetail({
   // Repli si l'image ne charge pas (optimiseur ET image brute en échec) → on montre le dé
   // au lieu d'une icône d'image cassée (cohérent avec la carte).
   const [imgBroken, setImgBroken] = useState(false)
-  const [heroActions, setHeroActions] = useState(false) // les actions posées sur la jaquette
+  const [heroActions, setHeroActions] = useState(false) // la boîte est-elle retournée ?
+  // ⚠️ La remise à l'endroit se fait PENDANT LE RENDU (motif « ajuster l'état quand une prop
+  // change »), surtout PAS dans un effet : `.detail-body` porte key={game.id}, donc le corps du
+  // jeu suivant est un nœud NEUF créé avec la classe `flipped`, et le useLayoutEffect voisin
+  // appelle getBoundingClientRect → la boîte est RÉSOLUE à rotateY(180deg) avant que la classe
+  // ne tombe → la transition de 0,55 s se joue et le jeu suivant arrive DOS À L'ÉCRAN.
+  // Mesuré avant correctif : 180° à 37 ms, 87° à 202 ms, 0° seulement à 653 ms.
+  // ⚠️ un useLayoutEffect à la place NE SUFFIT PAS (mesuré aussi) : il passe après ce reflow.
+  const [idPrec, setIdPrec] = useState(game.id)
+  if (idPrec !== game.id) {
+    setIdPrec(game.id)
+    setHeroActions(false)
+  }
   useEffect(() => setImgBroken(false), [fullImg])
   const showImg = Boolean(fullImg) && !imgBroken
 
@@ -80,8 +93,47 @@ export default function GameDetail({
     const top = bodyRef.current.getBoundingClientRect().top
     setBodyLeaving((b) => (b && Math.abs(b.top - top) > 0.5 ? { ...b, top } : b))
   }, [bodyLeaving])
-  // On change de jeu (glissé) → les actions de la jaquette se referment.
-  useEffect(() => { setHeroActions(false) }, [game.id])
+  // ⚠️ Le glissé entre fiches passe SOUS le doigt sur la jaquette : sans ce drapeau, un
+  // glissé trop court pour changer de jeu (< 60 px) laisse passer son clic de fin de geste
+  // et retourne la boîte par accident. Même motif que NavBar et que le parcours de saisie —
+  // c'est la troisième fois qu'il est nécessaire dans ce projet.
+  const swipedRef = useRef(false)
+  const retourner = () => {
+    if (swipedRef.current) return
+    vibre('cran')
+    setHeroActions((v) => !v)
+  }
+  // Les deux actions du dos remettent la boîte À L'ENDROIT en partant : sans ça, on revient du
+  // formulaire (ou de BGG) sur une plaque vide — la jaquette du jeu a purement disparu, et
+  // rien à l'écran ne dit qu'il faut retoucher la plaque pour la faire revenir.
+  const actionDuDos = (fn) => () => {
+    if (swipedRef.current) return
+    setHeroActions(false)
+    fn()
+  }
+  // ⚠️ Les deux faces échangent `aria-hidden` : sans déplacer le focus, on le laisse DANS la
+  // face qu'on vient de masquer. Chrome refuse alors d'appliquer l'aria-hidden (« Blocked
+  // aria-hidden on an element because its descendant retained focus »), le lecteur d'écran
+  // n'annonce rien, et un second Entrée sur le bouton toujours focalisé retourne encore la
+  // boîte — `pointer-events: none` ne bloque pas le clavier.
+  // On ne déplace le focus QUE s'il se trouvait dans la face qui part : sinon on le volerait
+  // à quelqu'un qui a simplement tapé du doigt ailleurs.
+  // Le dos ne porte BGG que si le jeu a une fiche BoardGameGeek et qu'on est en ligne.
+  const etiquetteRecto = onBgg
+    ? 'Retourner la boîte : modifier le jeu, ouvrir BoardGameGeek'
+    : 'Retourner la boîte : modifier le jeu'
+  const flipRef = useRef(null)
+  const premierRendu = useRef(true)
+  useLayoutEffect(() => {
+    if (premierRendu.current) { premierRendu.current = false; return }
+    const boite = flipRef.current
+    const actif = document.activeElement
+    if (!boite || !actif) return
+    const recto = boite.querySelector('.detail-hero')
+    const dos = boite.querySelector('.hero-back')
+    if (heroActions && recto && recto.contains(actif)) boite.querySelector('.hero-back-return')?.focus()
+    else if (!heroActions && dos && dos.contains(actif)) recto?.focus()
+  }, [heroActions])
   // Le fond d'ambiance remonte DERRIÈRE la tête : son décalage était la somme codée en dur
   // 8+6+44+14, calée sur une tête d'une seule ligne. Depuis que le titre y revient et peut
   // passer sur deux lignes, on mesure la tête pour de bon.
@@ -132,6 +184,9 @@ export default function GameDetail({
     const onEnd = (e) => {
       if (!st.dragging) return
       st.dragging = false
+      // posé AVANT le seuil des 60 px : un glissé qui n'aboutit pas ne doit rien déclencher
+      swipedRef.current = true
+      setTimeout(() => { swipedRef.current = false }, 220)
       const dx = e.changedTouches[0].clientX - st.x
       if (Math.abs(dx) < 60) return
       navRef.current.startNav(dx < 0 ? 1 : -1) // glissé vers la gauche → jeu suivant
@@ -180,48 +235,70 @@ export default function GameDetail({
           />
         </div>
       )}
+      {/* La boîte du jeu se RETOURNE : au dos, les deux actions de service. Elles ne pèsent
+          sur rien tant qu'on consulte, et le geste dit de lui-même comment revenir.
+          ⚠️ le RECTO reste dans le flux — c'est lui qui donne sa taille au retourneur ; le
+          verso l'épouse en absolu. Sans ça il faudrait une hauteur de rattrapage, comme la
+          tuile « meilleur score » a dû en poser une. */}
       <div className="detail-hero-wrap">
-        {showImg ? (
-          <button
-            type="button"
-            className="detail-hero"
-            onClick={() => setHeroActions((v) => !v)}
-            aria-expanded={heroActions}
-            aria-label={heroActions ? 'Masquer les actions' : 'Afficher les actions du jeu'}
-          >
-            <img
-              src={heroSrc(fullImg)}
-              alt=""
-              onError={(e) => {
-                // 1er échec (optimiseur) → tente l'image brute ; 2e échec → repli sur le dé.
-                if (e.currentTarget.src !== fullImg) e.currentTarget.src = fullImg
-                else setImgBroken(true)
-              }}
-            />
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="detail-hero detail-hero-empty"
-            onClick={() => setHeroActions((v) => !v)}
-            aria-expanded={heroActions}
-            aria-label={heroActions ? 'Masquer les actions' : 'Afficher les actions du jeu'}
-          >
-            <span aria-hidden="true">🎲</span>
-          </button>
-        )}
-        {/* Les actions de service ne se montrent QUE si on touche la jaquette : elles ne pèsent
-            sur rien tant qu'on consulte, et restent à portée quand on les cherche. Rendues même
-            sans image : sinon, un jeu sans jaquette n'aurait plus aucun accès à Modifier ni BGG. */}
-        <div className={`detail-hero-acts${heroActions ? ' on' : ''}`} aria-hidden={!heroActions}>
-          <button type="button" className="hero-act" onClick={onEdit} disabled={!online} tabIndex={heroActions ? 0 : -1}>
-            <PencilIcon size={17} /> Modifier
-          </button>
-          {onBgg && (
-            <button type="button" className="hero-act" onClick={onBgg} tabIndex={heroActions ? 0 : -1}>
-              <img className="bgg-mark" src={BGG_LOGO} alt="" width="17" height="17" /> BGG
+        <div className={`hero-flip${heroActions ? ' flipped' : ''}`} ref={flipRef}>
+          {showImg ? (
+            <button
+              type="button"
+              className="detail-hero"
+              onClick={retourner}
+              aria-hidden={heroActions || undefined}
+              tabIndex={heroActions ? -1 : 0}
+              aria-label={etiquetteRecto}
+            >
+              <img
+                src={heroSrc(fullImg)}
+                alt=""
+                onError={(e) => {
+                  // 1er échec (optimiseur) → tente l'image brute ; 2e échec → repli sur le dé.
+                  if (e.currentTarget.src !== fullImg) e.currentTarget.src = fullImg
+                  else setImgBroken(true)
+                }}
+              />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="detail-hero detail-hero-empty"
+              onClick={retourner}
+              aria-hidden={heroActions || undefined}
+              tabIndex={heroActions ? -1 : 0}
+              aria-label={etiquetteRecto}
+            >
+              <span aria-hidden="true">🎲</span>
             </button>
           )}
+          {/* Le dos. Rendu même sans jaquette : sinon un jeu sans image n'aurait plus AUCUN
+              accès à Modifier ni à BGG. */}
+          <div className="hero-back" aria-hidden={!heroActions}>
+            {/* Toute la plaque hors boutons ramène au recto : le geste de retour est le geste
+                d'aller. Pas de croix, pas de phrase. */}
+            <button
+              type="button"
+              className="hero-back-return"
+              onClick={retourner}
+              tabIndex={heroActions ? 0 : -1}
+              aria-label="Revenir à la jaquette"
+            />
+            <div className="hero-back-acts">
+              <button type="button" className="btn-ghost hero-back-btn" onClick={actionDuDos(onEdit)} disabled={!online} tabIndex={heroActions ? 0 : -1}>
+                <PencilIcon size={18} /> Modifier
+              </button>
+              {onBgg && (
+                <button type="button" className="btn-ghost hero-back-btn" onClick={actionDuDos(onBgg)} tabIndex={heroActions ? 0 : -1}>
+                  <img className="bgg-mark" src={BGG_LOGO} alt="" width="18" height="18" /> BGG
+                </button>
+              )}
+              {/* Sans elle, on retourne la boîte pour tomber sur un bouton mort et un bouton
+                  absent, sans un mot. */}
+              {!online && <p className="hero-back-offline">Hors ligne : lecture seule.</p>}
+            </div>
+          </div>
         </div>
       </div>
 

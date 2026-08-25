@@ -2458,7 +2458,18 @@ body {
   transform: rotateY(180deg);
   align-items: center;
   text-align: center;
-  border-color: var(--gold);
+}
+/* Recto de la tuile retournable : la couronne, discrète, calée sur les marges optiques de
+   `.stat-tile` (14/16) — elle aligne son haut sur celui des chiffres et se lit comme leur
+   annotation, pas comme un badge flottant. Posée DANS la face recto : sur `.tile-inner` elle
+   tournerait avec la carte, sur le bouton elle resterait au-dessus des deux faces. */
+.tile-hint {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  line-height: 1;
+  color: var(--gold-ink);
+  opacity: 0.55;
 }
 .tile-holder-icon {
   line-height: 1;
@@ -2468,7 +2479,7 @@ body {
   margin-top: 4px;
   font-size: var(--fs-body);
   font-weight: 700;
-  color: var(--gold);
+  color: var(--gold-ink); /* `--gold` donnait 2,3:1 sur la carte en clair — sous le seuil */
   line-height: 1.2;
   overflow-wrap: anywhere; /* un nom long (ou plusieurs ex æquo) passe à la ligne */
 }
@@ -3170,45 +3181,11 @@ button {
   overflow: hidden;
 }
 .bgg-mark { display: block; border-radius: 4px; }
-/* Actions de service, posées SUR la jaquette et révélées d'un tap dessus. Elles n'existent
-   visuellement que dans ce moment-là, donc elles peuvent se permettre un fond opaque : c'est
-   ce qui les rend lisibles sur n'importe quelle illustration, claire, sombre ou chargée. */
-.detail-hero-acts {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap; /* jaquette portrait : les 2 boutons s’empilent plutôt que de déborder */
-  gap: 8px;
-  padding: 26px 8px 8px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.62), transparent);
-  border-radius: 0 0 5px 5px;
-  opacity: 0;
-  transform: translateY(8px);
-  pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.18s ease;
-}
-.detail-hero-acts.on { opacity: 1; transform: none; pointer-events: auto; }
-.detail-hero-wrap { overflow: hidden; border-radius: 5px; } /* filet : rien ne sort de la jaquette */
-.hero-act {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 38px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: var(--r-ctl);
-  background: rgba(255, 255, 255, 0.94);
-  color: #131316; /* posé sur la jaquette : cette paire ne dépend pas du thème */
-  font-size: var(--fs-body-s);
-  font-weight: 600;
-  cursor: pointer;
-}
-.hero-act:disabled { opacity: 0.5; cursor: default; }
-.hero-act:active { transform: scale(0.96); }
-
+/* ⚠️ `overflow` RETIRÉ, rayon CONSERVÉ. Pendant la rotation, l'arête proche de la boîte
+   grossit d'environ 11 % (1200 / (1200 − 120) pour une jaquette de 240 px) : un clip la
+   trancherait net en haut et en bas. Le rayon, lui, sert encore — c'est lui qui arrondit
+   l'ombre du soulèvement. */
+.detail-hero-wrap { border-radius: 5px; }
 /* Changement de jeu au glissé = pager PLEIN ÉCRAN : le corps du NOUVEAU jeu entre en plein depuis un
    bord PENDANT que l'ancien (instantané figé `.detail-body-leaving`) sort par l'autre bord, avec une
    ombre nette entre les deux → on voit vraiment une fiche remplacer l'autre. */
@@ -3284,15 +3261,19 @@ button {
   z-index: 1;
 }
 /* La boîte épouse l'image EN LARGEUR aussi (l'image est centrée et rarement pleine largeur) :
-   sans ça, le voile des actions, posé en absolu sur ce conteneur, débordait de la jaquette. */
-.detail-hero-wrap { position: relative; width: fit-content; max-width: 100%; margin: 4px auto 12px; }
+   sans ça, le DOS de la boîte, posé en absolu sur ce conteneur, déborderait de la jaquette. */
+.detail-hero-wrap { position: relative; width: fit-content; max-width: 100%; margin: 4px auto 12px; perspective: 1200px; }
+/* ⚠️ La boîte déborde de son gabarit pendant la rotation. Sans ce cran, la bande d'infos —
+   frère POSTÉRIEUR au même z-index 1 — repeint par-dessus et tranche l'objet en plein tour.
+   Sélecteur enfant (0,2,0), déclaré APRÈS la règle-parapluie de même spécificité. */
+.detail-body > .detail-hero-wrap { z-index: 2; }
 .detail-hero {
   display: block;
   width: auto;
   border: 0;
   padding: 0;
   background: transparent; /* pas de cadre : l'image « flotte » sur le fond, identique clair/sombre */
-  border-radius: var(--r-card);
+  border-radius: 5px; /* le rayon de l'ART — et le dos porte le même : un objet qui tourne garde sa découpe */
   overflow: hidden;
   cursor: pointer; /* un tap révèle les actions ; la fiche ne zoome plus */
 }
@@ -3301,13 +3282,16 @@ button {
    l'ombre qui s'allonge (loi d'élévation maison, `--elev-2`).
    RÈGLE, qui ne vaut que tant qu'elle reste UNIQUE dans l'app : ce qui est une commande
    s'enfonce, ce qui est un objet se lève.
-   ⚠️ le mouvement est porté par le WRAP, pas par le bouton : `.detail-hero-wrap` est en
-   overflow:hidden (le voile des actions ne doit pas déborder d'une jaquette portrait) — un
-   soulèvement posé sur `.detail-hero` se ferait rogner ses 4 px du haut. */
+   ⚠️ le mouvement est porté par le WRAP, pas par le bouton : lui seul enveloppe les DEUX
+   faces, et c'est lui qui porte la perspective — un soulèvement posé sur `.detail-hero`
+   ne lèverait que le recto, pendant que le dos resterait en place.
+   (Le `overflow: hidden` qui justifiait autrefois ce choix a été RETIRÉ avec l'arrivée du
+   retournement : il tranchait l'arête proche de la boîte en pleine rotation.) */
 .detail-hero-wrap {
   transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease;
 }
-.detail-hero-wrap:has(.detail-hero:active) {
+.detail-hero-wrap:has(.detail-hero:active),
+.detail-hero-wrap:has(.hero-back-return:active) {
   transform: translateY(-4px) scale(1.015);
   box-shadow: var(--elev-2);
 }
@@ -3315,7 +3299,103 @@ button {
    invaliderait toute la liste, donc tous les autres retours au toucher avec elle. */
 @media (prefers-reduced-motion: reduce) {
   .detail-hero-wrap { transition: none; }
-  .detail-hero-wrap:has(.detail-hero:active) { transform: none; box-shadow: none; }
+  .detail-hero-wrap:has(.detail-hero:active),
+  .detail-hero-wrap:has(.hero-back-return:active) { transform: none; box-shadow: none; }
+}
+
+/* ═══ Le retournement de la boîte ═══
+   Le recto est dans le FLUX (il dimensionne), le verso l'épouse en absolu.
+   ⚠️ `transform-style: preserve-3d` ne vit que sur `.hero-flip`, qui ne doit donc porter NI
+   overflow ≠ visible, NI opacity < 1, NI filter/clip-path/mask/mix-blend-mode/isolation/
+   contain:paint, NI will-change — chacune de ces propriétés APLATIT la scène 3D (et
+   will-change a déjà figé une transition dans ce projet).
+   Durée et courbe reprises telles quelles de la tuile « meilleur score » : un même geste ne
+   se réinvente pas d'un écran à l'autre. Une TRANSITION, jamais une keyframe — une animation
+   CSS démarre à la première résolution de style, elle se rejouerait à chaque ouverture. */
+.hero-flip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* filet : aucune jaquette de la collection ne descend sous 178 px de haut (mesuré sur les
+     135 images), mais une future image panoramique ne doit pas écraser les deux boutons. */
+  min-height: 120px;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.hero-flip.flipped { transform: rotateY(180deg); }
+.detail-hero,
+.hero-back {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+/* ⚠️ `pointer-events` est HÉRITÉE : une valeur héritée ne s'applique que si l'élément ne
+   déclare rien. `.hero-back-btn { pointer-events: auto }` (indispensable, le champ du dos est
+   en `none` pour laisser passer le tap vers le retour) ANNULE donc le `none` du parent — les
+   deux boutons du dos restaient tapables face cachée. On les nomme explicitement. */
+.hero-flip:not(.flipped) .hero-back,
+.hero-flip:not(.flipped) .hero-back-btn,
+.hero-flip:not(.flipped) .hero-back-return { pointer-events: none; }
+.hero-flip.flipped .detail-hero { pointer-events: none; }
+/* Le dos : une surface de l'app, opaque (le fond d'ambiance flouté vit juste derrière), au
+   rayon de l'ART comme le recto. Aucun décor : le plaisir est dans la rotation, et sept
+   chantiers ont servi à retirer ce qui se posait par-dessus. */
+.hero-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-2);
+  background: var(--card);
+  border-radius: 5px;
+  box-shadow: var(--card-shadow);
+}
+.hero-back-return {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+/* Le champ laisse passer le tap vers le retour ; seuls les boutons le captent. */
+.hero-back-acts {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  width: 100%;
+}
+/* `flex: 1 1 116px` : les deux boutons se posent côte à côte quand la boîte est large, et
+   s'empilent tout seuls sur une jaquette portrait — la plus étroite de la collection fait
+   124 px rendus (Tarot). */
+.hero-back-btn {
+  pointer-events: auto;
+  flex: 1 1 116px;
+  min-width: 0;
+  height: 44px;
+  /* --sp-1 et pas --sp-2 : sur la jaquette la plus étroite de la collection (Tarot, 124 px
+     rendus) le bouton ne fait que 108 px, et « Modifier » en demande 87 — mesuré. */
+  padding: 0 var(--sp-1);
+  font-size: var(--fs-body);
+  white-space: nowrap;
+}
+.hero-back-offline {
+  flex: 1 0 100%;
+  margin: 0;
+  text-align: center;
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-flip { transition: none; }
 }
 
 /* Image à sa taille naturelle (pas pleine largeur → moins imposante), plafonnée à 240px de haut,
@@ -3329,10 +3409,10 @@ button {
   align-items: center;
   justify-content: center;
   font-size: 3rem;
-  cursor: pointer; /* devenu un bouton : il révèle les actions */
+  cursor: pointer; /* devenu un bouton : il se retourne */
   background: var(--soft);
   border: 1px solid var(--line);
-  border-radius: var(--r-card);
+  border-radius: 5px; /* même découpe que le dos */
 }
 /* Bande de stats : les cadres tombent (c'était le dernier écran à en avoir), il reste
    des filets verticaux et la typographie pour séparer — comme une fiche produit. */
@@ -3409,7 +3489,7 @@ button {
 /* Place ICI (et non dans le bloc general l. 2876) : une media query n ajoute aucune
    specificite, elle doit donc suivre les regles qu elle neutralise. */
 @media (prefers-reduced-motion: reduce) {
-  .detail-plays:active, .hero-act:active { transform: none; }
+  .detail-plays:active { transform: none; }
 }
 .detail-plays-n {
   font-size: var(--fs-title);
