@@ -3337,11 +3337,11 @@ button {
   -webkit-backface-visibility: hidden;
 }
 /* ⚠️ `pointer-events` est HÉRITÉE : une valeur héritée ne s'applique que si l'élément ne
-   déclare rien. `.hero-back-btn { pointer-events: auto }` (indispensable, le champ du dos est
+   déclare rien. `.hero-act-tile { pointer-events: auto }` (indispensable, le champ du dos est
    en `none` pour laisser passer le tap vers le retour) ANNULE donc le `none` du parent — les
    deux boutons du dos restaient tapables face cachée. On les nomme explicitement. */
 .hero-flip:not(.flipped) .hero-back,
-.hero-flip:not(.flipped) .hero-back-btn,
+.hero-flip:not(.flipped) .hero-act-tile,
 .hero-flip:not(.flipped) .hero-back-return { pointer-events: none; }
 .hero-flip.flipped .detail-hero { pointer-events: none; }
 /* Le dos : une surface de l'app, opaque (le fond d'ambiance flouté vit juste derrière), au
