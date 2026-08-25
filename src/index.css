@@ -112,6 +112,11 @@
   --ok-border: #a7f3d0;
   --ok-ink: #047857;
   --nav-pill: rgba(28, 28, 33, 0.08);
+  /* Verre du bac : le blanc de la carte, mais translucide, + l'arête claire du dessus. */
+  --verre: rgba(255, 255, 255, 0.84);
+  --verre-libelle: #5b5b63; /* le libellé inactif, un cran plus soutenu sous le verre */
+  --verre-arete: rgba(255, 255, 255, 0.75);
+  --verre-ombre: 0 -1px 24px rgba(0, 0, 0, 0.07);
   --app-w: 640px; /* largeur max de l'app (élargie en grille sur tablette/desktop) */
   color-scheme: light;
 }
@@ -159,6 +164,11 @@
     --ok-border: #1f6b4d;
     --ok-ink: #6ee7b7;
     --nav-pill: rgba(242, 242, 244, 0.1);
+  /* En sombre le voile est plus dense : un fond noir translucide laisse tout passer. */
+  --verre: rgba(22, 22, 24, 0.78);
+  --verre-libelle: #bcbcc4;
+  --verre-arete: rgba(255, 255, 255, 0.1);
+  --verre-ombre: 0 -1px 24px rgba(0, 0, 0, 0.45);
     color-scheme: dark;
   }
 }
@@ -203,6 +213,11 @@
   --ok-border: #1f6b4d;
   --ok-ink: #6ee7b7;
   --nav-pill: rgba(242, 242, 244, 0.1);
+  /* En sombre le voile est plus dense : un fond noir translucide laisse tout passer. */
+  --verre: rgba(22, 22, 24, 0.78);
+  --verre-libelle: #bcbcc4;
+  --verre-arete: rgba(255, 255, 255, 0.1);
+  --verre-ombre: 0 -1px 24px rgba(0, 0, 0, 0.45);
   color-scheme: dark;
 }
 
@@ -252,11 +267,33 @@ body {
   width: 100%;
   max-width: var(--app-w);
   display: flex;
-  /* Pas de backdrop-filter : le fond est opaque, le flou serait calculé pour rien. */
+  /* Le bac est la seule surface qui ne disparaît JAMAIS au défilement : c'est donc la
+     seule où du verre a un sens — la collection passe dessous et se devine.
+     ⚠️ REPLI OBLIGATOIRE : sans backdrop-filter, un voile translucide laisserait le texte
+     des cartes traverser les libellés. Le fond opaque reste donc la valeur par défaut, et
+     le verre ne s'applique que dans le @supports ci-dessous. */
   background: var(--card);
   border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 30;
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .navbar {
+    background: var(--verre);
+    /* La SATURATION est ce qui fait vivre la matière : un flou seul rend gris. */
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    border-top-color: transparent;
+    /* L'arête qui capte la lumière sur le bord supérieur, et l'ombre qui décolle le bac
+       du contenu — c'est ce couple qui distingue le verre d'un simple voile. */
+    box-shadow: inset 0 1px 0 var(--verre-arete), var(--verre-ombre);
+  }
+  /* Le libellé inactif ne peut plus compter sur un fond connu : il monte d'un cran.
+     L'onglet actif, lui, est en encre pleine — il n'a jamais eu de problème.
+     ⚠️ `.navbar .navtab` et pas `.navtab` : @supports n'ajoute AUCUNE spécificité, et la
+     règle `.navtab { color: var(--muted) }` est déclarée PLUS BAS dans le fichier — à
+     spécificité égale, c'est l'ordre qui tranche (même piège que les blocs reduced-motion). */
+  .navbar .navtab { color: var(--verre-libelle); }
 }
 /* Pastille de surbrillance qui glisse sous l'onglet actif. */
 .navbar-pill {
