@@ -46,6 +46,16 @@ const Ascenseur = forwardRef(function Ascenseur({ cle = null }, ref) {
     prepare(l) {
       setLettre(l)
     },
+    // La géométrie du rail, pour le hook de suivi : l'étiquette désigne le jeu EN FACE de
+    // la poignée à l'écran, la ligne de lecture est donc la position de la poignée — et
+    // seule cette ref sait où vit le rail. Lu au recalage (≤ 1×/s), jamais par événement.
+    metriques() {
+      const z = zone.current
+      const el = poignee.current
+      if (!z || !el) return null
+      const r = z.getBoundingClientRect()
+      return { top: r.top, hauteur: r.height, poignee: el.offsetHeight }
+    },
   }), [])
 
   // Changer de tri change le SENS de l'étiquette : l'ancienne (une lettre, une durée…)

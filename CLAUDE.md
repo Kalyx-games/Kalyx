@@ -280,6 +280,10 @@ L'étiquette venait d'un IntersectionObserver, validé en dev **en pilotant sa c
   · un SAUT (la saisie de l'ascenseur = `scrollTo` instantané) fait passer les ancres intermédiaires de « sous l'écran » à « au-dessus » sans qu'elles soient jamais visibles → zéro événement (le « C » à côté de Zenith).
 **RÈGLE, générale** : un mécanisme dont le banc ne peut pas exercer le VRAI chemin (IO, vrais événements scroll, vrais touch) ne doit pas être validé par un simulacre — soit on le teste en conditions réelles, soit on choisit un mécanisme dont le chemin synthétique EST le chemin réel.
 
+### 2e retour du même jour : « la lettre doit apparaître EN REGARD du jeu auquel elle se rapporte »
+
+La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HAUT de l'écran — mais l'œil lit la poignée contre son voisin. **LA LIGNE DE LECTURE EST DÉSORMAIS LA POIGNÉE** : l'étiquette désigne le jeu en face d'elle à l'écran. La position de la poignée est un calcul pur (fraction du rail), la géométrie du rail est lue au recalage via `asc.current.metriques()` — zéro lecture DOM par événement. Vérifié LITTÉRALEMENT (la carte qui chevauche le centre de la poignée est comparée à l'étiquette) : liste C↔Cat in the box, F↔Faraway, S↔Shamans, T↔The 7th Citadel, Z↔Zenith ; grille B↔rangée Bohnanza…, D↔Draftosaurus…, M, S, Z. Les butées priment toujours (fin de liste → dernière étiquette).
+
 ### Le correctif : un cache d'ordonnées + `scrollY`
 
 `src/lib/lettre.js` réécrit — **plus aucun IntersectionObserver dans le projet**. Un CACHE des ordonnées des ancres (≤ 26 `getBoundingClientRect`, refait au plus 1×/s et au resize — lectures propres, rien du write-read-write que l'audit avait banni) + une recherche sur `scrollY` à chaque événement `scroll`. Remontées et sauts justes par construction.

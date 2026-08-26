@@ -18,7 +18,8 @@ export function lettreDe(nom) {
   return /[A-Z]/.test(c) ? c : '#'
 }
 
-// La ligne de lecture : juste sous la barre du haut. C'est la seule constante géométrique.
+// Repli de la ligne de lecture si la géométrie du rail n'est pas encore connue (une frame
+// au montage, au pire) : juste sous la barre du haut.
 const LIGNE = 96
 
 /**
@@ -40,8 +41,10 @@ const LIGNE = 96
  * d'énergie avait fait retirer. Et surtout : `window.dispatchEvent(new Event('scroll'))`
  * exerce EXACTEMENT ce chemin — le test en banc vaut enfin preuve.
  *
- * Avant la première ancre → l'étiquette du PREMIER groupe ; après la dernière → celle du
- * DERNIER : les extrémités disent le début et la fin de la liste, jamais un état périmé.
+ * ⚠️ LA LIGNE DE LECTURE EST LA POIGNÉE : l'étiquette désigne le jeu en face d'elle à
+ * l'écran, pas la carte du haut (retour user — l'œil lit la poignée contre son voisin).
+ * Sa position est un calcul pur depuis la géométrie du rail, lue au recalage. Et les butées
+ * disent les extrémités : le premier groupe en haut, le dernier en bas.
  *
  * @param listRef  ref du conteneur de la liste (un enfant par jeu affiché)
  * @param ancres   Map(index de la première carte du groupe → étiquette), ou null si éteint
@@ -61,6 +64,7 @@ export function useLettreDefilement(listRef, ancres, nb, asc) {
     if (list.children.length !== nb) return
 
     let offsets = [] // [{ y, etiquette }] en ordre de page
+    let rail = null // la géométrie du rail de l'ascenseur, lue au recalage
     const recale = () => {
       const base = window.scrollY
       offsets = []
@@ -68,15 +72,21 @@ export function useLettreDefilement(listRef, ancres, nb, asc) {
         const el = list.children[i]
         if (el) offsets.push({ y: el.getBoundingClientRect().top + base, etiquette })
       })
+      rail = asc.current?.metriques?.() || null
     }
     const courante = () => {
       if (!offsets.length) return null
-      // À la butée BASSE, la ligne de lecture montre l'avant-dernier écran — mais ce que la
-      // position dit, c'est « la fin de la liste » : on affiche donc la DERNIÈRE étiquette
-      // (retour user : les extrémités doivent dire le début et la fin, pas un entre-deux).
       const max = document.documentElement.scrollHeight - window.innerHeight
+      // À la butée BASSE, l'étiquette dit la FIN de la liste, quoi qu'il y ait en face.
       if (max > 0 && window.scrollY >= max - 1) return offsets[offsets.length - 1].etiquette
-      const ligne = window.scrollY + LIGNE
+      // ⚠️ LA LIGNE DE LECTURE EST LA POIGNÉE, pas une constante sous la barre du haut :
+      // l'étiquette désigne le jeu EN FACE de la poignée à l'écran — c'est lui que l'œil
+      // regarde (retour user : « la lettre doit apparaître en regard du jeu auquel elle se
+      // rapporte »). La poignée est à la fraction f du rail, son centre en coordonnées
+      // d'écran est donc un calcul pur — zéro lecture DOM par événement.
+      const f = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0
+      const centre = rail ? rail.top + f * (rail.hauteur - rail.poignee) + rail.poignee / 2 : LIGNE
+      const ligne = window.scrollY + centre
       // Avant la première ancre, on est DANS le premier groupe : son étiquette, pas du vide.
       let l = offsets[0].etiquette
       for (const o of offsets) {
