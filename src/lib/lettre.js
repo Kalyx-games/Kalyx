@@ -60,19 +60,25 @@ export function useLettreDefilement(listRef, ancres, nb, asc) {
     // Au-delà de 760px la liste est multi-colonnes : « la carte du haut » désignerait
     // plusieurs jeux. (Le CSS cache déjà l'ascenseur ; on ne calcule pas pour rien.)
     if (window.matchMedia && window.matchMedia('(min-width: 760px)').matches) return
-    // Squelettes de chargement ou état vide : les enfants ne sont pas les cartes attendues.
-    if (list.children.length !== nb) return
-
     let offsets = [] // [{ y, etiquette }] en ordre de page
     let rail = null // la géométrie du rail de l'ascenseur, lue au recalage
+    // ⚠️⚠️ LE COMPTE D'ENFANTS EST UNE CONDITION DU RECALAGE, JAMAIS DE L'EFFET. Avant, un
+    // `return` sec ici (squelettes de chargement, rendu transitoire, liste pas encore
+    // peuplée à l'instant du montage) n'installait AUCUN écouteur : l'étiquette ne revenait
+    // alors JAMAIS — poignée nue jusqu'au prochain changement de tri. Un seul mauvais
+    // instant condamnait la fonction pour toute la session.
+    // RÈGLE : un mécanisme qui dépend d'un état transitoire doit RÉESSAYER, pas abandonner.
     const recale = () => {
+      if (list.children.length !== nb) { offsets = []; return false }
       const base = window.scrollY
-      offsets = []
+      const prises = []
       ancres.forEach((etiquette, i) => {
         const el = list.children[i]
-        if (el) offsets.push({ y: el.getBoundingClientRect().top + base, etiquette })
+        if (el) prises.push({ y: el.getBoundingClientRect().top + base, etiquette })
       })
+      offsets = prises
       rail = asc.current?.metriques?.() || null
+      return prises.length > 0
     }
     const courante = () => {
       if (!offsets.length) return null
@@ -96,15 +102,16 @@ export function useLettreDefilement(listRef, ancres, nb, asc) {
       return l
     }
 
-    recale()
+    const pret = recale()
     let precedente = courante()
     // La poignée doit être juste DÈS qu'elle apparaît : on pose la valeur sans réveiller.
-    asc.current?.prepare?.(precedente)
+    if (pret) asc.current?.prepare?.(precedente)
     let dernierRecalage = Date.now()
     const onScroll = () => {
-      // Le layout peut bouger (images, replis) : recalage au plus une fois par seconde —
+      // Tant que le recalage n'a pas abouti, on RÉESSAIE à chaque défilement (le layout
+      // finit toujours par se poser) ; une fois prêt, au plus une fois par seconde —
       // 26 lectures propres, sans écriture préalable, donc sans reflow forcé.
-      if (Date.now() - dernierRecalage > 1000) {
+      if (!offsets.length || Date.now() - dernierRecalage > 1000) {
         recale()
         dernierRecalage = Date.now()
       }

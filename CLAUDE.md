@@ -291,6 +291,24 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅⚠️ L'ÉTIQUETTE DE L'ASCENSEUR NE DISPARAÎT PLUS POUR TOUTE LA SESSION (2026-08-26, retour user)
+
+**Retour user** : « La lettre ne s'affiche plus, et probablement également les autres critères. C'est impensable que ce genre de bug puisse être déployé sans que tu l'identifies en amont, c'est trop gros. » Puis, en pleine enquête : « **ça fonctionne chez moi maintenant, après avoir changé le thème de l'app** » — l'indice qui a tout tranché.
+
+**LA CAUSE, exacte.** `useLettreDefilement` sortait sèchement quand la liste n'avait pas le compte d'enfants attendu :
+```js
+if (list.children.length !== nb) return   // ⛔ AUCUN écouteur posé, et l'effet ne se rejoue pas
+```
+Or à l'ACTUALISATION avec un écran mémorisé (`booting` vrai, App.jsx), **la liste affiche 5 squelettes (9 en grille) alors que `visible` est DÉJÀ peuplé depuis le cache IndexedDB** → 5 ≠ 101 → l'effet abandonnait **définitivement**. Ses dépendances (`cle`, `ancres`, `nb`) ne bougeant plus ensuite, il ne se rejouait jamais : **poignée nue pour toute la session**. Changer de thème passe par les Réglages et **remonte la liste** au retour (`key={tabKey}` sur `.view-swap`) → l'effet se rejouait avec le bon compte → la lettre revenait. C'est exactement ce que l'user a observé.
+
+**LE CORRECTIF** : le compte d'enfants devient une condition **DU RECALAGE**, jamais de l'effet. `recale()` renvoie un booléen ; les écouteurs sont TOUJOURS posés ; tant que le recalage n'a pas abouti, `onScroll` **réessaie à chaque défilement** (au lieu d'attendre la seconde du throttle), puis reprend le rythme normal. `prepare()` n'est appelé que si le recalage a réussi.
+
+⚠️⚠️ **RÈGLE GÉNÉRALE, à retenir : un mécanisme qui dépend d'un état TRANSITOIRE (chargement, squelettes, rendu en cours) doit RÉESSAYER, jamais abandonner.** Un `return` sec dans un effet dont les dépendances ne rebougeront pas est une panne définitive déguisée en garde défensive.
+
+⚠️ **LA LEÇON DE MÉTHODE** (l'user a raison, c'était trop gros) : après avoir touché l'Ascenseur (chantier « ne vole plus les taps »), j'ai vérifié **ce que je venais de changer** — la prise, le glissé, la cible — sans jamais relever **ce que je risquais de casser** : le CONTENU de la poignée. Mes mesures lisaient `rail.classList.contains('on')`, jamais `poignee.textContent`. **RÈGLE DE TEST : après un chantier sur un composant, la vérification doit couvrir sa FONCTION PREMIÈRE, pas seulement la zone touchée.** (Le bug ne venait pas de ce chantier-là — il dormait depuis la réécriture de `lettre.js` — mais un relevé du contenu l'aurait exposé.)
+
+**Reproduit ET vérifié en dev** par le vrai chemin : `kalyx-page` posé sur une fiche → `location.reload()` (`performance.getEntriesByType('navigation')[0].type === 'reload'` → `booting` vrai) → fiche restaurée → fermeture de la fiche (une surcouche : elle ne remonte PAS la liste) → défilement → **étiquette de nouveau juste : B → C → K**, puis A au défilement suivant. Sans le correctif, ce chemin laissait la poignée nue jusqu'au prochain remontage de la liste.
+
 ## ✅ L'ASCENSEUR NE VOLE PLUS LES TAPS (2026-08-26, retour user)
 
 **Retour user** : « en mode grille, quand je clique sur un des jeux à droite de l'écran, ça active parfois l'ascenseur qui me téléporte ». **Vrai, et la cause était grosse** : `.kx-asc.on` passait en `pointer-events: auto` sur TOUTE la bande — 40 px de large sur presque toute la hauteur de l'écran. N'importe quel tap dans cette bande était intercepté par le rail, et `prend()` appelait `surRail(e)` d'entrée : saut immédiat à l'ordonnée du doigt. En vue LISTE le contenu ne va pas jusqu'au bord droit, d'où la rareté ; en GRILLE les tuiles passent dessous, d'où le retour.
