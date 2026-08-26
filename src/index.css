@@ -3217,7 +3217,7 @@ button {
 .detail-hero-wrap { border-radius: 5px; }
 /* Changement de jeu au glissé = pager PLEIN ÉCRAN : le corps du NOUVEAU jeu entre en plein depuis un
    bord PENDANT que l'ancien (instantané figé `.detail-body-leaving`) sort par l'autre bord, avec une
-   ombre nette entre les deux → on voit vraiment une fiche remplacer l'autre. */
+   couture au filet entre les deux → on voit vraiment une fiche remplacer l'autre. */
 /* translateX en VW (largeur de l'écran), pas en % (largeur de l'élément) → l'ancienne fiche sort
    TOUJOURS complètement, même si la largeur mesurée du corps est décalée d'un pixel sur un appareil. */
 /* LE GLISSÉ QUI SUIT LE DOIGT : le geste écrit --kx-page (px) sur la feuille, les DEUX
@@ -3233,11 +3233,24 @@ button {
   /* jamais plus court que le corps sortant : sinon le navigateur clampe le défilement
      pendant le glissé et la tête bouge (--kx-mine = la hauteur du sortant, posée au geste) */
   min-height: var(--kx-mine, auto);
+  /* Le fond d'ambiance DÉBORDE de la gouttière (±16px, pour aller bord à bord au repos) :
+     pendant le glissé, ce débord flou s'étalerait PAR-DESSUS le panneau voisin. Clip sur
+     l'axe X seulement — le vertical reste libre (le dégradé remonte derrière la tête). */
+  overflow-x: clip;
+  overflow-y: visible;
   /* La couture entre les panneaux : un FILET, la grammaire de l'app — la bande de fond de
      20px essayée avant tranchait en blanc entre deux dégradés (retour user). */
   box-shadow: -1px 0 0 var(--line), 1px 0 0 var(--line);
 }
 .detail-body-leaving.manuel { transform: translateX(var(--kx-page, 0px)); }
+/* PENDANT LE GLISSÉ, LES FONDS D'AMBIANCE S'ÉTEIGNENT (retours user : flash, escalier sur
+   le fondu, bande entre les fiches, fondus superposés) : deux dégradés FLOUS qui glissent,
+   se croisent et débordent sont la source de toute cette famille d'artefacts. Les fiches
+   glissent « à plat » sur le fond de page, la couture est un filet net — et le dégradé
+   revient en FONDU à la pose (la transition ci-dessous, jouée au retrait de corps-glisse). */
+.detail-body .detail-backdrop { transition: opacity 0.22s ease; }
+.detail-body.corps-glisse .detail-backdrop,
+.detail-body-leaving .detail-backdrop { opacity: 0; }
 /* L'atterrissage : la classe kx-pose (posée en direct par le geste, jamais par React) rend
    la transition, puis la cible est écrite dans --kx-page → les deux panneaux atterrissent
    d'un seul mouvement, depuis la position exacte où le doigt les a laissés. */
@@ -3266,6 +3279,7 @@ button {
      qu'on pousse. */
   .detail-sheet.kx-pose .detail-body.corps-glisse,
   .detail-sheet.kx-pose .detail-body-leaving.manuel { transition: none; }
+  .detail-body .detail-backdrop { transition: none; }
 }
 
 /* Fond d'ambiance tiré de la jaquette (chantier 6). Il vit DANS .detail-body pour glisser
