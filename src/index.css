@@ -1337,6 +1337,8 @@ body {
   clip-path: inset(1px 0);
 }
 .swipe-act {
+  width: 76px;
+  flex-shrink: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -1348,6 +1350,24 @@ body {
   font-size: var(--fs-caption);
   font-weight: 700;
   cursor: pointer;
+  overflow: hidden; /* à largeur nulle (état armé), le contenu ne doit pas déborder */
+  transition: width 0.16s ease, opacity 0.12s ease;
+}
+/* L'action de BOUT (BGG, toujours la dernière) : elle absorbe l'étirement du menu quand la
+   carte dépasse l'ouverture — le début du « glissé jusqu'au bout ». */
+.swipe-act-fin {
+  flex: 1 1 76px;
+  width: auto;
+}
+/* ARMÉ : on est allé au bout. Les voisines se replient, l'action de bout occupe toute la
+   carte — l'état est visible et réversible avant de lâcher, sinon ce serait une roulette. */
+.swipe-menu.arme .swipe-act:not(.swipe-act-fin) {
+  width: 0;
+  opacity: 0;
+}
+/* Une media query n'ajoute AUCUNE spécificité : ce bloc doit SUIVRE ce qu'il neutralise. */
+@media (prefers-reduced-motion: reduce) {
+  .swipe-act { transition: none; }
 }
 .swipe-act-ico {
   font-size: 1.3rem;

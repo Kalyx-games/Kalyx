@@ -169,7 +169,7 @@ Audit en workflow (3 lentilles : cohérence / composition / finition, puis synth
 ```bash
 grep -cE '^s*(margin|padding|gap|row-gap|column-gap)[a-z-]*s*:.*[0-9]px' src/index.css
 ```
-**Valeur de référence au 25/08/2026 : 347** (348 au 20/08, puis 344 : la baisse venait du voile des actions de la jaquette, dont les px codés en dur ont disparu avec lui ; la remontée à 347 vient de la bande « fait notable », dont la géométrie est RECOPIÉE de `.tl-anec-hero` — une égalité à tenir, pas des valeurs inventées) (343 le 19/08 ; la hausse vient de la ligne d’état des Réglages, du repli des sauvegardes et de la phrase d’aide de la barre d’enregistrement).
+**Valeur de référence au 26/08/2026 : 349** (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
 
 **NON FAIT, et assumé** : le resserrement réel (faire tomber 10→8, 14→12, 6→4 …). Il déplacerait ~40 % des espacements pour un bénéfice invisible, sur une app que l’user a déjà fait itérer trois fois sur des retours visuels. À ne relancer QUE si l’user demande explicitement un rythme plus serré, écran par écran, et jamais en une passe globale.
 
@@ -290,6 +290,24 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - **Les butées disent les extrémités** (la demande) : avant la première ancre → l'étiquette du PREMIER groupe ; à `scrollY ≥ max − 1` → celle du DERNIER (sans ce forçage, la butée basse affichait le groupe à la ligne de lecture, un entre-deux).
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
+
+## ✅ LE GLISSÉ JUSQU'AU BOUT LANCE BGG + BGG PASSE AU BOUT DU MENU (2026-08-26, choix user)
+
+**Choix user** : « L'action en question doit toujours être d'ouvrir BGG, pour que ce soit cohérent d'un écran à l'autre. Il faut modifier l'ordre des actions en conséquence, sachant que l'action éditer doit également toujours être au même endroit. »
+
+**NOUVEL ORDRE DU MENU DE GLISSEMENT** — collection : Éditer · Partie · **BGG** ; wishlist : Éditer · Vers collection · **BGG**. Éditer reste premier partout, BGG est TOUJOURS au bout : c'est l'action que le glissé complet lance, elle doit être la même sur les deux écrans. (⚠️ ça remplace la règle du 18/07 « la dernière action = Partie/Vers collection au plus près du pouce » — décision user explicite.)
+
+**LE MÉCANISME (patron Mail iOS)**, tout dans GameCard :
+  - **Au-delà du menu ouvert, la carte SUIT le doigt 1:1** (plus d'élastique de ce côté), bornée à un liseré de 36 px de carte encore visible. `retenue(x, ouvert, fond)` prend un 3e paramètre : `fond = -(largeurCarte − 36)` si l'action de bout existe, `null` sinon → **l'élastique RESTE quand BGG est absent** (hors ligne, jeu sans bgg_id — vérifié : 300 px de doigt → −103, jamais armé).
+  - **Le menu s'étire avec la carte** : `width: Math.max(menuW, -offset)` (l'état offset est déjà posé par frame, aucun coût nouveau) ; **BGG est `.swipe-act-fin` en `flex: 1 1 76px`** → il absorbe le surplus dès qu'on dépasse l'ouverture (76 → 98 → 118 px mesurés), les voisines restent à 76.
+  - **ARMEMENT à 48 px au-delà du menu complet** (le dépassement dit l'intention), **hystérésis de 16 px** (sans elle, un doigt posé sur le seuil ferait clignoter l'état). `vibre('seuil')` à l'armement, `vibre('cran')` au désarmement. En armé : `.swipe-menu.arme .swipe-act:not(.swipe-act-fin) { width: 0; opacity: 0 }` → **BGG occupe TOUTE la surface révélée** (mesuré : 300×110 sur une carte de 343, logo + libellé centrés) — l'état est VISIBLE et RÉVERSIBLE avant de lâcher, c'est la condition qui sépare un raccourci d'une roulette.
+  - **Lâcher armé** → `bggRef.current?.()` + retour à 0. Lâcher non armé → l'aimant ouvert/fermé d'avant, inchangé (mi-course → menu ouvert à OPEN).
+  - ⚠️ Les largeurs des actions sortent du style inline (elles vivent en CSS : `.swipe-act { width: 76px }`) — un `width` inline aurait battu la règle `.arme` sans `!important`. `overflow: hidden` sur `.swipe-act` (à largeur nulle le contenu déborderait), transition width/opacity 0.16 s, garde reduced-motion APRÈS.
+  - ⚠️ **Piège JSX rencontré** : un commentaire `{/* … */}` posé comme EXPRESSION nue dans un `&& ( … )` ne compile pas — entre la parenthèse et l'élément, c'est un commentaire JS `/* */` qu'il faut.
+
+**Vérifié en dev par gestes synthétiques SUR LA CARTE** (la cible du touchstart, jamais le conteneur — règle de test) : suivi 1:1 (−30→−30 … −300→−300, borné −307), armé à −285 / pas à −270 (seuil −276), désarmé à −240 (hystérésis), ré-armé, lâcher → URL BGG interceptée + offset 0 ; largeurs cibles lues EN COUPANT les transitions (le banc page cachée les fige, piège connu) : voisines [0,0], BGG 300 ; wishlist = Éditer · Vers collection · BGG ; hors ligne = élastique seul. **Garde-fou d'espacement : toujours 349** (la hausse 347→349 venait du chantier précédent : les deux paddings de la poignée adaptative de l'ascenseur — recettes, pas des valeurs inventées) ; ce lot n'ajoute AUCUNE déclaration d'espacement.
+
+**Le document de travail** : la carte « Aller au bout du glissé » retirée (livrée), l'intro passe à « Deux idées ». Restent : le face-à-face, le glissé qui suit le doigt.
 
 ## ✅ L'ASCENSEUR REMPLACE LE PANNEAU + LA FENTE DÉBOGUÉE ET TEINTÉE (2026-08-25, 3 retours user)
 

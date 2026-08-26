@@ -3,6 +3,7 @@ import { parseOwners, parseTags, ownerDisplay, ownerColor, parseExtensions, base
 import { CollectionIcon, PlayersIcon, StarIcon, ClockIcon, ExtIcon, BarsIcon, PencilIcon, DieIcon } from './icons'
 import { thumbSrc } from '../lib/img'
 import { mou } from '../lib/geste'
+import { vibre } from '../lib/haptique'
 import { BGG_LOGO } from '../lib/logos'
 
 // Une carte compacte représentant un jeu dans la liste.
@@ -48,9 +49,15 @@ let openCard = null // { close: () => void }
 // ⚠️ le débord vers la DROITE est plafonné plus court : `.swipe-row` est en overflow:hidden
 // et porte l'ombre de la carte, donc au-delà la carte glisserait dans un cadre immobile.
 const DEBORD_DROITE = 14
-function retenue(x, ouvert) {
+// `fond` : la butée profonde quand une action de bout existe (BGG). La carte SUIT alors le
+// doigt au-delà du menu — c'est le chemin du « glissé jusqu'au bout » — au lieu de résister.
+// Sans action de bout (hors ligne, jeu sans fiche BGG), l'élastique reste.
+function retenue(x, ouvert, fond) {
   if (x > 0) return Math.min(DEBORD_DROITE, mou(x))
-  if (x < ouvert) return ouvert + mou(x - ouvert)
+  if (x < ouvert) {
+    if (fond != null) return Math.max(x, fond)
+    return ouvert + mou(x - ouvert)
+  }
   return x
 }
 
@@ -149,11 +156,17 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
   // Menu au dos de la carte, révélé en glissant vers la gauche (ou en tapant le chevron).
   // Rendu de gauche à droite ; le geste part du BORD DROIT → le dernier élément du tableau
   // est le plus proche du pouce (« tout à droite »).
-  //   Collection : Éditer · BGG · Nouvelle partie (tout à droite)
-  //   Wishlist   : Éditer · BGG · Vers collection (tout à droite)
+  //   Collection : Éditer · Nouvelle partie · BGG (au bout — le glissé complet le lance)
+  //   Wishlist   : Éditer · Vers collection · BGG (idem : cohérent d'un écran à l'autre)
   const ACTION_W = 76
   const actions = []
   if (onEdit) actions.push({ key: 'edit', label: 'Éditer', node: <PencilIcon size={20} />, bg: '#3e6c8e', fg: '#fff', run: onEdit })
+  // L'action du milieu varie selon l'écran : collection → Nouvelle partie ; wishlist →
+  // Vers collection.
+  if (onNewPlay) actions.push({ key: 'play', label: 'Partie', node: <DieIcon size={20} />, bg: '#4e7a5c', fg: '#fff', run: onNewPlay })
+  if (onMove) actions.push({ key: 'move', label: 'Vers collection', node: <CollectionIcon size={20} color="#fff" />, bg: '#4e7a5c', fg: '#fff', run: onMove })
+  // ⚠️ BGG est TOUJOURS au bout (demande user) : c'est l'action que lance le glissé complet,
+  // et elle doit être la même d'un écran à l'autre. Éditer reste toujours en premier.
   if (onBgg)
     actions.push({
       key: 'bgg',
@@ -172,14 +185,16 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
       fg: '#fff',
       run: onBgg,
     })
-  // Action « tout à droite » (la plus accessible au pouce) :
-  // collection → Nouvelle partie (remise à la demande de l'user) ; wishlist → Vers collection.
-  if (onNewPlay) actions.push({ key: 'play', label: 'Partie', node: <DieIcon size={20} />, bg: '#4e7a5c', fg: '#fff', run: onNewPlay })
-  if (onMove) actions.push({ key: 'move', label: 'Vers collection', node: <CollectionIcon size={20} color="#fff" />, bg: '#4e7a5c', fg: '#fff', run: onMove })
   const menuW = actions.length * ACTION_W
   const OPEN = -menuW
   const [offset, setOffset] = useState(0)
   const [dragging, setDragging] = useState(false)
+  // ARMÉ = on est allé au bout du glissé : BGG s'étale sur toute la carte, et lâcher le
+  // lance. L'état est VISIBLE et RÉVERSIBLE avant de lâcher — c'est la condition qui
+  // sépare un raccourci d'une roulette.
+  const [arme, setArme] = useState(false)
+  const bggRef = useRef(null)
+  bggRef.current = onBgg || null
   const offsetRef = useRef(0)
   offsetRef.current = offset
   const openRef = useRef(OPEN)
@@ -215,6 +230,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
     const onStart = (e) => {
       const t = e.touches[0]
       g.startX = t.clientX; g.startY = t.clientY; g.base = offsetRef.current; g.dir = null; g.moved = false
+      g.width = el.offsetWidth // la butée profonde et le seuil d'armement en dépendent
     }
     const onMove = (e) => {
       const t = e.touches[0]
@@ -227,13 +243,36 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
       if (g.dir === 'h') {
         e.preventDefault() // on prend le geste (pas de scroll)
         g.moved = true
-        setOffset(retenue(g.base + dx, openRef.current))
+        const brut = g.base + dx
+        const fond = bggRef.current ? -(g.width - 36) : null
+        setOffset(retenue(brut, openRef.current, fond))
+        if (fond != null) {
+          // Armement 48 px AU-DELÀ du menu complet (le dépassement dit l'intention), avec
+          // 16 px d'hystérésis — sans elle, un doigt posé sur le seuil ferait clignoter l'état.
+          if (!g.arme && brut < openRef.current - 48) {
+            g.arme = true
+            setArme(true)
+            vibre('seuil')
+          } else if (g.arme && brut > openRef.current - 32) {
+            g.arme = false
+            setArme(false)
+            vibre('cran')
+          }
+        }
       }
     }
     const onEnd = () => {
       if (g.dir === 'h') {
         setDragging(false)
-        setOffset((o) => (o < openRef.current / 2 ? openRef.current : 0)) // aimante ouvert/fermé
+        if (g.arme) {
+          // Le bout du glissé lance l'action : BGG occupait toute la carte, on a lâché dessus.
+          g.arme = false
+          setArme(false)
+          setOffset(0)
+          bggRef.current?.()
+        } else {
+          setOffset((o) => (o < openRef.current / 2 ? openRef.current : 0)) // aimante ouvert/fermé
+        }
         g.justSwiped = true
         setTimeout(() => { g.justSwiped = false }, 130)
       }
@@ -261,13 +300,16 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
   return (
     <div className="swipe-row" style={{ animationDelay: delay }}>
       {actions.length > 0 && (
-        <div className="swipe-menu" style={{ width: menuW }}>
+        /* Le menu s'étire avec la carte au-delà de son ouverture : l'action de bout (BGG)
+           absorbe le surplus, et à l'armement elle occupe tout — on voit exactement ce qui
+           va se produire avant de lâcher. */
+        <div className={`swipe-menu${arme ? ' arme' : ''}`} style={{ width: Math.max(menuW, -offset) }}>
           {actions.map((a) => (
             <button
               key={a.key}
               type="button"
-              className="swipe-act"
-              style={{ width: ACTION_W, background: a.bg, color: a.fg || 'var(--ink)' }}
+              className={`swipe-act${a.key === 'bgg' ? ' swipe-act-fin' : ''}`}
+              style={{ background: a.bg, color: a.fg || 'var(--ink)' }}
               onClick={() => { setOffset(0); a.run() }}
               disabled={!online}
               aria-label={a.label}
