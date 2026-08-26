@@ -138,6 +138,45 @@ export async function deleteTierlist(id) {
 // Renvoie { ranking: {tier:[id...]}, unranked:[id...], avg: {id:number} } :
 //  - ranking : les jeux notés, rangés par tier (triés par moyenne décroissante) ;
 //  - unranked : les jeux qu'AUCUN joueur n'a notés (zone « Non classés »).
+/**
+ * LE VERDICT DE LA TABLE : ce que chaque joueur pense de CE jeu, d'après sa tierlist.
+ * Rendu GROUPÉ par lettre, de la meilleure à la pire → [{ tier, joueurs: [noms] }].
+ *
+ * Répondre à « qu'est-ce que la famille pense de ce jeu ? » demandait jusqu'ici d'ouvrir les
+ * quatre tierlists et d'y chercher une vignette parmi cent. La donnée existe et elle est
+ * complète (les 134 jeux de la collection ont au moins un avis).
+ *
+ * ⚠️ L'id est remappé vers son REPRÉSENTANT : un jeu possédé en double (même nom, deux
+ * propriétaires) n'est classé qu'une fois, sous l'id du premier — sans ce remappage, la
+ * fiche du doublon paraîtrait n'avoir aucun avis.
+ * ⚠️ Le tier « ? » (Pas d'avis) et les joueurs qui n'ont pas classé le jeu sont OMIS en
+ * silence : afficher « — » pour eux ferait du bruit sans rien apprendre.
+ */
+export function verdictDeLaTable(tierlists, gameId, repById) {
+  if (!tierlists || !tierlists.length || !gameId) return []
+  const id = repById?.get?.(gameId) || gameId
+  const parTier = new Map()
+  for (const t of tierlists) {
+    // ⚠️ Les classements EN BASE contiennent encore des ids non-représentants (le nettoyage
+    // est paresseux : il n'est persisté qu'au prochain enregistrement de la tierlist). On
+    // remappe donc les DEUX côtés, comme le font computeGlobalTierlist et computeAnecdoteList
+    // — sans ça, un jeu possédé en double perd en silence les avis classés sous l'autre id
+    // (mesuré sur Belote : deux avis sur quatre manquaient, dont le seul F).
+    const ranking = repById ? remapRanking(t.ranking, repById) : t.ranking || {}
+    for (const { key, score } of TIERS) {
+      if (score == null) continue // « ? » : pas d'avis, pas de verdict
+      if (!(ranking[key] || []).includes(id)) continue
+      if (!parTier.has(key)) parTier.set(key, [])
+      parTier.get(key).push(t.player)
+      break
+    }
+  }
+  return TIERS.filter((t) => t.score != null && parTier.has(t.key)).map((t) => ({
+    tier: t.key,
+    joueurs: parTier.get(t.key).sort((a, b) => a.localeCompare(b, 'fr')),
+  }))
+}
+
 export function computeGlobalTierlist(tierlists, gameIds, repById) {
   const valid = new Set(gameIds)
   const sums = {} // id (représentant) → { total, n } — pour la moyenne de SCORE (→ le tier)

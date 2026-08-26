@@ -14,7 +14,7 @@ import { lettreDe, useLettreDefilement } from './lib/lettre'
 import Ascenseur from './components/Ascenseur'
 import { useExitLayer } from './lib/useExitLayer'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
-import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, computeAnecdoteList, emptyRanking, dedupeByName, repIdMap, remapRanking } from './lib/tierlists'
+import { fetchTierlists, upsertTierlist, deleteTierlist, computeGlobalTierlist, computeAnecdoteList, emptyRanking, dedupeByName, repIdMap, remapRanking, verdictDeLaTable } from './lib/tierlists'
 import { buildAnecdotes, anecdoteDuJour } from './lib/anecdotes'
 import { fetchPlays, fetchAllPlays, savePlay, updatePlay, deletePlay, fetchPlayerNames, fetchPlayMeta, renameCategories, fetchPlayerRoster, fetchPlayerOverall, renamePlayer } from './lib/plays'
 import GameCard from './components/GameCard'
@@ -1218,6 +1218,24 @@ export default function App() {
   // Ids de jeux valides (représentants) → sert à retirer des classements les jeux supprimés.
   const validTlIds = useMemo(() => new Set(collectionIds), [collectionIds])
   const reloadTierlists = () => fetchTierlists().then(setTierlists).catch(() => setTierlists(null))
+  // Le « verdict de la table » de la fiche a besoin des tierlists : jusqu'ici elles n'étaient
+  // chargées qu'à l'ouverture des Stats ou du hub. Une seule fois (garde sur tierlistsLues).
+  // ⚠️ Le drapeau n'est posé QU'EN CAS DE SUCCÈS : cet effet est à un seul coup (sa garde lit
+  // le drapeau), contrairement à celui des Stats qui se rejoue à chaque visite de l'onglet —
+  // un échec réseau au premier tap condamnerait le verdict pour toute la session.
+  useEffect(() => {
+    if (!detailGame || tierlistsLues) return
+    fetchTierlists()
+      .then((tl) => { setTierlists(tl); setTierlistsLues(true) })
+      .catch(() => {})
+  }, [detailGame, tierlistsLues])
+  // ⚠️ Sur detailLayer.value, PAS sur detailGameLive : ce dernier tombe à null dès le tap sur
+  // retour, alors que la feuille reste montée le temps de glisser dehors — le bloc se
+  // démonterait à la première frame de la sortie et tout le bas de fiche sauterait.
+  const verdictFiche = useMemo(
+    () => (detailLayer.value ? verdictDeLaTable(tierlists, detailLayer.value.id, repById) : []),
+    [tierlists, detailLayer.value, repById]
+  )
   // Les anecdotes tirées des TIERLISTS (qui aime quoi). Graine FIXE : les textes doivent
   // être stables d'un jour à l'autre, c'est le parcours ci-dessous qui apporte la variété.
   const tierAnecdotes = useMemo(() => {
@@ -1751,6 +1769,7 @@ export default function App() {
           ownerMap={ownerMap}
           tagMap={tagMap}
           fait={dernierFait?.gameId === detailLayer.value.id ? dernierFait : null}
+          verdict={verdictFiche}
           siblings={visible}
           onNavigate={(g) => setDetailGame((d) => (d ? g : d))} // naviguer exige une fiche OUVERTE
           onClose={() => setDetailGame(null)}

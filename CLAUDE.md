@@ -169,7 +169,7 @@ Audit en workflow (3 lentilles : cohérence / composition / finition, puis synth
 ```bash
 grep -cE '^s*(margin|padding|gap|row-gap|column-gap)[a-z-]*s*:.*[0-9]px' src/index.css
 ```
-**Valeur de référence au 26/08/2026 : 356** (la hausse depuis 349 : les sept espacements de la carte du face-à-face — la recette des tuiles stats et le joint de sa barre) (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
+**Valeur de référence au 26/08/2026 : 363** (349 → 356 avec la carte du face-à-face, puis 363 avec le verdict de la table et la ligne « Reprendre la dernière table ») (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
 
 **NON FAIT, et assumé** : le resserrement réel (faire tomber 10→8, 14→12, 6→4 …). Il déplacerait ~40 % des espacements pour un bénéfice invisible, sur une app que l’user a déjà fait itérer trois fois sur des retours visuels. À ne relancer QUE si l’user demande explicitement un rythme plus serré, écran par écran, et jamais en une passe globale.
 
@@ -290,6 +290,42 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - **Les butées disent les extrémités** (la demande) : avant la première ancre → l'étiquette du PREMIER groupe ; à `scrollY ≥ max − 1` → celle du DERNIER (sans ce forçage, la butée basse affichait le groupe à la ligne de lecture, un entre-deux).
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
+
+## ✅ LE VERDICT DE LA TABLE + LA TABLE QUI SE RASSOIT (2026-08-26, deux idées choisies par l'user)
+
+**Recherche d'idées de « gamification »** (workflow : 4 angles de génération → 7 idées → 7 juges adversariaux → 5 survivantes, dont une écartée par moi). **L'user en a pris DEUX** et refusé les autres avec ses motifs — à respecter :
+  ⛔ **La feuille de marque manche après manche** : « trop spécifique pour chaque jeu » (la belote et le tarot demandent contrats et annonces). NE PAS REPROPOSER.
+  ⛔ **Le score à battre pendant la saisie** (le record en --muted qui passe à l'or quand on le dépasse) : refusé parce qu'il **vole la surprise du fait notable**. NE PAS REPROPOSER.
+  · Tuées par le jugement, pour mémoire : « qui détient le titre » (⚠️ RÉFUTÉE PAR LA BASE : 18 parties de 7WD saisies en 17 min dans un ordre quasi aléatoire, la dernière saisie datant de 2020 → 4 fiches sur 10 auraient menti) ; le toast qu'on retient sous le doigt (⚠️ il répond DÉJÀ au tap, App.jsx — l'idée était une régression) ; la physique du zoom de jaquette (écartée par moi : du soin sur l'écran le moins ouvert).
+
+### 1. LE VERDICT DE LA TABLE (fiche jeu)
+
+La fiche montrait le sondage de milliers d'inconnus mais pas l'avis des quatre joueurs — alors que les tierlists couvrent 134/134 jeux et que la moitié de la collection a au moins 2 lettres d'écart. Répondre demandait d'ouvrir 4 tierlists et d'y chercher une vignette parmi cent.
+  - **`verdictDeLaTable(tierlists, gameId, repById)`** (lib/tierlists.js) → `[{ tier, joueurs }]` groupé par lettre (meilleure → pire), prénoms triés. Tier « ? » (score null) et non-classés omis en silence.
+  - **Rendu entre les actions et le sondage BGG** (la famille avant les inconnus) : filet `border-top` + libellé en micro-capitales — la grammaire du sondage et des propriétaires, **surtout pas une carte de plus**. Grille 2 colonnes : lettre à l'ENCRE en 700, prénoms en --muted. **AUCUNE couleur de tier** (le rouge→bleu tiermaker n'a rien à faire dans la charte encre & or).
+  - App charge les tierlists **à l'ouverture d'une fiche** (elles ne l'étaient qu'aux Stats ou au hub).
+
+### 2. LA TABLE QUI SE RASSOIT (page « Qui joue ? »)
+
+Retaper les mêmes trois ou quatre prénoms est le geste le plus répété de l'app. Une ligne muette « Reprendre la dernière table · Mathieu · Clémence » ; un tap l'assoit. **11 des 16 jeux à ≥ 3 parties ont une table dominante** ; la table de la partie précédente est la bonne **une fois sur deux** (92/185, mesuré).
+  - **`fetchDerniereTable(gameId)`** (lib/plays.js) : `order created_at desc, limit 1` (l'ordre de SAISIE — la seule chronologie fiable de cette base). Renvoie [] si un nom porte un chiffre ou commence par « Joueur » (mêmes règles que faits.js), ou si la partie était en ÉQUIPES. **Aucune date n'est affichée** : la ligne montre des noms, pas un « quand ».
+  - La ligne vit DANS le tronc commun **`playersLabel`** → les 5 points de rendu d'un coup, avec la garde `!isTeams` intégrée (la branche équipes rend le même libellé).
+
+### 3. Revue adversariale (17 agents, 3 lentilles) : 14 confirmées, 0 réfutée → 9 correctifs
+
+  1. ⚠️⚠️ **Le verdict comparait des ids BRUTS** : je remappais l'id de la FICHE mais pas ceux du CLASSEMENT — or le nettoyage des doublons est paresseux, les rankings en base contiennent encore des ids non-représentants. **Mesuré : Belote n'affichait que 2 avis sur 4** (dont le seul F manquant). Pire, **mon propre commentaire décrivait la garde qui n'existait pas**. Fix : `remapRanking(t.ranking, repById)` comme les deux fonctions sœurs. Vérifié après : « B Clémence / C Claire · Mathieu / F Nazim ».
+  2. ⚠️⚠️ **`rasseoir()` laissait les désignations de vainqueur ORPHELINES** : les joueurs assis ont des ids NEUFS (`makePlayer` → ++pid), mais `winnerIds`/`instantWinnerId`/`forcedWinnerId` désignent par id → couronne éteinte à l'écran, **bouton d'enregistrement toujours actif**, et une partie partait **sans vainqueur → `playWinners` recréditait TOUTE la table**. Reproduit dans l'app, écriture interceptée. Fix : même ménage que `removePlayer`, pour la même raison.
+  3. ⚠️ **« Vierge » ne regardait que les NOMS** : un tap sur une table déjà entamée effaçait **les scores tapés et les variantes** (ils vivent dans l'objet joueur, que `rasseoir` reconstruit). Périmètre élargi à celui de `dirtyEntry` : noms + variantes + scores + couronnes + victoire directe.
+  4. ⚠️ **La ligne se DÉMONTAIT au premier caractère** → ~47 px de saut en pleine frappe, champ focalisé et clavier ouvert. **Elle garde désormais sa place et devient INERTE** (opacité 0,34, `disabled`, `aria-hidden`) — toujours incapable d'écraser quoi que ce soit, mais plus rien ne saute (mesuré : 44 px avant ET après).
+  5. **Le verdict se calculait sur `detailGameLive`**, qui tombe à null dès le tap sur retour alors que la feuille glisse encore 240 ms → tout le bas de fiche sautait pendant la sortie. Passé sur `detailLayer.value`, comme les six props voisines.
+  6. **`tierlistsLues` était posé même en ÉCHEC** : un incident réseau au premier tap condamnait le verdict pour toute la session (cet effet est à un seul coup, contrairement à celui des Stats).
+  7. **Le filet de la ligne était à 1,16:1** (--line) : invisible, la ligne se lisait comme du texte mort. Passé à **--muted** (> 3:1). ⚠️ **PAS l'or** malgré la suggestion de la revue : dans cette app **l'or dit la victoire**, pas un raccourci.
+  8. **Cible tactile de 37 px** — sous les 38 px qu'un chantier entier vient de corriger. `min-height: 44px`, la norme maison.
+  9. L'interlettre du libellé (0,08em) quadruplait celle des autres micro-capitales de la fiche → 0,02em (la valeur de `.detail-info-k`) ; commentaire CSS orphelin remis à sa place.
+
+**ASSUMÉ, signalé à l'user** : la ligne peut asseoir un ABSENT qu'un tap distrait enregistrerait à 0 point. Les gardes limitent le dégât (table vierge seulement, noms en pleine page, meneur affiché en direct) ; le risque existait déjà sans elle (taper un nom et oublier de le retirer). La revue proposait un avertissement dans la barre d'enregistrement : **écarté** (il changerait le comportement de TOUTES les parties pour un risque préexistant).
+
+**Garde-fou d'espacement : 356 → 363** (les sept espacements des deux nouveaux blocs : grille du verdict et ligne de rappel).
 
 ## ✅ LE FACE-À-FACE (2026-08-26, jugé sur maquette puis tranché par l'user)
 

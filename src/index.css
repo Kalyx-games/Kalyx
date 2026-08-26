@@ -3676,6 +3676,39 @@ button {
 .detail-primary { width: 100%; height: 46px; font-size: var(--fs-body-l); gap: 8px; }
 .detail-secondary { width: 100%; height: 44px; }
 
+/* LE VERDICT DE LA TABLE : la lettre de tierlist de chaque joueur pour ce jeu, groupée par
+   lettre (meilleure → pire). Même grammaire que le sondage et les propriétaires — un filet,
+   pas un cadre. La lettre est à l'ENCRE : les couleurs de tiers (rouge → bleu) sont celles
+   de l'écran tierlist, pas de la charte de la fiche. */
+.detail-verdict {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.detail-verdict-label {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.02em; /* la valeur de .detail-info-k : sur la fiche, un libellé en
+                             micro-capitales s'écrit d'une seule façon */
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+/* Une grille de deux colonnes → les prénoms s'alignent quelle que soit la lettre. */
+.detail-verdict-grille {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.detail-verdict-tier {
+  font-weight: 700;
+  font-size: var(--fs-body-l);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.detail-verdict-qui { font-size: var(--fs-body-s); color: var(--muted); }
+
 /* Sondage BGG « nombre de joueurs » (idéal / recommandé / déconseillé + votes). */
 .detail-poll {
   margin-top: 20px;
@@ -5080,6 +5113,40 @@ input[type='number'] {
   margin-top: 8px;
   font-size: var(--fs-caption);
   color: var(--muted);
+}
+
+/* LA TABLE QUI SE RASSOIT : la dernière table saisie, rappelée sous « Qui joue ? ». La
+   grammaire d'une LIGNE D'ÉTAT (comme .device-lock des Réglages), pas d'un bouton plein :
+   c'est un raccourci qu'on prend ou qu'on ignore, il ne doit pas peser plus que la question. */
+.table-rappel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px; /* la norme maison des cibles (.back-btn, .icon-btn, .ext-row-x) */
+  text-align: left;
+  border: 0;
+  /* ⚠️ PAS var(--line) : mesuré à 1,16:1 sur le fond, le filet n'existait pas et la ligne se
+     lisait comme du texte mort. --muted passe le seuil de 3:1 des éléments non textuels.
+     Et surtout PAS l'or : dans cette app, l'or dit la victoire, pas un raccourci. */
+  border-left: 2px solid var(--muted);
+  border-radius: 0;
+  background: transparent;
+  padding: 2px 4px 2px 12px;
+  margin: 0 0 10px;
+  cursor: pointer;
+}
+.table-rappel-txt { font-size: var(--fs-caption); color: var(--muted); }
+.table-rappel-noms { font-size: var(--fs-body-s); color: var(--ink); font-weight: 600; }
+/* Saisie commencée : la ligne garde sa place (la démonter ferait sauter l'écran sous le
+   doigt) mais n'est plus offerte — elle ne peut donc rien écraser. */
+.table-rappel.inerte { opacity: 0.34; cursor: default; }
+.table-rappel:not(.inerte):active { transform: scale(0.985); }
+/* Une media query n'ajoute AUCUNE spécificité : ce bloc doit SUIVRE ce qu'il neutralise. */
+@media (prefers-reduced-motion: reduce) {
+  .table-rappel:not(.inerte):active { transform: none; }
 }
 
 /* Visualiseur : pointillés courts + un long sur la page active (doré si gagnant, mode joueur). */

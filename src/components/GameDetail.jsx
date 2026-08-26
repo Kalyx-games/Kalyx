@@ -28,7 +28,7 @@ const complexityWord = (n) => (n == null ? '' : n < 2 ? 'Simple' : n < 3 ? 'Moye
 // l'image. TOUTES les actions renvoient vers les écrans existants (rien n'est perdu).
 export default function GameDetail({
   game, online, hasSheet, playCount = 0, lastPlayedLabel,
-  fait, ownerMap, tagMap, siblings = [], onNavigate, closing = false,
+  fait, verdict = [], ownerMap, tagMap, siblings = [], onNavigate, closing = false,
   onClose, onNewPlay, onStats, onHistory, onCreateSheet, onEdit, onBgg,
 }) {
   const basePlayers = basePlayersSet(game)
@@ -599,6 +599,23 @@ export default function GameDetail({
           </button>
         )}
       </div>
+      {/* LE VERDICT DE LA TABLE : ce que la famille pense du jeu, avant l'avis des inconnus
+          de BoardGameGeek. Une ligne de texte dans la grammaire calme du bas de fiche (filet,
+          libellé en micro-capitales) — surtout pas une carte de plus. Pas de couleur de tier :
+          les teintes tiermaker (rouge → bleu) n'ont rien à faire dans la charte encre & or. */}
+      {verdict.length > 0 && (
+        <div className="detail-verdict">
+          <div className="detail-verdict-label">Le verdict de la table</div>
+          <div className="detail-verdict-grille">
+            {verdict.map((v) => (
+              <Fragment key={v.tier}>
+                <span className="detail-verdict-tier">{v.tier}</span>
+                <span className="detail-verdict-qui">{v.joueurs.join(' · ')}</span>
+              </Fragment>
+            ))}
+          </div>
+        </div>
+      )}
       {poll && (
         <div className="detail-poll">
           <div className="detail-poll-head">

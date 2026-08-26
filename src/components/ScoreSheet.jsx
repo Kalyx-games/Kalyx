@@ -4,6 +4,7 @@ import { useCouronnes } from '../lib/couronne'
 import { BackIcon, PlayersIcon, ExtIcon, FlagIcon, CrownIcon, PlusIcon, PencilIcon } from './icons'
 import { parseExtensions, effectivePlayersSet } from '../lib/games'
 import { resolveDefaultExts } from '../lib/scoresheets'
+import { fetchDerniereTable } from '../lib/plays'
 import NameField from './NameField'
 
 // Fiche de saisie d'une partie. Le type de partie vient du template :
@@ -690,7 +691,61 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   )
 
   // Même question d'ouverture que le parcours, dans tous les modes.
-  const playersLabel = <label className="field-label"><PlayersIcon size={13} /> Qui joue ?</label>
+  // ══ LA TABLE QUI SE RASSOIT ══ Retaper les mêmes trois ou quatre prénoms est le geste le
+  // plus répété de l'app. Une ligne muette rappelle la dernière table saisie de CE jeu ; un
+  // tap l'assoit. Ne rien toucher = l'écran d'avant, à l'identique.
+  // ⚠️ Elle ne paraît QUE sur une table vierge (les joueurs par défaut, aucun nom saisi) et
+  // disparaît au premier caractère tapé : elle ne peut donc jamais écraser une saisie.
+  // ⚠️ Jamais en réédition (la table est celle de la partie qu'on corrige), jamais en
+  // équipes (leur composition ne se rejoue pas d'une ligne de noms).
+  const [derniereTable, setDerniereTable] = useState([])
+  useEffect(() => {
+    if (isEdit || isTeams || !game?.id) return
+    let vivant = true
+    fetchDerniereTable(game.id).then((noms) => { if (vivant) setDerniereTable(noms) }).catch(() => {})
+    return () => { vivant = false }
+  }, [game?.id, isEdit, isTeams])
+  // ⚠️ « VIERGE » NE PEUT PAS VOULOIR DIRE « SANS NOMS » SEULEMENT : le score et la variante
+  // vivent DANS l'objet joueur, et les couronnes le désignent par son id — or rasseoir()
+  // reconstruit des joueurs NEUFS. Un tap sur une table déjà entamée effacerait donc des
+  // scores tapés, et laisserait les désignations de vainqueur pointer dans le vide.
+  // Même périmètre que la garde anti-perte (dirtyEntry).
+  const tableVierge =
+    players.every((p) => !(p.name || '').trim() && !(p.variant || '').trim() && !aUnScore(p)) &&
+    winnerIds.size === 0 &&
+    instantWinnerId == null
+  // ⚠️ La ligne NE SE DÉMONTE PAS au premier caractère tapé : elle emporterait sa hauteur
+  // dans le flux, champ focalisé et clavier ouvert — tout l'écran sauterait sous le doigt.
+  // Elle reste en place et devient INERTE (atténuée, plus tapable), donc toujours incapable
+  // d'écraser une saisie.
+  const rappelTable = derniereTable.length > 0 && !isEdit && !isTeams
+  const rasseoir = () => {
+    if (!tableVierge) return
+    // Même ménage que removePlayer, pour la même raison : les nouveaux joueurs ont des ids
+    // neufs, tout état qui désigne un joueur par son id doit repartir de zéro.
+    setWinnerIds(new Set())
+    setInstantWinnerId(null)
+    setForcedWinnerId(null)
+    setPlayers(derniereTable.map((n) => makePlayer(n)))
+    vibre('cran')
+  }
+  const playersLabel = (
+    <>
+      <label className="field-label"><PlayersIcon size={13} /> Qui joue ?</label>
+      {rappelTable && (
+        <button
+          type="button"
+          className={`table-rappel${tableVierge ? '' : ' inerte'}`}
+          onClick={rasseoir}
+          disabled={!tableVierge}
+          aria-hidden={tableVierge ? undefined : 'true'}
+        >
+          <span className="table-rappel-txt">Reprendre la dernière table</span>
+          <span className="table-rappel-noms">{derniereTable.join(' · ')}</span>
+        </button>
+      )}
+    </>
+  )
   // Le petit champ sous chaque nom perd son indication dès qu'il est rempli : on la rappelle.
   const variantHint = variantPerPlayer ? (
     <p className="field-hint">Sous chaque nom : son {variantCfg.label.toLowerCase()}.</p>

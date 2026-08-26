@@ -25,6 +25,35 @@ export async function fetchPlays(gameId) {
   return data ?? []
 }
 
+/**
+ * Les joueurs de la DERNIÈRE partie saisie de ce jeu — pour rasseoir la table d'un tap.
+ * [] si rien d'exploitable (table absente, hors ligne, aucune partie, noms douteux).
+ *
+ * ⚠️ Trié sur created_at (l'ORDRE DE SAISIE) et pas sur played_at : les deux sont identiques
+ * en pratique, mais c'est bien « la dernière partie que j'ai enregistrée » qu'on rejoue, et
+ * l'ordre de saisie est la seule chronologie fiable de cette base (l'historique a été importé
+ * d'un bloc). Aucune date n'est affichée nulle part : la ligne montre des noms, pas un « quand ».
+ * ⚠️ Un nom qui contient un chiffre n'est pas une personne (même règle que faits.js), et
+ * « Joueur N » est le nom de remplacement d'une saisie anonyme : les deux annulent la ligne
+ * plutôt que de proposer une table fausse.
+ */
+export async function fetchDerniereTable(gameId) {
+  if (!gameId) return []
+  const { data, error } = await supabase
+    .from('plays')
+    .select('players')
+    .eq('game_id', gameId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+  if (error || !data || !data.length) return []
+  const noms = (data[0].players || []).map((j) => j && j.name).filter(Boolean)
+  if (!noms.length) return []
+  if (noms.some((n) => /\d/.test(n) || /^Joueur\s/i.test(n))) return []
+  // Les parties en ÉQUIPES portent un champ team : leur composition ne se rejoue pas ici.
+  if ((data[0].players || []).some((j) => j && j.team)) return []
+  return noms
+}
+
 // TOUTES les parties, tous jeux confondus (pour les sauvegardes). [] si table absente.
 // Contrairement à fetchPlays, aucun filtre sur game_id : c'est un instantané complet.
 export async function fetchAllPlays() {
