@@ -287,6 +287,15 @@ Le contour `--gold-ink` (« marron ») et les pointillés de `.tl-over` ne plais
   - **`couleurDominante(img)`** au moment de la prise : canvas 10×10, moyenne pondérée vers les tons saturés ni noirs ni blancs, posée en `--fente-c` sur la racine. La fente : `box-shadow: inset 2px var(--fente-c, var(--ink))` + fond `color-mix(… 16 %, var(--card))` — la case annonce QUEL jeu va s'y poser.
   - ⚠️ **En PROD ça marche parce que les vignettes passent par `/_vercel/image` (MÊME origine → canvas propre).** En DEV le repli sert l'image geekdo brute SANS CORS → canvas « tainted », `getImageData` JETTE → le try/catch retombe sur l'encre. C'est le piège « Canvas client IMPOSSIBLE » déjà documenté — ici il ne coûte qu'un repli.
 
+### 3bis. L'ASCENSEUR SUR TOUS LES TRIS (retour user du même jour : « présent quel que soit le critère, avec l'évolution du critère ; en aléatoire, toujours l'ascenseur même sans étiquette »)
+
+**`etiquetteDeTri(sort, playMeta)`** (App.jsx, module-level) rend la fabrique d'étiquettes du tri courant : nom → lettre · durée → « 18 min »/« 1 h » (le format de la fiche) · complexité → **le MOT** (Simple/Moyen/Corsé, 3 groupes — le chiffre en ferait 30) · joueurs → « 2 j » · parties → le nombre nu · dernière partie → **le MOIS** (« juil. 2026 » — un groupe par jour en ferait un par carte) · prix → « 40 € » · **aléatoire → null**.
+  - `ascActif` (= liste ≥ 30, hors stats/réglages) commande le RENDU de l'ascenseur ; `ancresAsc` (null si pas d'étiquette affichable) commande l'observateur. En aléatoire : **poignée NUE** (`.kx-asc-poignee.nue`, 14 px — une simple prise), pas de bulle, mais l'ascenseur reste saisissable.
+  - ⚠️ **L'étiquette se VIDE au changement de tri** (prop `cle` → `useEffect [cle]` → `setLettre(null)`) : sans ça, la lettre « C » du tri par nom restait affichée en tri par durée jusqu'au premier franchissement — elle aurait menti sur le sens du critère.
+  - Poignée à largeur adaptative (min 32 px, padding 6) ; étiquette > 2 caractères → `.longue` (fs-footnote, et la bulle descend à fs-body-l). La bulle se cale à `right: calc(100% + 12px)` — toujours à gauche de la poignée quelle que soit sa largeur.
+  - `.kx-asc { display: none }` en ≥ 760 px (la liste y est multi-colonnes, et le bureau a sa vraie barre) — en PLUS du garde du hook.
+  - **Mesuré, tous les tris** : durée 23 groupes/« 18 min » · complexité 3/« Simple » · parties 17/« 2 » · dernière partie 3/« juil. 2026 » · aléatoire 0 observateur + poignée nue + ascenseur visible · retour nom → étiquette vidée puis « G ».
+
 ### 3. L'ASCENSEUR remplace le panneau central (retour user : « je m'attendais à un ascenseur avec grande lettre intégrée, saisissable au pouce »)
 
 `GrandeLettre.jsx` est SUPPRIMÉ ; `src/components/Ascenseur.jsx` le remplace : une poignée de 32×46 en verre sur le bord droit, la lettre du groupe dedans, **saisissable au pouce** pour sauter n'importe où (le patron des Contacts d'Android — oui, ça se fait toujours). Pendant la saisie, une bulle de 56×56 répète la lettre à GAUCHE du pouce (qui masque la poignée). Il disparaît 1,2 s après le dernier geste.

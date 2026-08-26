@@ -154,6 +154,44 @@ function shuffleRank(id, seed) {
 }
 
 // Date courte « 12 juil. 2026 » pour la ligne d'info des cartes.
+// L'étiquette que porte l'ascenseur pour UN jeu, selon le tri en cours — l'évolution du
+// critère, pas autre chose. `null` pour tout le tri = pas d'étiquette affichable (aléatoire) :
+// l'ascenseur reste, nu.
+function etiquetteDeTri(sort, playMeta) {
+  switch (sort) {
+    case 'name':
+      return (g) => lettreDe(g.name)
+    case 'duration':
+      return (g) => {
+        const d = g.duration_max ?? g.duration_min
+        if (!d) return '—'
+        if (d < 60) return `${d} min`
+        const h = Math.floor(d / 60)
+        const m = d % 60
+        return m === 0 ? `${h} h` : `${h}h${String(m).padStart(2, '0')}`
+      }
+    case 'complexity':
+      // Le MOT, pas le chiffre : trois groupes lisibles, comme partout ailleurs dans l'app.
+      return (g) => (g.complexity == null ? '—' : g.complexity < 2 ? 'Simple' : g.complexity < 3 ? 'Moyen' : 'Corsé')
+    case 'players':
+      return (g) => (g.players_min ? `${g.players_min} j` : '—')
+    case 'plays':
+      return (g) => String(playMeta[g.id]?.count || 0)
+    case 'lastplayed':
+      // Le MOIS : le bon grain pour se situer — un groupe par jour en ferait un par carte.
+      return (g) => {
+        const iso = playMeta[g.id]?.last
+        if (!iso) return '—'
+        const d = new Date(iso)
+        return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
+      }
+    case 'price':
+      return (g) => (g.price != null ? `${g.price} €` : '—')
+    default:
+      return null // aléatoire : rien d'affichable
+  }
+}
+
 function formatDay(iso) {
   try {
     return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -667,27 +705,29 @@ export default function App() {
   // complète — au pire quelques pixels de trop, invisibles à l'usage.
   const listRef = useRef(null)
   // ── La grande lettre pendant le défilement ────────────────────────────────────────────
-  // Elle n'existe QUE sur un tri par nom : à « durée » ou « complexité », la carte du haut
-  // n'a aucun rapport avec une position alphabétique — l'afficher serait un mensonge.
-  // Le sens décroissant, lui, marche sans rien faire : les groupes restent contigus.
+  // L'ascenseur existe sur TOUT tri dès que la liste est longue (retour user) ; seul le
+  // contenu de sa poignée change : la lettre en tri par nom, la durée en tri par durée…
+  // En aléatoire rien n'est affichable → la poignée reste NUE, mais l'ascenseur demeure.
   // Sous 30 cartes on voit la liste entière en deux gestes — un repère n'apprend rien (ce
-  // garde couvre aussi la wishlist, qui en compte neuf).
+  // garde couvre aussi la wishlist, qui en compte neuf). La grille y a droit : l'observateur
+  // suit des NŒUDS, et les tuiles sont les enfants de la liste au même titre que les cartes.
+  // Le sens décroissant marche sans rien faire : les groupes restent contigus.
   const lettreRef = useRef(null)
-  // La grille y a droit aussi (retour user) : l'observateur suit des NŒUDS, et les tuiles
-  // sont les enfants de la liste au même titre que les cartes.
-  const lettresActives = sort === 'name' && !statsOpen && !settingsOpen && visible.length >= 30
-  const ancresLettres = useMemo(() => {
-    if (!lettresActives) return null
+  const ascActif = !statsOpen && !settingsOpen && visible.length >= 30
+  const ancresAsc = useMemo(() => {
+    if (!ascActif) return null
+    const etiquette = etiquetteDeTri(sort, playMeta)
+    if (!etiquette) return null
     const m = new Map()
     let prec = null
     visible.forEach((g, i) => {
-      const l = lettreDe(g.name)
+      const l = etiquette(g)
       if (l !== prec) { m.set(i, l); prec = l }
     })
     return m
-  }, [visible, lettresActives])
+  }, [visible, ascActif, sort, playMeta])
   const montreLettre = useCallback((l) => lettreRef.current?.montre(l), [])
-  useLettreDefilement(listRef, ancresLettres, visible.length, montreLettre)
+  useLettreDefilement(listRef, ancresAsc, visible.length, montreLettre)
   useLayoutEffect(() => {
     const list = listRef.current
     // En grille il n'y a aucune cellule à aligner : on sort avant de payer le reflow.
@@ -1404,7 +1444,7 @@ export default function App() {
         <p className="banner">Hors ligne : lecture seule. Reconnectez-vous pour ajouter ou modifier.</p>
       )}
       {error && <p className="banner banner-err">{error}</p>}
-      {ancresLettres && <Ascenseur ref={lettreRef} />}
+      {ascActif && <Ascenseur ref={lettreRef} cle={ancresAsc ? sort : null} />}
 
       {toast && (
         <div className={`toast${toast.fait ? ' toast-fait' : ''}`} role="status" onClick={() => setToast(null)}>

@@ -5215,7 +5215,8 @@ input[type='number'] {
   position: absolute;
   top: 0;
   right: 5px;
-  width: 32px;
+  min-width: 32px;
+  padding: 0 6px;
   height: 46px;
   display: flex;
   align-items: center;
@@ -5226,15 +5227,26 @@ input[type='number'] {
   font-size: var(--fs-body-l);
   font-weight: 700;
   color: var(--ink);
+  white-space: nowrap;
+}
+/* Une étiquette de plusieurs mots (« 30 min », « juil. 2026 ») descend d'un cran. */
+.kx-asc-poignee.longue { font-size: var(--fs-footnote); }
+/* Tri sans critère affichable (aléatoire) : la poignée reste, NUE — une simple prise. */
+.kx-asc-poignee.nue { min-width: 14px; padding: 0; }
+/* ≥ 760px la liste est multi-colonnes et le bureau a sa propre barre : rien à faire ici. */
+@media (min-width: 760px) {
+  .kx-asc { display: none; }
 }
 /* La bulle pendant la saisie : la même lettre, en grand, à GAUCHE du pouce (qui masque
    la poignée). Enfant de la poignée → elle la suit sans une ligne de JS. */
 .kx-asc-bulle {
   position: absolute;
-  right: 44px;
+  right: calc(100% + 12px); /* toujours à gauche de la poignée, quelle que soit sa largeur */
   top: 50%;
   transform: translateY(-50%); /* centrage statique, pas une animation */
-  width: 56px;
+  min-width: 56px;
+  padding: 0 10px;
+  white-space: nowrap;
   height: 56px;
   display: flex;
   align-items: center;
@@ -5249,7 +5261,8 @@ input[type='number'] {
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   /* ⚠️ @supports n'ajoute AUCUNE spécificité : sélecteurs qualifiés pour battre la base. */
   div.kx-asc-poignee,
-  .kx-asc-poignee .kx-asc-bulle {
+  .kx-asc-poignee.longue .kx-asc-bulle { font-size: var(--fs-body-l); }
+.kx-asc-poignee .kx-asc-bulle {
     background: var(--verre);
     backdrop-filter: blur(18px) saturate(180%);
     -webkit-backdrop-filter: blur(18px) saturate(180%);

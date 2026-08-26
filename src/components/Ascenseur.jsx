@@ -20,7 +20,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
  * La lettre, elle, continue de venir de l'observateur, qui suit le vrai contenu — donc elle
  * reste JUSTE même si les cartes n'ont pas toutes la même hauteur.
  */
-const Ascenseur = forwardRef(function Ascenseur(_, ref) {
+const Ascenseur = forwardRef(function Ascenseur({ cle = null }, ref) {
   const [lettre, setLettre] = useState(null)
   const [vue, setVue] = useState(false)
   const [saisi, setSaisi] = useState(false)
@@ -43,6 +43,11 @@ const Ascenseur = forwardRef(function Ascenseur(_, ref) {
       reveilleRef.current()
     },
   }), [])
+
+  // Changer de tri change le SENS de l'étiquette : l'ancienne (une lettre, une durée…)
+  // mentirait jusqu'au prochain franchissement. `cle` vaut null quand le tri n'a pas
+  // d'étiquette affichable (aléatoire) → poignée nue.
+  useEffect(() => { setLettre(null) }, [cle])
 
   useEffect(() => {
     const place = () => {
@@ -108,9 +113,9 @@ const Ascenseur = forwardRef(function Ascenseur(_, ref) {
       onPointerUp={lache}
       onPointerCancel={lache}
     >
-      <div ref={poignee} className="kx-asc-poignee">
+      <div ref={poignee} className={`kx-asc-poignee${lettre ? '' : ' nue'}${lettre && lettre.length > 2 ? ' longue' : ''}`}>
         {lettre}
-        {saisi && <span className="kx-asc-bulle">{lettre}</span>}
+        {saisi && lettre && <span className="kx-asc-bulle">{lettre}</span>}
       </div>
     </div>
   )
