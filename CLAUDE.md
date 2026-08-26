@@ -302,6 +302,7 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
 
 La fiche montrait le sondage de milliers d'inconnus mais pas l'avis des quatre joueurs — alors que les tierlists couvrent 134/134 jeux et que la moitié de la collection a au moins 2 lettres d'écart. Répondre demandait d'ouvrir 4 tierlists et d'y chercher une vignette parmi cent.
   - **`verdictDeLaTable(tierlists, gameId, repById)`** (lib/tierlists.js) → `[{ tier, joueurs }]` groupé par lettre (meilleure → pire), prénoms triés. Tier « ? » (score null) et non-classés omis en silence.
+  - **Libellé : « Tierlists »** — « Le verdict de la table » a été refusé par l'user (« pas clair ») : trop littéraire là où le bloc voisin dit simplement « Nombre de joueurs », et le mot que l'app emploie pour cette donnée est TIERLISTS. Le nom de code (verdictDeLaTable) reste.
   - **Rendu entre les actions et le sondage BGG** (la famille avant les inconnus) : filet `border-top` + libellé en micro-capitales — la grammaire du sondage et des propriétaires, **surtout pas une carte de plus**. Grille 2 colonnes : lettre à l'ENCRE en 700, prénoms en --muted. **AUCUNE couleur de tier** (le rouge→bleu tiermaker n'a rien à faire dans la charte encre & or).
   - App charge les tierlists **à l'ouverture d'une fiche** (elles ne l'étaient qu'aux Stats ou au hub).
 

@@ -605,7 +605,7 @@ export default function GameDetail({
           les teintes tiermaker (rouge → bleu) n'ont rien à faire dans la charte encre & or. */}
       {verdict.length > 0 && (
         <div className="detail-verdict">
-          <div className="detail-verdict-label">Le verdict de la table</div>
+          <div className="detail-verdict-label">Tierlists</div>
           <div className="detail-verdict-grille">
             {verdict.map((v) => (
               <Fragment key={v.tier}>
