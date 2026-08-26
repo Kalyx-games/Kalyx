@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { computePlayStats, computeEntityStats, playWinners, scoreCounts } from '../lib/plays'
+import { computePlayStats, faceAFace, computeEntityStats, playWinners, scoreCounts } from '../lib/plays'
 import { effectivePlayersSet } from '../lib/games'
 import SortMenu from './SortMenu'
 import FilterSheet from './FilterSheet'
@@ -194,6 +194,9 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
 
   // Classement / moyenne : seuls les joueurs cochés (aucun coché = tout le monde).
   const stats = useMemo(() => computePlayStats(filtered, scoring, filters.players), [filtered, scoring, filters.players])
+  // Le face-à-face se calcule sur TOUTES les parties (comme le record) : il dit une chose
+  // structurelle du jeu, les filtres ne doivent pas le faire mentir.
+  const duel = useMemo(() => (isCoop ? null : faceAFace(allList)), [allList, isCoop])
   // Colonnes moyenne/record : seulement si le jeu a des points ET qu'il y en a d'enregistrés.
   const showScores = !noPoints && stats.hasScores && stats.byPlayer.some((p) => p.avg != null)
 
@@ -472,6 +475,28 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
                   )}
                 </div>
             </FilterSheet>
+          )}
+
+          {/* LE FACE-À-FACE : toujours en tête de l'écran Statistiques (choix user), hors
+              du bloc filtré — il ignore les filtres, comme le record. */}
+          {!isPlaysView && duel && (
+            <div className="hist-fa">
+              <div className="hist-fa-label">Face-à-face · {duel.total} parties entre eux</div>
+              <div className="hist-fa-noms"><span>{duel.a}</span><span>{duel.b}</span></div>
+              <div className="hist-fa-rang">
+                <span className="hist-fa-n">{duel.va}</span>
+                <div className="hist-fa-barre">
+                  <i style={{ flexGrow: duel.va }} />
+                  <i style={{ flexGrow: duel.vb }} />
+                </div>
+                <span className="hist-fa-n">{duel.vb}</span>
+              </div>
+              {duel.partagees > 0 && (
+                <div className="hist-fa-sous">
+                  + {duel.partagees} partie{duel.partagees > 1 ? 's' : ''} partagée{duel.partagees > 1 ? 's' : ''}
+                </div>
+              )}
+            </div>
           )}
 
           {filtered.length === 0 ? (

@@ -83,6 +83,9 @@
      chanter — choix assumé de l'utilisateur. Déclinées par thème : figées, elles
      tombaient à 3:1 sur la barre sombre. */
   --nav-collection: #2f8f5b;
+  /* Le face-à-face (écran Statistiques) : deux camps en tons sourds — choix user. */
+  --fa-gauche: #3e6c8e;
+  --fa-droite: #8e4f6b;
   --nav-wishlist: #c2456f;
   --nav-stats: #7250c8;
   /* Pastilles du bouton Chwazi. ⚠️ posées sur --primary, qui S'INVERSE d'un thème à
@@ -164,6 +167,9 @@
     --gold: #f5c542;
     --gold-ink: #f5c542;
   --nav-collection: #4fc98d;
+  /* Le face-à-face : tons éclaircis, sinon les camps s'éteignent sur la carte sombre. */
+  --fa-gauche: #5e8cae;
+  --fa-droite: #b06f8b;
   --nav-wishlist: #f2789f;
   --nav-stats: #a98bf5;
   /* Ici le disque est presque BLANC : il leur faut des tons soutenus. */
@@ -218,6 +224,9 @@
   --gold: #f5c542;
   --gold-ink: #f5c542;
   --nav-collection: #4fc98d;
+  /* Le face-à-face : tons éclaircis, sinon les camps s'éteignent sur la carte sombre. */
+  --fa-gauche: #5e8cae;
+  --fa-droite: #b06f8b;
   --nav-wishlist: #f2789f;
   --nav-stats: #a98bf5;
   /* Ici le disque est presque BLANC : il leur faut des tons soutenus. */
@@ -5013,6 +5022,66 @@ input[type='number'] {
 /* Page unique : pas de glissé, donc pas de zone morte à remplir — sinon les champs de
    partie sont repoussés tout en bas, derrière une bande vide. */
 .pcard-wrap-single { flex: 0 0 auto; }
+/* LE FACE-À-FACE (écran Statistiques d'un jeu) : quand un jeu se joue surtout à deux, par
+   les deux mêmes personnes, une barre unique dit qui mène — la longueur de chaque part EST
+   l'information. Habit « deux camps » (choix user) : deux tons sourds, personne n'est doré.
+   Gauche/droite = ordre alphabétique, jamais le score (la place ne change pas d'une visite
+   à l'autre). Recette de carte : celle des tuiles stats voisines (padding 14/16). */
+.hist-fa {
+  background: var(--card);
+  border-radius: var(--r-card);
+  box-shadow: var(--card-shadow);
+  padding: 14px 16px 16px;
+  margin-bottom: 10px;
+}
+.hist-fa-label {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.hist-fa-noms {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-footnote);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.hist-fa-rang {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hist-fa-n {
+  font-size: var(--fs-title-s);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  min-width: 1.2em;
+}
+.hist-fa-n:last-child { text-align: right; }
+.hist-fa-barre {
+  flex: 1;
+  height: 14px;
+  display: flex;
+  gap: 3px;
+}
+/* flex-grow vient du JSX (le nombre de victoires) ; le perdant garde toujours un liseré. */
+.hist-fa-barre i {
+  flex-basis: 0;
+  flex-shrink: 1;
+  min-width: 8px;
+  border-radius: 3px;
+}
+.hist-fa-barre i:first-child { background: var(--fa-gauche); border-radius: 7px 3px 3px 7px; }
+.hist-fa-barre i:last-child { background: var(--fa-droite); border-radius: 3px 7px 7px 3px; }
+.hist-fa-sous {
+  margin-top: 8px;
+  font-size: var(--fs-caption);
+  color: var(--muted);
+}
+
 /* Visualiseur : pointillés courts + un long sur la page active (doré si gagnant, mode joueur). */
 .pcard-dots {
   display: flex;

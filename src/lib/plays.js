@@ -345,6 +345,42 @@ export function playWinners(play) {
 // scores incomplets/nuls (on a arrêté la partie sans finir de compter) → il ne faut PAS
 // les compter dans les moyennes/records/catégories, sinon ils faussent tout. La victoire,
 // elle, compte normalement. (En coop, le score du groupe reste pertinent → on le garde.)
+// LE FACE-À-FACE : quand un jeu se joue surtout à deux, par les deux mêmes personnes, une
+// seule barre dit qui mène. Éligible si le duo MAJORITAIRE compte au moins 4 parties ET au
+// moins la moitié des parties du jeu (choix user — critère assoupli depuis la maquette).
+// Jamais appelé pour un jeu coopératif (gardé par l'appelant).
+// ⚠️ Les deux joueurs sont rangés par ordre ALPHABÉTIQUE (gauche = premier), jamais par le
+// score : la place de chacun ne change pas d'une visite à l'autre (choix user).
+export function faceAFace(plays) {
+  if (!plays || plays.length < 4) return null
+  const duos = new Map()
+  for (const p of plays) {
+    const noms = (p.players || []).map((j) => j.name).filter(Boolean)
+    if (noms.length !== 2) continue
+    const cle = [...noms].sort((x, y) => x.localeCompare(y, 'fr')).join('\u0000')
+    if (!duos.has(cle)) duos.set(cle, [])
+    duos.get(cle).push(p)
+  }
+  let duo = null
+  for (const paire of duos) if (!duo || paire[1].length > duo[1].length) duo = paire
+  if (!duo || duo[1].length < 4 || duo[1].length * 2 < plays.length) return null
+  const [a, b] = duo[0].split('\u0000')
+  let va = 0
+  let vb = 0
+  let partagees = 0
+  for (const p of duo[1]) {
+    const w = playWinners(p)
+    const ga = w.includes(a)
+    const gb = w.includes(b)
+    if (ga && gb) partagees++
+    else if (ga) va++
+    else if (gb) vb++
+    else partagees++
+  }
+  if (va + vb === 0) return null // rien à mesurer : la barre n'aurait pas de longueurs
+  return { a, b, va, vb, partagees, total: duo[1].length }
+}
+
 export function scoreCounts(play) {
   return !(play?.trigger && !play?.outcome)
 }

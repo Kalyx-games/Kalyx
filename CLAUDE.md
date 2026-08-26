@@ -169,7 +169,7 @@ Audit en workflow (3 lentilles : cohérence / composition / finition, puis synth
 ```bash
 grep -cE '^s*(margin|padding|gap|row-gap|column-gap)[a-z-]*s*:.*[0-9]px' src/index.css
 ```
-**Valeur de référence au 26/08/2026 : 349** (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
+**Valeur de référence au 26/08/2026 : 356** (la hausse depuis 349 : les sept espacements de la carte du face-à-face — la recette des tuiles stats et le joint de sa barre) (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
 
 **NON FAIT, et assumé** : le resserrement réel (faire tomber 10→8, 14→12, 6→4 …). Il déplacerait ~40 % des espacements pour un bénéfice invisible, sur une app que l’user a déjà fait itérer trois fois sur des retours visuels. À ne relancer QUE si l’user demande explicitement un rythme plus serré, écran par écran, et jamais en une passe globale.
 
@@ -290,6 +290,18 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - **Les butées disent les extrémités** (la demande) : avant la première ancre → l'étiquette du PREMIER groupe ; à `scrollY ≥ max − 1` → celle du DERNIER (sans ce forçage, la butée basse affichait le groupe à la ligne de lecture, un entre-deux).
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
+
+## ✅ LE FACE-À-FACE (2026-08-26, jugé sur maquette puis tranché par l'user)
+
+**Maquette artifact** (https://claude.ai/code/artifact/2ddae1a7-c1b7-4535-9057-800c2b0e6278), construite sur les VRAIES parties de la base. **Choix user, tous les quatre** : habit « DEUX CAMPS » (tons sourds, personne n'est doré) · placement TOUJOURS EN TÊTE de l'écran Statistiques · critère ASSOUPLI : ≥ 4 parties du duo ET le duo ≥ LA MOITIÉ des parties du jeu · **ordre ALPHABÉTIQUE** (gauche = premier nom, jamais le score — la place de chacun ne change pas d'une visite à l'autre).
+
+  - **`faceAFace(plays)`** (lib/plays.js) : duo majoritaire des parties à EXACTEMENT 2 joueurs, victoires via `playWinners` (la fonction canonique — pas le champ winner brut), ex æquo et parties sans vainqueur → « partagées » (sous-ligne « + N partie(s) partagée(s) »), `va + vb === 0` → null (rien à mesurer). Jamais appelé en coop (gardé par l'appelant).
+  - **GameHistory** : `duel` calculé sur **allList** (comme le record — les filtres ne le font pas mentir), rendu HORS du bloc filtré, gardé `!isPlaysView` (l'écran Historique ne le porte pas).
+  - **CSS `.hist-fa*`** : recette de carte des tuiles voisines (14/16). Tokens **`--fa-gauche` #3e6c8e / `--fa-droite` #8e4f6b** dans les 3 portées, ÉCLAIRCIS en sombre (#5e8cae / #b06f8b — sinon les camps s'éteignent sur la carte sombre ; contrastes ≥ 4,5). Le flex-grow des segments vient du JSX (le nombre de victoires) ; **min-width 8px = le perdant garde toujours un liseré**.
+  - **Vérifié en dev sur les cas réels** : Vale of Eternity 13–6 (« 19 parties entre eux », proportions exactes) ; Mystic Vale : Clémence 4 à GAUCHE malgré Mathieu meneur (l'alphabétique prime) + « + 1 partie partagée » ; 7 Wonders Duel 5–4 (éligible pile à la moitié : 9/18) ; Abyss (27 %) et Bomb Busters (coop) : pas de barre. Huit jeux de la base portent la barre aujourd'hui.
+  - **Garde-fou d'espacement : 349 → 356** (les sept espacements de la carte .hist-fa, dont le gap de 3px du joint de la barre — la recette des tuiles stats et ses rangs internes).
+
+**Le document de travail « Kalyx joueuse » est SOLDÉ** : toutes les idées sont livrées, la section est vide en attendant les prochaines.
 
 ## ✅ LE GLISSÉ SUIT LE DOIGT, PARTOUT : LA FICHE DEVIENT UN VRAI PAGER + LES POINTILLÉS UNE RÉGLETTE (2026-08-26, choix user)
 
