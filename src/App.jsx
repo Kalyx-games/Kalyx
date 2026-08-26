@@ -1752,7 +1752,7 @@ export default function App() {
           tagMap={tagMap}
           fait={dernierFait?.gameId === detailLayer.value.id ? dernierFait : null}
           siblings={visible}
-          onNavigate={(g) => setDetailGame(g)}
+          onNavigate={(g) => setDetailGame((d) => (d ? g : d))} // naviguer exige une fiche OUVERTE
           onClose={() => setDetailGame(null)}
           onNewPlay={() => handleNewPlayFromCard(detailLayer.value)}
           onStats={() => openHistory(detailLayer.value, 'stats')}

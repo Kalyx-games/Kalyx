@@ -2,6 +2,7 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { BackIcon, ExtIcon, PencilIcon, DieIcon, CrownIcon } from './icons'
 import { BGG_LOGO } from '../lib/logos'
 import { vibre } from '../lib/haptique'
+import { mou } from '../lib/geste'
 import SnapshotPane from './SnapshotPane'
 import { backdropSrc, heroSrc } from '../lib/img'
 import {
@@ -78,8 +79,7 @@ export default function GameDetail({
   const idx = siblings.findIndex((g) => g.id === game.id)
   const sheetRef = useRef(null)
   const headRef = useRef(null)
-  const swipeRef = useRef({ x: 0, y: 0, dragging: false })
-  const navDirRef = useRef(0) // sens du dernier changement de jeu (0 = ouverture, 1 = suivant, -1 = précédent)
+  const swipeRef = useRef({ id: null, x: 0, y: 0, dragging: false })
   // Transition PLEIN ÉCRAN (pager) : on fige un instantané du corps ACTUEL qui glisse dehors PENDANT
   // que le corps du NOUVEAU jeu glisse dedans → on voit vraiment une fiche remplacer l'autre.
   const bodyRef = useRef(null)
@@ -88,8 +88,14 @@ export default function GameDetail({
   // ne pas être à la même ordonnée que l'instantané sortant (mesuré : 20px d'écart entre un
   // titre d’une ligne et un titre de deux). On réaligne, sinon les deux panneaux se croisent
   // en escalier — et le fond d’ambiance du sortant paraîtrait sauter.
+  // ⚠️ Le recalage ne vaut que pour une fiche NON défilée : là, l'écart est un pur delta de
+  // hauteur de tête (titre d'une ligne contre deux) et recaler évite l'escalier. Fiche
+  // défilée, chaque panneau garde son ordonnée (comportement normal d'un pager) — recaler
+  // ferait sauter l'instantané de tout le défilement. Le critère est le défilement relevé à
+  // l'engagement, pas la taille de l'écart (un petit scroll ressemble à un delta de tête).
   useLayoutEffect(() => {
     if (!bodyLeaving || !bodyRef.current) return
+    if ((pagerRef.current?.scrollAvant ?? 0) > 0.5) return
     const top = bodyRef.current.getBoundingClientRect().top
     setBodyLeaving((b) => (b && Math.abs(b.top - top) > 0.5 ? { ...b, top } : b))
   }, [bodyLeaving])
@@ -148,56 +154,217 @@ export default function GameDetail({
     ro.observe(head)
     return () => ro.disconnect()
   }, [])
-  const leaveTimer = useRef(null)
-  const startNav = (dir) => {
-    const next = idx + dir
-    if (!onNavigate || idx < 0 || next < 0 || next >= siblings.length) return
-    const el = bodyRef.current
-    if (el) {
-      const rect = el.getBoundingClientRect()
-      const clone = el.cloneNode(true)
-      clearTimeout(leaveTimer.current)
-      setBodyLeaving({ node: clone, dir, top: rect.top, left: rect.left, width: rect.width })
-      // Filet de sécurité : normalement l'instantané est retiré par onAnimationEnd (synchronisé pile à
-      // la fin de l'anim → pas de « bande figée » qui traîne). Ce timeout (plus long) ne sert qu'au cas
-      // où animationend ne se déclenche pas (reduced-motion, anim interrompue).
-      leaveTimer.current = setTimeout(() => setBodyLeaving(null), 600)
+  // ══ LE GLISSÉ QUI SUIT LE DOIGT ══ La fiche est un vrai pager : dès l'engagement, l'instantané
+  // du jeu courant suit le doigt 1:1 pendant que le CORPS RÉEL du voisin arrive à côté (la bascule
+  // d'état se fait à l'engagement — un aller-retour setDetailGame ne coûte que deux re-rendus,
+  // aucun réseau, aucune entrée d'historique : vérifié dans App). Le geste écrit UNE variable CSS
+  // (--kx-page) sur la feuille, les DEUX panneaux en dérivent leur position — React ne touche
+  // jamais cette variable (le patron de la pastille du bac). Au relâché, la classe kx-pose rend
+  // une transition et la cible est écrite dans la même variable : l'aperçu et l'arrivée ne font
+  // qu'un seul mouvement. Au bord de la collection : l'élastique (mou) — on SENT qu'il n'y a
+  // plus rien après, au lieu d'un geste qui tombe dans le vide.
+  const [glisse, setGlisse] = useState(null) // null | { mode: 'pager', dir } | { mode: 'bord' }
+  const pagerRef = useRef(null) // l'état du geste en cours (jamais lu par le rendu)
+  const poseRef = useRef(null) // l'atterrissage en vol { commit, mode, timer }
+  const scrollRestaureRef = useRef(null) // défilement à rendre au jeu d'origine après une annulation
+  const scrollRetryRef = useRef(null) // la 2e écriture du scroll restauré (annulable)
+  // Miroir de `closing` pour le minuteur d'atterrissage : une fiche en train de se fermer
+  // ne doit plus JAMAIS naviguer — sinon le onNavigate différé de 340 ms la ROUVRE tout seul.
+  const closingRef = useRef(closing)
+  closingRef.current = closing
+  // Au démontage : le minuteur d'atterrissage et le filet de scroll meurent avec le composant.
+  useEffect(() => () => {
+    clearTimeout(poseRef.current?.timer)
+    poseRef.current = null
+    pagerRef.current = null
+    clearTimeout(scrollRetryRef.current)
+  }, [])
+  const finirPose = () => {
+    const s = poseRef.current
+    if (!s) return
+    poseRef.current = null
+    clearTimeout(s.timer)
+    // kx-pose se retire en DIRECT, symétriquement à pose() qui l'ajoute : deux glissés
+    // enchaînés font passer `glisse` d'objet à objet sans jamais commettre null (React
+    // groupe les deux setGlisse du même handler) → l'effet de nettoyage ne viendrait pas,
+    // et la transition de 0,3 s resterait collée au suivi du geste suivant.
+    sheetRef.current?.classList.remove('kx-pose')
+    const p = pagerRef.current
+    pagerRef.current = null
+    if (p?.mode === 'pager' && !s.commit && !closingRef.current) {
+      // Annulé : le jeu d'origine revient, avec son défilement — l'aller-retour est invisible,
+      // l'instantané couvre l'écran jusqu'au commit React qui le retire (même peinture).
+      scrollRestaureRef.current = p.scrollAvant
+      onNavigate(p.original)
     }
-    navDirRef.current = dir
-    if (sheetRef.current) sheetRef.current.scrollTop = 0 // nouveau jeu en haut, aligné avec l'instantané
-    onNavigate(siblings[next]) // bascule immédiate → le nouveau corps glisse en entrée
+    setBodyLeaving(null)
+    setGlisse(null)
   }
+  const engage = (dir) => {
+    if (closing) return // la feuille est en train de sortir : aucun pager ne doit naître
+    clearTimeout(scrollRetryRef.current) // le filet de scroll n'écrit pas en plein geste
+    // Un atterrissage encore en vol : on le termine net (fast-forward). S'il s'agissait d'une
+    // ANNULATION, le jeu d'origine est en train de revenir → ce geste-ci reste sans pager.
+    if (poseRef.current) {
+      const bloque = poseRef.current.mode === 'pager' && !poseRef.current.commit
+      finirPose()
+      if (bloque) return
+    }
+    const sheet = sheetRef.current
+    if (!sheet) return
+    const next = idx + dir
+    const versVoisin = Boolean(onNavigate) && idx >= 0 && next >= 0 && next < siblings.length
+    sheet.style.setProperty('--kx-page', '0px')
+    if (!versVoisin) {
+      // Le bord de la collection : pas de voisin, la fiche résiste à l'élastique.
+      pagerRef.current = { mode: 'bord', pos: 0 }
+      sheet.style.setProperty('--kx-cote', '0')
+      setGlisse({ mode: 'bord' })
+      return
+    }
+    const el = bodyRef.current
+    const rect = el.getBoundingClientRect()
+    const clone = el.cloneNode(true)
+    // Sur un enchaînement (fast-forward), le corps cloné porte encore corps-glisse et
+    // data-cote : le clone matcherait la règle de transform et partirait d'un écran.
+    clone.classList.remove('corps-glisse')
+    clone.removeAttribute('data-cote')
+    pagerRef.current = {
+      mode: 'pager', dir, original: game, scrollAvant: sheet.scrollTop,
+      largeur: window.innerWidth, pos: 0, vx: 0, dernierX: null, dernierT: 0,
+    }
+    sheet.style.setProperty('--kx-cote', String(dir))
+    setBodyLeaving({ node: clone, manuel: true, top: rect.top, left: rect.left, width: rect.width })
+    setGlisse({ mode: 'pager', dir })
+    sheet.scrollTop = 0 // le voisin arrive en haut de SA fiche
+    onNavigate(siblings[next])
+  }
+  const suit = (dx, x) => {
+    const p = pagerRef.current
+    const sheet = sheetRef.current
+    if (!p || !sheet) return
+    let pos
+    if (p.mode === 'bord') pos = mou(dx)
+    else if (p.dir === 1) pos = dx > 0 ? mou(dx) : Math.max(dx, -p.largeur)
+    else pos = dx < 0 ? mou(dx) : Math.min(dx, p.largeur)
+    p.pos = pos
+    if (p.mode === 'pager') {
+      const t = performance.now()
+      if (p.dernierX != null && t > p.dernierT) p.vx = (x - p.dernierX) / (t - p.dernierT)
+      p.dernierX = x
+      p.dernierT = t
+    }
+    sheet.style.setProperty('--kx-page', pos + 'px')
+  }
+  const pose = (annule) => {
+    const p = pagerRef.current
+    const sheet = sheetRef.current
+    if (!p || !sheet) return
+    let commit = false
+    let cible = 0
+    if (p.mode === 'pager' && !annule) {
+      // On bascule au TIERS de l'écran, ou d'une pichenette. La vitesse ne vaut que si le
+      // dernier mouvement est récent (un doigt qui a marqué une pause a changé d'avis), et
+      // une pichenette FINALE vers l'origine annule même au-delà du tiers — le dernier
+      // geste dit l'intention.
+      const v = performance.now() - p.dernierT < 90 ? p.vx : 0
+      const versVoisin = p.dir === 1 ? v < -0.45 : v > 0.45
+      const versOrigine = p.dir === 1 ? v > 0.45 : v < -0.45
+      const passeTiers = p.dir === 1 ? p.pos <= -p.largeur * 0.33 : p.pos >= p.largeur * 0.33
+      commit = versVoisin || (passeTiers && !versOrigine)
+      cible = commit ? -p.dir * p.largeur : 0
+    }
+    sheet.classList.add('kx-pose')
+    void sheet.getBoundingClientRect() // la classe doit être résolue AVANT la nouvelle valeur
+    sheet.style.setProperty('--kx-page', cible + 'px')
+    // Pas de transitionend : les transitions internes du corps remonteraient jusqu'ici, et une
+    // valeur déjà à la cible n'en émet aucun. Le minuteur calé sur la durée (0,3 s) suffit.
+    poseRef.current = { commit, mode: p.mode, timer: setTimeout(finirPose, 340) }
+  }
+  // Le nettoyage APRÈS le commit (avant la peinture) : retirer les variables plus tôt ferait
+  // sauter le corps encore classé à sa position de repos, une frame avant le retrait des classes.
+  useLayoutEffect(() => {
+    if (glisse) return
+    const sheet = sheetRef.current
+    if (!sheet) return
+    sheet.classList.remove('kx-pose')
+    sheet.style.removeProperty('--kx-page')
+    sheet.style.removeProperty('--kx-cote')
+    if (scrollRestaureRef.current != null) {
+      const vise = scrollRestaureRef.current
+      scrollRestaureRef.current = null
+      sheet.scrollTop = vise
+      // Au commit, la jaquette du corps remonté n'a pas encore sa hauteur (image en cours de
+      // chargement) → le scroll peut être CLAMPÉ trop haut. Une seconde écriture, une fois
+      // l'image arrivée (cache), rend sa vraie position ; si la page est réellement plus
+      // courte, elle clampe pareil — inoffensif.
+      if (Math.abs(sheet.scrollTop - vise) > 1) {
+        clearTimeout(scrollRetryRef.current)
+        scrollRetryRef.current = setTimeout(() => {
+          scrollRetryRef.current = null
+          // jamais en plein geste : un pager engagé a remis le scroll à 0 exprès
+          if (sheetRef.current && !pagerRef.current) sheetRef.current.scrollTop = vise
+        }, 150)
+      }
+    }
+  }, [glisse])
   const navRef = useRef({})
-  navRef.current = { startNav }
+  navRef.current = { engage, suit, pose }
+  // ⚠️ POINTER EVENTS + CAPTURE, et pas des touch events — c'est le cœur : l'engagement
+  // REMONTE le corps (key={game.id}), donc la cible du toucher initial est DÉTACHÉE du DOM,
+  // et les touchmove d'un nœud détaché ne remontent plus (le gel de la fente des tierlists,
+  // reproduit ici au premier essai). `setPointerCapture` sur la feuille redirige tout le
+  // geste vers elle, détachement ou pas. Le défilement vertical reste au navigateur via
+  // `touch-action: pan-y` sur la feuille (un preventDefault n'y ferait rien en pointer).
   useEffect(() => {
     const el = sheetRef.current
     if (!el) return
     const st = swipeRef.current
-    const onStart = (e) => { const t = e.touches[0]; st.x = t.clientX; st.y = t.clientY; st.dragging = false }
-    const onMove = (e) => {
-      const t = e.touches[0]
-      const dx = t.clientX - st.x
-      const dy = t.clientY - st.y
-      if (!st.dragging && Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) + 6) st.dragging = true
-      if (st.dragging) e.preventDefault()
+    const onDown = (e) => {
+      // Tactile (et stylet) seulement, comme l'ancien mécanisme : à la souris, un glissé
+      // horizontal est une sélection de texte, pas une navigation.
+      if (!e.isPrimary || e.pointerType === 'mouse') return
+      st.id = e.pointerId; st.x = e.clientX; st.y = e.clientY; st.dragging = false
     }
-    const onEnd = (e) => {
+    const onMove = (e) => {
+      if (e.pointerId !== st.id) return
+      const dx = e.clientX - st.x
+      const dy = e.clientY - st.y
+      if (!st.dragging && Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) + 6) {
+        st.dragging = true
+        // posé dès l'ENGAGEMENT : l'écran bouge sous le doigt, le clic de fin de geste ne
+        // doit rien déclencher (il retournerait la boîte 3D)
+        swipedRef.current = true
+        try { el.setPointerCapture(e.pointerId) } catch { /* pointeur synthétique (banc) */ }
+        navRef.current.engage(dx < 0 ? 1 : -1) // glissé vers la gauche → jeu suivant
+      }
+      if (st.dragging) navRef.current.suit(dx, e.clientX)
+    }
+    const onUp = (e) => {
+      if (e.pointerId !== st.id) return
+      st.id = null
       if (!st.dragging) return
       st.dragging = false
-      // posé AVANT le seuil des 60 px : un glissé qui n'aboutit pas ne doit rien déclencher
-      swipedRef.current = true
       setTimeout(() => { swipedRef.current = false }, 220)
-      const dx = e.changedTouches[0].clientX - st.x
-      if (Math.abs(dx) < 60) return
-      navRef.current.startNav(dx < 0 ? 1 : -1) // glissé vers la gauche → jeu suivant
+      navRef.current.pose(false)
     }
-    el.addEventListener('touchstart', onStart, { passive: true })
-    el.addEventListener('touchmove', onMove, { passive: false })
-    el.addEventListener('touchend', onEnd, { passive: true })
+    const onCancel = (e) => {
+      if (e.pointerId !== st.id) return
+      st.id = null
+      if (!st.dragging) return
+      st.dragging = false
+      setTimeout(() => { swipedRef.current = false }, 220)
+      navRef.current.pose(true) // le système a repris le geste → jamais de bascule
+    }
+    el.addEventListener('pointerdown', onDown)
+    el.addEventListener('pointermove', onMove)
+    el.addEventListener('pointerup', onUp)
+    el.addEventListener('pointercancel', onCancel)
     return () => {
-      el.removeEventListener('touchstart', onStart)
-      el.removeEventListener('touchmove', onMove)
-      el.removeEventListener('touchend', onEnd)
+      el.removeEventListener('pointerdown', onDown)
+      el.removeEventListener('pointermove', onMove)
+      el.removeEventListener('pointerup', onUp)
+      el.removeEventListener('pointercancel', onCancel)
     }
   }, [])
 
@@ -216,12 +383,16 @@ export default function GameDetail({
       {bodyLeaving && (
         <SnapshotPane
           node={bodyLeaving.node}
-          className={`detail-body-leaving dir-${bodyLeaving.dir}`}
+          className="detail-body-leaving manuel"
           style={{ top: bodyLeaving.top, left: bodyLeaving.left, width: bodyLeaving.width }}
-          onAnimationEnd={() => { clearTimeout(leaveTimer.current); setBodyLeaving(null) }}
         />
       )}
-      <div className="detail-body" key={game.id} data-dir={navDirRef.current} ref={bodyRef}>
+      <div
+        className={`detail-body${glisse ? ' corps-glisse' : ''}`}
+        key={game.id}
+        data-cote={glisse?.mode === 'pager' ? glisse.dir : undefined}
+        ref={bodyRef}
+      >
       {/* Fond d'ambiance : la jaquette, floutée, teinte le haut de la fiche puis se fond
           dans le fond de page. L'image est demandée en 128 px de large — un flou de 30 px
           n'a que faire de la définition, et ça ne coûte que quelques kilo-octets. */}

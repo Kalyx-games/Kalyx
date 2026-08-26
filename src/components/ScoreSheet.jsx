@@ -96,7 +96,8 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const [step, setStep] = useState(isEdit ? 3 : 1)
   const [cardIndex, setCardIndex] = useState(0) // page du parcours affichée (joueur ou item selon le mode)
   const walkRef = useRef(null) // conteneur du parcours (pour le glissé)
-  const swipeRef = useRef({ x: 0, y: 0, dragging: false })
+  const dotsRef = useRef(null) // la rangée des pointillés (la réglette)
+  const swipeRef = useRef({ id: null, x: 0, y: 0, dragging: false })
   const swipedRef = useRef(false) // un glissé vient d'avoir lieu → son clic de fin est ignoré
   // Mode de saisie du parcours multi-catégories : une page par joueur, ou une par catégorie.
   const entry = template?.entry === 'byPlayer' ? 'byPlayer' : 'byItem'
@@ -754,33 +755,127 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     const el = walkRef.current
     if (!el) return
     const st = swipeRef.current
-    const onStart = (e) => { const t = e.touches[0]; st.x = t.clientX; st.y = t.clientY; st.dragging = false; swipedRef.current = false }
+    const onStart = (e) => {
+      // Identité du toucher : un 2e doigt posé pendant le geste ne doit pas écraser l'état
+      // (il rebasculerait surDots et ré-armerait le glissé sous un scrub de la réglette).
+      if (st.id != null) return
+      const t = e.changedTouches[0]
+      st.id = t.identifier
+      st.x = t.clientX; st.y = t.clientY; st.dragging = false; swipedRef.current = false
+      // Un geste né sur les pointillés appartient à la RÉGLETTE, pas au glissé de page.
+      st.surDots = Boolean(e.target.closest && e.target.closest('.pcard-dots'))
+    }
     const onMove = (e) => {
-      const t = e.touches[0]
+      if (st.surDots) return
+      const t = Array.from(e.touches).find((o) => o.identifier === st.id)
+      if (!t) return
       const dx = t.clientX - st.x
       const dy = t.clientY - st.y
       if (!st.dragging && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) + 4) {
         st.dragging = true
-        // Posé AVANT le seuil de navigation : même un glissé trop court ne doit pas finir
-        // en tap sur le −/+ qui se trouve sous le doigt (même défaut que dans NavBar).
+        // Posé AVANT le seuil de navigation, SANS minuteur : un glissé peut durer plus de
+        // 220 ms, et son clic de fin arrive APRÈS le relâché — c'est là que le minuteur part.
         swipedRef.current = true
-        setTimeout(() => { swipedRef.current = false }, 220)
       }
       if (st.dragging) e.preventDefault()
     }
     const onEnd = (e) => {
+      const t = Array.from(e.changedTouches).find((o) => o.identifier === st.id)
+      if (!t) return
+      st.id = null
+      if (st.surDots || !st.dragging) return
+      st.dragging = false
+      setTimeout(() => { swipedRef.current = false }, 220)
+      const dx = t.clientX - st.x
+      if (Math.abs(dx) > 50) (dx < 0 ? navRef.current.goNext : navRef.current.goPrev)()
+    }
+    // Sans lui, un geste repris par le système laisserait le drapeau posé pour toujours
+    // (plus aucun tap ne marcherait sur l'écran).
+    const onCancel = (e) => {
+      if (!Array.from(e.changedTouches).some((o) => o.identifier === st.id)) return
+      st.id = null
       if (!st.dragging) return
       st.dragging = false
-      const dx = e.changedTouches[0].clientX - st.x
-      if (Math.abs(dx) > 50) (dx < 0 ? navRef.current.goNext : navRef.current.goPrev)()
+      setTimeout(() => { swipedRef.current = false }, 220)
     }
     el.addEventListener('touchstart', onStart, { passive: true })
     el.addEventListener('touchmove', onMove, { passive: false })
     el.addEventListener('touchend', onEnd, { passive: true })
+    el.addEventListener('touchcancel', onCancel, { passive: true })
     return () => {
       el.removeEventListener('touchstart', onStart)
       el.removeEventListener('touchmove', onMove)
       el.removeEventListener('touchend', onEnd)
+      el.removeEventListener('touchcancel', onCancel)
+    }
+  }, [step])
+
+  // LA RÉGLETTE : les pointillés (des cibles de 44 px collées les unes aux autres) se
+  // PARCOURENT sans lever le doigt — un glissé traverse les pages, un cran de vibration par
+  // franchissement. Tout passe par navRef (jumpTo/idx frais à chaque rendu) : l'effet n'est
+  // monté qu'une fois par entrée dans l'étape 2. Les positions sont relevées à l'engagement
+  // puis RE-relevées après chaque franchissement : le pointillé actif est plus large
+  // (20 → 36 px), ses voisins se décalent sous le doigt.
+  useEffect(() => {
+    if (step !== 2) return
+    const el = dotsRef.current
+    if (!el) return // page unique ou autre mode : pas de pointillés
+    const st = { id: null, x: 0, y: 0, actif: false, rects: null, sale: false }
+    const releve = () => { st.rects = Array.from(el.children, (c) => c.getBoundingClientRect()) }
+    const sousLeDoigt = (x, y) => {
+      let k = 0
+      let meilleur = Infinity
+      st.rects.forEach((r, i) => {
+        const ex = x < r.left ? r.left - x : x > r.right ? x - r.right : 0
+        const ey = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0
+        const d = ex * ex + ey * ey
+        if (d < meilleur) { meilleur = d; k = i }
+      })
+      return k
+    }
+    const onStart = (e) => {
+      if (st.id != null) return // un 2e doigt n'écrase pas le scrub en cours
+      const t = e.changedTouches[0]
+      st.id = t.identifier
+      st.x = t.clientX; st.y = t.clientY; st.actif = false
+    }
+    const onMove = (e) => {
+      const t = Array.from(e.touches).find((o) => o.identifier === st.id)
+      if (!t) return
+      const dx = t.clientX - st.x
+      const dy = t.clientY - st.y
+      if (!st.actif && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) + 2) {
+        st.actif = true
+        // le clic de fin de geste tomberait sur un pointillé → il ne doit pas re-sauter.
+        // Posé SANS minuteur (un scrub dure plus de 220 ms) : le minuteur part au relâché.
+        swipedRef.current = true
+        releve()
+      }
+      if (!st.actif) return
+      e.preventDefault()
+      if (st.sale) { releve(); st.sale = false }
+      const k = sousLeDoigt(t.clientX, t.clientY)
+      if (k !== navRef.current.idx) {
+        st.sale = true // les largeurs vont changer avec la page active
+        vibre('touche')
+        navRef.current.jumpTo(k)
+      }
+    }
+    const onEnd = (e) => {
+      if (!Array.from(e.changedTouches).some((o) => o.identifier === st.id)) return
+      st.id = null
+      if (st.actif) setTimeout(() => { swipedRef.current = false }, 220)
+      st.actif = false
+    }
+    el.addEventListener('touchstart', onStart, { passive: true })
+    el.addEventListener('touchmove', onMove, { passive: false })
+    el.addEventListener('touchend', onEnd, { passive: true })
+    el.addEventListener('touchcancel', onEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchmove', onMove)
+      el.removeEventListener('touchend', onEnd)
+      el.removeEventListener('touchcancel', onEnd)
     }
   }, [step])
   const triggerField = showTrigger && (
@@ -1280,20 +1375,20 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     else if (!singlePage) setStep(3)
   }
   const jumpTo = (k) => { navDirRef.current = k >= idx ? 1 : -1; setCardIndex(k) }
-  navRef.current = { goPrev, goNext }
+  navRef.current = { goPrev, goNext, jumpTo, idx }
 
   const prevLabel = idx > 0 ? (entry === 'byPlayer' ? nameOf(players[idx - 1], idx - 1) : visibleCats[idx - 1].label) : 'Joueurs'
   const nextLabel = idx < pageCount - 1 ? (entry === 'byPlayer' ? nameOf(players[idx + 1], idx + 1) : visibleCats[idx + 1].label) : 'Récapitulatif'
 
   // Visualiseur : un pointillé court par page, un long sur la page active ; doré = gagnant (mode joueur).
   const walkDots = (
-    <div className="pcard-dots">
+    <div className="pcard-dots" ref={dotsRef}>
       {Array.from({ length: pageCount }).map((_, k) => (
         <button
           key={k}
           type="button"
           className={`pcard-dot ${k === idx ? 'on' : ''} ${entry === 'byPlayer' && players[k] && isTopWinner(players[k]) ? 'win' : ''}`}
-          onClick={() => jumpTo(k)}
+          onClick={() => { if (swipedRef.current) return; jumpTo(k) }}
           aria-label={`Page ${k + 1} sur ${pageCount}`}
         />
       ))}
