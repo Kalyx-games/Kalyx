@@ -22,10 +22,6 @@ function durationLabel(g) {
 }
 const complexityWord = (n) => (n == null ? '' : n < 2 ? 'Simple' : n < 3 ? 'Moyen' : 'Corsé')
 
-// L'écart de fond entre les deux panneaux du pager (retour user : l'ombre de couture posée
-// sur deux fonds d'ambiance qui se touchaient faisait « des fondus superposés très laids »).
-// ⚠️ SUIT le 20px de la règle .detail-body.corps-glisse (index.css) — un couple à tenir.
-const ECART_PAGER = 20
 
 // Page détaillée d'un jeu (« fiche jeu ») — le point d'ancrage : depuis ici on lance une
 // partie, on ouvre l'historique + les stats, on modifie le jeu, on va sur BGG, on zoome
@@ -98,18 +94,30 @@ export default function GameDetail({
   // zone morte temporelle (ReferenceError), attrapée par l'ErrorBoundary au premier rendu.
   const [glisse, setGlisse] = useState(null) // null | { mode: 'pager', dir, titre } | { mode: 'bord' }
   const pagerRef = useRef(null) // l'état du geste en cours (jamais lu par le rendu)
-  // ⚠️ Le recalage ne vaut que pour une fiche NON défilée : là, l'écart est un pur delta de
-  // hauteur de tête (titre d'une ligne contre deux) et recaler évite l'escalier. Fiche
-  // défilée, chaque panneau garde son ordonnée (comportement normal d'un pager) — recaler
-  // ferait sauter l'instantané de tout le défilement. Le critère est le défilement relevé à
-  // l'engagement, pas la taille de l'écart (un petit scroll ressemble à un delta de tête).
+  // Le clone est calé sur l'ordonnée du corps par un marginTop DANS un hôte plein écran
+  // (le fond d'ambiance du clone remonte derrière la tête sans être tranché par l'overflow).
   // `glisse` est une dépendance : le titre de la tête ne bascule qu'au relâché commité, et
-  // c'est LÀ que la tête peut changer de hauteur — l'instantané doit se recaler à ce moment.
+  // c'est LÀ que la tête peut changer de hauteur — l'instantané suit alors le DELTA du corps
+  // entrant (jamais sa position absolue : fiche défilée, les deux panneaux n'ont PAS la même
+  // ordonnée, c'est normal). Mutations DIRECTES de nœuds inertes : pas de setState, pas de boucle.
   useLayoutEffect(() => {
     if (!bodyLeaving || !bodyRef.current) return
-    if ((pagerRef.current?.scrollAvant ?? 0) > 0.5) return
+    const sheet = sheetRef.current
+    // ⚠️ Si le voisin est plus COURT que le défilement courant, le navigateur vient de
+    // CLAMPER scrollTop au remontage : l'ancre doit refléter le défilement RÉEL, sinon le
+    // corps entrant apparaît trop bas de la différence.
+    if (glisse?.mode === 'pager' && sheet) sheet.style.setProperty('--kx-ancre', sheet.scrollTop + 'px')
     const top = bodyRef.current.getBoundingClientRect().top
-    setBodyLeaving((b) => (b && Math.abs(b.top - top) > 0.5 ? { ...b, top } : b))
+    if (bodyLeaving.ancreTop == null) {
+      bodyLeaving.ancreTop = top // la référence : le top de l'entrant à l'engagement
+      return
+    }
+    const delta = top - bodyLeaving.ancreTop
+    if (Math.abs(delta) > 0.5) {
+      bodyLeaving.ancreTop = top
+      bodyLeaving.top += delta
+      bodyLeaving.node.style.marginTop = bodyLeaving.top + 'px'
+    }
   }, [bodyLeaving, glisse])
   // ⚠️ Le glissé entre fiches passe SOUS le doigt sur la jaquette : sans ce drapeau, un
   // glissé trop court pour changer de jeu (< 60 px) laisse passer son clic de fin de geste
@@ -176,18 +184,16 @@ export default function GameDetail({
   // qu'un seul mouvement. Au bord de la collection : l'élastique (mou) — on SENT qu'il n'y a
   // plus rien après, au lieu d'un geste qui tombe dans le vide.
   const poseRef = useRef(null) // l'atterrissage en vol { commit, mode, timer }
-  const scrollRestaureRef = useRef(null) // défilement à rendre au jeu d'origine après une annulation
-  const scrollRetryRef = useRef(null) // la 2e écriture du scroll restauré (annulable)
+  const scrollZeroRef = useRef(false) // au commit : remettre le défilement à zéro, compensé au pixel
   // Miroir de `closing` pour le minuteur d'atterrissage : une fiche en train de se fermer
   // ne doit plus JAMAIS naviguer — sinon le onNavigate différé de 340 ms la ROUVRE tout seul.
   const closingRef = useRef(closing)
   closingRef.current = closing
-  // Au démontage : le minuteur d'atterrissage et le filet de scroll meurent avec le composant.
+  // Au démontage : le minuteur d'atterrissage meurt avec le composant.
   useEffect(() => () => {
     clearTimeout(poseRef.current?.timer)
     poseRef.current = null
     pagerRef.current = null
-    clearTimeout(scrollRetryRef.current)
   }, [])
   const finirPose = () => {
     const s = poseRef.current
@@ -201,18 +207,22 @@ export default function GameDetail({
     sheetRef.current?.classList.remove('kx-pose')
     const p = pagerRef.current
     pagerRef.current = null
-    if (p?.mode === 'pager' && !s.commit && !closingRef.current) {
-      // Annulé : le jeu d'origine revient, avec son défilement — l'aller-retour est invisible,
-      // l'instantané couvre l'écran jusqu'au commit React qui le retire (même peinture).
-      scrollRestaureRef.current = p.scrollAvant
-      onNavigate(p.original)
+    if (p?.mode === 'pager') {
+      if (!s.commit && !closingRef.current) {
+        // Annulé : le jeu d'origine revient — le défilement n'a jamais bougé, rien à rendre.
+        onNavigate(p.original)
+      } else if (s.commit) {
+        // Commité : le voisin était ANCRÉ (translateY) sur un défilement inchangé — la
+        // remise à zéro se fait dans le nettoyage, compensée au pixel par le retrait de
+        // l'ancre dans la MÊME peinture.
+        scrollZeroRef.current = true
+      }
     }
     setBodyLeaving(null)
     setGlisse(null)
   }
   const engage = (dir) => {
     if (closing) return // la feuille est en train de sortir : aucun pager ne doit naître
-    clearTimeout(scrollRetryRef.current) // le filet de scroll n'écrit pas en plein geste
     // Un atterrissage encore en vol : on le termine net (fast-forward). S'il s'agissait d'une
     // ANNULATION, le jeu d'origine est en train de revenir → ce geste-ci reste sans pager.
     if (poseRef.current) {
@@ -229,6 +239,7 @@ export default function GameDetail({
       // Le bord de la collection : pas de voisin, la fiche résiste à l'élastique.
       pagerRef.current = { mode: 'bord', pos: 0 }
       sheet.style.setProperty('--kx-cote', '0')
+      sheet.style.setProperty('--kx-ancre', '0px')
       setGlisse({ mode: 'bord' })
       return
     }
@@ -238,17 +249,31 @@ export default function GameDetail({
     // Sur un enchaînement (fast-forward), le corps cloné porte encore corps-glisse : le
     // clone matcherait la règle de transform et partirait d'un écran.
     clone.classList.remove('corps-glisse')
+    // Pendant le glissé, le corps ENTRANT garde AU MOINS la hauteur du sortant : monté sans
+    // ses images (hauteurs nulles), il serait plus court → le navigateur CLAMPERAIT scrollTop
+    // de lui-même, et la tête bougerait quand même. Retirée au nettoyage, avant le scroll 0.
+    sheet.style.setProperty('--kx-mine', rect.height + 'px')
+    // Le clone vit dans un hôte PLEIN ÉCRAN et se cale par marginTop (négatif si la fiche
+    // était défilée) : son fond d'ambiance remonte derrière la tête SANS être tranché par
+    // l'overflow de l'hôte — le panneau sortant garde son dégradé jusqu'en haut (retour
+    // user : « le haut de la fiche devient blanc »).
+    clone.style.marginTop = rect.top + 'px'
     pagerRef.current = {
-      mode: 'pager', dir, original: game, scrollAvant: sheet.scrollTop,
+      mode: 'pager', dir, original: game,
       largeur: window.innerWidth, pos: 0, vx: 0, dernierX: null, dernierT: 0,
     }
     sheet.style.setProperty('--kx-cote', String(dir))
+    // ⚠️ LE DÉFILEMENT NE BOUGE PAS À L'ENGAGEMENT (retour user : « toute la fiche se
+    // décale vers le bas » — un scrollTop = 0 rendait brutalement le moindre micro-scroll).
+    // Le voisin est ANCRÉ : translateY(--kx-ancre) le montre comme s'il était en haut de
+    // SA fiche, sur un défilement inchangé. La remise à zéro réelle attend le commit, où
+    // elle est compensée au pixel par le retrait de l'ancre dans la même peinture.
+    sheet.style.setProperty('--kx-ancre', sheet.scrollTop + 'px')
     setBodyLeaving({ node: clone, manuel: true, top: rect.top, left: rect.left, width: rect.width })
     // Le titre de la tête reste CELUI DU JEU QU'ON TIENT pendant tout le glissé (retour
     // user : le titre qui basculait à l'engagement changeait la HAUTEUR de la tête — tout
     // l'écran se décalait d'un cran, « un glitch »). Il ne bascule qu'au relâché commité.
     setGlisse({ mode: 'pager', dir, titre: game.name })
-    sheet.scrollTop = 0 // le voisin arrive en haut de SA fiche
     onNavigate(siblings[next])
   }
   const suit = (dx, x) => {
@@ -257,8 +282,8 @@ export default function GameDetail({
     if (!p || !sheet) return
     let pos
     if (p.mode === 'bord') pos = mou(dx)
-    else if (p.dir === 1) pos = dx > 0 ? mou(dx) : Math.max(dx, -(p.largeur + ECART_PAGER))
-    else pos = dx < 0 ? mou(dx) : Math.min(dx, p.largeur + ECART_PAGER)
+    else if (p.dir === 1) pos = dx > 0 ? mou(dx) : Math.max(dx, -p.largeur)
+    else pos = dx < 0 ? mou(dx) : Math.min(dx, p.largeur)
     p.pos = pos
     if (p.mode === 'pager') {
       const t = performance.now()
@@ -284,7 +309,7 @@ export default function GameDetail({
       const versOrigine = p.dir === 1 ? v > 0.45 : v < -0.45
       const passeTiers = p.dir === 1 ? p.pos <= -p.largeur * 0.33 : p.pos >= p.largeur * 0.33
       commit = versVoisin || (passeTiers && !versOrigine)
-      cible = commit ? -p.dir * (p.largeur + ECART_PAGER) : 0
+      cible = commit ? -p.dir * p.largeur : 0
       // Commité : le titre bascule MAINTENANT (pendant la pose, comme l'ancien pager) —
       // pas à l'engagement, pas à la fin de l'atterrissage.
       if (commit) setGlisse((g) => (g ? { ...g, titre: undefined } : g))
@@ -305,22 +330,14 @@ export default function GameDetail({
     sheet.classList.remove('kx-pose')
     sheet.style.removeProperty('--kx-page')
     sheet.style.removeProperty('--kx-cote')
-    if (scrollRestaureRef.current != null) {
-      const vise = scrollRestaureRef.current
-      scrollRestaureRef.current = null
-      sheet.scrollTop = vise
-      // Au commit, la jaquette du corps remonté n'a pas encore sa hauteur (image en cours de
-      // chargement) → le scroll peut être CLAMPÉ trop haut. Une seconde écriture, une fois
-      // l'image arrivée (cache), rend sa vraie position ; si la page est réellement plus
-      // courte, elle clampe pareil — inoffensif.
-      if (Math.abs(sheet.scrollTop - vise) > 1) {
-        clearTimeout(scrollRetryRef.current)
-        scrollRetryRef.current = setTimeout(() => {
-          scrollRetryRef.current = null
-          // jamais en plein geste : un pager engagé a remis le scroll à 0 exprès
-          if (sheetRef.current && !pagerRef.current) sheetRef.current.scrollTop = vise
-        }, 150)
-      }
+    sheet.style.removeProperty('--kx-ancre')
+    sheet.style.removeProperty('--kx-mine')
+    // Au commit : le corps vient de perdre son ancre (translateY) dans CE commit, et la
+    // remise à zéro du défilement le redescend d'autant — somme nulle, avant la peinture :
+    // rien ne bouge à l'écran.
+    if (scrollZeroRef.current) {
+      scrollZeroRef.current = false
+      sheet.scrollTop = 0
     }
   }, [glisse])
   const navRef = useRef({})
@@ -408,10 +425,12 @@ export default function GameDetail({
       {/* Corps du nouveau jeu qui GLISSE en entrée (plein écran). L'ancien corps (instantané figé)
           glisse dehors en même temps → cf. SnapshotPane plus bas. key={game.id} → re-montage. */}
       {bodyLeaving && (
+        /* Hôte PLEIN ÉCRAN (top 0) : le clone se cale dedans par son marginTop → son fond
+           d'ambiance remonte derrière la tête sans être tranché par l'overflow de l'hôte. */
         <SnapshotPane
           node={bodyLeaving.node}
           className="detail-body-leaving manuel"
-          style={{ top: bodyLeaving.top, left: bodyLeaving.left, width: bodyLeaving.width }}
+          style={{ top: 0, left: bodyLeaving.left, width: bodyLeaving.width }}
         />
       )}
       <div

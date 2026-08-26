@@ -3226,11 +3226,16 @@ button {
    la collection (le corps courant suit l'élastique, sans décalage). */
 .detail-body.corps-glisse {
   animation: none;
-  /* 100vw + 20px : un ÉCART de fond sépare les deux panneaux pendant le glissé — chaque
-     fiche a son fond d'ambiance, et deux dégradés qui se touchaient (plus l'ancienne ombre
-     de couture par-dessus) faisaient « des fondus superposés très laids » (retour user).
-     ⚠️ le 20px suit ECART_PAGER (GameDetail.jsx) — un couple à tenir. */
-  transform: translateX(calc(var(--kx-page, 0px) + (100vw + 20px) * var(--kx-cote, 0)));
+  /* translateY(--kx-ancre) : le voisin est ANCRÉ — il se présente comme en haut de SA fiche
+     alors que le défilement de la feuille n'a pas bougé (il ne bouge qu'au commit, compensé
+     au pixel par le retrait de l'ancre dans la même peinture). */
+  transform: translateX(calc(var(--kx-page, 0px) + 100vw * var(--kx-cote, 0))) translateY(var(--kx-ancre, 0px));
+  /* jamais plus court que le corps sortant : sinon le navigateur clampe le défilement
+     pendant le glissé et la tête bouge (--kx-mine = la hauteur du sortant, posée au geste) */
+  min-height: var(--kx-mine, auto);
+  /* La couture entre les panneaux : un FILET, la grammaire de l'app — la bande de fond de
+     20px essayée avant tranchait en blanc entre deux dégradés (retour user). */
+  box-shadow: -1px 0 0 var(--line), 1px 0 0 var(--line);
 }
 .detail-body-leaving.manuel { transform: translateX(var(--kx-page, 0px)); }
 /* L'atterrissage : la classe kx-pose (posée en direct par le geste, jamais par React) rend
