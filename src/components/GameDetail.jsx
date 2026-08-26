@@ -22,6 +22,11 @@ function durationLabel(g) {
 }
 const complexityWord = (n) => (n == null ? '' : n < 2 ? 'Simple' : n < 3 ? 'Moyen' : 'Corsé')
 
+// L'écart de fond entre les deux panneaux du pager (retour user : l'ombre de couture posée
+// sur deux fonds d'ambiance qui se touchaient faisait « des fondus superposés très laids »).
+// ⚠️ SUIT le 20px de la règle .detail-body.corps-glisse (index.css) — un couple à tenir.
+const ECART_PAGER = 20
+
 // Page détaillée d'un jeu (« fiche jeu ») — le point d'ancrage : depuis ici on lance une
 // partie, on ouvre l'historique + les stats, on modifie le jeu, on va sur BGG, on zoome
 // l'image. TOUTES les actions renvoient vers les écrans existants (rien n'est perdu).
@@ -88,17 +93,24 @@ export default function GameDetail({
   // ne pas être à la même ordonnée que l'instantané sortant (mesuré : 20px d'écart entre un
   // titre d’une ligne et un titre de deux). On réaligne, sinon les deux panneaux se croisent
   // en escalier — et le fond d’ambiance du sortant paraîtrait sauter.
+  // ⚠️ Déclarés ICI et pas dans le bloc du pager plus bas : le tableau de dépendances du
+  // useLayoutEffect de recalage lit `glisse` PENDANT le rendu — déclaré après, c'est la
+  // zone morte temporelle (ReferenceError), attrapée par l'ErrorBoundary au premier rendu.
+  const [glisse, setGlisse] = useState(null) // null | { mode: 'pager', dir, titre } | { mode: 'bord' }
+  const pagerRef = useRef(null) // l'état du geste en cours (jamais lu par le rendu)
   // ⚠️ Le recalage ne vaut que pour une fiche NON défilée : là, l'écart est un pur delta de
   // hauteur de tête (titre d'une ligne contre deux) et recaler évite l'escalier. Fiche
   // défilée, chaque panneau garde son ordonnée (comportement normal d'un pager) — recaler
   // ferait sauter l'instantané de tout le défilement. Le critère est le défilement relevé à
   // l'engagement, pas la taille de l'écart (un petit scroll ressemble à un delta de tête).
+  // `glisse` est une dépendance : le titre de la tête ne bascule qu'au relâché commité, et
+  // c'est LÀ que la tête peut changer de hauteur — l'instantané doit se recaler à ce moment.
   useLayoutEffect(() => {
     if (!bodyLeaving || !bodyRef.current) return
     if ((pagerRef.current?.scrollAvant ?? 0) > 0.5) return
     const top = bodyRef.current.getBoundingClientRect().top
     setBodyLeaving((b) => (b && Math.abs(b.top - top) > 0.5 ? { ...b, top } : b))
-  }, [bodyLeaving])
+  }, [bodyLeaving, glisse])
   // ⚠️ Le glissé entre fiches passe SOUS le doigt sur la jaquette : sans ce drapeau, un
   // glissé trop court pour changer de jeu (< 60 px) laisse passer son clic de fin de geste
   // et retourne la boîte par accident. Même motif que NavBar et que le parcours de saisie —
@@ -163,8 +175,6 @@ export default function GameDetail({
   // une transition et la cible est écrite dans la même variable : l'aperçu et l'arrivée ne font
   // qu'un seul mouvement. Au bord de la collection : l'élastique (mou) — on SENT qu'il n'y a
   // plus rien après, au lieu d'un geste qui tombe dans le vide.
-  const [glisse, setGlisse] = useState(null) // null | { mode: 'pager', dir } | { mode: 'bord' }
-  const pagerRef = useRef(null) // l'état du geste en cours (jamais lu par le rendu)
   const poseRef = useRef(null) // l'atterrissage en vol { commit, mode, timer }
   const scrollRestaureRef = useRef(null) // défilement à rendre au jeu d'origine après une annulation
   const scrollRetryRef = useRef(null) // la 2e écriture du scroll restauré (annulable)
@@ -225,17 +235,19 @@ export default function GameDetail({
     const el = bodyRef.current
     const rect = el.getBoundingClientRect()
     const clone = el.cloneNode(true)
-    // Sur un enchaînement (fast-forward), le corps cloné porte encore corps-glisse et
-    // data-cote : le clone matcherait la règle de transform et partirait d'un écran.
+    // Sur un enchaînement (fast-forward), le corps cloné porte encore corps-glisse : le
+    // clone matcherait la règle de transform et partirait d'un écran.
     clone.classList.remove('corps-glisse')
-    clone.removeAttribute('data-cote')
     pagerRef.current = {
       mode: 'pager', dir, original: game, scrollAvant: sheet.scrollTop,
       largeur: window.innerWidth, pos: 0, vx: 0, dernierX: null, dernierT: 0,
     }
     sheet.style.setProperty('--kx-cote', String(dir))
     setBodyLeaving({ node: clone, manuel: true, top: rect.top, left: rect.left, width: rect.width })
-    setGlisse({ mode: 'pager', dir })
+    // Le titre de la tête reste CELUI DU JEU QU'ON TIENT pendant tout le glissé (retour
+    // user : le titre qui basculait à l'engagement changeait la HAUTEUR de la tête — tout
+    // l'écran se décalait d'un cran, « un glitch »). Il ne bascule qu'au relâché commité.
+    setGlisse({ mode: 'pager', dir, titre: game.name })
     sheet.scrollTop = 0 // le voisin arrive en haut de SA fiche
     onNavigate(siblings[next])
   }
@@ -245,8 +257,8 @@ export default function GameDetail({
     if (!p || !sheet) return
     let pos
     if (p.mode === 'bord') pos = mou(dx)
-    else if (p.dir === 1) pos = dx > 0 ? mou(dx) : Math.max(dx, -p.largeur)
-    else pos = dx < 0 ? mou(dx) : Math.min(dx, p.largeur)
+    else if (p.dir === 1) pos = dx > 0 ? mou(dx) : Math.max(dx, -(p.largeur + ECART_PAGER))
+    else pos = dx < 0 ? mou(dx) : Math.min(dx, p.largeur + ECART_PAGER)
     p.pos = pos
     if (p.mode === 'pager') {
       const t = performance.now()
@@ -272,7 +284,10 @@ export default function GameDetail({
       const versOrigine = p.dir === 1 ? v > 0.45 : v < -0.45
       const passeTiers = p.dir === 1 ? p.pos <= -p.largeur * 0.33 : p.pos >= p.largeur * 0.33
       commit = versVoisin || (passeTiers && !versOrigine)
-      cible = commit ? -p.dir * p.largeur : 0
+      cible = commit ? -p.dir * (p.largeur + ECART_PAGER) : 0
+      // Commité : le titre bascule MAINTENANT (pendant la pose, comme l'ancien pager) —
+      // pas à l'engagement, pas à la fin de l'atterrissage.
+      if (commit) setGlisse((g) => (g ? { ...g, titre: undefined } : g))
     }
     sheet.classList.add('kx-pose')
     void sheet.getBoundingClientRect() // la classe doit être résolue AVANT la nouvelle valeur
@@ -310,6 +325,18 @@ export default function GameDetail({
   }, [glisse])
   const navRef = useRef({})
   navRef.current = { engage, suit, pose }
+  // Les jaquettes des DEUX voisins se préchargent dès l'ouverture de la fiche : sans ça,
+  // l'image du voisin arrive en fondu EN PLEIN glissé (« des fondus superposés »). En prod
+  // elles tombent dans le cache CacheFirst — quelques Ko, une fois.
+  useEffect(() => {
+    if (idx < 0) return
+    for (const v of [siblings[idx - 1], siblings[idx + 1]]) {
+      if (!v || !v.image_url) continue
+      new Image().src = heroSrc(v.image_url)
+      new Image().src = backdropSrc(v.image_url)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game.id])
   // ⚠️ POINTER EVENTS + CAPTURE, et pas des touch events — c'est le cœur : l'engagement
   // REMONTE le corps (key={game.id}), donc la cible du toucher initial est DÉTACHÉE du DOM,
   // et les touchmove d'un nœud détaché ne remontent plus (le gel de la fente des tierlists,
@@ -375,7 +402,7 @@ export default function GameDetail({
         {/* Le titre partage la rangée avec le seul bouton retour, et il REVIENT À LA LIGNE :
             avec une troncature, 11 jeux sur 146 étaient encore coupés à 375px. La tête peut
             donc grandir → le fond d'ambiance se recale dessus (voir --kx-head-h). */}
-        <h2 className="detail-title">{game.name}</h2>
+        <h2 className="detail-title">{glisse?.titre ?? game.name}</h2>
       </div>
 
       {/* Corps du nouveau jeu qui GLISSE en entrée (plein écran). L'ancien corps (instantané figé)
@@ -390,7 +417,6 @@ export default function GameDetail({
       <div
         className={`detail-body${glisse ? ' corps-glisse' : ''}`}
         key={game.id}
-        data-cote={glisse?.mode === 'pager' ? glisse.dir : undefined}
         ref={bodyRef}
       >
       {/* Fond d'ambiance : la jaquette, floutée, teinte le haut de la fiche puis se fond

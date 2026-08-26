@@ -3226,7 +3226,11 @@ button {
    la collection (le corps courant suit l'élastique, sans décalage). */
 .detail-body.corps-glisse {
   animation: none;
-  transform: translateX(calc(var(--kx-page, 0px) + 100vw * var(--kx-cote, 0)));
+  /* 100vw + 20px : un ÉCART de fond sépare les deux panneaux pendant le glissé — chaque
+     fiche a son fond d'ambiance, et deux dégradés qui se touchaient (plus l'ancienne ombre
+     de couture par-dessus) faisaient « des fondus superposés très laids » (retour user).
+     ⚠️ le 20px suit ECART_PAGER (GameDetail.jsx) — un couple à tenir. */
+  transform: translateX(calc(var(--kx-page, 0px) + (100vw + 20px) * var(--kx-cote, 0)));
 }
 .detail-body-leaving.manuel { transform: translateX(var(--kx-page, 0px)); }
 /* L'atterrissage : la classe kx-pose (posée en direct par le geste, jamais par React) rend
@@ -3239,12 +3243,8 @@ button {
    même si l'instantané est retiré une frame trop tard. */
 .detail-body { position: relative; z-index: 4; background: var(--bg); }
 
-/* Ombre du bord d'attaque = un DÉGRADÉ vertical (gauche/droite SEULEMENT, aucun flou en haut/bas) sur un
-   pseudo-élément. data-cote ne vit sur le corps QUE pendant un glissé (React le retire à
-   l'atterrissage) → au repos l'opacité revient à 0 (base) → aucune ombre permanente sous la tête. */
-.detail-body::before { content: ''; position: absolute; top: 0; bottom: 0; width: 34px; pointer-events: none; opacity: 0; z-index: 1; }
-.detail-body[data-cote='1']::before { left: -34px; background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.32)); opacity: 1; }
-.detail-body[data-cote='-1']::before { right: -34px; background: linear-gradient(to left, transparent, rgba(0, 0, 0, 0.32)); opacity: 1; }
+/* Plus d'ombre de couture : l'ÉCART de fond entre les panneaux (voir .corps-glisse) fait la
+   séparation — une bande sombre permanente pendant le glissé était laide sur le thème clair. */
 .detail-body-leaving {
   position: fixed;
   bottom: 0;
