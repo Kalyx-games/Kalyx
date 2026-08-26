@@ -481,7 +481,7 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
               du bloc filtré — il ignore les filtres, comme le record. */}
           {!isPlaysView && duel && (
             <div className="hist-fa">
-              <div className="hist-fa-label">Face-à-face · {duel.total} parties entre eux</div>
+              <div className="hist-fa-label">Face-à-face · {duel.total} parties</div>
               <div className="hist-fa-noms"><span>{duel.a}</span><span>{duel.b}</span></div>
               <div className="hist-fa-rang">
                 <span className="hist-fa-n">{duel.va}</span>
