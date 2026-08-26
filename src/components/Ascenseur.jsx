@@ -9,16 +9,15 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
  * Il n'existe que pendant le défilement, et disparaît 1,2 s après le dernier geste.
  *
  * ⚠️⚠️ CE COMPOSANT POSSÈDE TOUT SON ÉTAT — `App` ne rend JAMAIS pendant le défilement.
- * L'observateur d'intersection l'appelle par sa ref (`montre('C')`), et la position de la
- * poignée est écrite DIRECTEMENT en style (aucun setState par frame : un `setVue(true)`
- * déjà vrai est ignoré par React). Remonter quoi que ce soit dans App re-rendrait les
- * 100 cartes à chaque pixel — exactement le coût que l'audit d'énergie a fait retirer.
+ * Le hook de suivi (src/lib/lettre.js) l'appelle par sa ref : `montre('C')` réveille,
+ * `prepare('C')` pose la valeur sans réveiller. La position de la poignée est écrite
+ * DIRECTEMENT en style (aucun setState par frame : un `setVue(true)` déjà vrai est ignoré
+ * par React). Remonter quoi que ce soit dans App re-rendrait les 100 cartes à chaque pixel —
+ * exactement le coût que l'audit d'énergie a fait retirer.
  *
  * La position de la poignée ne demande AUCUNE mesure par carte : elle est la fraction
  * `scrollY / (scrollHeight − innerHeight)` — deux scalaires que le navigateur connaît déjà.
  * Et la saisie fait l'inverse : la fraction du doigt sur le rail devient un `scrollTo`.
- * La lettre, elle, continue de venir de l'observateur, qui suit le vrai contenu — donc elle
- * reste JUSTE même si les cartes n'ont pas toutes la même hauteur.
  */
 const Ascenseur = forwardRef(function Ascenseur({ cle = null }, ref) {
   const [lettre, setLettre] = useState(null)
@@ -41,6 +40,11 @@ const Ascenseur = forwardRef(function Ascenseur({ cle = null }, ref) {
     montre(l) {
       setLettre(l)
       reveilleRef.current()
+    },
+    // Pose l'étiquette SANS réveiller : la poignée doit être juste dès qu'elle apparaît,
+    // mais poser la valeur courante au montage ne doit pas la faire surgir.
+    prepare(l) {
+      setLettre(l)
     },
   }), [])
 

@@ -726,8 +726,7 @@ export default function App() {
     })
     return m
   }, [visible, ascActif, sort, playMeta])
-  const montreLettre = useCallback((l) => lettreRef.current?.montre(l), [])
-  useLettreDefilement(listRef, ancresAsc, visible.length, montreLettre)
+  useLettreDefilement(listRef, ancresAsc, visible.length, lettreRef)
   useLayoutEffect(() => {
     const list = listRef.current
     // En grille il n'y a aucune cellule à aligner : on sort avant de payer le reflow.

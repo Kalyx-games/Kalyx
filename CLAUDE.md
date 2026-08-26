@@ -269,6 +269,24 @@ Recette actuelle d'Apple, pas le verre dépoli de 2020 : voile translucide + `bl
 
 **RÈGLE** : le verre ne se pose que sur une surface qui FLOTTE au-dessus d'un contenu qui défile, et jamais sans avoir mesuré le contraste de ce qu'elle porte, dans les deux thèmes, avec la jaquette la plus contrariante derrière.
 
+## ✅ L'ASCENSEUR NE MENT PLUS : L'IntersectionObserver EST SORTI DU PROJET (2026-08-26, retour user fâché — à juste titre)
+
+**Retour user** : « Au début et à la fin de la hauteur, il faut afficher le critère du début et de la fin de la liste, là c'est très confusant. Et ça ne marche pas en mode ligne — ce n'est pas normal que ce genre de bug passe la phase de déploiement. »
+
+### ⚠️⚠️ POURQUOI LE BUG A PASSÉ LE DÉPLOIEMENT — la leçon avant le correctif
+
+L'étiquette venait d'un IntersectionObserver, validé en dev **en pilotant sa callback à la main** (le banc, page cachée, n'émet pas les vrais événements IO). Ce pilotage ne prouvait RIEN sur le comportement réel, qui est **structurellement** faux pour cet usage :
+  · une ancre qui redescend sous la ligne en REMONTANT la liste ne tire AUCUN événement (elle reste « intersecting » tout du long) → l'état ne redescendait jamais, l'étiquette restait figée sur le groupe le plus bas jamais atteint (le « C » en haut de liste de la capture) ;
+  · un SAUT (la saisie de l'ascenseur = `scrollTo` instantané) fait passer les ancres intermédiaires de « sous l'écran » à « au-dessus » sans qu'elles soient jamais visibles → zéro événement (le « C » à côté de Zenith).
+**RÈGLE, générale** : un mécanisme dont le banc ne peut pas exercer le VRAI chemin (IO, vrais événements scroll, vrais touch) ne doit pas être validé par un simulacre — soit on le teste en conditions réelles, soit on choisit un mécanisme dont le chemin synthétique EST le chemin réel.
+
+### Le correctif : un cache d'ordonnées + `scrollY`
+
+`src/lib/lettre.js` réécrit — **plus aucun IntersectionObserver dans le projet**. Un CACHE des ordonnées des ancres (≤ 26 `getBoundingClientRect`, refait au plus 1×/s et au resize — lectures propres, rien du write-read-write que l'audit avait banni) + une recherche sur `scrollY` à chaque événement `scroll`. Remontées et sauts justes par construction.
+  - **Les butées disent les extrémités** (la demande) : avant la première ancre → l'étiquette du PREMIER groupe ; à `scrollY ≥ max − 1` → celle du DERNIER (sans ce forçage, la butée basse affichait le groupe à la ligne de lecture, un entre-deux).
+  - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
+  - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
+
 ## ✅ L'ASCENSEUR REMPLACE LE PANNEAU + LA FENTE DÉBOGUÉE ET TEINTÉE (2026-08-25, 3 retours user)
 
 ### 1. ⚠️⚠️ LE BUG DE LA FENTE EN PROD — un piège tactile à CONNAÎTRE
