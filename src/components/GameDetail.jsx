@@ -249,6 +249,13 @@ export default function GameDetail({
     // Sur un enchaînement (fast-forward), le corps cloné porte encore corps-glisse : le
     // clone matcherait la règle de transform et partirait d'un écran.
     clone.classList.remove('corps-glisse')
+    // Le fond du clone s'éteint en FONDU (kx-fond-eteint) — sauf si le corps cloné l'avait
+    // DÉJÀ éteint (enchaînement de glissés) : rejouer le fondu ferait réapparaître le
+    // dégradé un instant sur le panneau qu'on éjecte.
+    const bdSortant = el.querySelector('.detail-backdrop')
+    if (bdSortant && parseFloat(getComputedStyle(bdSortant).opacity) < 0.5) {
+      clone.querySelector('.detail-backdrop')?.classList.add('sans-fondu')
+    }
     // Pendant le glissé, le corps ENTRANT garde AU MOINS la hauteur du sortant : monté sans
     // ses images (hauteurs nulles), il serait plus court → le navigateur CLAMPERAIT scrollTop
     // de lui-même, et la tête bougerait quand même. Retirée au nettoyage, avant le scroll 0.

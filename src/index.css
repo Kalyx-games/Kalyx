@@ -3248,9 +3248,22 @@ button {
    se croisent et débordent sont la source de toute cette famille d'artefacts. Les fiches
    glissent « à plat » sur le fond de page, la couture est un filet net — et le dégradé
    revient en FONDU à la pose (la transition ci-dessous, jouée au retrait de corps-glisse). */
-.detail-body .detail-backdrop { transition: opacity 0.22s ease; }
+.detail-body .detail-backdrop { transition: opacity 0.22s ease; animation: kx-fond-nait 0.22s ease; }
 .detail-body.corps-glisse .detail-backdrop,
 .detail-body-leaving .detail-backdrop { opacity: 0; }
+/* Le dégradé APPARAÎT en fondu au montage d'un corps (ouverture de la fiche, retour après
+   une annulation) — l'arrivée en fondu plaît, on la généralise. Sur le corps entrant d'un
+   glissé (repos 0 via corps-glisse) : 0 → 0, inerte. */
+@keyframes kx-fond-nait { from { opacity: 0; } }
+/* L'extinction du fond du SORTANT se fait en FONDU (retour user : « trop brusque ») : une
+   ANIMATION, pas une transition — le clone naît déjà éteint (valeur de repos 0 ci-dessus),
+   et une transition ne joue jamais sur un élément qui vient de naître. Exemption du gel des
+   animations du clone : spécificité supérieure, !important contre !important. */
+@keyframes kx-fond-eteint { from { opacity: 1; } }
+.detail-body-leaving .detail-backdrop { animation: kx-fond-eteint 0.22s ease !important; }
+/* Enchaînement de glissés : le corps cloné avait DÉJÀ le fond éteint — rejouer le fondu
+   ferait réapparaître le dégradé un instant. Marqué au clonage (GameDetail). */
+.detail-body-leaving .detail-backdrop.sans-fondu { animation: none !important; }
 /* L'atterrissage : la classe kx-pose (posée en direct par le geste, jamais par React) rend
    la transition, puis la cible est écrite dans --kx-page → les deux panneaux atterrissent
    d'un seul mouvement, depuis la position exacte où le doigt les a laissés. */
@@ -3279,7 +3292,8 @@ button {
      qu'on pousse. */
   .detail-sheet.kx-pose .detail-body.corps-glisse,
   .detail-sheet.kx-pose .detail-body-leaving.manuel { transition: none; }
-  .detail-body .detail-backdrop { transition: none; }
+  .detail-body .detail-backdrop { transition: none; animation: none; }
+  .detail-body-leaving .detail-backdrop { animation: none !important; }
 }
 
 /* Fond d'ambiance tiré de la jaquette (chantier 6). Il vit DANS .detail-body pour glisser
