@@ -5402,13 +5402,18 @@ input[type='number'] {
   width: 40px; /* la zone de saisie du pouce — plus large que la poignée visible */
   z-index: 40; /* au-dessus des boutons flottants (20) et du bac (30), sous les feuilles */
   opacity: 0;
-  pointer-events: none; /* invisible = insaisissable : le glissé des cartes garde le bord */
+  /* ⚠️ TOUJOURS insaisissable — même visible. Le rail couvre 40px sur toute la hauteur de
+     l'écran : quand il était interactif, un tap sur une tuile de la grille située sous cette
+     bande était intercepté et sautait à cette position (retour user). Seule la POIGNÉE se
+     saisit ; le rail ne sert plus qu'à porter la géométrie et à situer la poignée. */
+  pointer-events: none;
   transition: opacity 0.2s ease;
-  touch-action: none; /* le rail pilote la liste ; le défilement natif se tairait mal */
 }
-.kx-asc.on {
-  opacity: 1;
+.kx-asc.on { opacity: 1; }
+/* La poignée n'est saisissable que VISIBLE : au repos, le bord droit reste au glissé des cartes. */
+.kx-asc.on .kx-asc-poignee {
   pointer-events: auto;
+  touch-action: none; /* elle pilote la liste ; le défilement natif se tairait mal */
 }
 .kx-asc-poignee {
   position: absolute;
@@ -5427,6 +5432,13 @@ input[type='number'] {
   font-weight: 700;
   color: var(--ink);
   white-space: nowrap;
+}
+/* La cible du pouce déborde de la poignée SANS l'agrandir à l'œil — mais elle reste locale à
+   la poignée (≈ 48 × 60), au lieu de l'ancienne bande pleine hauteur qui volait les taps. */
+.kx-asc-poignee::before {
+  content: '';
+  position: absolute;
+  inset: -7px -5px -7px -11px;
 }
 /* Une étiquette de plusieurs mots (« 30 min », « juil. 2026 ») descend d'un cran. */
 .kx-asc-poignee.longue { font-size: var(--fs-footnote); }

@@ -27,6 +27,10 @@ const Ascenseur = forwardRef(function Ascenseur({ cle = null }, ref) {
   const poignee = useRef(null)
   const minuteur = useRef(null)
   const saisiRef = useRef(false)
+  // L'écart entre le doigt et le centre de la poignée, relevé à la prise et conservé pendant
+  // tout le glissé : sans lui, la poignée se recentre d'un coup sous le doigt — un saut à
+  // l'instant même où on la saisit.
+  const ecartRef = useRef(0)
 
   const reveille = () => {
     setVue(true)
@@ -96,17 +100,23 @@ const Ascenseur = forwardRef(function Ascenseur({ cle = null }, ref) {
     if (!z || !el) return
     const r = z.getBoundingClientRect()
     const h = el.offsetHeight
-    const f = Math.min(1, Math.max(0, (e.clientY - r.top - h / 2) / (r.height - h)))
+    const y = e.clientY - ecartRef.current
+    const f = Math.min(1, Math.max(0, (y - r.top - h / 2) / (r.height - h)))
     const max = document.documentElement.scrollHeight - window.innerHeight
     window.scrollTo(0, f * max)
   }
+  // ⚠️ La prise ne DÉPLACE RIEN : on relève l'écart doigt ↔ centre de la poignée, et la liste
+  // ne bouge qu'au premier mouvement. Un simple toucher sur la poignée ne téléporte plus.
   const prend = (e) => {
+    const el = poignee.current
+    if (!el) return
     saisiRef.current = true
     setSaisi(true)
     setVue(true)
     clearTimeout(minuteur.current)
-    zone.current?.setPointerCapture?.(e.pointerId)
-    surRail(e)
+    el.setPointerCapture?.(e.pointerId)
+    const r = el.getBoundingClientRect()
+    ecartRef.current = e.clientY - (r.top + r.height / 2)
   }
   const bouge = (e) => {
     if (saisiRef.current) surRail(e)
@@ -118,16 +128,17 @@ const Ascenseur = forwardRef(function Ascenseur({ cle = null }, ref) {
   }
 
   return (
-    <div
-      ref={zone}
-      className={`kx-asc${vue ? ' on' : ''}`}
-      aria-hidden="true"
-      onPointerDown={prend}
-      onPointerMove={bouge}
-      onPointerUp={lache}
-      onPointerCancel={lache}
-    >
-      <div ref={poignee} className={`kx-asc-poignee${lettre ? '' : ' nue'}${lettre && lettre.length > 2 ? ' longue' : ''}`}>
+    <div ref={zone} className={`kx-asc${vue ? ' on' : ''}`} aria-hidden="true">
+      {/* Les écouteurs vivent sur la POIGNÉE, pas sur le rail : le rail couvre toute la
+          hauteur de l'écran et volait les taps destinés au contenu (retour user). */}
+      <div
+        ref={poignee}
+        className={`kx-asc-poignee${lettre ? '' : ' nue'}${lettre && lettre.length > 2 ? ' longue' : ''}`}
+        onPointerDown={prend}
+        onPointerMove={bouge}
+        onPointerUp={lache}
+        onPointerCancel={lache}
+      >
         {lettre}
         {saisi && lettre && <span className="kx-asc-bulle">{lettre}</span>}
       </div>

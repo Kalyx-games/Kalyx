@@ -291,6 +291,14 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅ L'ASCENSEUR NE VOLE PLUS LES TAPS (2026-08-26, retour user)
+
+**Retour user** : « en mode grille, quand je clique sur un des jeux à droite de l'écran, ça active parfois l'ascenseur qui me téléporte ». **Vrai, et la cause était grosse** :  passait en  sur TOUTE la bande — 40 px de large sur presque toute la hauteur de l'écran. N'importe quel tap dans cette bande était intercepté par le rail, et  appelait  d'entrée : saut immédiat à l'ordonnée du doigt. En vue LISTE le contenu ne va pas jusqu'au bord droit, d'où la rareté ; en GRILLE les tuiles passent dessous, d'où le retour.
+  - **Le rail est désormais  EN PERMANENCE**, même visible : il ne sert plus qu'à porter la géométrie (, placement de la poignée). Seule **** est saisissable (avec son , déplacé du rail vers elle) ; les écouteurs pointer passent du rail à la poignée, capture comprise.
+  - **La cible du pouce reste confortable** sans agrandir la poignée à l'œil : un  en  (≈ 48 × 60) — LOCAL à la poignée, au lieu de l'ancienne bande pleine hauteur.
+  - ⚠️ **La prise ne DÉPLACE PLUS RIEN** :  relève l'écart doigt ↔ centre de la poignée () et  le soustrait ; la liste ne bouge qu'au premier mouvement. Avant, saisir la poignée par le haut la recentrait d'un coup sous le doigt — un saut à l'instant même de la prise, et l'appel à  dans  était précisément ce qui « téléportait ».
+  - **Vérifié en dev, en GRILLE** : sous la bande,  renvoie désormais les tuiles (, ) et non le rail ; un tap loin de la poignée laisse  strictement inchangé ; un tap sur une tuile ouvre la bonne fiche (Catan → Catan) ; un tap sur la poignée ne bouge rien ; le glissé va toujours jusqu'en bas (5036 = max) et remonte à 0 ; la cible élargie prend bien à 7 px à gauche de la poignée visible.
+
 ## ✅ LE VERDICT DE LA TABLE + LA TABLE QUI SE RASSOIT (2026-08-26, deux idées choisies par l'user)
 
 **Recherche d'idées de « gamification »** (workflow : 4 angles de génération → 7 idées → 7 juges adversariaux → 5 survivantes, dont une écartée par moi). **L'user en a pris DEUX** et refusé les autres avec ses motifs — à respecter :
