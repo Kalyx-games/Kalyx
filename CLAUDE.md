@@ -291,6 +291,16 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅ LE TEXTE DES COMMANDES NE SE SÉLECTIONNE PLUS (2026-08-26, retour user)
+
+**Retour user** : « il ne faut pas qu'on puisse sélectionner le texte dans les boutons +/- lorsqu'on saisit les scores, puisqu'on reste appuyé dessus. C'est sûrement un bug qui doit pouvoir arriver ailleurs dans l'appli d'ailleurs. » **Les deux points étaient justes**, y compris le second.
+
+**LA CAUSE** : `user-select: none` était posé AU CAS PAR CAS — `.game`, `.chwazi`, `.tl-chip`, `.cat-grip`, `.rs-bar` — c'est-à-dire uniquement là où le défaut avait été REMARQUÉ. La règle `button` globale, elle, ne le portait pas : **tous les boutons de l'app étaient concernés**, et le symptôme n'apparaissait que sur ceux qu'on MAINTIENT (les −/+ de la saisie, qui accélèrent à la tenue). Sur iOS s'y ajoutait le menu « copier » de l'appui long.
+
+**LE CORRECTIF, posé à la racine** : la règle `button` globale porte `user-select: none` + `-webkit-user-select: none` + `-webkit-touch-callout: none`. **RÈGLE : un bouton est une COMMANDE, jamais du contenu — son libellé ne se sélectionne pas.** Les champs de saisie ne sont pas touchés (leur texte doit rester sélectionnable) : la règle ne vise que `button`.
+  - ⚠️ **La poignée de l'ascenseur a eu besoin de sa propre ligne** : elle se tient sous le doigt comme un bouton mais c'est une `div` à écouteurs pointer — la règle globale ne l'atteignait pas. Toute future surface tenue sous le doigt qui n'est pas un `<button>` doit porter les trois déclarations.
+  - **Vérifié en dev** : les 431 boutons présents à l'écran sont tous à `user-select: none` (zéro fautif), poignée / carte / onglet / bouton flottant idem, et le champ de recherche reste à `auto`. Les −/+ de la saisie, les pointillés et les boutons de navigation du parcours sont couverts.
+
 ## ✅⚠️ L'ÉTIQUETTE DE L'ASCENSEUR NE DISPARAÎT PLUS POUR TOUTE LA SESSION (2026-08-26, retour user)
 
 **Retour user** : « La lettre ne s'affiche plus, et probablement également les autres critères. C'est impensable que ce genre de bug puisse être déployé sans que tu l'identifies en amont, c'est trop gros. » Puis, en pleine enquête : « **ça fonctionne chez moi maintenant, après avoir changé le thème de l'app** » — l'indice qui a tout tranché.

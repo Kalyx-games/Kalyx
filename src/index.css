@@ -3134,6 +3134,15 @@ button {
   font-family: inherit;
   font-variant-numeric: inherit;
   transition: transform 0.12s ease;
+  /* ⚠️ UN BOUTON EST UNE COMMANDE, JAMAIS DU CONTENU : son libellé ne se sélectionne pas.
+     Sans ça, tout bouton qu'on MAINTIENT sous le doigt (les −/+ de la saisie, qui accélèrent
+     à la tenue) surligne son texte en bleu, et iOS ouvre en plus son menu « copier ».
+     Posé sur la règle GLOBALE : le défaut valait pour tous les boutons de l'app, pas
+     seulement pour ceux qu'on a remarqués (retour user). Les champs de saisie ne sont pas
+     touchés — eux, leur texte doit rester sélectionnable. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 /* 2) ENFONCEMENT par défaut pour les boutons d'action + tapables qui n'avaient AUCUN retour.
       Liste EXPLICITE : on évite un `button:active` global qui écraserait les boutons centrés par
@@ -5432,6 +5441,11 @@ input[type='number'] {
   font-weight: 700;
   color: var(--ink);
   white-space: nowrap;
+  /* Elle se tient sous le doigt comme un bouton, sans en être un (c'est une div à écouteurs
+     pointer) : la règle globale ne l'atteint pas, elle a besoin de sa propre ligne. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 /* La cible du pouce déborde de la poignée SANS l'agrandir à l'œil — mais elle reste locale à
    la poignée (≈ 48 × 60), au lieu de l'ancienne bande pleine hauteur qui volait les taps. */
