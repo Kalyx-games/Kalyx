@@ -1,24 +1,23 @@
-import { useState } from 'react'
-import { BackIcon, PencilIcon } from './icons'
+import { BackIcon } from './icons'
 import Avatar from './Avatar'
 import EditeurBulle from './EditeurBulle'
 
-// LE MENU DU COMPTE, ouvert depuis la barre du haut. Il porte les deux gestes qui
-// concernent le compte : en changer, et modifier celui-ci (nom, image, couleur).
-// Les Réglages s'en trouvent allégés d'autant — ils ne parlent plus de comptes.
+// LE MENU DU COMPTE, ouvert depuis la barre du haut.
+//
+// L'écran n'a qu'un sujet : ce compte. Les champs qui le modifient sont donc posés
+// DIRECTEMENT — pas derrière un bouton « Modifier » qui ne masquerait qu'une page
+// presque vide. L'aperçu en tête est vivant : il suit l'emoji et la couleur en direct.
 export default function EcranCompte({
   compte, // la ligne du compte actif | null (aucun compte choisi)
   jeux = [],
   online = true,
-  creation = false, // on arrive ici pour CRÉER un compte (depuis l écran des avatars)
+  creation = false, // on arrive ici pour CRÉER un compte (depuis l'écran des avatars)
   onChangerCompte,
   onAnnulerCreation,
   onEnregistrer, // (nom, initiales, couleur, avatar, origine)
   onSupprimer,
   onClose,
 }) {
-  const [edite, setEdite] = useState(false)
-
   return (
     <div className="settings">
       <div className="settings-head">
@@ -26,8 +25,6 @@ export default function EcranCompte({
         <h2>{creation ? 'Nouveau compte' : 'Compte'}</h2>
       </div>
 
-      {/* Le compte tel qu'il est : son image en grand, son nom. C'est l'objet du menu,
-          il occupe donc la première place — pas une ligne dans une liste. */}
       <section className="settings-card compte-carte">
         {creation ? (
           <EditeurBulle
@@ -35,47 +32,47 @@ export default function EcranCompte({
             bulle="new"
             namePlaceholder="Nom du compte (ex. Clémence & Mathieu)"
             avecAvatar
+            apercuGrand
             jeux={jeux}
             onValider={onEnregistrer}
             onAnnuler={onAnnulerCreation}
           />
-        ) : compte ? (
+        ) : !compte ? (
+          <>
+            <p className="muted">Aucun compte n'est choisi sur cet appareil.</p>
+            <button type="button" className="btn-ghost" onClick={onChangerCompte}>Choisir un compte</button>
+          </>
+        ) : online ? (
+          <EditeurBulle
+            key={compte.id || compte.name}
+            bulle={compte}
+            namePlaceholder="Nom du compte"
+            avecAvatar
+            apercuGrand
+            jeux={jeux}
+            onValider={onEnregistrer}
+          />
+        ) : (
+          /* Hors ligne, rien ne s'écrit : on montre le compte, on ne l'édite pas. */
           <>
             <div className="compte-tete">
               <Avatar compte={compte} jeux={jeux} taille={72} className="compte-avatar" />
               <span className="compte-titre">{compte.name}</span>
             </div>
-            {online && !edite && (
-              <div className="compte-actions">
-                <button type="button" className="btn-ghost" onClick={() => setEdite(true)}>
-                  <PencilIcon size={15} /> Modifier
-                </button>
-                <button type="button" className="btn-ghost" onClick={onChangerCompte}>Changer de compte</button>
-              </div>
-            )}
-            {online && edite && (
-              <EditeurBulle
-                key={compte.id || compte.name}
-                bulle={compte}
-                namePlaceholder="Nom du compte"
-                avecAvatar
-                jeux={jeux}
-                onValider={(...a) => { onEnregistrer(...a); setEdite(false) }}
-                onAnnuler={() => setEdite(false)}
-              />
-            )}
-            {!online && <p className="muted">Hors ligne : lecture seule.</p>}
-          </>
-        ) : (
-          <>
-            <p className="muted">Aucun compte n'est choisi sur cet appareil.</p>
-            <button type="button" className="btn-ghost" onClick={onChangerCompte}>Choisir un compte</button>
+            <p className="muted">Hors ligne : lecture seule.</p>
           </>
         )}
       </section>
 
+      {/* Changer de compte reste possible hors ligne : c'est un geste local. */}
+      {!creation && (
+        <button type="button" className="btn-ghost compte-changer-btn" onClick={onChangerCompte}>
+          Changer de compte
+        </button>
+      )}
+
       {/* Supprimer vit à part, et tout en bas : ce n'est pas une action du même rang. */}
-      {compte && online && onSupprimer && !edite && (
+      {compte && online && !creation && onSupprimer && (
         <button type="button" className="btn-ghost compte-supprimer" onClick={() => onSupprimer(compte)}>
           Supprimer ce compte
         </button>

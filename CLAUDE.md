@@ -291,6 +291,47 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅ LE COMPTE S ÉDITE À NU + LES 3 CONSÉQUENCES DU MODÈLE « LE NOM EST LA CLÉ » (2026-08-28, retours user)
+
+**Retours user** : « les options de modification ne sont pas derrière un bouton : elles sont directement là quand on va sur la page compte » · « on est d accord que le bouton supprimer a une popup de confirmation ? Pas de blague hein » · « en vue liste on n a pas la bulle propriétaire du compte actuel, uniquement pour les jeux qui ne font pas partie de ce compte » · « les anecdotes basées sur des jeux ne sont affichées que pour les stats concernant le compte actif » · « réfléchis à d autres choses auxquelles il faudrait penser avec ce passage à un système par compte ».
+
+### 1. L ÉDITEUR EST L ÉCRAN
+
+Le bouton « Modifier » est SUPPRIMÉ : l écran n a qu un sujet, il ne masquait qu une page presque vide.
+  - **`EditeurBulle` gagne `apercuGrand`** : l aperçu passe à 72 px EN TÊTE et celui de 44 px disparaît. ⚠️ **Un seul avatar** : deux images du même compte à quelques pixels d écart se contrediraient pendant l édition (l une vivante, l autre figée). Il est aligné à GAUCHE comme le titre et les champs — centré, il se lirait comme une erreur de gabarit.
+  - **`onAnnuler` devient optionnel** : sans lui, pas de bouton Annuler — il n y aurait rien à refermer. Reste en création (il ramène au menu).
+  - **« Enregistrer » est ÉTEINT tant que rien n a bougé** (`ref0`, les valeurs de départ figées). Un éditeur affiché en permanence qui propose toujours d enregistrer ne dit plus rien de l état.
+  - ⚠️ **Le filet pointillé de `.owner-editor` est neutralisé sous `.compte-carte`** : il sépare l éditeur de la LISTE dans les tags ; ici l éditeur est seul dans sa carte, il ne séparait rien.
+  - Hors ligne : l éditeur cède la place à l avatar + le nom (rien ne s écrit). « Changer de compte » reste offert (geste local) ; « Supprimer » disparaît.
+
+**La confirmation de suppression EXISTE, vérifiée par le chemin réel** (et pas par lecture — le menu Compte REMPLACE l app, le dialogue aurait pu ne jamais se monter) : « Supprimer ce compte ? / X sera retiré de la liste des comptes. **Les jeux qui lui sont associés ne seront pas supprimés.** » → Annuler / Supprimer. Le `ConfirmDialog` est rendu APRÈS le ternaire des écrans pleins (l. ~1943 vs fermeture l. ~1871), donc il coiffe tous les écrans.
+
+### 2. LA BULLE DU COMPTE ACTIF NE S AFFICHE PLUS SUR SES PROPRES JEUX
+
+`GameCard` prend `compte` et filtre : `parseOwners(game.owner).filter((o) => o !== compte)`. **Sur ses propres jeux la bulle est vraie partout, donc elle n apprend rien et se répète sur cent cartes ; elle ne reparaît que sur les jeux d un AUTRE compte — là elle dit enfin quelque chose.**
+  - ⚠️ **`compte` entre dans le comparateur du `memo`** : sans lui, changer de compte ne redessinerait pas les cartes.
+  - Le calcul de `bubbleCount` (qui fait GRANDIR la carte au-delà de 3 bulles) se fait après le filtrage — donc une carte de moins de bulles ne réserve plus la place.
+  - **La vue GRILLE n est pas concernée** : `GameTile` n a jamais porté de bulles (vérifié).
+  - **Mesuré dans les deux sens** : compte « Claire & Nazim » → 33 cartes sur 43 n ont plus AUCUNE bulle, la seule restante est « Clémence & Mathieu » (les jeux partagés) ; en affichant TOUTE la collection (102 cartes), les jeux des deux autres foyers portent bien la leur.
+
+### 3. LES ANECDOTES SE LIMITENT AUX JEUX DU COMPTE ACTIF
+
+`idsAnec` / `gamesAnec` / `playsAnec` (App) restreignent la matière ; `tierAnecdotes` suit le même périmètre.
+  - ⚠️ **Le périmètre suit le COMPTE, pas les filtres.** S il suivait les filtres, l anecdote du jour changerait en cours de route au moindre réglage de durée — alors que tout le mécanisme repose sur « même jour = même anecdote ».
+  - ⚠️ **On passe par les REPRÉSENTANTS** (`repById`) : un jeu possédé par les deux foyers n a qu un représentant, porteur du propriétaire du PREMIER exemplaire — lire le propriétaire du seul représentant priverait l autre compte de ses propres jeux. Mesuré : « 7 Wonders Duel » (possédé par les deux) reste bien dans le périmètre des deux.
+  - **`ANEC_MIN = 10` : sous ce seuil, on SE TAIT.** Mesuré : un compte tout neuf (1 jeu, 1 partie) ne produit que **2 anecdotes** — elles reviendraient tous les deux jours, ce qui les déclasse en bruit. Le parcours ne vaut que parce qu il ne se répète pas.
+  - **Mesuré sur la vraie base** : toute la collection 77 anecdotes · Clémence & Mathieu 69 · Claire & Nazim 64 · Mathilde & Mathieu 2 (donc silence). **Zéro jeu étranger cité**, vérifié par contre-épreuve.
+  - ⚠️ **PIÈGE DE TEST** : une contre-épreuve qui cherche un nom de jeu par `includes` crie au faux positif dès qu un nom est SOUS-CHAÎNE d un autre (« 7 Wonders » dans « 7 Wonders Duel », « Monopoly » dans « Monopoly Deal »). Exiger que le nom étranger ne soit pas couvert par un nom du compte présent dans la même phrase.
+
+### 4. LES TROIS CONSÉQUENCES DU MODÈLE, TROUVÉES EN RÉFLÉCHISSANT (et réparées)
+
+⚠️⚠️ **Le compte actif est mémorisé PAR SON NOM** (comme tout le reste : la table `owners`, les tierlists, le CSV `games.owner`). Deux gestes cassaient donc l appareil, et ce sont justement les deux que le nouvel écran rend faciles :
+  1. **RENOMMER le compte actif** → `kalyx-compte` gardait l ancien nom → avatar sans couleur ET surtout un filtre propriétaire ne correspondant à AUCUN jeu → **collection vide sans un mot**. `handleRenameOwner` fait suivre le compte mémorisé ET remappe `filters.owners`.
+  2. **SUPPRIMER le compte actif** → même filtre mort. `handleConfirmDeleteOwner` revient à toute la collection, retire le nom du filtre, ferme le menu et **redemande qui regarde**.
+  3. **AJOUTER un jeu** → le compte actif est désormais **coché d office** comme propriétaire (`defaultOwner`) : on range un jeu dans SA collection, c est le geste par défaut de toute app à comptes. Reste décochable d un tap ; l ÉDITION d un jeu existant garde ses propriétaires.
+
+**Examinés et volontairement laissés tels quels** : le compte n entre pas dans les sauvegardes (c est un réglage d APPAREIL, comme le thème) ; la barre du haut porte déjà l avatar, le titre d écran n a pas à répéter le compte ; la saisie d une partie ne présume pas des joueurs (un compte est un foyer, pas une personne — et « la table qui se rassoit » fait déjà mieux) ; les tierlists restent hors comptes (décision user au cadrage).
+
 ## ✅ LE MENU DU COMPTE SORT DES RÉGLAGES (2026-08-28, retour user)
 
 **Retour user** : « Il faudrait un bouton compte à côté du bouton paramètre. Dans ce nouveau menu on peut changer de compte actif et changer nom du compte + photo/initiale. Ça permet de clean un peu les paramètres. Le bouton "ajouter un compte" se retrouve sur la page d'accueil des comptes ou lorsqu'on change de compte. »

@@ -40,13 +40,15 @@ function extPickMessage(name, players, best) {
 // Le nom de chaque source, pour le message sous le champ.
 const SOURCES_IMAGE = { bgg: 'BoardGameGeek', philibert: 'Philibert' }
 
-export default function GameForm({ game, owners, tags, existingGames = [], saving, onSave, onCancel, onDelete, defaultStatus, prefill, closeRef }) {
+export default function GameForm({ game, owners, tags, existingGames = [], saving, onSave, onCancel, onDelete, defaultStatus, defaultOwner = null, prefill, closeRef }) {
   const [form, setForm] = useState(() => toForm(game, defaultStatus, prefill))
   const [playersSet, setPlayersSet] = useState(() =>
     game?.players ? parseCounts(game.players) : expandRange(game?.players_min, game?.players_max)
   )
   const [bestSet, setBestSet] = useState(() => parseCounts(game?.players_best))
-  const [ownerSet, setOwnerSet] = useState(() => parseOwners(game?.owner))
+  // À l AJOUT, le compte actif est coché d office : on range un jeu dans SA collection
+  // (c est le geste par défaut de toute app à comptes). Reste décochable d un tap.
+  const [ownerSet, setOwnerSet] = useState(() => (game ? parseOwners(game.owner) : defaultOwner ? [defaultOwner] : []))
   const [tagSet, setTagSet] = useState(() => parseTags(game?.tags))
   // Extensions : liste éditable (nom + nombre de joueurs facultatif), triée par nom
   // à l'ouverture et à l'enregistrement. Les joueurs d'une extension élargissent la

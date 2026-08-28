@@ -19,6 +19,7 @@ export default function EditeurBulle({
   titre,
   namePlaceholder,
   avecAvatar = false,
+  apercuGrand = false, // l aperçu en tête, en grand : quand l éditeur EST l écran
   jeux = [],
   onValider, // (nom, initiales, couleur, avatar|undefined, bulleDOrigine)
   onAnnuler,
@@ -34,6 +35,15 @@ export default function EditeurBulle({
   const [forme, setForme] = useState(avatarDepart.type)
   const [emoji, setEmoji] = useState(avatarDepart.type === AVATAR_EMOJI ? avatarDepart.valeur : '')
   const [jeuId, setJeuId] = useState(avatarDepart.type === AVATAR_JEU ? avatarDepart.valeur : '')
+  // Les valeurs de DÉPART, figées : elles disent si quelque chose a bougé. Sans ça,
+  // un éditeur affiché en permanence propose « Enregistrer » alors qu il n y a rien à
+  // enregistrer — le bouton ne dirait plus rien de l état.
+  const [ref0] = useState(() => ({
+    name: depart?.name || '',
+    initials: depart ? depart.initials || ownerInitials(depart.name) : '',
+    color: depart ? muteOwnerColor(depart.color) || ownerColor(depart.name) : PALETTE[0],
+    avatar: depart?.avatar ?? null,
+  }))
 
   const onNameChange = (v) => {
     setName(v)
@@ -44,6 +54,12 @@ export default function EditeurBulle({
   const avatarCourant = avecAvatar ? formatAvatar(forme, forme === AVATAR_EMOJI ? emoji : jeuId) : undefined
   // L'aperçu se construit sur les valeurs EN COURS d'édition, pas sur la ligne enregistrée.
   const apercu = { name: name || '?', initials: previewInitials, color, avatar: avatarCourant ?? null }
+  const modifie =
+    neuf ||
+    name.trim() !== ref0.name ||
+    (initials || name).trim().slice(0, 2).toUpperCase() !== ref0.initials ||
+    color !== ref0.color ||
+    (avecAvatar && (avatarCourant ?? null) !== ref0.avatar)
 
   // Les jaquettes proposées : les jeux DU COMPTE d'abord (c'est sa collection), les autres
   // ensuite — un compte tout neuf n'a encore aucun jeu à son nom.
@@ -74,6 +90,9 @@ export default function EditeurBulle({
       }}
     >
       {titre && <div className="owner-editor-title">{titre}</div>}
+      {/* L aperçu en grand : un seul avatar, VIVANT (il suit emoji et couleur en direct).
+          Deux avatars du même compte à quelques pixels d écart se contrediraient. */}
+      {apercuGrand && avecAvatar && <Avatar compte={apercu} jeux={jeux} taille={72} className="oe-apercu-grand" />}
 
       <input className="oe-name" value={name} onChange={(e) => onNameChange(e.target.value)} placeholder={namePlaceholder} />
       {depart && name.trim() !== depart.name && (
@@ -95,7 +114,7 @@ export default function EditeurBulle({
           />
         </div>
         {avecAvatar ? (
-          <Avatar compte={apercu} jeux={jeux} taille={44} className="oe-preview" />
+          apercuGrand ? null : <Avatar compte={apercu} jeux={jeux} taille={44} className="oe-preview" />
         ) : (
           <span className="owner-bubble oe-preview" style={{ background: color }}>{previewInitials}</span>
         )}
@@ -166,8 +185,9 @@ export default function EditeurBulle({
       </div>
 
       <div className="oe-actions">
-        <button type="button" className="btn-ghost" onClick={onAnnuler}>Annuler</button>
-        <button type="button" className="owner-add-btn" onClick={valider} disabled={!name.trim()}>
+        {/* Pas d Annuler quand l éditeur est l écran lui-même : il n y aurait rien à refermer. */}
+        {onAnnuler && <button type="button" className="btn-ghost" onClick={onAnnuler}>Annuler</button>}
+        <button type="button" className="owner-add-btn" onClick={valider} disabled={!name.trim() || !modifie}>
           {neuf ? 'Ajouter' : 'Enregistrer'}
         </button>
       </div>

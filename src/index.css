@@ -2407,12 +2407,21 @@ body {
   overflow-wrap: anywhere; /* « Clémence & Mathieu » ne doit jamais déborder */
 }
 .compte-avatar { box-shadow: var(--elev-1); }
-.compte-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
+/* L aperçu, en tête de l éditeur : le compte se regarde avant de se modifier. Aligné à
+   GAUCHE comme le titre, les libellés et les champs — un avatar centré au milieu d une
+   page alignée à gauche se lirait comme une erreur de gabarit. */
+.oe-apercu-grand {
+  margin-bottom: var(--sp-3);
+  box-shadow: var(--elev-1);
 }
-.compte-actions .btn-ghost { flex: 1 1 140px; }
+/* Le filet pointillé de .owner-editor sépare l éditeur de la LISTE au-dessus (les tags).
+   Dans le menu du compte l éditeur est seul dans sa carte : il ne séparerait rien. */
+.compte-carte .owner-editor {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.compte-changer-btn { width: 100%; }
 /* Supprimer n'est pas du même rang que le reste : à l'écart, en bas, et en rouge. */
 .compte-supprimer {
   width: 100%;

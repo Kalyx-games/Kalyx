@@ -64,6 +64,10 @@ function loadOwnerFilter() {
 // regarde en ce moment (il change au gré des envies), le compte dit qui on est — et sa
 // simple PRÉSENCE, même vide, signifie « le choix a déjà été fait, ne plus demander ».
 const COMPTE_KEY = 'kalyx-compte'
+// En dessous de ce nombre d anecdotes disponibles, on se TAIT. Le parcours ne vaut que
+// parce qu il ne se répète pas ; un compte tout neuf (mesuré : 1 jeu → 2 anecdotes) verrait
+// la même phrase revenir tous les deux jours, ce qui la déclasse en bruit.
+const ANEC_MIN = 10
 function loadCompte() {
   try {
     const v = localStorage.getItem(COMPTE_KEY)
@@ -941,6 +945,15 @@ export default function App() {
   async function handleRenameOwner(id, oldName, newName, patch) {
     try {
       const n = await renameOwner(id, oldName, newName, patch)
+      // ⚠️ Le compte actif est mémorisé PAR SON NOM (comme tout le reste : la table owners,
+      // les tierlists, le CSV games.owner). Le renommer sans suivre laisserait l appareil sur
+      // un compte qui n existe plus — avatar sans couleur, et surtout un filtre propriétaire
+      // qui ne correspond à AUCUN jeu : la collection se viderait sans un mot.
+      if (oldName === compte) {
+        setCompte(newName)
+        saveCompte(newName)
+        setFilters((f) => ({ ...f, owners: f.owners.map((o) => (o === oldName ? newName : o)) }))
+      }
       reloadOwners()
       loadGames() // recharge les jeux : le nom propagé dans games.owner doit s'afficher
       showToast(n ? `« ${newName} » : ${n} jeu${n > 1 ? 'x' : ''} mis à jour.` : `Renommé en « ${newName} ».`)
@@ -953,7 +966,17 @@ export default function App() {
     setDeletingOwnerBusy(true)
     setError(null)
     try {
+      const supprime = confirmingOwner.name
       await deleteOwner(confirmingOwner.id)
+      // Même raison qu au renommage : rester « sur » un compte supprimé laisse un filtre
+      // mort. On revient à toute la collection et on redemande qui regarde.
+      if (supprime === compte) {
+        setCompte(null)
+        saveCompte(null)
+        setFilters((f) => ({ ...f, owners: f.owners.filter((o) => o !== supprime) }))
+        setCompteOuvert(false)
+        setChoixCompte(true)
+      }
       reloadOwners()
       setConfirmingOwner(null)
     } catch (e) {
@@ -1270,6 +1293,32 @@ export default function App() {
   const collectionIds = useMemo(() => collectionGames.map((g) => g.id), [collectionGames])
   // Ids de jeux valides (représentants) → sert à retirer des classements les jeux supprimés.
   const validTlIds = useMemo(() => new Set(collectionIds), [collectionIds])
+
+  // ---- Le périmètre des ANECDOTES : les jeux du COMPTE ACTIF ----
+  // Une anecdote parle de NOTRE collection ; elle n a pas à raconter les jeux d un autre
+  // foyer, même quand on les regarde. Le périmètre suit le compte et PAS les filtres :
+  // s il les suivait, l anecdote du jour changerait en cours de route au moindre réglage,
+  // alors que tout le mécanisme repose sur « même jour = même anecdote ».
+  // ⚠️ On passe par les REPRÉSENTANTS : un jeu possédé par les deux foyers n en a qu un,
+  // porteur du nom du premier exemplaire — lire le propriétaire du seul représentant en
+  // priverait l autre compte de ses propres jeux.
+  const idsAnec = useMemo(() => {
+    if (!compte) return null // aucun compte choisi → toute la collection
+    const s = new Set()
+    nonWishlist.forEach((g) => {
+      if (parseOwners(g.owner).includes(compte)) s.add(repById.get(g.id) ?? g.id)
+    })
+    return s
+  }, [compte, nonWishlist, repById])
+  const gamesAnec = useMemo(
+    () => (idsAnec ? collectionGames.filter((g) => idsAnec.has(g.id)) : collectionGames),
+    [idsAnec, collectionGames]
+  )
+  const idsAnecListe = useMemo(() => gamesAnec.map((g) => g.id), [gamesAnec])
+  const playsAnec = useMemo(
+    () => (idsAnec && allPlays ? allPlays.filter((p) => idsAnec.has(repById.get(p.game_id) ?? p.game_id)) : allPlays),
+    [idsAnec, allPlays, repById]
+  )
   const reloadTierlists = () => fetchTierlists().then(setTierlists).catch(() => setTierlists(null))
   // Le « verdict de la table » de la fiche a besoin des tierlists : jusqu'ici elles n'étaient
   // chargées qu'à l'ouverture des Stats ou du hub. Une seule fois (garde sur tierlistsLues).
@@ -1293,16 +1342,16 @@ export default function App() {
   // être stables d'un jour à l'autre, c'est le parcours ci-dessous qui apporte la variété.
   const tierAnecdotes = useMemo(() => {
     if (!tierlists || !tierlists.length) return []
-    const nameById = new Map(collectionGames.map((g) => [g.id, g.name]))
-    return computeAnecdoteList(tierlists, collectionIds, repById, nameById, 1).flat().map((a) => a.text)
-  }, [tierlists, collectionGames, collectionIds, repById])
+    const nameById = new Map(gamesAnec.map((g) => [g.id, g.name]))
+    return computeAnecdoteList(tierlists, idsAnecListe, repById, nameById, 1).flat().map((a) => a.text)
+  }, [tierlists, gamesAnec, idsAnecListe, repById])
   // Toute la matière disponible : les parties (qui joue à quoi, qui gagne, quand) + les goûts.
   const anecPool = useMemo(
     () =>
       allPlays && tierlistsLues
         ? buildAnecdotes({
-            plays: allPlays,
-            games: collectionGames,
+            plays: playsAnec,
+            games: gamesAnec,
             repById,
             tierAnecdotes,
             // Le sens du score de chaque jeu : sans lui, « Record à Odin » couronnerait le
@@ -1312,12 +1361,12 @@ export default function App() {
               : null,
           })
         : [],
-    [allPlays, tierlistsLues, collectionGames, repById, tierAnecdotes]
+    [allPlays, playsAnec, gamesAnec, tierlistsLues, repById, tierAnecdotes]
   )
   // L'anecdote du jour. Ce n'est PAS un tirage : les anecdotes sont mélangées une fois par
   // cycle puis servies une par jour → chacune passe exactement une fois avant que la
   // première revienne (donc pas de répétition en un mois tant qu'il y en a au moins 30).
-  const anecShown = useMemo(() => anecdoteDuJour(anecPool), [anecPool])
+  const anecShown = useMemo(() => (anecPool.length >= ANEC_MIN ? anecdoteDuJour(anecPool) : null), [anecPool])
   function handleOpenTierlists() {
     setTierlistHub(true)
     reloadTierlists()
@@ -1824,6 +1873,7 @@ export default function App() {
                   ? () => window.open(philibertSearchUrl(g.name), '_blank', 'noopener')
                   : () => setDetailGame(g) // collection → la « fiche jeu » (hub : partie, historique, édition, BGG…)
               }
+              compte={compte ?? null}
               onImageClick={(url) => setZoomImage(url)}
               // « Nouvelle partie » RETIRÉ du menu de glissement → uniquement sur la fiche jeu.
               // Quand on trie par une info absente des cartes, on l'affiche dessus.
@@ -1904,6 +1954,7 @@ export default function App() {
           existingGames={games ?? []}
           saving={saving}
           defaultStatus={listStatus}
+          defaultOwner={compte ?? null}
           onSave={handleSave}
           onCancel={() => setEditing(null)}
           onDelete={editing !== 'new' ? () => setConfirming(editing) : undefined}

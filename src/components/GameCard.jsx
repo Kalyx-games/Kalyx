@@ -61,7 +61,7 @@ function retenue(x, ouvert, fond) {
   return x
 }
 
-function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick, onImageClick, metaLine, ownerMap, tagMap, index = 0 }) {
+function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick, onImageClick, metaLine, ownerMap, tagMap, compte = null, index = 0 }) {
   const complexity = game.complexity ? Number(game.complexity) : null
   // Complexité sur 3 barres : plafonnée à 3, arrondie au demi près (remplissage partiel possible).
   const cx = complexity ? Math.min(3, complexity) : 0
@@ -73,7 +73,10 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
   // Bulles propriétaires + tags : empilées en bas à gauche de l'image. Si la pile
   // dépasse la hauteur de l'image, la carte s'agrandit pour les contenir (min-height
   // sur la colonne image, image poussée en bas → la pile monte dans l'espace gagné).
-  const ownerList = parseOwners(game.owner)
+  // ⚠️ La bulle du COMPTE ACTIF ne s affiche pas : sur ses propres jeux elle est vraie
+  // partout, donc elle n apprend rien et se répète sur cent cartes. Elle ne reparaît que
+  // sur les jeux d un AUTRE compte — là, elle dit enfin quelque chose.
+  const ownerList = parseOwners(game.owner).filter((o) => o !== compte)
   const tagList = parseTags(game.tags)
   const bubbleCount = ownerList.length + tagList.length
   const BUBBLE_H = 20
@@ -456,6 +459,8 @@ export default memo(
     prev.online === next.online &&
     prev.ownerMap === next.ownerMap &&
     prev.tagMap === next.tagMap &&
+    // Changer de compte change les bulles affichées → les cartes doivent se redessiner.
+    prev.compte === next.compte &&
     // Sans ça, créer une fiche ne redessinait pas la carte → elle gardait l'ancien
     // onCardClick (sans fiche) et recliquer rouvrait l'éditeur au lieu de l'historique.
     prev.hasSheet === next.hasSheet &&
