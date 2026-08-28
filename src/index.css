@@ -2321,6 +2321,109 @@ body {
   color: var(--muted);
   margin-bottom: 6px;
 }
+/* L'ÉCRAN DE DÉMARRAGE « qui regarde ? » — palier 3 du chantier « comptes ».
+   Il occupe tout l'écran et REMPLACE l'app (il ne s'empile pas : ce n'est pas une couche
+   de navigation, c'est la porte d'entrée). Fond de page, pas de carte : la grammaire de
+   l'app veut qu'une surface pleine se pose à plat. */
+.ecran-comptes {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: var(--sp-5) var(--gutter) calc(var(--sp-5) + env(safe-area-inset-bottom));
+}
+.ec-corps {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.ec-titre {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-title);
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.15;
+}
+.ec-sous {
+  margin: 0 0 var(--sp-5);
+  font-size: var(--fs-body-s);
+  color: var(--muted);
+  max-width: 34ch;
+  line-height: 1.45;
+}
+/* Une grille souple : deux comptes tiennent côte à côte, trois se répartissent d'eux-mêmes. */
+.ec-grille {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+.ec-compte {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border: 0;
+  border-radius: var(--r-card);
+  background: transparent;
+  cursor: pointer;
+  max-width: 132px;
+}
+/* L'avatar est un OBJET qu'on choisit : il se soulève, il ne s'enfonce pas — la règle
+   posée par la jaquette de la fiche. */
+.ec-compte:active .ec-avatar { transform: translateY(-3px) scale(1.03); }
+.ec-avatar {
+  box-shadow: var(--elev-2);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+.ec-compte.actif .ec-avatar { box-shadow: var(--elev-2), 0 0 0 3px var(--primary); }
+.ec-nom {
+  font-size: var(--fs-body-s);
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+  overflow-wrap: anywhere; /* « Clémence & Mathieu » ne doit jamais déborder */
+}
+.ec-tout {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-body-s);
+  padding: var(--sp-2) var(--sp-3);
+  min-height: 44px;
+  cursor: pointer;
+}
+.ec-annuler {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  padding: var(--sp-2);
+  min-height: 44px;
+  cursor: pointer;
+}
+/* Une media query n'ajoute AUCUNE spécificité : ce bloc doit SUIVRE ce qu'il neutralise. */
+@media (prefers-reduced-motion: reduce) {
+  .ec-avatar { transition: none; }
+  .ec-compte:active .ec-avatar { transform: none; }
+}
+
+/* Le compte actif, rappelé en tête des Réglages (avec de quoi en changer). */
+.compte-actif {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.compte-nom { font-weight: 600; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.compte-aucun { color: var(--muted); font-weight: 500; }
+.compte-changer { flex-shrink: 0; }
+
 /* L'AVATAR D'UN COMPTE — palier 2 du chantier « comptes ». Trois formes au choix :
    les initiales (le défaut, rien ne change), un emoji, ou la jaquette d'un jeu.
    Le composant Avatar pose taille, rayon et fond en ligne (la taille pilote tout) ;

@@ -43,6 +43,7 @@ import SkeletonCard from './components/SkeletonCard'
 import GameTile from './components/GameTile'
 import { enterFullscreen } from './lib/fullscreen'
 import NavBar from './components/NavBar'
+import EcranComptes from './components/EcranComptes'
 import { SettingsIcon, ChwaziIcon, FilterIcon, PlusIcon, ClockIcon, DieIcon, CheckIcon, CrownIcon, GridIcon, ListIcon } from './components/icons'
 
 
@@ -57,6 +58,26 @@ function loadOwnerFilter() {
     return []
   }
 }
+// Le COMPTE choisi à l'écran de démarrage. Distinct du filtre : le filtre dit ce qu'on
+// regarde en ce moment (il change au gré des envies), le compte dit qui on est — et sa
+// simple PRÉSENCE, même vide, signifie « le choix a déjà été fait, ne plus demander ».
+const COMPTE_KEY = 'kalyx-compte'
+function loadCompte() {
+  try {
+    const v = localStorage.getItem(COMPTE_KEY)
+    return v === null ? undefined : JSON.parse(v) // undefined = jamais choisi
+  } catch {
+    return undefined
+  }
+}
+function saveCompte(nom) {
+  try {
+    localStorage.setItem(COMPTE_KEY, JSON.stringify(nom ?? null))
+  } catch {
+    /* stockage indispo : tant pis */
+  }
+}
+
 function saveOwnerFilter(arr) {
   try {
     localStorage.setItem(OWNER_FILTER_KEY, JSON.stringify(arr || []))
@@ -326,6 +347,8 @@ export default function App() {
   // à la sauvegarde auto : sinon, table owners/tags absente → liste null pour toujours → la
   // sauvegarde auto ne se déclencherait JAMAIS (null = « en cours » ET « absente » sans ça).
   const [ownersLoaded, setOwnersLoaded] = useState(false)
+  const [compte, setCompte] = useState(loadCompte) // nom du compte actif | null (aucun) | undefined (jamais choisi)
+  const [choixCompte, setChoixCompte] = useState(false) // écran rouvert depuis les Réglages
   const [tagsLoaded, setTagsLoaded] = useState(false)
   const [scoresheets, setScoresheets] = useState(null) // { game_id: template }, ou null si table absente
   const [scoringGame, setScoringGame] = useState(null) // jeu en cours de notation (nouvelle partie OU édition) | null
@@ -348,6 +371,16 @@ export default function App() {
   // renvoie null et l'app perdait initiales et couleurs (recalculées, avec des collisions
   // entre prénoms proches). Le cache n'est peuplé que par un chargement RÉUSSI, donc il ne
   // masque jamais une table réellement absente : il ne sert que de repli.
+  // Choisir un compte pose le filtre par propriétaire — le mécanisme persistant qui
+  // existe déjà. « Toute la collection » (null) vide le filtre au lieu d'en poser un.
+  const choisirCompte = useCallback((nom) => {
+    setCompte(nom ?? null)
+    saveCompte(nom ?? null)
+    setFilters((f) => ({ ...f, owners: nom ? [nom] : [] }))
+    setChoixCompte(false)
+    window.scrollTo(0, 0)
+  }, [])
+
   const reloadOwners = useCallback(() => {
     fetchOwners().then((v) => {
       if (v) {
@@ -1417,6 +1450,26 @@ export default function App() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // L'ÉCRAN DE DÉMARRAGE : au tout premier lancement (aucun choix mémorisé) ou quand on
+  // l'a rouvert depuis les Réglages. Il attend que les comptes soient VRAIMENT chargés,
+  // sinon il s'afficherait vide une fraction de seconde. Sous deux comptes il n'a rien à
+  // demander : on ne fait pas choisir entre une seule porte.
+  const comptesChoisissables = ownersList ?? []
+  const montreEcranComptes =
+    (choixCompte || compte === undefined) && ownersLoaded && comptesChoisissables.length >= 2
+
+  if (montreEcranComptes) {
+    return (
+      <EcranComptes
+        comptes={comptesChoisissables}
+        jeux={games ?? []}
+        compteActif={compte ?? null}
+        onChoisir={choisirCompte}
+        onFermer={choixCompte ? () => setChoixCompte(false) : undefined}
+      />
+    )
+  }
+
   return (
     <div className={`app ${hideBars ? 'bars-hidden' : ''} ${scrolled ? 'scrolled' : ''}`}>
       <header className="topbar">
@@ -1534,6 +1587,9 @@ export default function App() {
             }}
             onOpenPlayers={handleOpenPlayers}
             jeux={games ?? []}
+            compte={compte ?? null}
+            comptes={comptesChoisissables}
+            onChangerCompte={() => { setSettingsOpen(false); setChoixCompte(true) }}
             onEnterCode={() => setCodeAsk(true)}
             onChangeCode={() => setCodeChange(true)}
             deviceAuthorized={authorized}

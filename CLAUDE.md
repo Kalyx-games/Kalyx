@@ -291,6 +291,24 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## 🔨 LES COMPTES — PALIER 3/4 : L'ÉCRAN DE DÉMARRAGE (2026-08-28)
+
+**Migration du palier 2 LANCÉE par l'user** (colonne `owners.avatar` présente). **Persistance vérifiée bout en bout en prod** par un aller-retour : `emoji:🐙` posé sur un compte via le proxy → relu correctement → **remis à null** (rien laissé). ⚠️ L'user a aussi créé un TROISIÈME compte entre-temps (« Mathilde & Mathieu ») : la base en compte 3, pas 2.
+
+**`src/components/EcranComptes.jsx`** — « Qui regarde ? », les avatars en 96 px, le nom dessous.
+  - ⚠️⚠️ **CE N'EST PAS UNE COUCHE DE NAVIGATION.** Il n'entre PAS dans `uiRef`/`layerCount`, ne pousse aucune entrée d'historique, et le bouton retour ne le ferme pas : il **REMPLACE** le rendu de l'app (`if (montreEcranComptes) return <EcranComptes …>`, avant le `return` principal). C'est la porte d'entrée, pas un écran dont on revient — l'ajouter aux couches aurait déséquilibré la comptabilité d'historique, qui est le mécanisme le plus délicat du projet.
+  - **Quand il paraît** : `(choixCompte || compte === undefined) && ownersLoaded && comptes.length >= 2`. Trois gardes, chacune pour une raison : `compte === undefined` distingue « jamais choisi » de « a choisi de ne rien filtrer » (`null`) — d'où `loadCompte()` qui renvoie `undefined` quand la clé est ABSENTE et `null` quand elle vaut null ; `ownersLoaded` évite qu'il s'affiche vide une fraction de seconde ; **sous deux comptes il n'a rien à demander** (on ne fait pas choisir entre une seule porte).
+  - **Choisir pose le filtre** : `choisirCompte` écrit `kalyx-compte` ET `filters.owners` — c'est-à-dire le filtre par propriétaire, persistant, qui existait déjà. Aucun mécanisme neuf.
+  - **« Voir toute la collection »** mémorise `null` : ne rien choisir est un choix légitime, et sans mémorisation l'écran reviendrait à chaque lancement chez qui ne veut pas de filtre.
+  - **Réglages → carte « Compte »** (avatar + nom + « Changer »), posée juste avant la gestion des comptes. Rouvrir l'écran depuis là affiche en plus un **« Annuler »** (au tout premier lancement, il n'y a rien derrière où revenir → le bouton n'existe pas) et **marque le compte actif** d'un anneau.
+  - L'avatar **se soulève** au toucher (`translateY(-3px) scale(1.03)`) : c'est un OBJET qu'on choisit, pas une commande — la règle posée par la jaquette de la fiche. Garde reduced-motion APRÈS.
+
+**Vérifié en dev, tout le parcours** : premier lancement (mémoire vidée) → l'écran s'affiche avec les 3 comptes, avatars à 96 px, aucun débordement à 375 px, corps centré (146 + 519 + 146 = 812) ; choix de « Clémence & Mathieu » → **68 jeux**, puce de filtre posée, `kalyx-compte` et `kalyx-owner-filter` écrits ; **rechargement → l'écran ne revient pas** ; Réglages → carte « Compte » (MD · Clémence & Mathieu · Changer) ; « Changer » → l'écran rouvre AVEC Annuler et le compte marqué actif ; Annuler → retour sans rien modifier ; « Voir toute la collection » → 102 jeux, filtre vidé, mémoire à `null`, et l'écran ne revient pas au rechargement non plus.
+
+⚠️ **PIÈGE DE BANC** : une capture prise juste après `resize_window` montre encore l'ANCIEN rendu (le contenu paraissait collé en haut alors que les mesures le donnaient centré). **Se fier aux mesures, pas à une capture prise dans la foulée d'un redimensionnement.**
+
+**RESTE** : palier 4 (le vocabulaire « propriétaire » → « compte » sur les écrans).
+
 ## 🔨 LES COMPTES — PALIER 2/4 : L'AVATAR (2026-08-28)
 
 **⚠️ MIGRATION À LANCER PAR L'USER : `supabase/migration_comptes_avatar.sql`** (une colonne `avatar text` sur `owners` ; ajoutée aussi à `schema.sql`). **Sans elle l'app marche normalement** — la dégradation retire la colonne et réessaie (vérifié, voir plus bas).
