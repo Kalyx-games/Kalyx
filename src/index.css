@@ -2321,6 +2321,64 @@ body {
   color: var(--muted);
   margin-bottom: 6px;
 }
+/* L'AVATAR D'UN COMPTE — palier 2 du chantier « comptes ». Trois formes au choix :
+   les initiales (le défaut, rien ne change), un emoji, ou la jaquette d'un jeu.
+   Le composant Avatar pose taille, rayon et fond en ligne (la taille pilote tout) ;
+   ici on ne traite que ce qui ne dépend pas de la taille. */
+.kx-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff; /* posé sur une couleur de compte, jamais sur le fond de page */
+  font-weight: 600;
+  line-height: 1;
+  overflow: hidden;
+  user-select: none;
+}
+.kx-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Les emojis proposés : une grille de cibles confortables, pas des mini-boutons. */
+.av-emojis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.av-emoji {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  background: var(--input-bg);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.av-emoji.sel { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.av-emoji-libre { width: 100%; }
+
+/* Les jaquettes : une grille dense et défilante — la collection peut être longue. */
+.av-jeux {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 6px;
+  max-height: 168px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.av-jeu {
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 5px; /* l'art est le plus serré, comme les jaquettes partout ailleurs */
+  overflow: hidden;
+  background: var(--soft);
+  cursor: pointer;
+}
+.av-jeu img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.av-jeu.sel { box-shadow: 0 0 0 2px var(--primary); }
+.av-formes { margin-bottom: 8px; }
+
 .oe-preview {
   width: 44px;
   height: 44px;

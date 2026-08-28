@@ -883,9 +883,9 @@ export default function App() {
     }
   }
 
-  async function handleAddOwner(name, initials, color) {
+  async function handleAddOwner(name, initials, color, avatar) {
     try {
-      await addOwner(name, initials, color)
+      await addOwner(name, initials, color, avatar)
       reloadOwners()
     } catch (e) {
       setError(messageUtilisateur(e))
@@ -1533,6 +1533,7 @@ export default function App() {
                 .catch(() => setRestorePlan({ games: 0, plays: 0, sheets: 0, names: [], owners: [], tags: [] }))
             }}
             onOpenPlayers={handleOpenPlayers}
+            jeux={games ?? []}
             onEnterCode={() => setCodeAsk(true)}
             onChangeCode={() => setCodeChange(true)}
             deviceAuthorized={authorized}

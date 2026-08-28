@@ -291,6 +291,32 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## 🔨 LES COMPTES — PALIER 2/4 : L'AVATAR (2026-08-28)
+
+**⚠️ MIGRATION À LANCER PAR L'USER : `supabase/migration_comptes_avatar.sql`** (une colonne `avatar text` sur `owners` ; ajoutée aussi à `schema.sql`). **Sans elle l'app marche normalement** — la dégradation retire la colonne et réessaie (vérifié, voir plus bas).
+
+**LE MODÈLE — UNE SEULE COLONNE TEXTE** (`src/lib/avatar.js`) :
+  · `NULL` / `''` → **les initiales sur la couleur du compte** : le comportement historique, et le repli de TOUS les cas douteux. Un compte sans avatar reste strictement ce qu'il est aujourd'hui.
+  · `emoji:🐙` → l'emoji sur la couleur du compte.
+  · `jeu:<uuid>` → la jaquette d'un jeu de la collection.
+  ⚠️ **Un seul champ, pas trois** : la valeur se lit à l'œil en base, une sauvegarde la transporte sans traitement, et `formatAvatar` renvoie `null` pour « initiales » — le défaut n'occupe aucune place. Le lien vers un jeu est VOLONTAIREMENT souple : si le jeu disparaît, `Avatar` retombe sur les initiales au lieu d'afficher un trou.
+
+**`src/components/Avatar.jsx`** : rend un compte à la taille demandée (la taille pilote police et rayon) → le MÊME composant servira les grandes vignettes de l'écran de démarrage au palier 3. Il ne laisse jamais de vide.
+
+**L'ÉDITEUR** (`BubbleListManager`, carte « Propriétaires » des Réglages) : trois puces « Initiales / Emoji / Jaquette ». En emoji, 12 propositions (**des objets de table, pas des visages** : ce sont des comptes de FOYER) + un champ libre. En jaquette, une grille dense et défilante où **les jeux DU COMPTE viennent en premier** (c'est sa collection ; un compte neuf n'en a encore aucun). L'aperçu se construit sur les valeurs en cours d'édition.
+  - ⚠️ **`avecAvatar` n'est vrai que pour les COMPTES.** Le composant est partagé avec les TAGS : un tag est une étiquette, pas une identité — lui donner un visage n'aurait aucun sens. Vérifié : 2 avatars dans la carte des comptes, 0 dans celle des tags.
+  - Quand la carte ne gère pas d'avatar, la clé `avatar` est `undefined` → la colonne n'est pas touchée du tout (et non mise à `null`).
+
+**⚠️⚠️ LE BUG ATTRAPÉ PAR LE TEST, ET LA RÈGLE QUI EN SORT.** La dégradation « colonne absente » ne marchait PAS : j'avais écrit `new RegExp(\`\\b${c}\\b\`)` dans un TEMPLATE LITERAL, où **`\b` est le caractère BACKSPACE, pas la frontière de mot d'une regex**. La regex ne reconnaissait donc jamais le message de PostgREST → aucun réessai → **modifier un compte aurait échoué chez l'user tant que la migration n'était pas lancée**. Mesuré (un seul envoi, erreur remontée), puis corrigé en construisant la regex par CONCATÉNATION (`'\\b' + c + '\\b'`), sans template. Re-mesuré : deux envois successifs (avec avatar → refusé, sans avatar → accepté), zéro erreur, pour `updateOwner` ET `addOwner`.
+  **RÈGLE : ne jamais écrire une classe d'échappement regex dans un template literal** — et surtout, **tester une dégradation en SIMULANT la panne** (réponse REST interceptée), jamais en la supposant.
+  ⚠️ `games.js` a le même motif et il est CORRECT (double antislash) : c'est la copie qui a dérivé.
+
+**Vérifié en dev** : les trois formes rendent bien (initiales « NL » sur la couleur du compte · emoji 🐙 sur la couleur · jaquette de 1000 Bornes en image) ; l'annulation ne laisse rien ; `parseAvatar` tolère null, valeur inconnue et `emoji:` tronqué (→ initiales) ; `formatAvatar('initiales')` et un emoji vide donnent bien `null`. **Garde-fou d'espacement : 363 → 367** (les quatre espacements des grilles d'emojis et de jaquettes).
+
+⚠️ **PIÈGES D'OUTILLAGE revécus dans ce lot** : (a) un heredoc bash avale les antislashes ET casse sur les apostrophes françaises → **écrire les scripts d'édition avec l'outil Write**, jamais en heredoc ; (b) après une rafale d'éditions, le serveur vite a servi un module périmé (l'éditeur d'avatar ne s'affichait pas alors que le code était juste) → **preview_stop/start avant de conclure**.
+
+**RESTE** : palier 3 (l'écran de démarrage + le compte actif), palier 4 (le vocabulaire « propriétaire » → « compte »).
+
 ## 🔨 LES COMPTES — PALIER 1/4 : LE SOCLE (2026-08-27)
 
 **Chantier cadré avec l'user** (artifact https://claude.ai/code/artifact/4758c259-f573-4da9-b4b0-08c2aae8b15b) : un écran de démarrage à la Steam, un avatar par compte, en REMPLACEMENT des propriétaires.
