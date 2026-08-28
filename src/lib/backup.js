@@ -30,9 +30,17 @@ function pick(obj, cols) {
   return out
 }
 
-// Une bulle gérée (propriétaire ou tag) → objet minimal à sauvegarder.
+// Une bulle gérée (compte ou tag) → objet à sauvegarder.
+// ⚠️ Les trois champs de base existent depuis toujours. `BUBBLE_OPT` liste les colonnes
+// AJOUTÉES PLUS TARD : elles ne sont recopiées que si la donnée existe, et l'upsert les
+// retire d'elle-même si la base ne les connaît pas encore (migration non lancée).
+// Sans cette liste, une colonne neuve serait SILENCIEUSEMENT absente de toutes les
+// sauvegardes — et effacée à la première restauration.
+const BUBBLE_OPT = ['avatar']
 function pickBubble(o) {
-  return { name: o.name, initials: o.initials ?? null, color: o.color ?? null }
+  const out = { name: o.name, initials: o.initials ?? null, color: o.color ?? null }
+  for (const c of BUBBLE_OPT) if (o[c] !== undefined && o[c] !== null) out[c] = o[c]
+  return out
 }
 
 // Construit l'objet de sauvegarde. `plays` et `scoresheets` viennent de la base
@@ -189,13 +197,19 @@ export function parseBackup(text) {
 // Si la table n'existe pas (migration non lancée), on ignore silencieusement.
 async function upsertBubbles(table, list) {
   if (!list || !list.length) return
-  const rows = list.map((o) => ({
-    name: String(o.name).trim(),
-    initials: o.initials ?? null,
-    color: o.color ?? null,
-  }))
-  const { error } = await writeDb().from(table).upsert(rows, { onConflict: 'name' })
-  if (error && !/does not exist|schema cache|relation/i.test(error.message || '')) throw error
+  let rows = list.map((o) => ({ ...pickBubble(o), name: String(o.name).trim() }))
+  // Dégradation en cascade, comme pour les jeux : si la base ne connaît pas encore une
+  // colonne optionnelle, on la retire et on réessaie → le reste se restaure quand même.
+  for (;;) {
+    const { error } = await writeDb().from(table).upsert(rows, { onConflict: 'name' })
+    if (!error) return
+    if (/does not exist|schema cache|relation/i.test(error.message || '')) return // table absente
+    const col = BUBBLE_OPT.find(
+      (c) => rows.some((r) => r[c] !== undefined) && new RegExp(`\b${c}\b`, 'i').test(error.message || '')
+    )
+    if (!col) throw error
+    rows = rows.map(({ [col]: _ignore, ...reste }) => reste)
+  }
 }
 
 // Ré-insère des lignes par identifiant, en ignorant la table si elle n'existe pas encore.
@@ -382,13 +396,31 @@ export async function restorePreview(backupId) {
   const keep = new Set((Array.isArray(snap.games) ? snap.games : []).map((g) => g.id).filter(Boolean))
   const { data: current } = await supabase.from('games').select('id, name')
   const doomed = (current ?? []).filter((g) => !keep.has(g.id))
-  if (!doomed.length) return { games: 0, plays: 0, sheets: 0, names: [] }
+
+  // ⚠️ La restauration supprime AUSSI les comptes et les tags absents de la sauvegarde
+  // (deleteExtra plus bas) — l'écran de confirmation l'annonçait sans jamais dire lesquels
+  // ni combien. Le jour où un compte porte un avatar choisi, le perdre en silence se voit.
+  const nomsDe = (l) => new Set((Array.isArray(l) ? l : []).map((b) => String(b?.name ?? '').trim()).filter(Boolean))
+  const gardeOwners = nomsDe(snap.owners)
+  const gardeTags = nomsDe(snap.tags)
+  const [{ data: curOwners }, { data: curTags }] = await Promise.all([
+    supabase.from('owners').select('name'),
+    supabase.from('tags').select('name'),
+  ])
+  const perdus = (cur, garde) =>
+    (cur ?? []).map((r) => String(r.name ?? '').trim()).filter((n) => n && !garde.has(n))
+  const ownersPerdus = perdus(curOwners, gardeOwners)
+  const tagsPerdus = perdus(curTags, gardeTags)
+
+  const base = { games: 0, plays: 0, sheets: 0, names: [], owners: ownersPerdus, tags: tagsPerdus }
+  if (!doomed.length) return base
   const ids = doomed.map((g) => g.id)
   const [{ data: pl }, { data: sh }] = await Promise.all([
     supabase.from('plays').select('id').in('game_id', ids),
     supabase.from('scoresheets').select('id').in('game_id', ids),
   ])
   return {
+    ...base,
     games: doomed.length,
     plays: (pl ?? []).length,
     sheets: (sh ?? []).length,

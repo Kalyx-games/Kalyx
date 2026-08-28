@@ -291,6 +291,32 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## 🔨 LES COMPTES — PALIER 1/4 : LE SOCLE (2026-08-27)
+
+**Chantier cadré avec l'user** (artifact https://claude.ai/code/artifact/4758c259-f573-4da9-b4b0-08c2aae8b15b) : un écran de démarrage à la Steam, un avatar par compte, en REMPLACEMENT des propriétaires.
+
+**DÉCISIONS DE L'USER, à respecter** :
+  · **Un compte = un FOYER** (2 comptes : Clémence & Mathieu 93 jeux, Claire & Nazim 68, dont 15 partagés). ⚠️ PAS une personne — la question était ouverte et il a tranché.
+  · **Les tierlists restent un menu à part**, sans lien avec le compte (chacun crée la sienne, voit celles des autres ; idée future : des tierlists thématiques). Le nœud « 2 foyers vs 4 tierlists vs 31 joueurs » est donc DÉSAMORCÉ, pas à résoudre.
+  · **Avatar au choix** parmi trois formes : initiales+couleur (l'actuel), emoji+couleur, ou une jaquette de la collection. **Aucune image importée** (rien à héberger).
+  · **Un seul code d'accès**, comme aujourd'hui. Choisir un compte ne donne AUCUN droit particulier.
+  · **Écran de démarrage au premier lancement**, puis mémorisé (+ un bouton pour changer de compte).
+  · **Le compte pose le filtre** par défaut sur ses jeux, modifiable.
+
+**VERDICT DU CADRAGE (skin vs vrai système)** : le « skin » n'est pas un déguisement — le modèle actuel EST un modèle de comptes-foyers. Un système relationnel (ids, table de liaison) réécrirait les 146 jeux, les sauvegardes et l'export pour ZÉRO gain (2 comptes stables, personne ne se connecte). **On garde le modèle, on construit l'interface.**
+
+### Ce que le palier 1 corrige (invisible à l'écran, mais ce sont deux pertes de données évitées)
+
+  1. ⚠️⚠️ **HORS LIGNE, LES DEUX COMPTES DEVENAIENT INDISCERNABLES.** Seuls les jeux étaient en cache ; la table `owners` non. Hors ligne, `fetchOwners()` renvoie null → `ownerDisplay` recalcule initiales et couleur. **MESURÉ : « Claire & Nazim » et « Clémence & Mathieu » donnent TOUS DEUX « CL »** — mêmes initiales, couleurs changées. L'écran de démarrage étant le PREMIER écran de l'app, il doit tenir sans réseau. → `cache.js` passe en **DB version 2** avec deux stores de plus (`owners`, `tags`, keyPath `name` — le nom est la clé partout dans ce projet) + `saveBubblesCache`/`loadBubblesCache` ; `reloadOwners`/`reloadTags` écrivent le cache en cas de succès et s'y replient sinon. ⚠️ Le cache n'est peuplé que par un chargement RÉUSSI → il ne masque jamais une table réellement absente.
+  2. ⚠️⚠️ **UNE COLONNE AVATAR AURAIT ÉTÉ SILENCIEUSEMENT ABSENTE DES SAUVEGARDES.** `pickBubble` listait trois champs écrits à la main (name, initials, color) ; une colonne neuve n'y serait jamais entrée, et une restauration l'aurait effacée. → `BUBBLE_OPT = ['avatar']` : les colonnes ajoutées plus tard sont recopiées **si la donnée existe**, et `upsertBubbles` les **retire d'elle-même** si la base ne les connaît pas encore (même motif de dégradation que `OPTIONAL_COLS` des jeux). **Le palier 2 pourra donc ajouter la colonne sans rien casser** — c'est tout l'objet de ce palier.
+  3. **Une restauration supprimait des comptes sans dire lesquels.** `deleteExtra('owners','name',…)` les efface, mais `restorePreview` ne les comptait pas : le dialogue disait seulement « Les propriétaires et tags absents seront aussi retirés ». → `restorePreview` renvoie désormais `owners` et `tags` (les noms qui seraient perdus) et le dialogue les NOMME.
+
+**Vérifié en dev** : base IndexedDB en version 2, les 2 comptes et 2 tags en cache avec leurs vraies initiales et couleurs ; `fetchOwners()` renvoie bien null réseau coupé pendant que le cache reste lisible ; la collision « CL / CL » du repli calculé est reproduite (c'est le bug qu'on ferme) ; `restorePreview` renvoie les nouvelles clés sur les 5 sauvegardes (aucune perte réelle : elles contiennent toutes les comptes) ; et le dialogue nomme bien « Compte de passage, Tag de passage » quand on lui fait croire qu'un compte absent des sauvegardes existe (réponse REST interceptée en LECTURE SEULE, base jamais touchée).
+
+⚠️ **PIÈGE ÉVITÉ DE JUSTESSE** : `vite build` PASSE alors que `saveBubblesCache` n'était pas importé dans App.jsx (JS non typé → aucune erreur à la compilation, `ReferenceError` à l'exécution). **Après avoir ajouté un appel à une fonction d'une autre lib, vérifier l'import — le build ne le fera pas.**
+
+**RESTE** : palier 2 (la colonne avatar + son éditeur dans les Réglages), palier 3 (l'écran de démarrage + le compte actif), palier 4 (le vocabulaire « propriétaire » → « compte »).
+
 ## ✅ LE TEXTE DES COMMANDES NE SE SÉLECTIONNE PLUS (2026-08-26, retour user)
 
 **Retour user** : « il ne faut pas qu'on puisse sélectionner le texte dans les boutons +/- lorsqu'on saisit les scores, puisqu'on reste appuyé dessus. C'est sûrement un bug qui doit pouvoir arriver ailleurs dans l'appli d'ailleurs. » **Les deux points étaient justes**, y compris le second.

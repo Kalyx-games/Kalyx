@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Sus
 import lazyRetry from './lib/lazyRetry'
 import { isConfigured, hasCode } from './lib/supabase'
 import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwners, parseTags } from './lib/games'
-import { saveGamesCache, loadGamesCache } from './lib/cache'
+import { saveGamesCache, loadGamesCache, saveBubblesCache, loadBubblesCache } from './lib/cache'
 import { fetchOwners, addOwner, updateOwner, renameOwner, deleteOwner } from './lib/owners'
 import { fetchTags, addTag, updateTag, renameTag, deleteTag } from './lib/tags'
 import { downloadBackup, downloadCsv, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup, restorePreview } from './lib/backup'
@@ -344,15 +344,29 @@ export default function App() {
   const [confirmingTierlist, setConfirmingTierlist] = useState(false) // suppression tierlist en attente
 
   // Charger les listes gérées (tables owners + tags + fiches de score).
+  // ⚠️ Comptes et tags passent par le CACHE, comme les jeux : hors ligne, `fetchOwners`
+  // renvoie null et l'app perdait initiales et couleurs (recalculées, avec des collisions
+  // entre prénoms proches). Le cache n'est peuplé que par un chargement RÉUSSI, donc il ne
+  // masque jamais une table réellement absente : il ne sert que de repli.
   const reloadOwners = useCallback(() => {
     fetchOwners().then((v) => {
-      setOwnersList(v)
+      if (v) {
+        setOwnersList(v)
+        saveBubblesCache('owners', v)
+      } else {
+        loadBubblesCache('owners').then((c) => setOwnersList(c.length ? c : null))
+      }
       setOwnersLoaded(true)
     })
   }, [])
   const reloadTags = useCallback(() => {
     fetchTags().then((v) => {
-      setTagsList(v)
+      if (v) {
+        setTagsList(v)
+        saveBubblesCache('tags', v)
+      } else {
+        loadBubblesCache('tags').then((c) => setTagsList(c.length ? c : null))
+      }
       setTagsLoaded(true)
     })
   }, [])
@@ -1514,7 +1528,9 @@ export default function App() {
               setRestoring(b)
               // On calcule ce qui serait détruit AVANT de demander confirmation.
               setRestorePlan(null)
-              restorePreview(b.id).then(setRestorePlan).catch(() => setRestorePlan({ games: 0, plays: 0, sheets: 0, names: [] }))
+              restorePreview(b.id)
+                .then(setRestorePlan)
+                .catch(() => setRestorePlan({ games: 0, plays: 0, sheets: 0, names: [], owners: [], tags: [] }))
             }}
             onOpenPlayers={handleOpenPlayers}
             onEnterCode={() => setCodeAsk(true)}
@@ -1898,7 +1914,16 @@ export default function App() {
                   {restorePlan.names.length > 0 && <> ({restorePlan.names.slice(0, 5).join(', ')}{restorePlan.names.length > 5 ? '…' : ''})</>}
                 </>
               )}
-              {' '}Les propriétaires et tags absents de cette sauvegarde seront aussi retirés.
+              {/* Les comptes et tags supprimés sont maintenant NOMMÉS : la phrase générique
+                  ne disait ni combien ni lesquels. */}
+              {restorePlan != null && (restorePlan.owners?.length || restorePlan.tags?.length) ? (
+                <>
+                  {' '}Seront aussi retirés :{' '}
+                  <strong>{[...(restorePlan.owners ?? []), ...(restorePlan.tags ?? [])].join(', ')}</strong>.
+                </>
+              ) : (
+                <> Les propriétaires et tags absents de cette sauvegarde seront aussi retirés.</>
+              )}
               {' '}Une sauvegarde de l'état actuel sera créée avant, pour pouvoir revenir en arrière.
             </>
           }
