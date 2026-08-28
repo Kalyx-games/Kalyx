@@ -61,7 +61,7 @@ const estEquipes = (p) => (p?.players || []).some((x) => x && x.team)
  * Chaque entrée : { key, text }. `key` identifie l'anecdote indépendamment de sa
  * formulation → c'est elle qui sert au rangement, pas la position dans le tableau.
  */
-export function buildAnecdotes({ plays = [], games = [], repById = null, tierAnecdotes = [], scoringById = null } = {}) {
+export function buildAnecdotes({ plays = [], games = [], playsTous = null, repById = null, tierAnecdotes = [], scoringById = null } = {}) {
   const out = []
   // Deux anecdotes au texte identique feraient double emploi — et, si elles partagent leur
   // clé (cas des tierlists, dont la clé DÉRIVE du texte), la même phrase pourrait sortir
@@ -80,120 +80,28 @@ export function buildAnecdotes({ plays = [], games = [], repById = null, tierAne
   // Un jeu que deux propriétaires possèdent existe en double en base : on ramène chaque
   // partie au jeu « représentant », sinon elle serait ignorée (et le total, faux).
   const memeJeu = (id) => (repById && repById.get ? repById.get(id) : null) || id
-  const parties = plays
-    .map((p) => (p && memeJeu(p.game_id) !== p.game_id ? { ...p, game_id: memeJeu(p.game_id) } : p))
-    .filter((p) => p && nameById.has(p.game_id))
+  const remap = (p) => (p && memeJeu(p.game_id) !== p.game_id ? { ...p, game_id: memeJeu(p.game_id) } : p)
+  // `parties` : ce qui a été joué SUR LES JEUX DU PÉRIMÈTRE (le compte actif). Toutes les
+  // sections qui NOMMENT un jeu s appuient dessus.
+  const parties = plays.map(remap).filter((p) => p && nameById.has(p.game_id))
+  // `partiesJoueurs` : TOUTES les parties connues, sans filtre de collection — la matière
+  // des anecdotes qui parlent de personnes. Le remappage reste nécessaire pour ne pas
+  // compter deux fois un jeu que deux foyers possèdent (« a touché à N jeux »).
+  const partiesJoueurs = (playsTous || plays).map(remap).filter(Boolean)
 
-  // ⚠️ Aucune partie CONNUE ≠ aucune partie JOUÉE : hors ligne, ou tant que le chargement
-  // n'a pas abouti, la liste est vide. On se tait plutôt que d'affirmer que rien n'a jamais
-  // été joué (une version antérieure annonçait « toute la collection n'a jamais été jouée »).
-  if (!parties.length) {
-    ajouteTierlists()
-    return out
-  }
-
-  // ===== 1. Ce qu'on joue =====
-  const parJeu = new Map()
-  parties.forEach((p) => {
-    const e = parJeu.get(p.game_id) || { n: 0, dates: [], plays: [] }
-    e.n++
-    const d = jourDe(p.played_at)
-    if (d) e.dates.push(d)
-    e.plays.push(p)
-    parJeu.set(p.game_id, e)
-  })
-
-  const classement = [...parJeu.entries()].sort((a, b) => b[1].n - a[1].n || String(a[0]).localeCompare(String(b[0])))
-
-  add('total-parties', parties.length > 1
-    ? `${nb(parties.length)}${NBSP}parties enregistrées dans Kalyx.`
-    : 'La toute première partie est enregistrée dans Kalyx.')
-
-  // Les trois jeux les plus joués, chacun sa propre anecdote.
-  classement.slice(0, 3).forEach(([id, e], i) => {
-    if (e.n < 2) return
-    const rang = ['le jeu le plus joué', 'le deuxième jeu le plus joué', 'le troisième jeu le plus joué'][i]
-    add(`plus-joue-${i}`, `${gname(id)} est ${rang} : ${pluriel(e.n, 'partie')}.`)
-  })
-
-  // Les jeux sans aucune partie enregistrée. ⚠️ formulation : on ne sait pas s'ils ont été
-  // joués, seulement qu'aucune partie n'a été notée.
-  const jamais = games.filter((g) => !parJeu.has(g.id))
-  if (jamais.length && games.length) {
-    add('jamais-joues', jamais.length > 1
-      ? `${nb(jamais.length)}${NBSP}jeux de la collection n'ont encore aucune partie enregistrée.`
-      : "Un seul jeu de la collection n'a encore aucune partie enregistrée.")
-    // Un jeu qui attend, choisi de façon stable (le premier par ordre alphabétique).
-    const attente = [...jamais].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fr'))[0]
-    add('jeu-en-attente', `${attente.name} n'a encore aucune partie enregistrée.`)
-  }
-
-  // Le jeu dont la dernière partie enregistrée est la plus ancienne (au moins 3 mois).
-  const derniereDe = (e) => e.dates.reduce((m, d) => (d > m ? d : m), new Date(0))
-  const oublies = classement
-    .map(([id, e]) => ({ id, quand: derniereDe(e) }))
-    .filter((x) => x.quand.getTime() > 0)
-    .sort((a, b) => a.quand - b.quand)
-  if (oublies.length) {
-    const mois = Math.floor((Date.now() - oublies[0].quand.getTime()) / (1000 * 60 * 60 * 24 * 30))
-    if (mois >= 3) add('oublie', `Aucune partie de ${gname(oublies[0].id)} depuis ${pluriel(mois, 'mois', 'mois')}.`)
-  }
-
-  const uneFois = classement.filter(([, e]) => e.n === 1)
-  if (uneFois.length >= 2) add('une-seule-fois', `${nb(uneFois.length)}${NBSP}jeux n'ont qu'une seule partie enregistrée.`)
-
-  // ===== 2. Le temps =====
-  // ⚠️ `played_at` est l'heure de SAISIE : tous les chiffres de cette section sont plafonnés
-  // à ce qui reste plausible pour une vraie soirée.
-  const parJour = new Map()
-  const parMois = new Map()
-  const parAnnee = new Map()
-  parties.forEach((p) => {
-    const d = jourDe(p.played_at)
-    if (!d) return
-    parJour.set(cleJour(d), (parJour.get(cleJour(d)) || 0) + 1)
-    const km = `${d.getFullYear()}-${d.getMonth()}`
-    parMois.set(km, (parMois.get(km) || 0) + 1)
-    parAnnee.set(d.getFullYear(), (parAnnee.get(d.getFullYear()) || 0) + 1)
-  })
-  if (parJour.size) {
-    const [kj, n] = [...parJour.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]
-    // Au-delà, ce n'est plus une soirée, c'est une saisie d'historique.
-    if (n >= 3 && n <= 12) {
-      const [y, m, j] = kj.split('-').map(Number)
-      add('plus-grosse-soiree', `Record de la journée : ${pluriel(n, 'partie')} le ${j} ${MOIS[m]} ${y}.`)
-    }
-  }
-  if (parMois.size >= 2) {
-    const [km, n] = [...parMois.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]
-    const [y, m] = km.split('-').map(Number)
-    if (n <= 60) add('plus-gros-mois', `Le mois le plus joueur : ${MOIS[m]} ${y}, ${pluriel(n, 'partie')}.`)
-  }
-  const dates = parties.map((p) => jourDe(p.played_at)).filter(Boolean).sort((a, b) => a - b)
-  if (dates.length >= 2) {
-    add('premiere-partie', `La toute première partie enregistrée date du ${dateCourte(dates[0])}.`)
-    const jours = Math.max(1, Math.round((dates[dates.length - 1] - dates[0]) / (1000 * 60 * 60 * 24)))
-    // Seulement avec du recul : sur quelques semaines, ce chiffre mesure la saisie.
-    const parSemaine = (dates.length / jours) * 7
-    if (jours >= 120 && parSemaine >= 0.5 && parSemaine <= 14)
-      add('rythme', `En moyenne, ${parSemaine.toFixed(1).replace('.', ',')}${NBSP}parties par semaine.`)
-  }
-  // L'année en cours n'a d'intérêt QUE s'il existe une autre année : sinon « cette année »
-  // et « en tout » désignent la même chose, et les deux anecdotes font doublon.
-  const annee = new Date().getFullYear()
-  if (parAnnee.size >= 2 && (parAnnee.get(annee) || 0) >= 3) {
-    const cetteAnnee = parties.filter((p) => { const d = jourDe(p.played_at); return d && d.getFullYear() === annee })
-    const parJeuAn = new Map()
-    cetteAnnee.forEach((p) => parJeuAn.set(p.game_id, (parJeuAn.get(p.game_id) || 0) + 1))
-    const [id, n] = [...parJeuAn.entries()].sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])))[0]
-    add('roi-de-lannee', `Le jeu de ${annee} : ${gname(id)}, ${pluriel(n, 'partie')}.`)
-    add('total-annee', `${pluriel(cetteAnnee.length, 'partie')} enregistrées depuis le début de ${annee}.`)
-  }
-
-  // ===== 3. Les joueurs =====
+  // ===== 1. Les joueurs =====
+  // ⚠️⚠️ CETTE SECTION SE CALCULE SUR **TOUTES** LES PARTIES, jamais sur le périmètre d un
+  // compte — et elle est donc placée AVANT la garde ci-dessous. Ses sept phrases ne citent
+  // AUCUN jeu : ce sont des affirmations sur des PERSONNES, et cinq d entre elles sont des
+  // superlatifs (« le plus assidu », « le meilleur taux », « le duo »). Restreintes à un
+  // foyer, elles ne seraient pas seulement partielles : elles désigneraient QUELQU UN
+  // D AUTRE. Elles se contrediraient en plus avec le « Bilan d un joueur » du même écran,
+  // qui compte, lui, toutes les parties.
+  // RÈGLE : le périmètre d une anecdote suit son SUJET (un jeu → le compte ; une personne →
+  // tout le monde), pas sa SOURCE.
   const stats = new Map() // nom → { parties, duels, gagnes, jeux:Set }
   const ensemble = new Map() // "A|B" → nb de parties en commun
-  parties.forEach((p) => {
+  partiesJoueurs.forEach((p) => {
     const noms = [...new Set((p.players || []).map((x) => (x?.name || '').trim()).filter(vraiNom))]
     const gagnants = new Set(playWinners(p))
     const coop = estCoop(p)
@@ -243,10 +151,122 @@ export function buildAnecdotes({ plays = [], games = [], repById = null, tierAne
       add('duo', `${a} et ${b} sont le duo le plus assidu : ${pluriel(n, 'partie')} ensemble.`)
     }
   }
-  if (parties.length >= 5) {
-    const moy = parties.reduce((s, p) => s + (p.players || []).length, 0) / parties.length
+  if (partiesJoueurs.length >= 5) {
+    const moy = partiesJoueurs.reduce((s, p) => s + (p.players || []).length, 0) / partiesJoueurs.length
     add('taille-table', `Autour de la table : ${moy.toFixed(1).replace('.', ',')}${NBSP}joueurs en moyenne.`)
   }
+
+  // ⚠️ Aucune partie CONNUE ≠ aucune partie JOUÉE : hors ligne, ou tant que le chargement
+  // n'a pas abouti, la liste est vide. On se tait plutôt que d'affirmer que rien n'a jamais
+  // été joué (une version antérieure annonçait « toute la collection n'a jamais été jouée »).
+  if (!parties.length) {
+    // On sort AVANT les sections qui nomment un jeu, mais la §1 ci-dessus a déjà parlé des
+    // personnes : un compte sans partie sur SES jeux n est pas un monde sans parties.
+    ajouteTierlists()
+    return out
+  }
+
+  // ===== 2. Ce qu'on joue =====
+  const parJeu = new Map()
+  parties.forEach((p) => {
+    const e = parJeu.get(p.game_id) || { n: 0, dates: [], plays: [] }
+    e.n++
+    const d = jourDe(p.played_at)
+    if (d) e.dates.push(d)
+    e.plays.push(p)
+    parJeu.set(p.game_id, e)
+  })
+
+  const classement = [...parJeu.entries()].sort((a, b) => b[1].n - a[1].n || String(a[0]).localeCompare(String(b[0])))
+
+  // ⚠️ Ni « dans Kalyx » ni « de la collection » : depuis que le périmètre suit le compte,
+  // ces mentions affirmeraient un total GLOBAL qu on ne mesure plus. On les retire plutôt
+  // que de les nuancer — la phrase reste vraie quel que soit le périmètre.
+  add('total-parties', parties.length > 1
+    ? `${nb(parties.length)}${NBSP}parties enregistrées.`
+    : 'La toute première partie est enregistrée.')
+
+  // Les trois jeux les plus joués, chacun sa propre anecdote.
+  classement.slice(0, 3).forEach(([id, e], i) => {
+    if (e.n < 2) return
+    const rang = ['le jeu le plus joué', 'le deuxième jeu le plus joué', 'le troisième jeu le plus joué'][i]
+    add(`plus-joue-${i}`, `${gname(id)} est ${rang} : ${pluriel(e.n, 'partie')}.`)
+  })
+
+  // Les jeux sans aucune partie enregistrée. ⚠️ formulation : on ne sait pas s'ils ont été
+  // joués, seulement qu'aucune partie n'a été notée.
+  const jamais = games.filter((g) => !parJeu.has(g.id))
+  if (jamais.length && games.length) {
+    add('jamais-joues', jamais.length > 1
+      ? `${nb(jamais.length)}${NBSP}jeux n'ont encore aucune partie enregistrée.`
+      : "Un seul jeu n'a encore aucune partie enregistrée.")
+    // Un jeu qui attend, choisi de façon stable (le premier par ordre alphabétique).
+    const attente = [...jamais].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fr'))[0]
+    add('jeu-en-attente', `${attente.name} n'a encore aucune partie enregistrée.`)
+  }
+
+  // Le jeu dont la dernière partie enregistrée est la plus ancienne (au moins 3 mois).
+  const derniereDe = (e) => e.dates.reduce((m, d) => (d > m ? d : m), new Date(0))
+  const oublies = classement
+    .map(([id, e]) => ({ id, quand: derniereDe(e) }))
+    .filter((x) => x.quand.getTime() > 0)
+    .sort((a, b) => a.quand - b.quand)
+  if (oublies.length) {
+    const mois = Math.floor((Date.now() - oublies[0].quand.getTime()) / (1000 * 60 * 60 * 24 * 30))
+    if (mois >= 3) add('oublie', `Aucune partie de ${gname(oublies[0].id)} depuis ${pluriel(mois, 'mois', 'mois')}.`)
+  }
+
+  const uneFois = classement.filter(([, e]) => e.n === 1)
+  if (uneFois.length >= 2) add('une-seule-fois', `${nb(uneFois.length)}${NBSP}jeux n'ont qu'une seule partie enregistrée.`)
+
+  // ===== 3. Le temps =====
+  // ⚠️ `played_at` est l'heure de SAISIE : tous les chiffres de cette section sont plafonnés
+  // à ce qui reste plausible pour une vraie soirée.
+  const parJour = new Map()
+  const parMois = new Map()
+  const parAnnee = new Map()
+  parties.forEach((p) => {
+    const d = jourDe(p.played_at)
+    if (!d) return
+    parJour.set(cleJour(d), (parJour.get(cleJour(d)) || 0) + 1)
+    const km = `${d.getFullYear()}-${d.getMonth()}`
+    parMois.set(km, (parMois.get(km) || 0) + 1)
+    parAnnee.set(d.getFullYear(), (parAnnee.get(d.getFullYear()) || 0) + 1)
+  })
+  if (parJour.size) {
+    const [kj, n] = [...parJour.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]
+    // Au-delà, ce n'est plus une soirée, c'est une saisie d'historique.
+    if (n >= 3 && n <= 12) {
+      const [y, m, j] = kj.split('-').map(Number)
+      add('plus-grosse-soiree', `Record de la journée : ${pluriel(n, 'partie')} le ${j} ${MOIS[m]} ${y}.`)
+    }
+  }
+  if (parMois.size >= 2) {
+    const [km, n] = [...parMois.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]
+    const [y, m] = km.split('-').map(Number)
+    if (n <= 60) add('plus-gros-mois', `Le mois le plus joueur : ${MOIS[m]} ${y}, ${pluriel(n, 'partie')}.`)
+  }
+  const dates = parties.map((p) => jourDe(p.played_at)).filter(Boolean).sort((a, b) => a - b)
+  if (dates.length >= 2) {
+    add('premiere-partie', `La toute première partie enregistrée date du ${dateCourte(dates[0])}.`)
+    const jours = Math.max(1, Math.round((dates[dates.length - 1] - dates[0]) / (1000 * 60 * 60 * 24)))
+    // Seulement avec du recul : sur quelques semaines, ce chiffre mesure la saisie.
+    const parSemaine = (dates.length / jours) * 7
+    if (jours >= 120 && parSemaine >= 0.5 && parSemaine <= 14)
+      add('rythme', `En moyenne, ${parSemaine.toFixed(1).replace('.', ',')}${NBSP}parties par semaine.`)
+  }
+  // L'année en cours n'a d'intérêt QUE s'il existe une autre année : sinon « cette année »
+  // et « en tout » désignent la même chose, et les deux anecdotes font doublon.
+  const annee = new Date().getFullYear()
+  if (parAnnee.size >= 2 && (parAnnee.get(annee) || 0) >= 3) {
+    const cetteAnnee = parties.filter((p) => { const d = jourDe(p.played_at); return d && d.getFullYear() === annee })
+    const parJeuAn = new Map()
+    cetteAnnee.forEach((p) => parJeuAn.set(p.game_id, (parJeuAn.get(p.game_id) || 0) + 1))
+    const [id, n] = [...parJeuAn.entries()].sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])))[0]
+    add('roi-de-lannee', `Le jeu de ${annee} : ${gname(id)}, ${pluriel(n, 'partie')}.`)
+    add('total-annee', `${pluriel(cetteAnnee.length, 'partie')} enregistrées depuis le début de ${annee}.`)
+  }
+
 
   // ===== 4. Les scores =====
   // ⚠️ Le sens du score, jeu par jeu. À défaut : « le plus haut gagne », le cas des 33 fiches

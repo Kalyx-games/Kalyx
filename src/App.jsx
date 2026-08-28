@@ -1331,7 +1331,10 @@ export default function App() {
     if (!compte) return null // aucun compte choisi → toute la collection
     const s = new Set()
     nonWishlist.forEach((g) => {
-      if (parseOwners(g.owner).includes(compte)) s.add(repById.get(g.id) ?? g.id)
+      const proprios = parseOwners(g.owner)
+      // ⚠️ Un jeu SANS propriétaire est à tout le monde : les filtres le montrent à tous
+      // (filtering.js le laisse toujours passer), il doit donc compter pour tous.
+      if (!proprios.length || proprios.includes(compte)) s.add(repById.get(g.id) ?? g.id)
     })
     return s
   }, [compte, nonWishlist, repById])
@@ -1339,7 +1342,6 @@ export default function App() {
     () => (idsAnec ? collectionGames.filter((g) => idsAnec.has(g.id)) : collectionGames),
     [idsAnec, collectionGames]
   )
-  const idsAnecListe = useMemo(() => gamesAnec.map((g) => g.id), [gamesAnec])
   const playsAnec = useMemo(
     () => (idsAnec && allPlays ? allPlays.filter((p) => idsAnec.has(repById.get(p.game_id) ?? p.game_id)) : allPlays),
     [idsAnec, allPlays, repById]
@@ -1382,16 +1384,24 @@ export default function App() {
         ? buildAnecdotes({
             plays: playsAnec,
             games: gamesAnec,
+            // Les anecdotes qui parlent de PERSONNES se calculent sur tout (cf. la §1 de
+            // anecdotes.js) : un superlatif restreint à un foyer désigne quelqu un d autre.
+            playsTous: allPlays,
             repById,
             tierAnecdotes,
             // Le sens du score de chaque jeu : sans lui, « Record à Odin » couronnerait le
             // PIRE score de la table (cette fiche est en « le plus petit score gagne »).
+            // ⚠️ Indexée par le REPRÉSENTANT : les parties sont remappées vers lui, donc une
+            // fiche posée sur le second exemplaire d un jeu possédé en double serait perdue
+            // (repli silencieux sur « le plus haut gagne » → record inversé à Odin).
             scoringById: scoresheets
-              ? new Map(Object.entries(scoresheets).map(([id, t]) => [id, t?.scoring || 'high']))
+              ? new Map(Object.entries(scoresheets).map(([id, t]) => [repById.get(id) ?? id, t?.scoring || 'high']))
               : null,
           })
         : [],
-    [allPlays, playsAnec, gamesAnec, tierlistsLues, repById, tierAnecdotes]
+    // ⚠️ `scoresheets` EN DÉPENDANCE : sans lui le sens du score restait figé à sa valeur du
+    // premier calcul (souvent null → tout en « le plus haut gagne »).
+    [allPlays, playsAnec, gamesAnec, tierlistsLues, repById, tierAnecdotes, scoresheets]
   )
   // L'anecdote du jour. Ce n'est PAS un tirage : les anecdotes sont mélangées une fois par
   // cycle puis servies une par jour → chacune passe exactement une fois avant que la
@@ -1657,7 +1667,15 @@ export default function App() {
           creation={ajoutCompte}
           onChangerCompte={() => { setCompteOuvert(false); setChoixCompte(true) }}
           onEnregistrer={(nom, ini, couleur, avatar, origine) => {
-            if (!origine) handleAddOwner(nom, ini, couleur, avatar)
+            if (!origine) {
+              // Une création qui se contente de refermer le formulaire laisse l écran sur le
+              // compte PRÉCÉDENT, sans un mot : on annonce, et on ramène là où l on voit tous
+              // les comptes — c est là qu on choisit d y entrer.
+              handleAddOwner(nom, ini, couleur, avatar)
+              showToast(`Compte « ${nom} » créé.`)
+              setCompteOuvert(false)
+              setChoixCompte(true)
+            }
             else if (nom !== origine.name) handleRenameOwner(origine.id, origine.name, nom, { initials: ini, color: couleur, avatar })
             else handleUpdateOwner(origine.id, { initials: ini, color: couleur, avatar })
             setAjoutCompte(false)
@@ -1679,11 +1697,6 @@ export default function App() {
       ) : settingsOpen ? (
         <Suspense fallback={null}>
           <Settings
-            owners={ownersList}
-            onAddOwner={handleAddOwner}
-            onUpdateOwner={handleUpdateOwner}
-            onRenameOwner={handleRenameOwner}
-            onDeleteOwner={(owner) => setConfirmingOwner(owner)}
             tags={tagsList}
             onAddTag={handleAddTag}
             onUpdateTag={handleUpdateTag}

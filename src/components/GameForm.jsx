@@ -48,7 +48,9 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
   const [bestSet, setBestSet] = useState(() => parseCounts(game?.players_best))
   // À l AJOUT, le compte actif est coché d office : on range un jeu dans SA collection
   // (c est le geste par défaut de toute app à comptes). Reste décochable d un tap.
-  const [ownerSet, setOwnerSet] = useState(() => (game ? parseOwners(game.owner) : defaultOwner ? [defaultOwner] : []))
+  const [ownerSet, setOwnerSet] = useState(() =>
+    game ? parseOwners(game.owner) : defaultOwner && (owners || []).includes(defaultOwner) ? [defaultOwner] : []
+  )
   const [tagSet, setTagSet] = useState(() => parseTags(game?.tags))
   // Extensions : liste éditable (nom + nombre de joueurs facultatif), triée par nom
   // à l'ouverture et à l'enregistrement. Les joueurs d'une extension élargissent la
@@ -508,7 +510,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                 ))}
               </div>
             ) : (
-              <p className="field-hint">Ajoutez des comptes depuis l'écran Réglages ⚙️</p>
+              <p className="field-hint">Ajoutez des comptes depuis l'écran des comptes (l'avatar, en haut).</p>
             )}
           </div>
 

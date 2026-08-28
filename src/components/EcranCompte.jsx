@@ -26,7 +26,9 @@ export default function EcranCompte({
       </div>
 
       <section className="settings-card compte-carte">
-        {creation ? (
+        {creation && !online ? (
+          <p className="muted">Hors ligne : impossible de créer un compte.</p>
+        ) : creation ? (
           <EditeurBulle
             key="nouveau"
             bulle="new"

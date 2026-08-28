@@ -291,6 +291,64 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅⚠️ LE PÉRIMÈTRE D UNE ANECDOTE SUIT SON **SUJET**, PAS SA **SOURCE** (2026-08-28, revue adversariale)
+
+**Retour user** : « les anecdotes sur les personnes uniques (via les tierlists) restent toujours communes ».
+Puis une revue adversariale (7 agents, 3 lentilles + cartographie + synthèse) a montré que la correction
+faite dans la foulée ne suffisait pas.
+
+### La faute de raisonnement, à retenir
+
+⚠️⚠️ **J avais découpé par SOURCE** (parties = compte, tierlists = commun) **au lieu de découper par SUJET**
+(un jeu → le compte ; une personne → tout le monde). Or **sept familles de `buildAnecdotes` ne citent AUCUN
+jeu** — ce sont des affirmations nues sur des PERSONNES — et elles se calculaient sur les seules parties du
+compte : `nb-joueurs`, `plus-assidu`, `meilleur-taux`, `moins-bon-taux`, `plus-curieux`, `duo`, `taille-table`.
+  · **Cinq sont des SUPERLATIFS** (`sort`/`reduce` de tête) : restreintes à un foyer, elles ne sont pas
+    seulement partielles, **elles désignent QUELQU UN D AUTRE**. « X est le duo le plus assidu » devenait faux.
+  · Les seuils aggravaient (`duels >= 5`, `jeux.size >= 5`, `n >= 3`) : un joueur pouvait sortir du classement
+    une fois l échantillon amputé.
+  · Et **le même écran se contredisait** : le « Bilan d un joueur » des Stats compte, lui, TOUTES les parties.
+
+### Le correctif
+
+**`buildAnecdotes` prend `playsTous`** ; `partiesJoueurs` = toutes les parties remappées (sans filtre de
+collection — la §1 ne lit que `players`/`outcome`/`game_id`, elle n a besoin d aucun `nameById`).
+  - **La §3 « Les joueurs » devient la §1 et REMONTE AVANT la garde `if (!parties.length)`** : un compte sans
+    partie sur SES jeux n est pas un monde sans parties. Déplacement sans effet sur le parcours — `anecdoteDuJour`
+    range par `hash(key)`, jamais par la position d insertion (vérifié).
+  - Sections renumérotées : 1 Les joueurs · 2 Ce qu on joue · 3 Le temps · 4 Les scores · 5 Coop · 6 Séries · 7 Goûts.
+  - **MESURÉ** : les 7 phrases sont désormais IDENTIQUES pour les 3 comptes (« Clémence a joué le plus de
+    parties : 181 », « le duo le plus assidu : 154 parties », « 26 personnes différentes »…), tandis que celles
+    qui nomment un jeu restent propres à chacun (Abyss 26 parties chez l un, 7 Wonders Duel 18 chez l autre).
+  - Pools : Clémence & Mathieu **77** · Claire & Nazim **75** · Mathilde & Mathieu **60**.
+
+### Trois autres défauts trouvés par la même revue
+
+  1. ⚠️ **Cinq phrases affirmaient un total GLOBAL** (« parties enregistrées **dans Kalyx** », « N jeux **de la
+     collection** ») alors qu elles ne mesurent plus qu un foyer. **Les mentions sont RETIRÉES** plutôt que
+     nuancées : la phrase reste vraie quel que soit le périmètre, et elle est plus courte.
+  2. ⚠️ **`scoresheets` manquait aux dépendances de `anecPool`** → le sens du score restait figé à sa valeur du
+     premier calcul (souvent `null` → tout en « le plus haut gagne ») : « Record à Odin » aurait couronné le PIRE
+     score. Et **`scoringById` était indexé par id RÉEL** alors que `sensDe` est appelé avec l id du REPRÉSENTANT
+     → une fiche posée sur le second exemplaire d un jeu possédé en double était perdue. Les deux corrigés.
+  3. **Les jeux SANS propriétaire étaient exclus du périmètre** alors que les filtres les montrent à tous
+     (`filtering.js` les laisse toujours passer). Ils comptent désormais pour tout le monde.
+
+**Corrections de finition du même lot** : `idsAnecListe` (devenu mort) supprimé ; `GameForm` renvoyait « Ajoutez
+des comptes depuis l écran Réglages » alors que les comptes en sont partis ; `defaultOwner` n était pas vérifié
+contre les choix proposés (une case invisible, non décochable, dont le nom partait quand même en base) ; la
+création d un compte ne disait rien et laissait l écran sur le compte PRÉCÉDENT (toast + retour aux avatars) ;
+le mode création ignorait l état hors ligne ; `Settings` recevait encore 5 props de gestion des comptes.
+
+**SIGNALÉ, PAS CORRIGÉ (défaut ANTÉRIEUR, arbitrage de produit)** : deux définitions du taux de victoire
+coexistent — l anecdote exclut le coopératif (où `playWinners` couronne toute la table), le « Bilan d un joueur »
+ne l exclut pas. Écarts mesurés : 0 à 8 points, **−29 pour un gros joueur de coop**. Changer l un des deux
+modifierait un chiffre que l user connaît : à trancher avec lui.
+
+**RÈGLE GÉNÉRALE** : avant de restreindre un périmètre, se demander (a) si le paramètre sert à AFFICHER ou à
+CALCULER — `gameIds` de `computeAnecdoteList` alimente `remapRanking`, le restreindre FAUSSE au lieu de masquer ;
+(b) quel est le SUJET de chaque phrase, pas d où viennent ses données.
+
 ## ✅ LES ÉTIQUETTES DE FILTRE NE RÉPÈTENT PLUS LE COMPTE + LE COMPTE PASSE EN DERNIER (2026-08-28, retours user)
 
 **Retours user** : « dans les étiquettes de filtres sous le champ rechercher, il ne faut plus qu il y ait le nom

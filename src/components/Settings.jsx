@@ -61,7 +61,6 @@ function relativeTime(iso) {
 }
 
 export default function Settings({
-  owners, onAddOwner, onUpdateOwner, onRenameOwner, onDeleteOwner, jeux = [],
   tags, onAddTag, onUpdateTag, onRenameTag, onDeleteTag,
   onExport, onExportCsv, onImportFile,
   backupFreq, onSetBackupFreq, backups, backupBusy, onBackupNow, onRestore,
