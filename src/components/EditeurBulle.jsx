@@ -38,12 +38,15 @@ export default function EditeurBulle({
   // Les valeurs de DÉPART, figées : elles disent si quelque chose a bougé. Sans ça,
   // un éditeur affiché en permanence propose « Enregistrer » alors qu il n y a rien à
   // enregistrer — le bouton ne dirait plus rien de l état.
-  const [ref0] = useState(() => ({
+  // ⚠️ useMemo sur `depart` et NON useState : dans le menu Compte l'éditeur reste monté après
+  // l'enregistrement, et une référence figée au montage laissait « Enregistrer » allumé à vie —
+  // ce qui annule exactement ce que cette référence sert à dire.
+  const ref0 = useMemo(() => ({
     name: depart?.name || '',
     initials: depart ? depart.initials || ownerInitials(depart.name) : '',
     color: depart ? muteOwnerColor(depart.color) || ownerColor(depart.name) : PALETTE[0],
     avatar: depart?.avatar ?? null,
-  }))
+  }), [depart])
 
   const onNameChange = (v) => {
     setName(v)

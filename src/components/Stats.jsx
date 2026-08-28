@@ -278,6 +278,10 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
     </>
   )
 
+  // ⚠️ `games === null` = PAS ENCORE CHARGÉ. Sans cette garde, `[].every(...)` vaut true et l'écran
+  // affirmait « Votre collection est vide » pendant tout le chargement (et hors ligne sans cache).
+  if (games == null) return <div className="stats">{header}</div>
+
   if (noCollectionShown) {
     return (
       <div className="stats">

@@ -33,8 +33,11 @@ export default class ErrorBoundary extends Component {
       } catch {
         /* ignore */
       }
-      // Vide le SW + caches puis recharge → récupère à coup sûr la version à jour.
-      hardReload()
+      // ⚠️ HORS LIGNE, ON NE TOUCHE PAS AU CACHE. `hardReload` désinscrit le service worker et vide
+      // les caches : sans réseau pour les repeupler, la PWA ne s'ouvre plus DU TOUT. On se contente
+      // alors de recharger — l'erreur vient rarement du cache, et un rechargement suffit souvent.
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) window.location.reload()
+      else hardReload()
     }
 
     return (

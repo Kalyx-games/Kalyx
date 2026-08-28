@@ -268,7 +268,11 @@ export default function Settings({
         )}
         {backups && backups.length > 2 && (
           <button type="button" className="backup-more" onClick={() => setToutesSauvegardes((v) => !v)}>
-            {toutesSauvegardes ? 'Réduire' : `Voir les ${backups.length - 2} plus anciennes`}
+            {toutesSauvegardes
+                    ? 'Réduire'
+                    : backups.length - 2 > 1
+                    ? `Voir les ${backups.length - 2} plus anciennes`
+                    : 'Voir la plus ancienne'}
           </button>
         )}
         {backups && backups.length === 0 && (

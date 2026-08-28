@@ -16,7 +16,13 @@ export default function CodeDialog({ onDone, onClose }) {
     const ok = await verifyCode(c)
     setBusy(false)
     if (!ok) {
-      setErr('Code incorrect. Réessayez.')
+      // ⚠️ Hors ligne, la vérification ne peut PAS aboutir : accuser le code ferait douter
+      // l'utilisateur d'un code pourtant juste, et le pousserait à en essayer d'autres.
+      setErr(
+        navigator.onLine
+          ? 'Code incorrect. Réessayez.'
+          : 'Pas de connexion : impossible de vérifier le code. Réessayez une fois reconnecté.'
+      )
       return
     }
     setCode(c)

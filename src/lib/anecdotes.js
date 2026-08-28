@@ -39,7 +39,8 @@ const jourDe = (iso) => {
   const d = new Date(iso)
   return Number.isNaN(d.getTime()) ? null : d
 }
-const dateCourte = (d) => `${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
+// En français, le premier jour du mois s'écrit « 1er », jamais « 1 ».
+const dateCourte = (d) => `${d.getDate() === 1 ? '1er' : d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
 const cleJour = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 
 // Un nom qui contient un chiffre n'est pas un prénom : c'est soit un code tapé de travers
@@ -362,8 +363,15 @@ export function buildAnecdotes({ plays = [], games = [], playsTous = null, repBy
   // score de l'équipe est recopié sur chaque membre → les deux premiers sont coéquipiers).
   const ecarts = []
   parties.filter((p) => scoreCounts(p) && !estCoop(p) && !estEquipes(p)).forEach((p) => {
-    const tot = (p.players || []).map((x) => Number(x?.total)).filter(Number.isFinite).sort((a, b) => b - a)
-    if (tot.length >= 2) ecarts.push({ p, e: tot[0] - tot[1] })
+    // ⚠️⚠️ LE SENS DU SCORE DÉCIDE QUI EST PREMIER. Trier toujours en décroissant mesurait, sur une
+    // fiche « le plus petit gagne » (Odin), l'écart entre les DEUX PERDANTS : « la partie la plus
+    // serrée : 2 points » là où la victoire s'est jouée à 58, et « égalité parfaite » alors que
+    // quelqu'un avait gagné de 60. Et sur une fiche sans points, le total ne désigne personne.
+    const sens = sensDe(p.game_id)
+    if (sens === 'none') return
+    const tot = (p.players || []).map((x) => Number(x?.total)).filter(Number.isFinite)
+      .sort((a, b) => (sens === 'low' ? a - b : b - a))
+    if (tot.length >= 2) ecarts.push({ p, e: Math.abs(tot[0] - tot[1]) })
   })
   if (ecarts.length >= 3) {
     const serre = ecarts.reduce((b, x) => (x.e < b.e ? x : b))

@@ -291,6 +291,97 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅ CHASSE AUX DÉFAUTS : 27 CORRIGÉS D UN LOT (2026-08-28, demande user « corrige toutes les erreurs »)
+
+Workflow de 11 agents, dix zones du code relues indépendamment → 59 constats bruts → **27 retenus, 30
+écartés** (prémisse fausse, comportement documenté, doublon). Chacun revérifié dans le code avant
+application. Classés ici par ce qu ils cassaient.
+
+### ⚠️⚠️ Les quatre BLOQUANTS
+
+  1. **`anecdotes.js` — « la partie la plus serrée » mesurait l écart entre les DEUX PERDANTS** sur une
+     fiche « le plus petit gagne ». Le tri était TOUJOURS décroissant alors que `sensDe()` existe dix lignes
+     plus haut. Sur Odin, « 2 points d écart » là où la victoire s est jouée à 58, et « égalité parfaite »
+     alors que quelqu un avait gagné de 60. **Sur un jeu `low` à 3+ joueurs c est le cas NOMINAL.** Les
+     fiches `scoring: none` (26 en base !) sont désormais exclues : leur total ne désigne personne.
+  2. **`ScoreSheet` — le départage d équipes était un VERROU À SENS UNIQUE.** Le bloc disparaissait au
+     premier tap (`!teams.some(t => t.win)`), et sur une fiche à points sans « victoire directe » plus AUCUN
+     contrôle ne porte `t.win` : un tap par erreur était définitif. Comme `saveTeams` donne priorité absolue
+     à la coche sur le score, l équipe à 501 était enregistrée gagnante **contre 502**. Le bloc reste
+     maintenant tant que l égalité dure, et la puce choisie porte `on`.
+  3. **`App` — sous 2 comptes, l écran des comptes ne s ouvrait JAMAIS.** Le seuil `>= 2` s appliquait aussi à
+     la réouverture VOLONTAIRE. En supprimant un compte sur deux, l écran des avatars — qui héberge le SEUL
+     « Ajouter un compte » — devenait inatteignable, et « Choisir un compte » ne faisait plus rien : **la
+     fonction comptes disparaissait de l app sans retour possible**. Le seuil ne vaut plus que pour la
+     question automatique du premier lancement.
+  4. **`ErrorBoundary` — « Recharger l appli » détruisait le précache hors ligne.** `hardReload()` désinscrit
+     le service worker et vide les caches : **sans réseau pour les repeupler, la PWA ne s ouvre plus DU
+     TOUT**. Hors ligne on se contente désormais de recharger.
+
+### Les défauts de DONNÉES
+
+  5. ⚠️⚠️ **`upsertBubbles` : la dégradation était morte DEUX FOIS** → comptes et tags perdus en silence à
+     l import, qui s annonçait réussi. (a) le test « table absente » passait EN PREMIER, or PostgREST annonce
+     une COLONNE manquante par « Could not find the ... column ... in the **schema cache** » ; (b) le motif
+     était écrit `\\b${c}\\b` dans un TEMPLATE LITERAL, où `\\b` est le BACKSPACE — **le piège que ce projet
+     documente déjà**, corrigé dans owners.js mais jamais ici. Regex par CONCATÉNATION.
+  6. **`upsertRows` confondait colonne absente et table absente** : sur une base dont une migration manque,
+     **toutes les parties étaient jetées, comptées 0 et annoncées comme un succès**. Dégradation colonne par
+     colonne ajoutée ; `tableMissing` exclut désormais le message de colonne.
+  7. **Le filtre des « Joueur 1 » ne filtrait rien** : `/^Joueur d+$/` — l antislash manquait. Ces noms de
+     remplacement polluaient l auto-complétion de toutes les saisies.
+  8. **Rééditer une partie en ÉQUIPES effaçait la variante de chaque membre** (le héros, la faction…) :
+     l initialiseur ne reprenait que `p.name`. L objet membre voyage maintenant en entier.
+ 15. **Les barres « nombre de joueurs » des Stats ignoraient les extensions**, alors qu un tap dessus applique
+     un filtre qui, lui, les compte : la barre pouvait annoncer moins de jeux que le filtre n en montrait.
+
+### Les défauts d ÉCRAN et d ÉTAT
+
+  9. **La carte « Variantes » de l éditeur disparaissait dès « En équipes » coché** — contre l arbitrage user
+     explicitement documenté (« variantes en équipes → débloquées, les deux »).
+ 10. **Passer une fiche en « Coopératif » laissait `teamsOn` à true** : la case n étant plus rendue en coop,
+     elle devenait invisible ET indécochable, et masquait Catégories ET Variantes.
+ 11. **`setEditingPlay(null)` pendant les 240 ms de fermeture** : la feuille qu on venait d enregistrer
+     sortait de l écran VIERGE.
+ 12. **`booting` manquait aux dépendances de la mesure des colonnes** : la largeur était prise sur les
+     SQUELETTES et jamais recalculée.
+ 13. **Une création de compte ratée était 100 % silencieuse** : on partait vers l écran des avatars, qui
+     REMPLACE le rendu — ni le toast ni le bandeau d erreur n y sont montés. `handleAddOwner` renvoie
+     désormais son verdict et on ne quitte l écran qu en cas de succès.
+ 14. **L onglet Stats affirmait « Votre collection est vide » pendant tout le chargement** : `[].every()`
+     vaut true. On distingue maintenant « pas encore chargé » (null) de « vide ».
+ 16. **Un geste ANNULÉ par le système lançait BoardGameGeek** : `touchcancel` partageait le gestionnaire de
+     `touchend`. Un appel entrant pendant un glissé armé ouvrait un onglet.
+ 17. **L aperçu d image restait masqué POUR TOUJOURS après une URL cassée** : `display:none` posé en style
+     inline, que React ne réinitialise pas. Une `key` sur l URL donne un nœud neuf.
+ 20. **« Enregistrer » du menu Compte restait allumé après un enregistrement réussi** : `ref0` était figé au
+     montage alors que l éditeur y reste monté (`useMemo` sur `depart`).
+
+### DÉGRADATIONS, TEXTES et CSS
+
+ 18. **Hors ligne, le BON code d accès était refusé** par « Code incorrect. Réessayez. » — on accusait
+     l utilisateur d une panne de réseau.
+ 19. **Hors ligne, le hub Tierlists accusait la base** (« pas encore activées sur votre base »).
+ 21. **Le taux de victoire du podium était en `--gold`** (l or de REMPLISSAGE) : **1,87:1** en thème clair.
+     Passé à `--gold-ink` (`4,1:1 ; identique en sombre). Même paire, même motif que `.tile-holder-name`.
+ 22. **Le bloc reduced-motion visait `.game`, qui n a plus d animation** : l apparition en cascade des cartes
+     ET des tuiles restait jouée. Il vise maintenant `.swipe-row` et `.gtile`.
+ 23. **Les actions du menu de glissement gardaient leur couleur pleine hors ligne** (pas de `:disabled`).
+ 24. **`.sheet-del:active` était neutralisé par une media query INERTE** : la règle est redéclarée 700 lignes
+     plus bas, et une media query n ajoute aucune spécificité → `button.sheet-del:active` (0-2-1).
+ 25. **« Voir les 1 plus anciennes »** — et c est l état NORMAL de la liste des sauvegardes (3 sauvegardes).
+ 26. **Tierlists : « Non classés (N) » annonçait un compte NON filtré** et « Tous les jeux sont classés 🎉 »
+     s affichait alors que les filtres avaient seulement vidé la zone — une félicitation mensongère.
+ 27. **« le 1 mars 2026 »** au lieu de « le 1er ».
+
+⚠️ **PIÈGE JSX REVÉCU** : un commentaire `{/* … */}` posé comme EXPRESSION NUE dans un `&& ( … )` ne compile
+pas — entre la parenthèse et l élément, il faut un commentaire JS `/* */`. Déjà documenté, refait.
+
+**Vérifié en dev** : aucun crash, Stats muette pendant le chargement puis 8 tuiles, taux du podium à
+`--gold-ink` dans les deux thèmes, reduced-motion visant `.swipe-row, .gtile`, éditeur de fiche montrant
+« Variantes » en équipes et rétablissant « Catégories » en coop. **Fiche de 7 Wonders Duel vérifiée intacte
+en base après les tests** (compétitif, 8 catégories, sans équipes) ; aucune donnée de test créée.
+
 ## ✅⚠️ LE GARDE ANTI-PERTE NE PEUT PLUS FAIRE QUITTER L APP (2026-08-28, demande user)
 
 **Demande user** : « corrige aussi le garde anti-perte ».

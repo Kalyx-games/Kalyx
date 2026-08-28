@@ -603,18 +603,33 @@ export default function TierlistView({
             dans le défilement (pas épinglée). En édition c'est le bac épinglé qui gère ça. */}
         {!editing && (
           <div className="tl-unranked">
-            {readUnranked.length > 0 ? (
-              <>
-                <div className="tl-tray-title">Non classés <span className="muted">({readUnranked.length})</span></div>
-                <div className="tl-tray tl-tray-inline">
-                  {gamesOf(readUnranked, true).map((g) => (
-                    <Chip key={g.id} game={g} />
-                  ))}
-                </div>
-              </>
-            ) : (
-              <p className="muted" style={{ padding: '8px 2px' }}>Tous les jeux sont classés 🎉</p>
-            )}
+            {/* ⚠️ On compte les vignettes RÉELLEMENT affichées : `readUnranked` ignore les filtres,
+                alors que `gamesOf(…, true)` les applique — le titre annonçait donc plus de jeux
+                qu'il n'en montrait. Et « tous classés » ne doit pas se dire quand ce sont les
+                filtres qui ont vidé la zone : ce serait une félicitation mensongère. */}
+            {(() => {
+              const visibles = gamesOf(readUnranked, true)
+              const masques = readUnranked.length - visibles.length
+              if (visibles.length > 0) {
+                return (
+                  <>
+                    <div className="tl-tray-title">Non classés <span className="muted">({visibles.length})</span></div>
+                    <div className="tl-tray tl-tray-inline">
+                      {visibles.map((g) => (
+                        <Chip key={g.id} game={g} />
+                      ))}
+                    </div>
+                  </>
+                )
+              }
+              return (
+                <p className="muted" style={{ padding: '8px 2px' }}>
+                  {masques > 0
+                    ? `${masques} jeu${masques > 1 ? 'x' : ''} non classé${masques > 1 ? 's' : ''}, masqué${masques > 1 ? 's' : ''} par vos filtres.`
+                    : 'Tous les jeux sont classés 🎉'}
+                </p>
+              )
+            })()}
           </div>
         )}
 

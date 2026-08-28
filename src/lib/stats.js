@@ -1,15 +1,8 @@
-import { parseCounts, expandRange } from './games'
+import { parseCounts, effectivePlayersSet, effectiveBestSet } from './games'
 
 // Calcule toutes les statistiques affichées dans l'onglet Stats.
 // Les répartitions portent sur la COLLECTION (jeux possédés) ; la wishlist
 // n'est comptée que comme un total à part.
-
-// Ensemble des nombres de joueurs supportés par un jeu (texte groupé sinon min/max).
-function playersSetOf(g) {
-  const fromText = parseCounts(g.players)
-  if (fromText.length) return fromText
-  return expandRange(g.players_min, g.players_max)
-}
 
 // Durée représentative d'un jeu : la borne haute (sinon la borne basse).
 function durationOf(g) {
@@ -83,8 +76,11 @@ export function computeStats(games) {
   const medComplexity = median(complexities)
 
   // Par nombre de joueurs (combien de jeux jouables à N) et par nombre idéal.
-  const byPlayers = playerDistribution(collection, playersSetOf)
-  const byOptimalPlayers = playerDistribution(collection, (g) => parseCounts(g.players_best))
+  // ⚠️ Les MÊMES ensembles que le filtre : taper une barre applique le filtre « N joueurs », qui
+  // compte les extensions (effective*Set). Les barres les ignoraient → un tap sur « 6 joueurs »
+  // pouvait afficher plus de jeux que la barre n'en annonçait.
+  const byPlayers = playerDistribution(collection, effectivePlayersSet)
+  const byOptimalPlayers = playerDistribution(collection, effectiveBestSet)
 
   // Par durée.
   const byDuration = DURATION_BUCKETS.map((b) => ({ label: b.label, count: 0 }))

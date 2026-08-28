@@ -195,7 +195,7 @@ export async function fetchPlayerNames() {
   // nommer personne. Ils restent dans le RÉFÉRENTIEL (écran Joueurs → on peut les
   // renommer, et le podium doit bien les montrer : ils ont joué), mais ils n'ont rien à
   // faire dans les propositions de saisie.
-  return (await fetchPlayerRoster()).map((p) => p.name).filter((n) => !/^Joueur d+$/.test(n))
+  return (await fetchPlayerRoster()).map((p) => p.name).filter((n) => !/^Joueur \d+$/.test(n))
 }
 
 // Nb minimum de parties sur un jeu pour qu'il puisse être le « meilleur jeu » d'un joueur

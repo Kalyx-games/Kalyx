@@ -203,24 +203,49 @@ async function upsertBubbles(table, list) {
   for (;;) {
     const { error } = await writeDb().from(table).upsert(rows, { onConflict: 'name' })
     if (!error) return
-    if (/does not exist|schema cache|relation/i.test(error.message || '')) return // table absente
+    // ⚠️⚠️ DEUX FAUTES QUI S'ADDITIONNAIENT ICI, et la dégradation était morte deux fois :
+    //  1. le test « table absente » passait EN PREMIER — or PostgREST annonce une COLONNE manquante
+    //     par « Could not find the 'avatar' column … in the schema cache », qui contient « schema
+    //     cache » : on sortait en silence, comptes et tags perdus, l'import se disant réussi ;
+    //  2. le motif était écrit dans un TEMPLATE LITERAL, où \b est le caractère BACKSPACE et non la
+    //     frontière de mot d'une regex (piège déjà documenté et corrigé dans owners.js) → la colonne
+    //     n'était de toute façon jamais reconnue. On construit la regex par CONCATÉNATION.
     const col = BUBBLE_OPT.find(
-      (c) => rows.some((r) => r[c] !== undefined) && new RegExp(`\b${c}\b`, 'i').test(error.message || '')
+      (c) => rows.some((r) => r[c] !== undefined) && new RegExp('\\b' + c + '\\b', 'i').test(error.message || '')
     )
-    if (!col) throw error
-    rows = rows.map(({ [col]: _ignore, ...reste }) => reste)
+    if (col) {
+      rows = rows.map(({ [col]: _ignore, ...reste }) => reste)
+      continue
+    }
+    if (tableMissing(error)) return // table absente : migration pas lancée, on ignore
+    throw error
   }
 }
 
+// Colonnes qui peuvent manquer sur une base dont toutes les migrations n'ont pas été lancées.
+const OPTIONAL_ROW_COLS = { plays: ['trigger', 'notes', 'scenario', 'score', 'outcome'] }
+
 // Ré-insère des lignes par identifiant, en ignorant la table si elle n'existe pas encore.
+// ⚠️ Une COLONNE absente n'est pas une TABLE absente : PostgREST dit « Could not find the 'trigger'
+// column … in the schema cache », qui matchait `tableMissing` → on renvoyait 0 et la restauration
+// annonçait un SUCCÈS en ayant jeté toutes les parties. On dégrade donc colonne par colonne, comme
+// pour les jeux, et on ne rend 0 que si la table est réellement absente.
 async function upsertRows(table, rows, conflictCol) {
   if (!rows || !rows.length) return 0
-  const { error } = await writeDb().from(table).upsert(rows, { onConflict: conflictCol })
-  if (error) {
+  const opt = OPTIONAL_ROW_COLS[table] || []
+  let lignes = rows
+  for (let garde = 0; garde <= opt.length; garde++) {
+    const { error } = await writeDb().from(table).upsert(lignes, { onConflict: conflictCol })
+    if (!error) return lignes.length
+    const col = opt.find((c) => new RegExp('\\b' + c + '\\b', 'i').test(error.message || ''))
+    if (col) {
+      lignes = lignes.map(({ [col]: _ignore, ...reste }) => reste)
+      continue
+    }
     if (tableMissing(error)) return 0
     throw error
   }
-  return rows.length
+  return 0
 }
 
 // Applique une sauvegarde : propriétaires + tags (par nom), puis les jeux (par
@@ -297,7 +322,11 @@ const FREQ_MS = {
   monthly: 30 * 24 * 60 * 60 * 1000,
 }
 
-const tableMissing = (error) => /does not exist|schema cache|relation/i.test(error?.message || '')
+// ⚠️ Une colonne manquante est annoncée « Could not find the 'x' column … in the schema cache » :
+// sans l'exclure, tout appelant de tableMissing prendrait une colonne absente pour une table absente.
+const colonneAbsente = (error) => /Could not find the '[^']+' column/i.test(error?.message || '')
+const tableMissing = (error) =>
+  !colonneAbsente(error) && /does not exist|schema cache|relation/i.test(error?.message || '')
 
 // Liste des sauvegardes (SANS les données lourdes), plus récente d'abord.
 // Renvoie null si la table n'existe pas encore (migration non lancée).

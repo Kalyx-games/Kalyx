@@ -181,16 +181,18 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         const key = p.team || '—'
         let g = groups.find((x) => x.name === key)
         if (!g) { g = { name: key, total: p.total, members: [] }; groups.push(g) }
-        g.members.push(p.name)
+        // ⚠️ L'objet entier, pas le seul nom : sinon rééditer une partie en équipes EFFACE la
+        // variante de chaque membre (le héros, la faction…), qui repart vide à l'enregistrement.
+        g.members.push({ name: p.name, variant: p.variant || '' })
       })
       const wn = winnerNamesOf(ip)
       return groups.map((g) => ({
         id: ++tid,
         name: g.name === '—' ? '' : g.name,
         size: null,
-        players: (g.members.length ? g.members : ['']).map((m) => makePlayer(m)),
+        players: (g.members.length ? g.members : [{ name: '' }]).map((m) => makePlayer(m.name, m.variant)),
         score: g.total != null ? String(g.total) : '',
-        win: g.members.some((m) => wn.has((m || '').trim())),
+        win: g.members.some((m) => wn.has((m.name || '').trim())),
       }))
     }
     const list = teamsCfg?.list || []
@@ -543,16 +545,30 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // Départage d'égalité + barre d'enregistrement du compétitif à points : réutilisés par le
   // récapitulatif (multi-pages) ET par la page unique (un seul item / un seul joueur → pas de récap).
   // Deux équipes au même score : sans ça, saveTeams les déclarait TOUTES gagnantes en silence.
+  // ⚠️ Le bloc reste tant que l'égalité dure, et la puce choisie porte `on`. Le masquer dès qu'une
+  // équipe était cochée en faisait un VERROU À SENS UNIQUE : sur une fiche à points sans « victoire
+  // directe », plus aucun autre contrôle ne porte `t.win` (le 🏆 d'en-tête est réservé à `noPoints ||
+  // hasInstant`) → un tap par erreur était définitif, et `saveTeams` donne priorité absolue à la coche
+  // sur le score : l'équipe à 501 était enregistrée gagnante contre 502.
   const teamTieBreak = () =>
-    tiedTeams.length >= 2 && !teams.some((t) => t.win) ? (
+    tiedTeams.length >= 2 ? (
       <div className="field">
         <label className="field-label">Égalité — qui l’emporte ?</label>
         <div className="chips">
           {tiedTeams.map((t) => (
-            <button key={t.id} type="button" className="fchip" onClick={() => toggleTeamWin(t.id)}>{teamName(t)}</button>
+            <button
+              key={t.id}
+              type="button"
+              className={`fchip ${t.win ? 'on' : ''}`}
+              onClick={() => toggleTeamWin(t.id)}
+            >
+              {teamName(t)}
+            </button>
           ))}
         </div>
-        <p className="field-hint">Sans choix, les deux équipes sont enregistrées gagnantes.</p>
+        {!teams.some((t) => t.win) && (
+          <p className="field-hint">Sans choix, les deux équipes sont enregistrées gagnantes.</p>
+        )}
       </div>
     ) : null
 

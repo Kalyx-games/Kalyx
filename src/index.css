@@ -1345,6 +1345,12 @@ body {
      un liseré sous-pixel du menu dépasse sous la carte (visible depuis qu'elle n'a plus de bordure) */
   clip-path: inset(1px 0);
 }
+/* Hors ligne, ces actions sont désactivées : sans règle :disabled elles gardaient leur couleur
+   pleine et paraissaient actives (règle maison : tout bouton à `color` explicite a sa :disabled). */
+.swipe-act:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .swipe-act {
   width: 76px;
   flex-shrink: 0;
@@ -2804,7 +2810,9 @@ body {
   color: var(--muted);
 }
 .podium-table .rate {
-  color: var(--gold);
+  /* --gold est l'or de REMPLISSAGE (1,87:1 sur la carte en thème clair) ; --gold-ink est sa
+     déclinaison lisible en texte. Même paire que .tile-holder-name, corrigée pour la même raison. */
+  color: var(--gold-ink);
   font-weight: 700;
 }
 /* ---- Tableau comparatif (2 entités) ---- */
@@ -3257,7 +3265,10 @@ body {
   .modal-backdrop,
   .modal,
   .confirm,
-  .game {
+  /* ⚠️ .swipe-row et .gtile, PAS .game : l'apparition en cascade a été déplacée sur la ligne
+     entière (et les tuiles de la grille l'ont reprise) — viser .game ne neutralisait plus rien. */
+  .swipe-row,
+  .gtile {
     animation: none !important;
   }
   .sk::after {
@@ -3356,7 +3367,9 @@ button {
   .price-verify:active, .settings-relink:active, .swatch:active, .chwazi-round:active,
   .cc-btn:active, .tl-global-btn:active, .tl-create-btn:active, .tl-edit-btn:active,
   .tl-del-btn:active, .tl-done-btn:active, .tl-label-btn:active,
-  .owner-edit:active, .owner-del:active, .sheet-del:active,
+  /* `button.sheet-del` (0-2-1) : la règle .sheet-del:active est redéclarée 700 lignes plus bas,
+     et une media query n'ajoute AUCUNE spécificité — à égalité, c'est la dernière qui gagne. */
+  .owner-edit:active, .owner-del:active, button.sheet-del:active,
   .filters-reset-top:active, .filters-see:active, .hero-act-tile:active,
   .link-row:active, .bar-row-btn:active, .tl-list-item:active, .active-chip:active { transform: none; }
 }

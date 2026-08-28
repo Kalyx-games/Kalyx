@@ -627,7 +627,16 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
             )}
           </div>
           {form.image_url.trim() && (
-            <img className="img-preview" src={form.image_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+            /* ⚠️ `key` sur l'URL : masquer le nœud par un style INLINE le laissait caché pour
+               toujours (React ne réinitialise pas un style qu'il n'a pas posé) — corriger l'adresse
+               ne ramenait jamais l'aperçu. Une URL neuve = un nœud neuf, donc visible. */
+            <img
+              key={form.image_url}
+              className="img-preview"
+              src={form.image_url}
+              alt=""
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
           )}
 
           {form.status !== 'wishlist' && (

@@ -13,7 +13,11 @@ export default function TierlistHub({ tierlists, online, closing = false, onOpen
 
       {missing ? (
         <p className="empty" style={{ padding: 24 }}>
-          Les tierlists ne sont pas encore activées sur votre base.
+          {/* ⚠️ Hors ligne, `tierlists` est null pour une tout autre raison : on ne peut pas
+              accuser la base d'un défaut de migration alors que c'est le réseau qui manque. */}
+          {online
+            ? 'Les tierlists ne sont pas encore activées sur votre base.'
+            : 'Hors ligne : vos tierlists ne peuvent pas être chargées. Reconnectez-vous pour les consulter.'}
         </p>
       ) : (
         <>

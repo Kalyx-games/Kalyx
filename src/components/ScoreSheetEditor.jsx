@@ -311,7 +311,10 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
           <button type="button" className={`fchip ${!isCoop ? 'on' : ''}`} onClick={() => setWin('competitive')}>
             Compétitif
           </button>
-          <button type="button" className={`fchip ${isCoop ? 'on' : ''}`} onClick={() => setWin('coop')}>
+          {/* ⚠️ On décoche « En équipes » : la case n'est plus RENDUE en coopératif, donc un teamsOn
+              resté à true devenait invisible et indécochable — il masquait alors Catégories et
+              Variantes sur une fiche qu'on venait juste de passer en coop. */}
+          <button type="button" className={`fchip ${isCoop ? 'on' : ''}`} onClick={() => { setWin('coop'); setTeamsOn(false) }}>
             Coopératif
           </button>
         </div>
@@ -367,8 +370,11 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
 
       </section>
 
-      {/* Variantes : par joueur ET/OU pour toute la partie (les deux sont indépendantes). */}
-      {!teamsOn && (
+      {/* Variantes : par joueur ET/OU pour toute la partie (les deux sont indépendantes).
+          ⚠️ PAS de garde `!teamsOn` : l'user a explicitement fait débloquer les variantes en équipes
+          (elles vivent dans `teams`, et saveTeams les porte sur chaque membre). Les masquer ici
+          rendait ce réglage inaccessible sur une fiche en équipes. */}
+      {(
         <section className="settings-card">
           <h3>Variantes</h3>
           <p className="field-hint" style={{ marginBottom: 12 }}>

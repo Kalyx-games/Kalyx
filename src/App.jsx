@@ -858,7 +858,9 @@ export default function App() {
     list.style.setProperty('--meta-left', max ? `${Math.ceil(max)}px` : 'minmax(0, 1fr)')
     // statsOpen/settingsOpen : le <main> est démonté puis remonté en fermant ces écrans →
     // il faut recalculer, sinon la 1re colonne retombe sur son repli (colonne étirée).
-  }, [games, listStatus, statsOpen, settingsOpen, compteOuvert, grille])
+    // ⚠️ `booting` : pendant la restauration d'écran, la liste n'affiche que des SQUELETTES — la
+    // colonne serait mesurée sur eux et ne serait jamais recalculée une fois les vraies cartes là.
+  }, [games, listStatus, statsOpen, settingsOpen, compteOuvert, grille, booting])
 
   // Scénarios déjà utilisés pour ce jeu (auto-complétion du champ scénario).
   const scenarioNames = useMemo(
@@ -1007,12 +1009,17 @@ export default function App() {
     }
   }
 
+  // Renvoie true si la création a abouti. ⚠️ L'appelant en a besoin : l'écran des avatars REMPLACE
+  // le rendu (return anticipé), donc ni le toast ni le bandeau d'erreur n'y sont montés — y aller
+  // après un échec rendait la panne 100 % silencieuse.
   async function handleAddOwner(name, initials, color, avatar) {
     try {
       await addOwner(name, initials, color, avatar)
       reloadOwners()
+      return true
     } catch (e) {
       setError(messageUtilisateur(e))
+      return false
     }
   }
   async function handleUpdateOwner(id, patch) {
@@ -1322,7 +1329,9 @@ export default function App() {
       else inserted = await savePlay(scoringGame.id, play)
       const g = scoringGame
       setScoringGame(null)
-      setEditingPlay(null)
+      // ⚠️ On NE remet PAS `editingPlay` à null ici : la feuille reste montée 240 ms pour glisser
+      // dehors (useExitLayer) et se rendrait VIERGE pendant toute sa sortie. Elle est réinitialisée
+      // à la prochaine ouverture.
       // Nouvelle partie → on revient sur la FICHE du jeu (déjà ouverte dessous ; sinon on l'ouvre).
       // Édition depuis l'historique → on revient sur l'historique (déjà ouvert dessous), rafraîchi.
       if (wasEditing) {
@@ -1616,8 +1625,15 @@ export default function App() {
   // ⚠️ `!ajoutCompte` : au TOUT PREMIER lancement, `compte === undefined` reste vrai après le tap sur
   // « Ajouter un compte » → l'écran des avatars continuait de s'afficher et le formulaire de création
   // n'apparaissait JAMAIS, tout en poussant une entrée d'historique pour une couche jamais rendue.
+  // ⚠️ Le seuil de 2 ne vaut que pour la question AUTOMATIQUE du premier lancement (« on ne fait pas
+  // choisir entre une seule porte »). L'appliquer aussi à l'ouverture VOLONTAIRE enfermait l'app :
+  // en supprimant un compte sur deux, l'écran des avatars ne paraissait plus jamais — or il héberge
+  // le SEUL « Ajouter un compte », et « Choisir un compte » n'avait plus aucun effet.
   const montreEcranComptes =
-    !ajoutCompte && (choixCompte || compte === undefined) && ownersLoaded && comptesChoisissables.length >= 2
+    !ajoutCompte &&
+    (choixCompte || compte === undefined) &&
+    ownersLoaded &&
+    (choixCompte || comptesChoisissables.length >= 2)
 
   if (montreEcranComptes) {
     return (
@@ -1742,13 +1758,17 @@ export default function App() {
           onChangerCompte={() => { setCompteOuvert(false); setStatsOpen(false); setChoixCompte(true) }}
           onEnregistrer={(nom, ini, couleur, avatar, origine) => {
             if (!origine) {
-              // Une création qui se contente de refermer le formulaire laisse l écran sur le
-              // compte PRÉCÉDENT, sans un mot : on annonce, et on ramène là où l on voit tous
-              // les comptes — c est là qu on choisit d y entrer.
-              handleAddOwner(nom, ini, couleur, avatar)
-              showToast(`Compte « ${nom} » créé.`)
-              setCompteOuvert(false)
-              setChoixCompte(true)
+              // Une création qui se contente de refermer le formulaire laisse l'écran sur le compte
+              // PRÉCÉDENT, sans un mot : on annonce, et on ramène là où l'on voit tous les comptes.
+              // ⚠️ Seulement SI ELLE A ABOUTI — sinon on reste ici, où le bandeau d'erreur est monté.
+              handleAddOwner(nom, ini, couleur, avatar).then((ok) => {
+                if (!ok) return
+                showToast(`Compte « ${nom} » créé.`)
+                setCompteOuvert(false)
+                setChoixCompte(true)
+              })
+              setAjoutCompte(false)
+              return
             }
             else if (nom !== origine.name) handleRenameOwner(origine.id, origine.name, nom, { initials: ini, color: couleur, avatar })
             else handleUpdateOwner(origine.id, { initials: ini, color: couleur, avatar })
@@ -1919,7 +1939,7 @@ export default function App() {
       {statsOpen ? (
         <Suspense fallback={null}>
           <Stats
-            games={statsGames}
+            games={games === null ? null : statsGames}
             hasCollection={hasCollection}
             playerOverall={playerOverall}
             onOpenTierlists={handleOpenTierlists}

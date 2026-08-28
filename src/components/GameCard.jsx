@@ -264,7 +264,9 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
         }
       }
     }
-    const onEnd = () => {
+    // `annule` : le système a repris le geste (appel entrant, notification, multi-touch…). On range
+    // la carte SANS exécuter l'action armée — un glissé interrompu n'est pas un glissé validé.
+    const onEnd = (annule) => {
       if (g.dir === 'h') {
         setDragging(false)
         if (g.arme) {
@@ -272,7 +274,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
           g.arme = false
           setArme(false)
           setOffset(0)
-          bggRef.current?.()
+          if (annule !== true) bggRef.current?.()
         } else {
           setOffset((o) => (o < openRef.current / 2 ? openRef.current : 0)) // aimante ouvert/fermé
         }
@@ -281,15 +283,16 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
       }
       g.dir = null
     }
+    const onCancel = () => onEnd(true)
     el.addEventListener('touchstart', onStart, { passive: true })
     el.addEventListener('touchmove', onMove, { passive: false })
     el.addEventListener('touchend', onEnd, { passive: true })
-    el.addEventListener('touchcancel', onEnd, { passive: true })
+    el.addEventListener('touchcancel', onCancel, { passive: true })
     return () => {
       el.removeEventListener('touchstart', onStart)
       el.removeEventListener('touchmove', onMove)
       el.removeEventListener('touchend', onEnd)
-      el.removeEventListener('touchcancel', onEnd)
+      el.removeEventListener('touchcancel', onCancel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onEdit])
