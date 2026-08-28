@@ -291,6 +291,48 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅⚠️ LE GARDE ANTI-PERTE NE PEUT PLUS FAIRE QUITTER L APP (2026-08-28, demande user)
+
+**Demande user** : « corrige aussi le garde anti-perte ».
+
+### Le défaut
+
+Un « retour » consomme TOUJOURS une entrée d historique, **même quand il ne ferme aucune couche**. C est
+le cas du garde « Quitter sans enregistrer ? » : l ouvrir consomme une entrée, le refermer en consomme une
+seconde. L ancien `scoringEntryConsumedRef` était un **booléen** : il ne savait en compter qu UNE.
+Deux retours d affilée en perdaient deux, et **le troisième quittait l app avec la saisie en cours** —
+exactement ce que le garde existe pour empêcher.
+
+### Pourquoi on ne peut pas simplement repousser l entrée
+
+⚠️ Le garde ne s ouvre PAS sur un tap : il s ouvre **en réponse à un retour**. Or Chrome marque
+« skippable » toute entrée poussée sans activation utilisateur, et la SAUTE au retour suivant. Repousser
+depuis le handler `popstate` ne protégerait donc rien. C est aussi pourquoi `scoreExitConfirm` ne peut pas
+devenir une couche ordinaire malgré la correction de `go(-N)`.
+
+### Le mécanisme retenu : une DETTE, remboursée au premier geste
+
+  · **`detteRef`** compte les entrées consommées par un retour qui n a fermé aucune couche (les DEUX
+    branches du garde : son ouverture et sa fermeture).
+  · **`armeRemboursement()`** pose un écouteur `pointerdown`/`keydown` **one-shot en CAPTURE** : au premier
+    contact de l utilisateur avec l écran — il va forcément répondre au dialogue — la profondeur perdue est
+    restaurée par autant de `pushState` que nécessaire. C est le motif « gesture-arm » déjà éprouvé ici.
+  · **L effet de synchro PAYE D ABORD AVEC LA DETTE** : une couche fermée par bouton alors qu une dette
+    existe ne déclenche pas de `go()` — son entrée a déjà été consommée par le retour.
+  · **Les deux boutons du dialogue n ont plus AUCUNE comptabilité à faire** : le `pointerdown` de leur tap a
+    remboursé avant le clic (capture). `scoringEntryConsumedRef` et les `pushState`/`backClosingRef` manuels
+    des handlers sont SUPPRIMÉS. Le code est plus court qu avant le correctif.
+
+**Vérifié en dev, par le chemin réel** (7 Wonders Duel → Nouvelle partie → un nom saisi) : retour → le garde
+s affiche ; retour → il se referme ; retour → il se rouvre ; retour → il se referme… **la saisie n est jamais
+perdue et l app ne quitte jamais**. Et le remboursement est PROUVÉ à l instrumentation de `pushState` : après
+deux retours stériles, le premier geste repousse **exactement 2 entrées**, un second geste n en repousse **0**
+(dette soldée). Aucune partie de test créée (220 parties en base, inchangé).
+
+⚠️ **Limite assumée** : deux retours d affilée SANS jamais toucher l écran restent hors de portée (aucune
+activation → aucun remboursement possible). Irréductible côté navigateur ; en pratique on touche l écran pour
+répondre au dialogue.
+
 ## ✅⚠️⚠️ `go(-N)` N ÉMET QU UN SEUL POPSTATE — le bloquant de la comptabilité des couches (2026-08-28)
 
 Revue adversariale (4 agents) lancée après le lot « écran plein ». **Verdict : la comptabilité n était PAS

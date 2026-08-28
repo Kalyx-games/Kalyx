@@ -486,15 +486,41 @@ export default function App() {
   // couche ouverte, poussée dans l'effet qui SUIT le tap d'ouverture (l'activation utilisateur est
   // encore « fraîche » → entrée respectée) ; chaque retour ferme UNE couche ; l'historique reste
   // équilibré (1 ouverture = 1 entrée = 1 retour). À la racine, le retour laisse quitter (normal Android).
-  // scoreExitConfirm est un garde ANTI-PERTE, pas une vraie couche : on l'EXCLUT du compte (sinon
-  // « Quitter » fermerait 2 couches d'un coup → go(-2), qui n'émet qu'UN popstate et déséquilibre
-  // ignoreBackRef). L'entrée consommée par le retour qui a affiché le garde est gérée à part
-  // (scoringEntryConsumedRef) : restaurée si on reste (Annuler), ou « déjà consommée » si on quitte.
+  // scoreExitConfirm est un garde ANTI-PERTE, pas une vraie couche : on l'EXCLUT du compte (il ne
+  // s'ouvre pas sur un tap mais EN RÉPONSE À UN RETOUR — il ne peut donc pas pousser d'entrée fiable).
+  // Les entrées que ces retours consomment sont comptées comme une DETTE et remboursées au premier
+  // geste de l'utilisateur (voir detteRef / armeRemboursement plus bas).
   const layerCount = Object.entries(uiRef.current).filter(([k, v]) => v && k !== 'scoreExitConfirm').length
   const depthRef = useRef(0) // nb d'entrées d'historique poussées pour les couches ouvertes
   const ignoreBackRef = useRef(0) // popstate synthétiques (resynchro) à ignorer
   const backClosingRef = useRef(false) // la baisse de layerCount en cours vient d'un « retour »
-  const scoringEntryConsumedRef = useRef(false) // le retour qui a ouvert le garde a déjà consommé l'entrée de la saisie
+  // ⚠️ DETTE D'ENTRÉES. Un « retour » consomme TOUJOURS une entrée d'historique, même quand il ne
+  // ferme aucune couche — c'est le cas du garde anti-perte (l'ouvrir, puis le refermer). L'ancien
+  // drapeau booléen ne savait compter qu'UNE entrée : deux retours d'affilée en perdaient deux, et
+  // le troisième quittait l'app AVEC LA SAISIE EN COURS — exactement ce que le garde existe pour
+  // empêcher. On COMPTE donc les entrées dues, et on les rembourse.
+  const detteRef = useRef(0)
+  const remboursementArmeRef = useRef(false)
+
+  // Rembourse les entrées dues. ⚠️ UNIQUEMENT sur un geste utilisateur : un pushState sans activation
+  // est marqué « skippable » par Chrome et sauté au retour suivant (cf. le bloc ci-dessus) — il ne
+  // protégerait donc rien. Or l'utilisateur qui voit le garde va toucher l'écran pour répondre : c'est
+  // là qu'on restaure la profondeur perdue, avant qu'un second retour ne puisse faire sortir de l'app.
+  const armeRemboursement = useCallback(() => {
+    if (remboursementArmeRef.current) return
+    remboursementArmeRef.current = true
+    const rembourse = () => {
+      window.removeEventListener('pointerdown', rembourse, true)
+      window.removeEventListener('keydown', rembourse, true)
+      remboursementArmeRef.current = false
+      while (detteRef.current > 0) {
+        detteRef.current--
+        window.history.pushState({ kalyx: 'layer' }, '')
+      }
+    }
+    window.addEventListener('pointerdown', rembourse, true)
+    window.addEventListener('keydown', rembourse, true)
+  }, [])
 
   // Synchronise le nb d'entrées d'historique avec le nb de couches ouvertes.
   useEffect(() => {
@@ -505,12 +531,20 @@ export default function App() {
       for (let i = 0; i < diff; i++) window.history.pushState({ kalyx: 'layer' }, '')
     } else if (diff < 0 && !backClosingRef.current) {
       // Couche fermée par un BOUTON (pas par « retour ») → consomme l'entrée orpheline pour rester équilibré.
-      // ⚠️⚠️ +1 ET NON +(-diff) : `history.go(-N)` recule bien de N entrées mais n'émet qu'UN SEUL
-      // popstate (mesuré : go(-2) → 1 popstate, état passé de {t:3} à {t:1}). Compter N ignorés
-      // laissait un popstate fantôme À VIE : le retour suivant était avalé, puis celui d'après
-      // quittait l'app avec un écran ouvert.
-      ignoreBackRef.current += 1
-      window.history.go(diff)
+      // On PAYE D'ABORD AVEC LA DETTE : ces entrées-là ont déjà été consommées par un « retour »
+      // stérile, il ne faut pas les consommer une seconde fois.
+      let du = -diff
+      const parDette = Math.min(detteRef.current, du)
+      detteRef.current -= parDette
+      du -= parDette
+      if (du > 0) {
+        // ⚠️⚠️ +1 ET NON +du : `history.go(-N)` recule bien de N entrées mais n'émet qu'UN SEUL
+        // popstate (mesuré : go(-2) → 1 popstate, état passé de {t:3} à {t:1}). Compter N ignorés
+        // laissait un popstate fantôme À VIE : le retour suivant était avalé, puis celui d'après
+        // quittait l'app avec un écran ouvert.
+        ignoreBackRef.current += 1
+        window.history.go(-du)
+      }
     }
     backClosingRef.current = false
   }, [layerCount])
@@ -560,11 +594,11 @@ export default function App() {
     else if (s.editingSheet) setEditingSheet(null)
     // Retour pendant le garde → on referme le garde (on reste dans la saisie). Renvoie 'garde' :
     // cette branche ne fait pas varier layerCount (cf. le handler popstate).
-    else if (s.scoreExitConfirm) { setScoreExitConfirm(false); return 'garde' }
+    else if (s.scoreExitConfirm) { setScoreExitConfirm(false); detteRef.current += 1; armeRemboursement(); return 'garde' }
     else if (s.scoringGame) {
       // Saisie EN COURS → on affiche le garde au lieu de fermer. Ce retour a consommé l'entrée de la
       // saisie ; on le note pour rééquilibrer à la résolution (Annuler = restaure ; Quitter = déjà consommée).
-      if (scoringDirtyRef.current) { setScoreExitConfirm(true); scoringEntryConsumedRef.current = true; return 'garde' }
+      if (scoringDirtyRef.current) { setScoreExitConfirm(true); detteRef.current += 1; armeRemboursement(); return 'garde' }
       setScoringGame(null)
     }
 
@@ -583,7 +617,7 @@ export default function App() {
     else if (s.statsOpen) setStatsOpen(false)
     else return false
     return true
-  }, [])
+  }, [armeRemboursement])
 
   // Chaque « retour » ferme UNE couche (ordre de priorité) ou rejoue la vue précédente. On NE re-pousse
   // JAMAIS d'entrée ici (voir le bloc plus haut : ce serait sauté par Chrome → sortie de l'app). Quand
@@ -2311,19 +2345,14 @@ export default function App() {
           title="Quitter sans enregistrer ?"
           message="La partie en cours de saisie sera perdue."
           confirmLabel="Quitter"
+          // Les deux boutons n'ont plus de comptabilité à faire : le `pointerdown` de ce tap a déjà
+          // remboursé la dette (écouteur en CAPTURE, donc avant le clic). « Quitter » ferme la saisie et
+          // la synchro consomme son entrée normalement ; « Annuler » ne change aucune couche.
           onConfirm={() => {
             setScoreExitConfirm(false)
             setScoringGame(null)
-            // Si le garde a été ouvert par le RETOUR Android, l'entrée de la saisie a déjà été consommée
-            // → on marque « fermé par retour » pour que la synchro ne re-consomme pas l'entrée de la fiche dessous.
-            if (scoringEntryConsumedRef.current) { backClosingRef.current = true; scoringEntryConsumedRef.current = false }
           }}
-          onCancel={() => {
-            setScoreExitConfirm(false)
-            // On RESTE dans la saisie : si le retour avait consommé l'entrée, on la restaure (sur ce TAP →
-            // activation présente → entrée respectée par Chrome), pour que le prochain retour reprotège la saisie.
-            if (scoringEntryConsumedRef.current) { window.history.pushState({ kalyx: 'scoring' }, ''); scoringEntryConsumedRef.current = false }
-          }}
+          onCancel={() => setScoreExitConfirm(false)}
         />
       )}
 
