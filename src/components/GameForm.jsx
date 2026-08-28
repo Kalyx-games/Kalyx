@@ -496,7 +496,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
           </div>
 
           <div className="field">
-            <span className="field-label">Propriétaire(s)</span>
+            <span className="field-label">Compte(s)</span>
             {ownerChoices.length > 0 ? (
               <div className="chips">
                 {ownerChoices.map((o) => (
@@ -506,7 +506,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                 ))}
               </div>
             ) : (
-              <p className="field-hint">Ajoutez des propriétaires depuis l'écran Réglages ⚙️</p>
+              <p className="field-hint">Ajoutez des comptes depuis l'écran Réglages ⚙️</p>
             )}
           </div>
 

@@ -2341,20 +2341,6 @@ body {
   align-items: center;
   text-align: center;
 }
-.ec-titre {
-  margin: 0 0 var(--sp-2);
-  font-size: var(--fs-title);
-  font-weight: 700;
-  letter-spacing: -0.022em;
-  line-height: 1.15;
-}
-.ec-sous {
-  margin: 0 0 var(--sp-5);
-  font-size: var(--fs-body-s);
-  color: var(--muted);
-  max-width: 34ch;
-  line-height: 1.45;
-}
 /* Une grille souple : deux comptes tiennent côte à côte, trois se répartissent d'eux-mêmes. */
 .ec-grille {
   display: flex;
@@ -2389,15 +2375,6 @@ body {
   color: var(--ink);
   line-height: 1.25;
   overflow-wrap: anywhere; /* « Clémence & Mathieu » ne doit jamais déborder */
-}
-.ec-tout {
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: var(--fs-body-s);
-  padding: var(--sp-2) var(--sp-3);
-  min-height: 44px;
-  cursor: pointer;
 }
 .ec-annuler {
   border: 0;

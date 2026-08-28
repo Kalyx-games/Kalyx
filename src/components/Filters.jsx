@@ -39,7 +39,7 @@ export default function Filters({ owners, tags, filters, setFilters, showPrice, 
     <div className="filters">
       {owners.length > 0 && (
         <div className="filter-group">
-          <span className="filter-label">Propriétaire</span>
+          <span className="filter-label">Compte</span>
           <div className="chips">
             {owners.map((o) => (
               <button type="button" key={o} className={`fchip ${filters.owners.includes(o) ? 'on' : ''}`} onClick={() => toggleOwner(o)}>

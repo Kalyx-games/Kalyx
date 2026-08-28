@@ -291,6 +291,21 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅ LES COMPTES — PALIER 4/4 : LE VOCABULAIRE + 3 RETOURS SUR L'ÉCRAN (2026-08-28) → CHANTIER TERMINÉ
+
+**Trois retours user sur le palier 3, tous appliqués** :
+  1. ⛔ **Plus de bouton « Voir toute la collection »** : « on part du principe que quelqu'un qui va sur l'app a un compte, et au pire même sans code il peut utiliser les filtres depuis un compte pour voir les autres jeux ». L'écran n'a donc plus d'échappatoire — on entre par un compte. (`choisirCompte(null)` reste tolérant côté code, mais plus rien ne l'appelle.)
+  2. **Le dialogue du code d'accès** : « Plus tard » devient **« Lecture seule »** — le bouton dit ce qu'il FAIT au lieu de ressembler à une annulation. ⚠️ Non testable en dev (le garde du code ne s'arme pas sur localhost) : vérifié sur le contenu servi en prod.
+  3. ⛔ **Plus de titre « Qui regarde ? » ni de phrase d'explication** : « ne mets juste rien ». L'écran ne montre QUE les avatars et les noms — ils se comprennent seuls. `.ec-titre`, `.ec-sous` et `.ec-tout` sont supprimés du CSS avec leur JSX (pas de règle morte laissée derrière).
+
+**LE PALIER 4 — le vocabulaire.** « Propriétaire » devient « compte » PARTOUT OÙ ÇA SE LIT : le libellé du filtre, le champ du formulaire de jeu et son indice, la carte des Réglages (« Comptes »), son placeholder et son bouton d'ajout, le dialogue de suppression (titre + message), le récapitulatif d'import et celui de restauration. **Vérifié : plus aucun texte visible ne contient « propriétaire ».**
+  - ⚠️ **Les COMMENTAIRES de code gardent le mot d'origine** quand ils décrivent la colonne `games.owner` : c'est son nom technique, et la base n'a pas changé. Ce sont les ÉCRANS qui changent de langue, pas le modèle — c'est exactement ce que le cadrage promettait.
+  - ⚠️ **Défaut attrapé au test** : les Réglages affichaient deux cartes voisines nommées « Compte » et « Comptes » — deux titres quasi identiques pour deux choses différentes (celui qu'on EST / ceux qui EXISTENT). La première est devenue **« Compte actif »**.
+
+**Vérifié en dev** : l'écran de démarrage ne contient plus que « NL Claire & Nazim · MD Clémence & Mathieu · MA Mathilde & Mathieu », corps centré (231 + 350 + 231 = 812), aucun titre, aucune phrase, aucun bouton « tout voir » ; le filtre dit « Compte » ; les Réglages enchaînent « Compte actif » (avatar + nom + Changer) puis « Comptes » (la gestion) ; les boutons d'ajout disent « Ajouter un compte » / « Ajouter un tag ».
+
+**LE CHANTIER « COMPTES » EST TERMINÉ** (socle · avatar · écran de démarrage · vocabulaire). Ce qui NE change pas, comme promis au cadrage : les 146 jeux, les parties, les fiches, les tierlists, le code d'accès unique, les bulles des cartes et les filtres. La table reste `owners`, la colonne reste `games.owner` en CSV de noms : **le modèle n'a pas bougé d'un octet**, seule l'interface a changé.
+
 ## 🔨 LES COMPTES — PALIER 3/4 : L'ÉCRAN DE DÉMARRAGE (2026-08-28)
 
 **Migration du palier 2 LANCÉE par l'user** (colonne `owners.avatar` présente). **Persistance vérifiée bout en bout en prod** par un aller-retour : `emoji:🐙` posé sur un compte via le proxy → relu correctement → **remis à null** (rien laissé). ⚠️ L'user a aussi créé un TROISIÈME compte entre-temps (« Mathilde & Mathieu ») : la base en compte 3, pas 2.

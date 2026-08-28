@@ -11,10 +11,9 @@ import Avatar from './Avatar'
 export default function EcranComptes({ comptes = [], jeux = [], compteActif = null, onChoisir, onFermer }) {
   return (
     <div className="ecran-comptes">
+      {/* Aucun titre, aucune phrase : trois visages et leurs noms se comprennent seuls
+          (demande user). L'écran ne dit rien parce qu'il n'y a rien à expliquer. */}
       <div className="ec-corps">
-        <h1 className="ec-titre">Qui regarde&nbsp;?</h1>
-        <p className="ec-sous">Votre choix ouvre la collection sur vos jeux. Vous verrez toujours ceux des autres.</p>
-
         <div className="ec-grille">
           {comptes.map((c) => (
             <button
@@ -29,12 +28,8 @@ export default function EcranComptes({ comptes = [], jeux = [], compteActif = nu
           ))}
         </div>
 
-        {/* Ne rien choisir est un choix légitime — et il se mémorise, sinon l'écran
-            reviendrait à chaque lancement chez qui ne veut pas de filtre. */}
-        <button type="button" className="ec-tout" onClick={() => onChoisir(null)}>
-          Voir toute la collection
-        </button>
-
+        {/* Pas d'échappatoire « tout voir » (demande user) : qui ouvre l'app a un compte,
+            et depuis n'importe lequel les filtres donnent accès aux jeux des autres. */}
         {/* Présent seulement quand l'écran a été rouvert volontairement (depuis les
             Réglages) : au tout premier lancement, il n'y a rien derrière où revenir. */}
         {onFermer && (

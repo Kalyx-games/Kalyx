@@ -50,7 +50,7 @@ export default function CodeDialog({ onDone, onClose }) {
         <div className="modal-actions">
           {onClose && (
             <button type="button" className="btn-ghost" onClick={onClose} disabled={busy}>
-              Plus tard
+              Lecture seule
             </button>
           )}
           <button type="button" className="btn-primary" onClick={submit} disabled={busy || !code.trim()}>

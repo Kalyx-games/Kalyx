@@ -1901,8 +1901,8 @@ export default function App() {
 
       {confirmingOwner && (
         <ConfirmDialog
-          title="Supprimer ce propriétaire ?"
-          message={<><strong>{confirmingOwner.name}</strong> sera retiré de la liste des propriétaires. Les jeux qui lui sont associés ne seront pas supprimés.</>}
+          title="Supprimer ce compte ?"
+          message={<><strong>{confirmingOwner.name}</strong> sera retiré de la liste des comptes. Les jeux qui lui sont associés ne seront pas supprimés.</>}
           confirmLabel="Supprimer"
           busy={deletingOwnerBusy}
           onConfirm={handleConfirmDeleteOwner}
@@ -1939,7 +1939,7 @@ export default function App() {
           message={
             <>
               <strong>{importing.games.length}</strong> jeu{importing.games.length > 1 ? 'x' : ''}
-              {importing.owners.length > 0 && <> et <strong>{importing.owners.length}</strong> propriétaire{importing.owners.length > 1 ? 's' : ''}</>} vont être importés.
+              {importing.owners.length > 0 && <> et <strong>{importing.owners.length}</strong> compte{importing.owners.length > 1 ? 's' : ''}</>} vont être importés.
               Les jeux déjà présents (même identifiant) seront mis à jour.
             </>
           }
@@ -1979,7 +1979,7 @@ export default function App() {
                   <strong>{[...(restorePlan.owners ?? []), ...(restorePlan.tags ?? [])].join(', ')}</strong>.
                 </>
               ) : (
-                <> Les propriétaires et tags absents de cette sauvegarde seront aussi retirés.</>
+                <> Les comptes et tags absents de cette sauvegarde seront aussi retirés.</>
               )}
               {' '}Une sauvegarde de l'état actuel sera créée avant, pour pouvoir revenir en arrière.
             </>

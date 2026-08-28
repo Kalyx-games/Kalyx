@@ -210,7 +210,7 @@ export default function Settings({
           choix ne se redemande pas au lancement (il est mémorisé). */}
       {comptes.length >= 2 && (
         <section className="settings-card">
-          <h3>Compte</h3>
+          <h3>Compte actif</h3>
           <div className="compte-actif">
             {compteLigne ? (
               <>
@@ -227,10 +227,10 @@ export default function Settings({
         </section>
       )}
       <BubbleListManager
-        title="Propriétaires"
+        title="Comptes"
         items={owners}
-        namePlaceholder="Nom du propriétaire (ex. Mathieu)"
-        addLabel="Ajouter un propriétaire"
+        namePlaceholder="Nom du compte (ex. Clémence & Mathieu)"
+        addLabel="Ajouter un compte"
         online={online}
         avecAvatar
         jeux={jeux}
