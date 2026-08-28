@@ -1,0 +1,176 @@
+import { useMemo, useState } from 'react'
+import { ownerColor, ownerInitials, OWNER_COLORS, muteOwnerColor, parseOwners } from '../lib/games'
+import Avatar from './Avatar'
+import { thumbSrc } from '../lib/img'
+import { parseAvatar, formatAvatar, AVATAR_INITIALES, AVATAR_EMOJI, AVATAR_JEU, EMOJIS_PROPOSES } from '../lib/avatar'
+
+// L'ÉDITEUR d'une « bulle » : un COMPTE (avec son image) ou un TAG (sans).
+// Extrait de BubbleListManager pour servir aussi l'écran Compte — la même main édite
+// un compte, qu'on arrive par la liste des tags ou par le menu du compte.
+//
+// ⚠️ L'état est interne et initialisé une seule fois : l'appelant doit poser une `key`
+// qui change avec la bulle éditée, sinon le formulaire garderait les valeurs de la
+// précédente. C'est le motif React habituel, plus sûr qu'un effet de resynchronisation.
+
+const PALETTE = OWNER_COLORS // une seule palette pour toute l'app (tons sourds de la charte)
+
+export default function EditeurBulle({
+  bulle, // la ligne à modifier, ou 'new'
+  titre,
+  namePlaceholder,
+  avecAvatar = false,
+  jeux = [],
+  onValider, // (nom, initiales, couleur, avatar|undefined, bulleDOrigine)
+  onAnnuler,
+}) {
+  const neuf = bulle === 'new'
+  const depart = neuf ? null : bulle
+  const avatarDepart = parseAvatar(depart?.avatar)
+
+  const [name, setName] = useState(depart?.name || '')
+  const [initials, setInitials] = useState(depart ? depart.initials || ownerInitials(depart.name) : '')
+  const [color, setColor] = useState(depart ? muteOwnerColor(depart.color) || ownerColor(depart.name) : PALETTE[0])
+  const [initialsTouched, setInitialsTouched] = useState(!neuf)
+  const [forme, setForme] = useState(avatarDepart.type)
+  const [emoji, setEmoji] = useState(avatarDepart.type === AVATAR_EMOJI ? avatarDepart.valeur : '')
+  const [jeuId, setJeuId] = useState(avatarDepart.type === AVATAR_JEU ? avatarDepart.valeur : '')
+
+  const onNameChange = (v) => {
+    setName(v)
+    if (!initialsTouched) setInitials(v.trim().slice(0, 2).toUpperCase())
+  }
+
+  const previewInitials = (initials || name).trim().slice(0, 2).toUpperCase() || '?'
+  const avatarCourant = avecAvatar ? formatAvatar(forme, forme === AVATAR_EMOJI ? emoji : jeuId) : undefined
+  // L'aperçu se construit sur les valeurs EN COURS d'édition, pas sur la ligne enregistrée.
+  const apercu = { name: name || '?', initials: previewInitials, color, avatar: avatarCourant ?? null }
+
+  // Les jaquettes proposées : les jeux DU COMPTE d'abord (c'est sa collection), les autres
+  // ensuite — un compte tout neuf n'a encore aucun jeu à son nom.
+  const jeuxProposes = useMemo(() => {
+    if (!avecAvatar) return []
+    const avecImage = jeux.filter((g) => g.image_url)
+    const nm = (depart ? depart.name : name).trim()
+    if (!nm) return avecImage
+    const sien = (g) => parseOwners(g.owner).includes(nm)
+    return [...avecImage.filter(sien), ...avecImage.filter((g) => !sien(g))]
+  }, [avecAvatar, jeux, depart, name])
+
+  const valider = () => {
+    const nm = name.trim()
+    if (!nm) return
+    onValider(nm, (initials || name).trim().slice(0, 2).toUpperCase(), color, avatarCourant, depart)
+  }
+
+  return (
+    <div
+      className="owner-editor"
+      onKeyDown={(e) => {
+        // Entrée sur un champ → on masque le clavier (blur) sur mobile.
+        if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+          e.preventDefault()
+          e.target.blur()
+        }
+      }}
+    >
+      {titre && <div className="owner-editor-title">{titre}</div>}
+
+      <input className="oe-name" value={name} onChange={(e) => onNameChange(e.target.value)} placeholder={namePlaceholder} />
+      {depart && name.trim() !== depart.name && (
+        <p className="oe-rename-hint">Le nom sera aussi mis à jour sur tous les jeux concernés.</p>
+      )}
+
+      <div className="oe-row">
+        <div className="oe-field">
+          <span className="oe-label">Initiales</span>
+          <input
+            className="oe-initials"
+            maxLength={2}
+            value={initials}
+            onChange={(e) => {
+              setInitials(e.target.value.toUpperCase())
+              setInitialsTouched(true)
+            }}
+            placeholder="MA"
+          />
+        </div>
+        {avecAvatar ? (
+          <Avatar compte={apercu} jeux={jeux} taille={44} className="oe-preview" />
+        ) : (
+          <span className="owner-bubble oe-preview" style={{ background: color }}>{previewInitials}</span>
+        )}
+      </div>
+
+      {avecAvatar && (
+        <div className="oe-field">
+          <span className="oe-label">Image</span>
+          <div className="chips av-formes">
+            <button type="button" className={`fchip ${forme === AVATAR_INITIALES ? 'on' : ''}`} onClick={() => setForme(AVATAR_INITIALES)}>Initiales</button>
+            <button type="button" className={`fchip ${forme === AVATAR_EMOJI ? 'on' : ''}`} onClick={() => setForme(AVATAR_EMOJI)}>Emoji</button>
+            <button type="button" className={`fchip ${forme === AVATAR_JEU ? 'on' : ''}`} onClick={() => setForme(AVATAR_JEU)}>Jaquette</button>
+          </div>
+
+          {forme === AVATAR_EMOJI && (
+            <>
+              <div className="av-emojis">
+                {EMOJIS_PROPOSES.map((e) => (
+                  <button key={e} type="button" className={`av-emoji ${emoji === e ? 'sel' : ''}`} onClick={() => setEmoji(e)}>{e}</button>
+                ))}
+              </div>
+              <input
+                className="input av-emoji-libre"
+                value={emoji}
+                onChange={(e) => setEmoji([...e.target.value.trim()].slice(0, 2).join(''))}
+                placeholder="ou le vôtre"
+                aria-label="Emoji du compte"
+              />
+            </>
+          )}
+
+          {forme === AVATAR_JEU &&
+            (jeuxProposes.length === 0 ? (
+              <p className="field-hint">Aucun jeu avec une image pour l'instant.</p>
+            ) : (
+              <div className="av-jeux">
+                {jeuxProposes.slice(0, 40).map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    className={`av-jeu ${jeuId === g.id ? 'sel' : ''}`}
+                    onClick={() => setJeuId(g.id)}
+                    title={g.name}
+                    aria-label={g.name}
+                  >
+                    <img src={thumbSrc(g.image_url, 256)} alt="" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            ))}
+        </div>
+      )}
+
+      <div className="oe-field">
+        <span className="oe-label">Couleur</span>
+        <div className="palette">
+          {PALETTE.map((c) => (
+            <button
+              key={c}
+              type="button"
+              className={`swatch ${color === c ? 'sel' : ''}`}
+              style={{ background: c }}
+              onClick={() => setColor(c)}
+              aria-label={`Couleur ${c}`}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="oe-actions">
+        <button type="button" className="btn-ghost" onClick={onAnnuler}>Annuler</button>
+        <button type="button" className="owner-add-btn" onClick={valider} disabled={!name.trim()}>
+          {neuf ? 'Ajouter' : 'Enregistrer'}
+        </button>
+      </div>
+    </div>
+  )
+}

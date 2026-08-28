@@ -6,11 +6,11 @@ import { getTheme, applyTheme } from '../lib/theme'
 import { haptiqueDisponible, haptiqueActive, setHaptique } from '../lib/haptique'
 import { checkForUpdate, forceUpdate } from '../lib/update'
 import BubbleListManager from './BubbleListManager'
-import Avatar from './Avatar'
 import SortMenu from './SortMenu'
 import { SITE_LOGOS } from '../lib/logos'
 
-// Écran Réglages : propriétaires + tags (même format bulle), sauvegarde, apparence, liens.
+// Écran Réglages : tags, sauvegarde, apparence, liens. Les COMPTES ont leur propre écran
+// (le menu Compte de la barre du haut) : les Réglages n'en parlent plus du tout.
 
 const LINKS = [
   { label: "Melodice (musiques d'ambiance de jeux)", url: 'https://melodice.org/', domain: 'melodice.org' },
@@ -62,7 +62,6 @@ function relativeTime(iso) {
 
 export default function Settings({
   owners, onAddOwner, onUpdateOwner, onRenameOwner, onDeleteOwner, jeux = [],
-  compte = null, comptes = [], onChangerCompte,
   tags, onAddTag, onUpdateTag, onRenameTag, onDeleteTag,
   onExport, onExportCsv, onImportFile,
   backupFreq, onSetBackupFreq, backups, backupBusy, onBackupNow, onRestore,
@@ -70,8 +69,6 @@ export default function Settings({
   onEnterCode, onChangeCode, deviceAuthorized,
   online, onClose,
 }) {
-  // La ligne du compte : on retrouve sa couleur et son avatar dans la liste chargée.
-  const compteLigne = compte ? comptes.find((c) => c.name === compte) || { name: compte } : null
   const fileRef = useRef(null)
   const [theme, setThemeState] = useState(getTheme())
   const [vibrations, setVibrations] = useState(haptiqueActive)
@@ -205,40 +202,6 @@ export default function Settings({
         )}
       </section>
 
-
-      {/* LE COMPTE ACTIF. Il ouvre la collection sur ses jeux ; on en change ici — le
-          choix ne se redemande pas au lancement (il est mémorisé). */}
-      {comptes.length >= 2 && (
-        <section className="settings-card">
-          <h3>Compte actif</h3>
-          <div className="compte-actif">
-            {compteLigne ? (
-              <>
-                <Avatar compte={compteLigne} jeux={jeux} taille={44} />
-                <span className="compte-nom">{compteLigne.name}</span>
-              </>
-            ) : (
-              <span className="compte-nom compte-aucun">Toute la collection</span>
-            )}
-            <button type="button" className="btn-ghost compte-changer" onClick={onChangerCompte}>
-              Changer
-            </button>
-          </div>
-        </section>
-      )}
-      <BubbleListManager
-        title="Comptes"
-        items={owners}
-        namePlaceholder="Nom du compte (ex. Clémence & Mathieu)"
-        addLabel="Ajouter un compte"
-        online={online}
-        avecAvatar
-        jeux={jeux}
-        onAdd={onAddOwner}
-        onUpdate={onUpdateOwner}
-        onRename={onRenameOwner}
-        onDelete={onDeleteOwner}
-      />
 
       <BubbleListManager
         title="Tags"

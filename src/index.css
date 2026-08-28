@@ -2391,15 +2391,48 @@ body {
   .ec-compte:active .ec-avatar { transform: none; }
 }
 
-/* Le compte actif, rappelé en tête des Réglages (avec de quoi en changer). */
-.compte-actif {
+/* LE MENU DU COMPTE (barre du haut). Le compte s'y présente comme un objet : son image
+   en grand, son nom, puis ce qu'on peut en faire. */
+.compte-tete {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
 }
-.compte-nom { font-weight: 600; flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.compte-aucun { color: var(--muted); font-weight: 500; }
-.compte-changer { flex-shrink: 0; }
+.compte-titre {
+  font-size: var(--fs-body-l);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  min-width: 0;
+  overflow-wrap: anywhere; /* « Clémence & Mathieu » ne doit jamais déborder */
+}
+.compte-avatar { box-shadow: var(--elev-1); }
+.compte-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.compte-actions .btn-ghost { flex: 1 1 140px; }
+/* Supprimer n'est pas du même rang que le reste : à l'écart, en bas, et en rouge. */
+.compte-supprimer {
+  width: 100%;
+  color: var(--danger-ink);
+  margin-top: var(--sp-2);
+}
+
+/* « Ajouter un compte » vit sur l'écran des avatars, là où on les voit tous. */
+.ec-ajouter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-body-s);
+  padding: var(--sp-2) var(--sp-3);
+  min-height: 44px;
+  cursor: pointer;
+}
 
 /* L'AVATAR D'UN COMPTE — palier 2 du chantier « comptes ». Trois formes au choix :
    les initiales (le défaut, rien ne change), un emoji, ou la jaquette d'un jeu.

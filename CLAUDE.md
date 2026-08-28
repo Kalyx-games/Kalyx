@@ -291,6 +291,27 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅ LE MENU DU COMPTE SORT DES RÉGLAGES (2026-08-28, retour user)
+
+**Retour user** : « Il faudrait un bouton compte à côté du bouton paramètre. Dans ce nouveau menu on peut changer de compte actif et changer nom du compte + photo/initiale. Ça permet de clean un peu les paramètres. Le bouton "ajouter un compte" se retrouve sur la page d'accueil des comptes ou lorsqu'on change de compte. »
+
+**LE DÉPLACEMENT** :
+  · **Un bouton Compte dans la barre du haut**, à gauche de l'engrenage. Il porte **l'avatar du compte actif** (repli `PlayersIcon` quand aucun compte n'est choisi) — l'identité se montre, elle ne se cache pas derrière un glyphe.
+  · **`EcranCompte.jsx`** (NOUVEAU) : le compte en grand (avatar 72 px + nom), puis « Modifier » et « Changer de compte », et « Supprimer ce compte » à l'écart tout en bas — ce n'est pas une action du même rang.
+  · **Les Réglages perdent les DEUX cartes de comptes.** Ils ne parlent plus de comptes du tout : il reste Partager · Apparence · Tags · Joueurs · Sauvegardes · Liens.
+  · **« Ajouter un compte » vit sur l'écran des avatars**, là où on les voit tous — et ouvre le menu Compte en mode création (titre « Nouveau compte »).
+
+**LE REFACTOR QUI REND ÇA POSSIBLE — `EditeurBulle.jsx` (NOUVEAU)** : le formulaire (nom, initiales, image, couleur) est EXTRAIT de `BubbleListManager` pour servir aux deux endroits — la carte des tags et le menu Compte. La même main édite un compte, qu'on arrive par l'une ou par l'autre.
+  - ⚠️ **L'état de l'éditeur est interne et initialisé UNE SEULE FOIS** : l'appelant doit poser une `key` qui change avec la bulle éditée (`key={editing.id}`), sinon le formulaire garderait les valeurs de la précédente. C'est le motif React habituel, plus sûr qu'un effet de resynchronisation.
+  - `BubbleListManager` passe de 249 à 84 lignes et **ne sert plus qu'aux TAGS** — mais il reste générique (il porte encore `avecAvatar`), rien n'est figé.
+  - **Vérifié que le refactor n'a rien cassé côté tags** : l'éditeur d'un tag s'ouvre pré-rempli (« À Vendre »), sans aucune forme d'avatar (0 — un tag est une étiquette, pas une identité) et avec l'aperçu en bulle classique.
+
+**`compteOuvert` est une COUCHE** (dans `uiRef` et `closeTopLayer`), contrairement à l'écran des avatars qui, lui, remplace l'app : le menu Compte est un écran plein comme les Réglages, le bouton retour doit le fermer. **Vérifié** : retour → la collection ; second retour → on reste dans l'app.
+
+**Vérifié en dev, tout le parcours** : barre du haut = « Ajouter un jeu · Compte · Réglages » avec l'avatar du compte dans le bouton ; le menu montre NL / Claire & Nazim / Modifier / Changer de compte / Supprimer ; « Modifier » ouvre l'éditeur pré-rempli avec les trois formes ; « Changer de compte » ouvre les 3 avatars + « Ajouter un compte » + Annuler ; l'ajout ouvre un éditeur vide intitulé « Nouveau compte » ; les Réglages n'ont plus aucune carte de compte ; les tags sont intacts.
+
+⚠️ **PIÈGE REVÉCU (2e fois dans ce chantier)** : `vite build` PASSE avec un symbole non importé (`PlayersIcon`) — JS non typé, `ReferenceError` seulement à l'exécution. **Après avoir ajouté un composant ou une icône dans le JSX, vérifier l'import : le build ne le fera pas.**
+
 ## ✅ LES COMPTES — PALIER 4/4 : LE VOCABULAIRE + 3 RETOURS SUR L'ÉCRAN (2026-08-28) → CHANTIER TERMINÉ
 
 **Trois retours user sur le palier 3, tous appliqués** :

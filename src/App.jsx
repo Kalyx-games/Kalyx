@@ -44,7 +44,9 @@ import GameTile from './components/GameTile'
 import { enterFullscreen } from './lib/fullscreen'
 import NavBar from './components/NavBar'
 import EcranComptes from './components/EcranComptes'
-import { SettingsIcon, ChwaziIcon, FilterIcon, PlusIcon, ClockIcon, DieIcon, CheckIcon, CrownIcon, GridIcon, ListIcon } from './components/icons'
+import EcranCompte from './components/EcranCompte'
+import Avatar from './components/Avatar'
+import { SettingsIcon, ChwaziIcon, FilterIcon, PlusIcon, ClockIcon, DieIcon, CheckIcon, CrownIcon, GridIcon, ListIcon, PlayersIcon } from './components/icons'
 
 
 // Le filtre propriétaire est PERSISTANT (un seul propriétaire regarde en général ses
@@ -348,7 +350,9 @@ export default function App() {
   // sauvegarde auto ne se déclencherait JAMAIS (null = « en cours » ET « absente » sans ça).
   const [ownersLoaded, setOwnersLoaded] = useState(false)
   const [compte, setCompte] = useState(loadCompte) // nom du compte actif | null (aucun) | undefined (jamais choisi)
-  const [choixCompte, setChoixCompte] = useState(false) // écran rouvert depuis les Réglages
+  const [choixCompte, setChoixCompte] = useState(false) // écran des avatars rouvert volontairement
+  const [compteOuvert, setCompteOuvert] = useState(false) // menu Compte (barre du haut)
+  const [ajoutCompte, setAjoutCompte] = useState(false) // formulaire de création d'un compte
   const [tagsLoaded, setTagsLoaded] = useState(false)
   const [scoresheets, setScoresheets] = useState(null) // { game_id: template }, ou null si table absente
   const [scoringGame, setScoringGame] = useState(null) // jeu en cours de notation (nouvelle partie OU édition) | null
@@ -465,7 +469,7 @@ export default function App() {
   const formCloseRef = useRef(null)
   const filterCloseRef = useRef(null)
   const uiRef = useRef({})
-  uiRef.current = { editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scoreExitConfirm, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
+  uiRef.current = { compteOuvert, editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scoreExitConfirm, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
   viewRef.current = view
 
@@ -550,6 +554,8 @@ export default function App() {
     else if (s.tierlistHub) setTierlistHub(false)
     else if (s.statsOpen) setStatsOpen(false)
     else if (s.playersOpen) setPlayersOpen(false) // s'ouvre PAR-DESSUS les Réglages
+    // Le menu Compte est un écran plein comme les Réglages : le retour le ferme.
+    else if (s.compteOuvert) { setCompteOuvert(false); setAjoutCompte(false) }
     else if (s.settingsOpen) setSettingsOpen(false)
     else return false
     return true
@@ -1455,6 +1461,8 @@ export default function App() {
   // sinon il s'afficherait vide une fraction de seconde. Sous deux comptes il n'a rien à
   // demander : on ne fait pas choisir entre une seule porte.
   const comptesChoisissables = ownersList ?? []
+  // La ligne complète du compte actif (avatar, couleur) : le nom seul ne suffit pas.
+  const compteLigne = compte ? comptesChoisissables.find((c) => c.name === compte) || { name: compte } : null
   const montreEcranComptes =
     (choixCompte || compte === undefined) && ownersLoaded && comptesChoisissables.length >= 2
 
@@ -1464,7 +1472,9 @@ export default function App() {
         comptes={comptesChoisissables}
         jeux={games ?? []}
         compteActif={compte ?? null}
+        online={online}
         onChoisir={choisirCompte}
+        onAjouter={() => { setChoixCompte(false); setAjoutCompte(true); setCompteOuvert(true) }}
         onFermer={choixCompte ? () => setChoixCompte(false) : undefined}
       />
     )
@@ -1510,6 +1520,20 @@ export default function App() {
               <PlusIcon size={20} />
             </button>
           )}
+          {/* Le compte a sa propre porte, à côté des réglages : c'est une identité, pas
+              un paramètre. Les Réglages ne parlent plus de comptes du tout. */}
+          <button
+            type="button"
+            className={`icon-btn ${compteOuvert ? 'active' : ''}`}
+            onClick={() => {
+              setCompteOuvert((v) => !v)
+              setSettingsOpen(false)
+              setStatsOpen(false)
+            }}
+            aria-label="Compte"
+          >
+            {compteLigne ? <Avatar compte={compteLigne} jeux={games ?? []} taille={22} /> : <PlayersIcon size={20} />}
+          </button>
           <button
             type="button"
             className={`icon-btn ${settingsOpen ? 'active' : ''}`}
@@ -1546,7 +1570,24 @@ export default function App() {
         </div>
       )}
 
-      {settingsOpen && playersOpen ? (
+      {compteOuvert ? (
+        <EcranCompte
+          compte={compteLigne}
+          jeux={games ?? []}
+          online={online}
+          creation={ajoutCompte}
+          onChangerCompte={() => { setCompteOuvert(false); setChoixCompte(true) }}
+          onEnregistrer={(nom, ini, couleur, avatar, origine) => {
+            if (!origine) handleAddOwner(nom, ini, couleur, avatar)
+            else if (nom !== origine.name) handleRenameOwner(origine.id, origine.name, nom, { initials: ini, color: couleur, avatar })
+            else handleUpdateOwner(origine.id, { initials: ini, color: couleur, avatar })
+            setAjoutCompte(false)
+          }}
+          onAnnulerCreation={() => setAjoutCompte(false)}
+          onSupprimer={(c) => setConfirmingOwner(c)}
+          onClose={() => { setCompteOuvert(false); setAjoutCompte(false) }}
+        />
+      ) : settingsOpen && playersOpen ? (
         <Suspense fallback={null}>
           <PlayersManager
             roster={playerRoster}
