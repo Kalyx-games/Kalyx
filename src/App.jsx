@@ -475,7 +475,7 @@ export default function App() {
   const formCloseRef = useRef(null)
   const filterCloseRef = useRef(null)
   const uiRef = useRef({})
-  uiRef.current = { compteOuvert, editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scoreExitConfirm, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
+  uiRef.current = { codeAsk, codeChange, compteOuvert, editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scoreExitConfirm, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
   viewRef.current = view
 
@@ -505,7 +505,11 @@ export default function App() {
       for (let i = 0; i < diff; i++) window.history.pushState({ kalyx: 'layer' }, '')
     } else if (diff < 0 && !backClosingRef.current) {
       // Couche fermée par un BOUTON (pas par « retour ») → consomme l'entrée orpheline pour rester équilibré.
-      ignoreBackRef.current += -diff
+      // ⚠️⚠️ +1 ET NON +(-diff) : `history.go(-N)` recule bien de N entrées mais n'émet qu'UN SEUL
+      // popstate (mesuré : go(-2) → 1 popstate, état passé de {t:3} à {t:1}). Compter N ignorés
+      // laissait un popstate fantôme À VIE : le retour suivant était avalé, puis celui d'après
+      // quittait l'app avec un écran ouvert.
+      ignoreBackRef.current += 1
       window.history.go(diff)
     }
     backClosingRef.current = false
@@ -533,6 +537,14 @@ export default function App() {
     const s = uiRef.current
     // L'image en grand est au-dessus de tout → on la ferme en premier.
     if (s.zoomImage) setZoomImage(null)
+    // Les fenêtres de code sont rendues APRÈS les confirmations, à z-index égal → elles sont
+    // au-dessus. Sans branche ici, le retour fermait l'écran DERRIÈRE le voile (les Réglages),
+    // laissant la fenêtre seule à l'écran, puis quittait l'app.
+    // ⚠️ `codeAsk` peut aussi s'ouvrir TOUT SEUL au 1er lancement (effet, sans tap) : Chrome saute
+    // alors l'entrée poussée. Ce n'est pas une régression — sans couche, ce retour quittait déjà
+    // l'app. Ouverte par un tap (Réglages → Autoriser), elle se ferme correctement.
+    else if (s.codeAsk) { codeDismissedRef.current = true; setCodeAsk(false) }
+    else if (s.codeChange) setCodeChange(false)
     // Les confirmations s'ouvrent PAR-DESSUS (form, réglages…) → on les ferme d'abord.
     else if (s.confirming) setConfirming(null)
     else if (s.moving) setMoving(null)
@@ -546,12 +558,14 @@ export default function App() {
     else if (s.showFilters) { if (filterCloseRef.current) filterCloseRef.current(); else setShowFilters(false) }
     else if (s.chwaziOpen) setChwaziOpen(false)
     else if (s.editingSheet) setEditingSheet(null)
-    else if (s.scoreExitConfirm) setScoreExitConfirm(false) // retour pendant le garde → on referme le garde (on reste dans la saisie)
+    // Retour pendant le garde → on referme le garde (on reste dans la saisie). Renvoie 'garde' :
+    // cette branche ne fait pas varier layerCount (cf. le handler popstate).
+    else if (s.scoreExitConfirm) { setScoreExitConfirm(false); return 'garde' }
     else if (s.scoringGame) {
       // Saisie EN COURS → on affiche le garde au lieu de fermer. Ce retour a consommé l'entrée de la
       // saisie ; on le note pour rééquilibrer à la résolution (Annuler = restaure ; Quitter = déjà consommée).
-      if (scoringDirtyRef.current) { setScoreExitConfirm(true); scoringEntryConsumedRef.current = true }
-      else setScoringGame(null)
+      if (scoringDirtyRef.current) { setScoreExitConfirm(true); scoringEntryConsumedRef.current = true; return 'garde' }
+      setScoringGame(null)
     }
 
     else if (s.historyGame) setHistoryGame(null) // gamePlays idem (rechargé à l'ouverture)
@@ -578,7 +592,11 @@ export default function App() {
   useEffect(() => {
     const onPop = () => {
       if (ignoreBackRef.current > 0) { ignoreBackRef.current--; return } // « retour » synthétique (resynchro) → ignorer
-      if (closeTopLayer()) { backClosingRef.current = true; return }
+      const ferme = closeTopLayer()
+      // ⚠️ Les deux branches du GARDE anti-perte ne changent pas `layerCount` (scoreExitConfirm en
+      // est exclu) → l'effet de synchro ne se rejoue pas et ne désarmerait jamais le drapeau, qui
+      // ferait sauter le `go(-1)` de la prochaine vraie fermeture par bouton.
+      if (ferme) { backClosingRef.current = ferme !== 'garde'; return }
       if (viewHistoryRef.current.length > 0) setView(viewHistoryRef.current.pop())
       // sinon : racine → on ne fait rien, le « retour » quitte l'app (comportement Android normal)
     }
@@ -776,7 +794,7 @@ export default function App() {
   // suit des NŒUDS, et les tuiles sont les enfants de la liste au même titre que les cartes.
   // Le sens décroissant marche sans rien faire : les groupes restent contigus.
   const lettreRef = useRef(null)
-  const ascActif = !statsOpen && !settingsOpen && visible.length >= 30
+  const ascActif = !statsOpen && !settingsOpen && !compteOuvert && visible.length >= 30
   const ancresAsc = useMemo(() => {
     if (!ascActif) return null
     const etiquette = etiquetteDeTri(sort, playMeta)
@@ -806,7 +824,7 @@ export default function App() {
     list.style.setProperty('--meta-left', max ? `${Math.ceil(max)}px` : 'minmax(0, 1fr)')
     // statsOpen/settingsOpen : le <main> est démonté puis remonté en fermant ces écrans →
     // il faut recalculer, sinon la 1re colonne retombe sur son repli (colonne étirée).
-  }, [games, listStatus, statsOpen, settingsOpen, grille])
+  }, [games, listStatus, statsOpen, settingsOpen, compteOuvert, grille])
 
   // Scénarios déjà utilisés pour ce jeu (auto-complétion du champ scénario).
   const scenarioNames = useMemo(
@@ -1517,7 +1535,12 @@ export default function App() {
   const countLabel = `${visible.length} jeu${visible.length > 1 ? 'x' : ''}`
 
   // Nom de l'écran courant : sert au grand titre ET au titre condensé de la barre du haut.
-  const screenTitle = settingsOpen
+  // Même ordre de priorité que le rendu : le menu Compte passe devant tout.
+  const screenTitle = compteOuvert
+    ? ajoutCompte
+      ? 'Nouveau compte'
+      : 'Compte'
+    : settingsOpen
     ? playersOpen
       ? 'Joueurs'
       : 'Réglages'
@@ -1556,8 +1579,11 @@ export default function App() {
   const comptesChoisissables = ownersList ?? []
   // La ligne complète du compte actif (avatar, couleur) : le nom seul ne suffit pas.
   const compteLigne = compte ? comptesChoisissables.find((c) => c.name === compte) || { name: compte } : null
+  // ⚠️ `!ajoutCompte` : au TOUT PREMIER lancement, `compte === undefined` reste vrai après le tap sur
+  // « Ajouter un compte » → l'écran des avatars continuait de s'afficher et le formulaire de création
+  // n'apparaissait JAMAIS, tout en poussant une entrée d'historique pour une couche jamais rendue.
   const montreEcranComptes =
-    (choixCompte || compte === undefined) && ownersLoaded && comptesChoisissables.length >= 2
+    !ajoutCompte && (choixCompte || compte === undefined) && ownersLoaded && comptesChoisissables.length >= 2
 
   if (montreEcranComptes) {
     return (
@@ -1677,7 +1703,9 @@ export default function App() {
           jeux={games ?? []}
           online={online}
           creation={ajoutCompte}
-          onChangerCompte={() => { setCompteOuvert(false); setChoixCompte(true) }}
+          // L'écran des avatars REMPLACE le rendu (ce n'est pas une couche) : aucune couche ne doit
+          // lui survivre, sinon le premier retour en fermerait une INVISIBLE sans rien changer.
+          onChangerCompte={() => { setCompteOuvert(false); setStatsOpen(false); setChoixCompte(true) }}
           onEnregistrer={(nom, ini, couleur, avatar, origine) => {
             if (!origine) {
               // Une création qui se contente de refermer le formulaire laisse l écran sur le
@@ -1734,7 +1762,7 @@ export default function App() {
             jeux={games ?? []}
             compte={compte ?? null}
             comptes={comptesChoisissables}
-            onChangerCompte={() => { setSettingsOpen(false); setChoixCompte(true) }}
+            onChangerCompte={() => { setSettingsOpen(false); setStatsOpen(false); setPlayersOpen(false); setChoixCompte(true) }}
             onEnterCode={() => setCodeAsk(true)}
             onChangeCode={() => setCodeChange(true)}
             deviceAuthorized={authorized}
@@ -2168,7 +2196,9 @@ export default function App() {
           // on est déjà sur l'écran (c'est le geste « retour en haut »), sec quand on en
           // change (le contenu est remplacé, une glissade n'aurait rien à suivre).
           const dejaLa =
-            v === 'stats' ? statsOpen : !statsOpen && !settingsOpen && !compteOuvert && v === view
+            v === 'stats'
+              ? statsOpen && !settingsOpen && !compteOuvert
+              : !statsOpen && !settingsOpen && !compteOuvert && v === view
           window.scrollTo({ top: 0, behavior: dejaLa ? 'smooth' : 'auto' })
           // ⚠️ Le bac ferme TOUT écran plein, pas seulement les Réglages : le menu Compte et
           // l écran Joueurs sont rendus dans la même branche du rendu. Sans ça, taper un

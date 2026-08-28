@@ -291,6 +291,59 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅⚠️⚠️ `go(-N)` N ÉMET QU UN SEUL POPSTATE — le bloquant de la comptabilité des couches (2026-08-28)
+
+Revue adversariale (4 agents) lancée après le lot « écran plein ». **Verdict : la comptabilité n était PAS
+saine.** 19 constats bruts → 10 retenus, 6 doublons fusionnés, 1 écarté (comportement voulu).
+
+### ⚠️⚠️ LE BLOQUANT (R1) — vérifié EMPIRIQUEMENT avant correction
+
+L effet de synchro faisait `ignoreBackRef.current += -diff` puis `window.history.go(diff)`.
+**MESURÉ dans un onglet vierge** : `history.go(-2)` recule bien de deux entrées (état passé de {t:3} à {t:1})
+mais **n émet qu UN SEUL popstate**, exactement comme `go(-1)`. Le compteur en attendait donc un de trop, qui
+restait armé **À VIE** : le retour suivant était avalé (« l écran ne se ferme pas »), et celui d après
+quittait l app avec un écran ouvert.
+  - **Le commentaire du fichier énonçait déjà cet invariant** (« go(-2) … n émet qu UN popstate et déséquilibre
+    ignoreBackRef ») — c est la raison pour laquelle `scoreExitConfirm` est exclu de `layerCount`. L invariant
+    était connu, la ligne qui le viole ne l avait jamais été.
+  - **Mon lot précédent l a rendu ATTEIGNABLE** : en laissant `statsOpen` coexister avec les écrans pleins,
+    quatre gestes ordinaires ferment désormais 2 couches d un coup (bac, engrenage depuis Joueurs,
+    `handleDelete`, `handleConfirmDeleteOwner` — les deux derniers ANTÉRIEURS au lot).
+  - **Fix d une ligne : `ignoreBackRef.current += 1`.** `history.go(diff)` reste inchangé (il recule bien de N).
+  - **RÈGLE** : une traversée d historique, quelle que soit sa profondeur, n émet qu UN popstate.
+
+### Les neuf autres, tous corrigés
+
+  · **R2** — `statsOpen` survivait SOUS l écran des avatars (qui REMPLACE le rendu et n est pas une couche) :
+    le premier retour éteignait une couche invisible, l écran ne bougeait pas. Les deux portes
+    (`onChangerCompte` du menu Compte et des Réglages) ferment maintenant toute couche avant d y entrer.
+  · **R3** — `backClosingRef` restait armé quand `closeTopLayer` ne changeait pas `layerCount` (les deux
+    branches du garde anti-perte) → la fermeture par bouton suivante sautait son `go(-1)`. `closeTopLayer`
+    renvoie désormais `'garde'` dans ces deux cas, et le drapeau n est armé que pour une vraie baisse.
+  · **R5** — au TOUT PREMIER lancement, « Ajouter un compte » ne montrait RIEN (l écran des avatars restait
+    affiché car `compte === undefined` reste vrai) tout en poussant une entrée pour une couche jamais rendue.
+    `montreEcranComptes` gagne `!ajoutCompte`.
+  · **R6** — les fenêtres de code (`codeAsk`, `codeChange`, z-index 1500) n étaient PAS des couches : le retour
+    fermait l écran DERRIÈRE le voile puis quittait l app, fenêtre affichée. Ajoutées à `uiRef` et à
+    `closeTopLayer`, juste après `zoomImage`. ⚠️ `codeAsk` peut s ouvrir SANS tap (effet du 1er lancement) →
+    Chrome saute alors son entrée ; ce n est pas une régression (sans couche, ce retour quittait déjà l app).
+  · **R7 / R8 / R9 / R10** — quatre gardes qui avaient oublié `compteOuvert` : la largeur des colonnes n était
+    pas recalculée au retour du menu Compte (cartes désalignées), **l ascenseur alphabétique surgissait
+    par-dessus le menu Compte et téléportait son défilement**, le titre condensé de la barre du haut annonçait
+    « Statistiques » sur l écran Compte, et un tap sur l onglet Stats depuis un écran plein était traité comme
+    « on y est déjà » (défilement en douceur sur un contenu remplacé).
+
+**SIGNALÉ, NON CORRIGÉ (antérieur, correctif structurel)** : deux retours d affilée sur le garde anti-perte
+consomment deux entrées sans fermer aucune couche → l app peut quitter sur une saisie en cours. Piste ouverte
+par R1 : maintenant que `go(-N)` est sain, `scoreExitConfirm` pourrait REDEVENIR une couche ordinaire et tout
+le mécanisme à part (`scoringEntryConsumedRef`, les pushState manuels des boutons du dialogue) disparaîtrait.
+À faire dans un lot dédié : c est un chemin de perte de données.
+
+**Vérifié en dev après correctifs** : le scénario du bloquant (Stats → Réglages → Collection → Stats → retour)
+ferme bien les Stats au lieu d avaler le retour ; premier lancement → « Ajouter un compte » ouvre le formulaire ;
+ascenseur présent sur la collection, absent du menu Compte ; titre condensé « Compte » ; et les parcours
+habituels intacts (séquence de l user, fiche de jeu, Réglages → Joueurs), l app ne se refermant jamais.
+
 ## ✅⚠️ UN ÉCRAN PLEIN NE DÉTRUIT PLUS L ÉCRAN DE DESSOUS (2026-08-28, retour user)
 
 **Retour user** : « quand je suis sur la wishlist, que j ouvre la page compte, que je clique sur stats et que
