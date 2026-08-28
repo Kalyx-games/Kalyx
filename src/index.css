@@ -5119,6 +5119,13 @@ input[type='number'] {
   cursor: pointer;
   white-space: nowrap;
 }
+/* Une puce d'état qu'on ne peut pas retirer (« Tous les comptes » sans compte actif) :
+   elle dit où l'on est, elle ne commande rien — donc ni curseur, ni enfoncement. */
+.active-chip-fixe {
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+}
 .active-chip-x { font-size: var(--fs-body-l); line-height: 1; opacity: 0.75; }
 
 /* Barre du haut du panneau de filtres : Réinitialiser + Voir les N jeux */

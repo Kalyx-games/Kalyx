@@ -37,19 +37,6 @@ export default function Filters({ owners, tags, filters, setFilters, showPrice, 
 
   return (
     <div className="filters">
-      {owners.length > 0 && (
-        <div className="filter-group">
-          <span className="filter-label">Compte</span>
-          <div className="chips">
-            {owners.map((o) => (
-              <button type="button" key={o} className={`fchip ${filters.owners.includes(o) ? 'on' : ''}`} onClick={() => toggleOwner(o)}>
-                {o}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="filter-group">
         <span className="filter-label"><PlayersIcon size={14} /> Nombre de joueurs</span>
         <PlayerPicker value={filters.players} onChange={setPlayers} />
@@ -105,6 +92,21 @@ export default function Filters({ owners, tags, filters, setFilters, showPrice, 
         </div>
       )}
 
+      {/* LE COMPTE EN DERNIER. C'est le filtre le moins souvent touché : il est posé une fois
+          au choix du compte et ne bouge plus. Les critères de jeu (joueurs, durée, complexité),
+          eux, se règlent à chaque envie — ils passent devant. */}
+      {owners.length > 0 && (
+        <div className="filter-group">
+          <span className="filter-label">Compte</span>
+          <div className="chips">
+            {owners.map((o) => (
+              <button type="button" key={o} className={`fchip ${filters.owners.includes(o) ? 'on' : ''}`} onClick={() => toggleOwner(o)}>
+                {o}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -64,9 +64,11 @@ function loadOwnerFilter() {
 // regarde en ce moment (il change au gré des envies), le compte dit qui on est — et sa
 // simple PRÉSENCE, même vide, signifie « le choix a déjà été fait, ne plus demander ».
 const COMPTE_KEY = 'kalyx-compte'
-// En dessous de ce nombre d anecdotes disponibles, on se TAIT. Le parcours ne vaut que
-// parce qu il ne se répète pas ; un compte tout neuf (mesuré : 1 jeu → 2 anecdotes) verrait
-// la même phrase revenir tous les deux jours, ce qui la déclasse en bruit.
+// En dessous de ce nombre d anecdotes disponibles, on se TAIT : le parcours ne vaut que
+// parce qu il ne se répète pas. En pratique les anecdotes de tierlists (communes à tous les
+// comptes) suffisent à passer le seuil ; le filet ne sert que si personne n a fait de
+// tierlist ET que le compte est tout neuf — là, la poignée de phrases restantes
+// reviendrait tous les deux jours, ce qui les déclasse en bruit.
 const ANEC_MIN = 10
 function loadCompte() {
   try {
@@ -837,9 +839,28 @@ export default function App() {
   // Puces des filtres ACTIFS (sous la recherche) : on voit ce qui filtre et on l'enlève d'un tap.
   const activeChips = useMemo(() => {
     const chips = []
-    filters.owners.forEach((o) =>
-      chips.push({ key: 'o:' + o, label: o, remove: () => setFilters((f) => ({ ...f, owners: f.owners.filter((x) => x !== o) })) })
-    )
+    // LE COMPTE. On ne répète PAS le nom du compte actif quand il est seul coché : c est
+    // l état normal, il est déjà dit par l avatar de la barre du haut — une puce qui ne
+    // quitte jamais l écran cesse d être une information. En revanche, regarder AUTRE CHOSE
+    // que ses jeux doit se voir : d où « Tous les comptes » quand le filtre est vide (ou
+    // qu ils sont tous cochés, ce qui revient au même), et le nom des comptes sinon.
+    const sonCompteSeul = compte && filters.owners.length === 1 && filters.owners[0] === compte
+    const tousLesComptes = allOwners.length > 0 && (filters.owners.length === 0 || filters.owners.length === allOwners.length)
+    if (sonCompteSeul) {
+      // rien : induit
+    } else if (tousLesComptes) {
+      chips.push({
+        key: 'o:tous',
+        label: 'Tous les comptes',
+        // Le × ramène chez soi. Sans compte actif il n y a nulle part où revenir : la puce
+        // devient un simple état, pas une commande.
+        remove: compte ? () => setFilters((f) => ({ ...f, owners: [compte] })) : null,
+      })
+    } else {
+      filters.owners.forEach((o) =>
+        chips.push({ key: 'o:' + o, label: o, remove: () => setFilters((f) => ({ ...f, owners: f.owners.filter((x) => x !== o) })) })
+      )
+    }
     if (statsOpen || view !== 'wishlist') {
       filters.tags.forEach((t) =>
         chips.push({ key: 't:' + t, label: t, remove: () => setFilters((f) => ({ ...f, tags: f.tags.filter((x) => x !== t) })) })
@@ -865,7 +886,7 @@ export default function App() {
       chips.push({ key: 'price', label: `${lo}–${hi >= PRICE_MAX ? '150+' : hi} €`, remove: () => setFilters((f) => ({ ...f, priceRange: [PRICE_MIN, PRICE_MAX] })) })
     }
     return chips
-  }, [filters, statsOpen, view])
+  }, [filters, statsOpen, view, compte, allOwners])
 
   const currentCount = (games ?? []).filter((g) => g.status === listStatus).length
 
@@ -874,12 +895,16 @@ export default function App() {
   const activeChipsEl =
     activeChips.length > 0 ? (
       <div className="active-filters">
-        {activeChips.map((c) => (
-          <button key={c.key} type="button" className="active-chip" onClick={c.remove} aria-label={`Retirer le filtre ${c.label}`}>
-            <span>{c.label}</span>
-            <span className="active-chip-x">×</span>
-          </button>
-        ))}
+        {activeChips.map((c) =>
+          c.remove ? (
+            <button key={c.key} type="button" className="active-chip" onClick={c.remove} aria-label={`Retirer le filtre ${c.label}`}>
+              <span>{c.label}</span>
+              <span className="active-chip-x">×</span>
+            </button>
+          ) : (
+            <span key={c.key} className="active-chip active-chip-fixe">{c.label}</span>
+          )
+        )}
       </div>
     ) : null
 
@@ -1340,11 +1365,16 @@ export default function App() {
   )
   // Les anecdotes tirées des TIERLISTS (qui aime quoi). Graine FIXE : les textes doivent
   // être stables d'un jour à l'autre, c'est le parcours ci-dessous qui apporte la variété.
+  // ⚠️⚠️ ELLES RESTENT COMMUNES À TOUS LES COMPTES, sur TOUTE la collection. Les tierlists
+  // sont un menu à part, sans lien avec le compte (décision du cadrage) : elles parlent des
+  // PERSONNES, pas d'un foyer. Et le périmètre y est un paramètre de CALCUL, pas seulement
+  // d'affichage — `gameIds` sert de filtre à remapRanking, donc le restreindre fausserait
+  // aussi « le plus enthousiaste » ou « goûts proches », mesurés sur une collection amputée.
   const tierAnecdotes = useMemo(() => {
     if (!tierlists || !tierlists.length) return []
-    const nameById = new Map(gamesAnec.map((g) => [g.id, g.name]))
-    return computeAnecdoteList(tierlists, idsAnecListe, repById, nameById, 1).flat().map((a) => a.text)
-  }, [tierlists, gamesAnec, idsAnecListe, repById])
+    const nameById = new Map(collectionGames.map((g) => [g.id, g.name]))
+    return computeAnecdoteList(tierlists, collectionIds, repById, nameById, 1).flat().map((a) => a.text)
+  }, [tierlists, collectionGames, collectionIds, repById])
   // Toute la matière disponible : les parties (qui joue à quoi, qui gagne, quand) + les goûts.
   const anecPool = useMemo(
     () =>

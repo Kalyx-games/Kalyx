@@ -291,6 +291,40 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅ LES ÉTIQUETTES DE FILTRE NE RÉPÈTENT PLUS LE COMPTE + LE COMPTE PASSE EN DERNIER (2026-08-28, retours user)
+
+**Retours user** : « dans les étiquettes de filtres sous le champ rechercher, il ne faut plus qu il y ait le nom
+du compte en permanence : c est induit. Par contre il faut afficher "tous les comptes" si aucun ou tous les
+comptes sont cochés » · « dans le menu des filtres, la section compte doit être placée après les tags, en dernier ».
+
+**LES PUCES (`activeChips`, App)** — cinq états, tous vérifiés en dev sur la vraie collection :
+  | filtre owners | puce | jeux |
+  |---|---|---|
+  | le compte actif SEUL | **aucune** (induit) | 43 |
+  | aucun coché | **« Tous les comptes »** | 102 |
+  | un AUTRE compte seul | son nom | 68 |
+  | deux cochés | les deux noms | 101 |
+  | tous cochés | **« Tous les comptes »** | 102 |
+  - **Pourquoi ne rien afficher dans le cas normal** : une puce qui ne quitte jamais l écran cesse d être une
+    information — et l avatar de la barre du haut le dit déjà. En revanche regarder AUTRE CHOSE que ses jeux
+    doit se voir : c est le seul cas où la puce apprend quelque chose.
+  - ⚠️ **Le cas « deux cochés » affiche les DEUX noms, y compris celui du compte actif.** Le masquer là aussi
+    rendrait « [actif + autre] » et « [autre] » indiscernables — on ne saurait plus si ses propres jeux sont inclus.
+  - **Le × de « Tous les comptes » ramène CHEZ SOI** (`owners: [compte]`) : l état de repos, c est son compte.
+    Vérifié : 102 → 43 jeux, filtre remémorisé. **Sans compte actif il n y a nulle part où revenir** → la puce
+    est rendue en `<span class="active-chip-fixe">` (pas de ×, pas de curseur, texte non sélectionnable) :
+    c est un état, pas une commande.
+  - Priorité des tests : « son compte seul » AVANT « tous cochés » — avec un seul compte en base les deux sont
+    vrais, et c est « rien » qui doit gagner.
+
+**LE MENU DE FILTRES** : Nombre de joueurs · Durée · (Prix) · Complexité · Tags · **Compte**. Le compte est le
+filtre le moins souvent touché (posé une fois au choix du compte, il ne bouge plus) ; les critères de jeu se
+règlent à chaque envie et passent devant.
+
+⚠️ **PIÈGE REVÉCU (3e fois)** : un script qui retire un bloc puis le repose fait DEUX écritures du fichier →
+vite a servi l état INTERMÉDIAIRE (menu sans section Compte) et j ai cru à une erreur de JSX.
+**preview_stop/preview_start avant de conclure.**
+
 ## ✅ LE COMPTE S ÉDITE À NU + LES 3 CONSÉQUENCES DU MODÈLE « LE NOM EST LA CLÉ » (2026-08-28, retours user)
 
 **Retours user** : « les options de modification ne sont pas derrière un bouton : elles sont directement là quand on va sur la page compte » · « on est d accord que le bouton supprimer a une popup de confirmation ? Pas de blague hein » · « en vue liste on n a pas la bulle propriétaire du compte actuel, uniquement pour les jeux qui ne font pas partie de ce compte » · « les anecdotes basées sur des jeux ne sont affichées que pour les stats concernant le compte actif » · « réfléchis à d autres choses auxquelles il faudrait penser avec ce passage à un système par compte ».
@@ -314,13 +348,23 @@ Le bouton « Modifier » est SUPPRIMÉ : l écran n a qu un sujet, il ne masquai
   - **La vue GRILLE n est pas concernée** : `GameTile` n a jamais porté de bulles (vérifié).
   - **Mesuré dans les deux sens** : compte « Claire & Nazim » → 33 cartes sur 43 n ont plus AUCUNE bulle, la seule restante est « Clémence & Mathieu » (les jeux partagés) ; en affichant TOUTE la collection (102 cartes), les jeux des deux autres foyers portent bien la leur.
 
-### 3. LES ANECDOTES SE LIMITENT AUX JEUX DU COMPTE ACTIF
+### 3. LES ANECDOTES **DE JEUX** SE LIMITENT AU COMPTE ACTIF — LES TIERLISTS RESTENT COMMUNES
 
-`idsAnec` / `gamesAnec` / `playsAnec` (App) restreignent la matière ; `tierAnecdotes` suit le même périmètre.
+⚠️⚠️ **CORRIGÉ APRÈS COUP, sur retour user** : j avais AUSSI restreint les anecdotes de tierlists. Faux, et
+la demande le disait : « les anecdotes sur les personnes (via les tierlists) restent toujours communes ».
+**Pire que masquer : ça FAUSSAIT.** Le paramètre `gameIds` de `computeAnecdoteList` n est pas un filtre
+d AFFICHAGE, c est le périmètre de CALCUL (il alimente `remapRanking`) → « le plus enthousiaste », « goûts
+proches », « le plus classé » se calculaient sur une collection amputée. **RÈGLE : avant de restreindre un
+périmètre, se demander si le paramètre sert à AFFICHER ou à CALCULER.**
+
+`idsAnec` / `gamesAnec` / `playsAnec` (App) restreignent la matière de `buildAnecdotes` (parties +
+collection) ; `tierAnecdotes` reçoit au contraire `collectionGames` / `collectionIds`, TOUJOURS.
   - ⚠️ **Le périmètre suit le COMPTE, pas les filtres.** S il suivait les filtres, l anecdote du jour changerait en cours de route au moindre réglage de durée — alors que tout le mécanisme repose sur « même jour = même anecdote ».
   - ⚠️ **On passe par les REPRÉSENTANTS** (`repById`) : un jeu possédé par les deux foyers n a qu un représentant, porteur du propriétaire du PREMIER exemplaire — lire le propriétaire du seul représentant priverait l autre compte de ses propres jeux. Mesuré : « 7 Wonders Duel » (possédé par les deux) reste bien dans le périmètre des deux.
-  - **`ANEC_MIN = 10` : sous ce seuil, on SE TAIT.** Mesuré : un compte tout neuf (1 jeu, 1 partie) ne produit que **2 anecdotes** — elles reviendraient tous les deux jours, ce qui les déclasse en bruit. Le parcours ne vaut que parce qu il ne se répète pas.
-  - **Mesuré sur la vraie base** : toute la collection 77 anecdotes · Clémence & Mathieu 69 · Claire & Nazim 64 · Mathilde & Mathieu 2 (donc silence). **Zéro jeu étranger cité**, vérifié par contre-épreuve.
+  - **`ANEC_MIN = 10` : sous ce seuil, on SE TAIT** — le parcours ne vaut que parce qu il ne se répète pas. En pratique les 52 anecdotes de tierlists (communes) suffisent à passer le seuil ; le filet ne sert que si PERSONNE n a fait de tierlist ET que le compte est neuf.
+  - **Mesuré sur la vraie base**, anecdotes de jeux + 52 de tierlists : toute la collection **77** · Clémence & Mathieu **77** (25+52) · Claire & Nazim **75** (23+52) · Mathilde & Mathieu **54** (2+52 — il n est donc PAS muet). **Zéro jeu étranger cité** dans la part « jeux », vérifié par contre-épreuve.
+  - **Le contrat « pas de répétition avant un mois » tient pour chaque compte** : rejoué sur 90 jours, première répétition au jour **78 / 76 / 55**.
+  - **Conséquence assumée** : deux comptes voient une anecdote DIFFÉRENTE le même jour (leur pool diffère). « Même jour = même anecdote » vaut désormais PAR COMPTE.
   - ⚠️ **PIÈGE DE TEST** : une contre-épreuve qui cherche un nom de jeu par `includes` crie au faux positif dès qu un nom est SOUS-CHAÎNE d un autre (« 7 Wonders » dans « 7 Wonders Duel », « Monopoly » dans « Monopoly Deal »). Exiger que le nom étranger ne soit pas couvert par un nom du compte présent dans la même phrase.
 
 ### 4. LES TROIS CONSÉQUENCES DU MODÈLE, TROUVÉES EN RÉFLÉCHISSANT (et réparées)
