@@ -3290,7 +3290,11 @@ body {
    hors écran jusqu'au démontage réel ; pointer-events coupés pour ne pas gêner l'écran qui réapparaît. */
 @keyframes kx-page-out {
   from { transform: translateX(0); }
-  to { transform: translateX(100%); }
+  /* ⚠️ +64px, PAS 100 % : l ombre du bord gauche (-16px de décalage + 34px de flou) déborde de
+     50px À L INTÉRIEUR de la feuille. À 100 % pile, ce bord est au ras de l écran et l ombre y
+     restait donc collée en bande sombre jusqu au démontage — visible, et signalée comme telle.
+     En poussant la feuille de la largeur de sa propre ombre, celle-ci sort avec elle. */
+  to { transform: translateX(calc(100% + 64px)); }
 }
 .sheet.closing {
   animation: kx-page-out 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards;

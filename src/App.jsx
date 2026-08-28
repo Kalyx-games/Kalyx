@@ -2153,14 +2153,26 @@ export default function App() {
           // n'y avait jamais eu droit (sa branche sortait avant le scroll). En douceur quand
           // on est déjà sur l'écran (c'est le geste « retour en haut »), sec quand on en
           // change (le contenu est remplacé, une glissade n'aurait rien à suivre).
-          const dejaLa = v === 'stats' ? statsOpen : !statsOpen && !settingsOpen && v === view
+          const dejaLa =
+            v === 'stats' ? statsOpen : !statsOpen && !settingsOpen && !compteOuvert && v === view
           window.scrollTo({ top: 0, behavior: dejaLa ? 'smooth' : 'auto' })
+          // ⚠️ Le bac ferme TOUT écran plein, pas seulement les Réglages : le menu Compte et
+          // l écran Joueurs sont rendus dans la même branche du rendu. Sans ça, taper un
+          // onglet depuis le menu Compte ne faisait RIEN à l écran (la navigation avait bien
+          // lieu, mais derrière l écran resté ouvert). Et `playersOpen` laissé à true rouvrait
+          // les Réglages directement sur l écran Joueurs, la fois suivante.
+          const fermeLesEcransPleins = () => {
+            setCompteOuvert(false)
+            setAjoutCompte(false)
+            setPlayersOpen(false)
+            setSettingsOpen(false)
+          }
           if (v === 'stats') {
             setStatsOpen(true)
-            setSettingsOpen(false)
+            fermeLesEcransPleins()
             return
           }
-          setSettingsOpen(false)
+          fermeLesEcransPleins()
           setStatsOpen(false)
           if (v === view) return
           goToView(v)

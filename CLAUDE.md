@@ -291,6 +291,43 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅ LE BAC FERME LES ÉCRANS PLEINS + L OMBRE DE LA FEUILLE SORT AVEC ELLE (2026-08-28, 2 retours user)
+
+**Retours user** : « quand on est sur l onglet Compte et qu on appuie sur la tap bar ça fait rien. Je suppose
+que ça navigue en arrière-plan mais ça ne devrait pas, ça devrait fermer le menu compte. » · « quand on est sur
+une fiche de jeu et qu on fait retour, l ombre de la fiche reste affichée quelques fractions de seconde à droite
+de l écran avant de disparaître, c est très désagréable. »
+
+### 1. Le bac ne fermait que DEUX écrans pleins sur quatre
+
+Le gestionnaire du `NavBar` faisait `setSettingsOpen(false)` + `setStatsOpen(false)` — écrit avant que le menu
+Compte et l écran Joueurs n existent. Or ces quatre écrans vivent dans la MÊME branche du rendu : la navigation
+avait bien lieu, **derrière l écran resté ouvert**. D où « ça ne fait rien ».
+  - Un helper `fermeLesEcransPleins()` ferme désormais `compteOuvert`, `ajoutCompte`, `playersOpen` et
+    `settingsOpen`, dans les deux branches (Stats et les autres).
+  - ⚠️ **`playersOpen` laissé à true était un second défaut, latent** : `settingsOpen` repassé à false le rendait
+    sans effet à l écran, mais la fois suivante les Réglages se rouvraient DIRECTEMENT sur l écran Joueurs.
+  - `compteOuvert` entre dans `dejaLa` : depuis le menu Compte, taper un onglet n est pas « revenir en haut ».
+  - **Comptabilité d historique inchangée** : ces états sont déjà dans `uiRef`/`layerCount`, la baisse est donc
+    traitée comme n importe quelle fermeture par bouton (le tap sur le bac EST un tap → `go(-1)` sûr).
+  - **Vérifié** : menu Compte → tap Wishlist → menu fermé, écran Wishlist, onglet actif Wishlist ; écran Joueurs
+    → tap Stats → Statistiques ; rouvrir les Réglages affiche bien « Réglages » et non « Joueurs ».
+
+### 2. L ombre de la feuille restait collée au bord droit
+
+⚠️ **`.sheet` porte `box-shadow: -16px 0 34px` sur son bord GAUCHE** (le bord qui avance). L ombre s étend donc
+jusqu à **50 px À L INTÉRIEUR** de la feuille. La sortie `kx-page-out` s arrêtait à `translateX(100%)` : ce bord
+se calait AU RAS de l écran, et les 50 px d ombre restaient donc visibles en bande sombre sur le bord droit
+jusqu au démontage (courbe très décélérée : la feuille est arrivée dès `150 ms, le démontage à 240 ms → environ
+**90 ms d ombre immobile**). Exactement ce que décrivait l user.
+  - **Fix : `to { transform: translateX(calc(100% + 64px)) }`** — on pousse la feuille de la largeur de sa propre
+    ombre, qui sort donc avec elle. `kx-page-in` n est PAS touché : à l ouverture, l ombre qui entre est voulue.
+  - **MESURÉ** (fiche à 375 px, échantillonné pendant la fermeture) : dépassement de l ombre dans l écran
+    41 px à 120 ms → **2 px à 180 ms → 0 px à 240 ms**, démontage à 300 ms. Avant le correctif, la valeur finale
+    était **50 px** et y restait jusqu au démontage.
+  - **RÈGLE** : une surface qui sort de l écran doit sortir AVEC son ombre — `100 %` ne suffit pas dès qu un
+    `box-shadow` déborde vers l intérieur.
+
 ## ✅⚠️ LE PÉRIMÈTRE D UNE ANECDOTE SUIT SON **SUJET**, PAS SA **SOURCE** (2026-08-28, revue adversariale)
 
 **Retour user** : « les anecdotes sur les personnes uniques (via les tierlists) restent toujours communes ».
