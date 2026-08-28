@@ -291,6 +291,43 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅⚠️ UN ÉCRAN PLEIN NE DÉTRUIT PLUS L ÉCRAN DE DESSOUS (2026-08-28, retour user)
+
+**Retour user** : « quand je suis sur la wishlist, que j ouvre la page compte, que je clique sur stats et que
+je clique sur compte, la tap bar revient vers wishlist sans raison ».
+
+### La cause : deux boutons qui fermaient les Stats
+
+Les boutons **Compte** et **Réglages** faisaient `setStatsOpen(false)` — un reliquat de l époque où le rendu
+n avait pas encore de branche pour eux. Or **ce sont des SURCOUCHES** : le rendu les teste AVANT les Stats
+(`compteOuvert ? … : settingsOpen ? … : (statsOpen ? Stats : liste)`), donc rien ne les oblige à fermer quoi
+que ce soit. Les fermer avait deux conséquences :
+  1. l onglet actif retombait sur `view` (resté « wishlist ») → **le symptôme signalé** ;
+  2. ⚠️ **l historique se déséquilibrait** : la couche s ouvrait en fermant une autre (`layerCount` net 0, donc
+     AUCUNE entrée poussée) mais en consommait une en se refermant.
+Le `setStatsOpen(false)` est retiré des deux boutons. Refermer les Réglages ou le menu Compte ramène désormais
+à l écran d où l on vient, Stats compris.
+
+### Le défaut que ce correctif a RÉVÉLÉ (et qu il fallait corriger avec)
+
+⚠️⚠️ **`closeTopLayer` fermait `statsOpen` AVANT `compteOuvert` et `settingsOpen`**, alors que ceux-ci sont
+AU-DESSUS dans le rendu. Tant qu ils fermaient les Stats, les deux ne coexistaient jamais et l ordre n avait
+aucune importance. Une fois qu ils coexistent, **le premier « retour » fermait une couche INVISIBLE** : l écran
+ne changeait pas, il fallait appuyer deux fois. **L ordre suit maintenant l empilement réel :**
+`compteOuvert > playersOpen > settingsOpen > statsOpen`.
+  - **RÈGLE** : l ordre de `closeTopLayer` EST l ordre du rendu. Toute nouvelle branche d écran plein doit être
+    insérée à sa place dans les DEUX endroits, sous peine d un retour qui « ne fait rien ».
+  - Les deux boutons ferment aussi `playersOpen` : il ne s affiche que sous `settingsOpen`, mais il compte dans
+    `layerCount` — le laisser à true laissait une couche fantôme.
+  - `NavBar` reçoit `view={compteOuvert || settingsOpen ? null : statsOpen ? 'stats' : view}` : sous un écran
+    plein, **aucun onglet actif** (le bac ne décrit plus ce qu on regarde). Et « Ajouter un jeu » est masqué
+    dans le menu Compte, comme il l est déjà dans les Réglages.
+
+**Vérifié en dev, chaque retour ferme UNE couche et l app ne se referme jamais** : la séquence exacte de l user
+(wishlist → Compte → Stats → Compte) donne enfin Compte → Stats → Compte, puis retour → **Statistiques** →
+Wishlist → Collection ; Réglages par-dessus Stats → retour → Statistiques ; écran Joueurs → retour → Réglages →
+retour → Collection ; fiche de jeu → retour → Collection.
+
 ## ✅ LE BAC FERME LES ÉCRANS PLEINS + L OMBRE DE LA FEUILLE SORT AVEC ELLE (2026-08-28, 2 retours user)
 
 **Retours user** : « quand on est sur l onglet Compte et qu on appuie sur la tap bar ça fait rien. Je suppose

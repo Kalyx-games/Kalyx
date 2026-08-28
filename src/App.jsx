@@ -558,11 +558,15 @@ export default function App() {
     else if (s.detailGame) setDetailGame(null) // la fiche jeu : les sous-écrans (ci-dessus) se ferment d'abord
     else if (s.tierlistView) setTierlistView(null) // une tierlist s'ouvre PAR-DESSUS le menu
     else if (s.tierlistHub) setTierlistHub(false)
-    else if (s.statsOpen) setStatsOpen(false)
-    else if (s.playersOpen) setPlayersOpen(false) // s'ouvre PAR-DESSUS les Réglages
-    // Le menu Compte est un écran plein comme les Réglages : le retour le ferme.
+    // ⚠️ ORDRE = L EMPILEMENT DU RENDU, du plus haut au plus bas :
+    //   compteOuvert > playersOpen > settingsOpen > statsOpen.
+    // Les Stats VIVENT SOUS les écrans pleins (le menu Compte et les Réglages ne les ferment
+    // plus). Les fermer en premier revenait à fermer une couche INVISIBLE : le retour ne
+    // changeait rien à l écran, il fallait appuyer deux fois.
     else if (s.compteOuvert) { setCompteOuvert(false); setAjoutCompte(false) }
+    else if (s.playersOpen) setPlayersOpen(false) // s'ouvre PAR-DESSUS les Réglages
     else if (s.settingsOpen) setSettingsOpen(false)
+    else if (s.statsOpen) setStatsOpen(false)
     else return false
     return true
   }, [])
@@ -1597,7 +1601,7 @@ export default function App() {
 
           {/* Ajouter un jeu : une action délibérée et occasionnelle — elle cède la zone du
               pouce à Chwazi et monte ici. Absente des Stats, où elle n'a pas de sens. */}
-          {!statsOpen && !settingsOpen && (
+          {!statsOpen && !settingsOpen && !compteOuvert && (
             <button
               type="button"
               className="icon-btn"
@@ -1615,9 +1619,14 @@ export default function App() {
             type="button"
             className={`icon-btn ${compteOuvert ? 'active' : ''}`}
             onClick={() => {
+              // ⚠️ On NE ferme PAS les Stats : le menu Compte est une SURCOUCHE (le rendu le
+              // teste avant), et le refermer doit ramener là où l on était. Le fermer ici
+              // faisait retomber le bac sur la vue de dessous (« la tap bar revient vers
+              // wishlist sans raison ») — et déséquilibrait l historique : la couche s ouvrait
+              // sans pousser d entrée (net 0) mais en consommait une en se refermant.
               setCompteOuvert((v) => !v)
               setSettingsOpen(false)
-              setStatsOpen(false)
+              setPlayersOpen(false) // sinon la couche resterait comptée, invisible
             }}
             aria-label="Compte"
           >
@@ -1627,8 +1636,11 @@ export default function App() {
             type="button"
             className={`icon-btn ${settingsOpen ? 'active' : ''}`}
             onClick={() => {
+              // Même raison qu au-dessus : refermer les Réglages ramène à l écran d où l on
+              // vient, Stats compris.
               setSettingsOpen((s) => !s)
-              setStatsOpen(false)
+              setCompteOuvert(false)
+              setPlayersOpen(false) // idem : refermer les Réglages referme leur sous-écran
             }}
             aria-label="Réglages"
           >
@@ -2147,7 +2159,9 @@ export default function App() {
       )}
 
       <NavBar
-        view={statsOpen ? 'stats' : settingsOpen ? null : view}
+        // Un écran plein par-dessus le bac ⇒ aucun onglet actif : le bac ne décrit plus ce
+        // qu on regarde. (Les Stats restent marquées si elles sont l écran DE DESSOUS.)
+        view={compteOuvert || settingsOpen ? null : statsOpen ? 'stats' : view}
         onChange={(v) => {
           // Un tap sur le bac remonte TOUJOURS en haut de la page — y compris sur Stats, qui
           // n'y avait jamais eu droit (sa branche sortait avant le scroll). En douceur quand
