@@ -232,7 +232,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
               {tagList.map((t) => {
                 const d = ownerDisplay(t, tagMap)
                 return (
-                  <span key={`t-${t}`} className="owner-bubble" style={{ background: d.color }} title={`Tag : ${t}`}>
+                  <span key={`t-${t}`} className="owner-bubble bulle-tag" style={{ background: d.color }} title={`Tag : ${t}`}>
                     {d.initials}
                   </span>
                 )

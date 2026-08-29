@@ -9,7 +9,7 @@ import {
   parseOwners, ownerDisplay, parseExtensions,
   basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText,
 } from '../lib/games'
-import { tagsPourCompte } from '../lib/tagsJeux'
+import { tagsParCompte } from '../lib/tagsJeux'
 
 
 // Durée : identique à la carte ("30 min", "1 h", "1h30").
@@ -48,7 +48,10 @@ export default function GameDetail({
   const complexity = game.complexity ? Number(game.complexity) : null
   const extensions = parseExtensions(game.extensions).map((e) => e.name).sort((a, b) => a.localeCompare(b, 'fr'))
   const owners = parseOwners(game.owner)
-  const tags = tagsPourCompte(game.tags, compte)
+  // ⚠️ Une ligne PAR COMPTE, avec ses tags en regard — et non plus une liste plate où comptes
+  // et tags se suivaient à la même enseigne. Depuis que les tags appartiennent à un compte,
+  // les mettre côte à côte laissait croire qu'ils étaient de même nature (retour user).
+  const parCompte = tagsParCompte(game.tags, game.owner)
   const fullImg = game.image_url
 
   // Sondage BGG « nombre de joueurs » : { total, rows:[{n,best,rec,notRec}] }.
@@ -674,19 +677,23 @@ export default function GameDetail({
       {/* Qui possède le jeu : la dernière chose qu'on cherche sur une fiche, donc la dernière
           de la page. Les noms en entier (la fiche a la place que la carte n'a pas), avec la
           pastille de couleur des bulles pour garder le lien avec la liste. */}
-      {(owners.length > 0 || tags.length > 0) && (
-        <p className="detail-owners">
-          {owners.map((o) => (
-            <span key={`o-${o}`} className="detail-owner">
-              <i style={{ background: ownerDisplay(o, ownerMap).color }} aria-hidden="true" />{o}
-            </span>
+      {parCompte.length > 0 && (
+        <div className="detail-comptes">
+          {parCompte.map(({ compte: c, tags: ts }) => (
+            <p key={c} className="detail-compte">
+              <span className="detail-owner">
+                <i style={{ background: ownerDisplay(c, ownerMap).color }} aria-hidden="true" />{c}
+              </span>
+              <span className="detail-compte-tags">
+                {ts.map((t) => (
+                  <span key={t} className="detail-owner">
+                    <i style={{ background: ownerDisplay(t, tagMap).color }} aria-hidden="true" />{t}
+                  </span>
+                ))}
+              </span>
+            </p>
           ))}
-          {tags.map((t) => (
-            <span key={`t-${t}`} className="detail-owner">
-              <i style={{ background: ownerDisplay(t, tagMap).color }} aria-hidden="true" />{t}
-            </span>
-          ))}
-        </p>
+        </div>
       )}
       </div>
     </div>

@@ -1688,6 +1688,12 @@ body {
 }
 
 /* Bulles propriétaires/tags : cercles blancs. Taille de base = éditeurs (Réglages). */
+/* ⚠️ UN DISQUE = QUELQU'UN, UN CARRÉ ARRONDI = UNE ÉTIQUETTE. Retour user : « quand les
+   bulles de compte et de tags s'affichent sur un jeu, on ne sait pas à quel compte correspond
+   chaque tag ». Les deux familles partageaient la MÊME forme, donc rien ne disait laquelle
+   était un foyer et laquelle une étiquette. Une colonne par compte est impossible : la pile
+   fait 20px de large sur une vignette de 88. La forme, elle, se lit à cette taille.
+   RÈGLE : partout où un compte et un tag se côtoient, le tag porte `bulle-tag`. */
 .owner-bubble {
   display: flex;
   align-items: center;
@@ -1700,6 +1706,7 @@ body {
   font-weight: 600;
   flex-shrink: 0;
 }
+.owner-bubble.bulle-tag { border-radius: var(--r-ctl); }
 /* Sur la carte : bulles EMPILÉES au coin bas-gauche, la 1re à cheval sur le coin
    (même débord en bas qu'à gauche → 10px). Les suivantes montent (column-reverse). */
 .game-thumb-wrap .owner-bubbles {
@@ -3783,18 +3790,39 @@ button {
 /* Propriétaires et tags : sur la fiche on a la place d'écrire les VRAIS noms — deux
    initiales sur un coin de jaquette n'apprenaient rien et salissaient l'illustration.
    La pastille de couleur garde le lien visuel avec les bulles des cartes. */
-.detail-owners {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
+/* Qui possède le jeu, et ce que chacun lui a mis. ⚠️ UNE LIGNE PAR COMPTE : avant, comptes et
+   tags se suivaient dans une même liste plate, ce qui les faisait passer pour des choses de même
+   nature — faux depuis que les tags appartiennent à un compte. */
+.detail-comptes {
   margin: 20px 0 0;
   padding-top: 14px;
   border-top: 1px solid var(--line); /* même grammaire que le sondage juste au-dessus */
   font-size: var(--fs-body-s);
   color: var(--muted);
 }
+.detail-compte {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 7px 0;
+}
+.detail-compte + .detail-compte {
+  border-top: 1px solid var(--line);
+}
+/* Les tags du compte, poussés à droite : on lit « qui » à gauche, « quoi » en regard. */
+.detail-compte-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-left: auto;
+}
 .detail-owner { display: inline-flex; align-items: center; gap: 7px; }
 .detail-owner i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+/* Même vocabulaire que les bulles des cartes : le tag n'est pas rond. ⚠️ 2px et non
+   `--r-ctl` : à 9px de côté, un rayon de 6 redonne un disque. */
+.detail-compte-tags .detail-owner i { border-radius: 2px; }
 .detail-ext { margin: 0 0 12px; font-size: var(--fs-body); color: var(--ink); }
 
 /* Le fait notable de la dernière partie : encart ÉDITORIAL, la même grammaire que l'anecdote

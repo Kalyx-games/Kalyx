@@ -122,7 +122,7 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
               {tagList.map((t) => {
                 const d = ownerDisplay(t, tagMap)
                 return (
-                  <span key={`t-${t}`} className="owner-bubble" style={{ background: d.color }} title={`Tag : ${t}`}>
+                  <span key={`t-${t}`} className="owner-bubble bulle-tag" style={{ background: d.color }} title={`Tag : ${t}`}>
                     {d.initials}
                   </span>
                 )

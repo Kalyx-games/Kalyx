@@ -291,6 +291,44 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅ QUI POSSÈDE, ET CE QUE CHACUN LUI A MIS (2026-08-29, 2 retours user)
+
+**Retour 1** : « Sur la fiche d un jeu les comptes et les tags sont sur une seule ligne, **comme s ils
+étaient équivalents**, sauf que ce n est plus le cas. Je veux qu on voie les comptes auxquels il appartient
+et les tags que **chaque compte** lui a attribué ». **Retour 2** : « quand les bulles de compte et de tags
+s affichent sur un jeu dans la collection, on ne sait pas à quel compte correspond chaque tag ».
+
+### 1. La fiche : UNE LIGNE PAR COMPTE, ses tags en regard
+
+`tagsParCompte(raw, ownerText)` (tagsJeux.js) → `[{ compte, proprietaire, tags }]` : les propriétaires du
+jeu d abord, puis les comptes qui ont posé un tag **sans posséder le jeu** (rare, mais on ne le cache pas —
+c est justement l angle mort « pourquoi ce jeu n apparaît pas chez moi »). Les tags COMMUNS (ancien format,
+pas encore éclatés) comptent pour tout le monde : c est ce que chacun voit, donc c est ce qu on montre.
+  · `.detail-comptes` remplace `.detail-owners` : nom du compte à gauche, ses tags poussés à droite
+    (`margin-left: auto`) — on lit « qui » puis « quoi », et un filet sépare les comptes.
+  · **Mesuré sur Abalone** (possédé par les deux foyers) : Claire & Nazim → À Vendre + Grenier ·
+    Clémence & Mathieu → À Vendre. Ce qui est **exactement l état réel de la base** après que l user a
+    décoché Grenier depuis son compte : la fonctionnalité et son affichage disent la même chose.
+
+### 2. ⚠️ Les cartes : UN DISQUE = QUELQU UN, UN CARRÉ ARRONDI = UNE ÉTIQUETTE
+
+**Le grief n était PAS l attribution — il était la FORME.** Sur une carte, `tagList` vaut
+`tagsPourCompte(game.tags, compte)` : les tags affichés sont **toujours ceux du compte actif**, jamais ceux
+d un autre. Et `ownerList` retire justement le compte actif. Donc la réponse à « à quel compte correspond
+ce tag » est unique et constante : **à vous**. Ce qui manquait, c est que les deux familles portaient la
+MÊME `.owner-bubble` — un disque de 20px — donc rien ne disait laquelle était un foyer et laquelle une
+étiquette.
+  · **La piste « une colonne par compte » est impossible** : la pile fait 20px de large sur une vignette de
+    88, et un jeu peut avoir 2 comptes × 2 tags. La FORME, elle, se lit à cette taille.
+  · `.owner-bubble.bulle-tag { border-radius: var(--r-ctl) }` sur GameCard **et** GameTile (les deux vues ne
+    peuvent pas diverger). Sur la fiche, `.detail-compte-tags .detail-owner i` → **2px** et non `--r-ctl` :
+    à 9px de côté, un rayon de 6 redonne un disque.
+  · **Mesuré** en liste ET en grille : MD (compte) à `50%`, 💸 et 📦 (tags) à `6px`.
+  · **RÈGLE** : partout où un compte et un tag se côtoient, le tag porte `bulle-tag`.
+
+⚠️ **RESTE** : la carte « Tags » des Réglages (`BubbleListManager`) garde des bulles rondes — à traiter
+avec son déménagement dans le menu Compte, pour ne pas faire le travail deux fois.
+
 ## ✅⚠️⚠️ LES TAGS DEVIENNENT PROPRES À CHAQUE COMPTE (2026-08-29, demande user)
 
 **Demande user** : « il faudrait qu un même jeu ait des tags qui puissent être différents en fonction du

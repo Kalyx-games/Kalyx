@@ -85,6 +85,26 @@ export function tagsDesAutresComptes(raw, compte) {
     .sort((a, b) => a.compte.localeCompare(b.compte, 'fr'))
 }
 
+// QUI POSSÈDE LE JEU, ET CE QUE CHACUN LUI A MIS — pour la fiche.
+// Renvoie [{ compte, proprietaire, tags }] : les propriétaires du jeu d'abord, puis les
+// comptes qui ont posé un tag sans le posséder (rare, mais on ne le cache pas).
+// ⚠️ Les tags COMMUNS (ancien format, pas encore rattachés) comptent pour TOUT LE MONDE —
+// c'est ce que voit chaque compte, donc c'est ce qu'on montre.
+export function tagsParCompte(raw, ownerText) {
+  const items = parseTagItems(raw)
+  const proprios = parseOwners(ownerText)
+  const communs = [...new Set(items.filter((it) => !it.compte).map((it) => it.tag))]
+  const autres = [...new Set(items.filter((it) => it.compte).map((it) => it.compte))]
+    .filter((c) => !proprios.includes(c))
+  const pour = (c) =>
+    [...new Set([...communs, ...items.filter((it) => it.compte === c).map((it) => it.tag)])]
+      .sort((a, b) => a.localeCompare(b, 'fr'))
+  return [
+    ...proprios.map((c) => ({ compte: c, proprietaire: true, tags: pour(c) })),
+    ...autres.map((c) => ({ compte: c, proprietaire: false, tags: pour(c) })),
+  ]
+}
+
 // Écrit la tranche du compte actif SANS toucher à celle des autres.
 // ⚠️ `ownerAvant` = `games.owner` TEL QU'EN BASE, jamais la valeur du formulaire : sinon,
 // ajouter un propriétaire lui offrirait au passage les tags posés avant son arrivée.
