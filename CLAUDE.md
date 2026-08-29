@@ -470,6 +470,31 @@ bibliothèque part avec lui) · `retireCompteDeTagsVisibles` (son nom dans `visi
 
 **Garde-fou d espacement : 399, inchangé** (aucun CSS touché).
 
+## ✅ LA JAQUETTE DONNE LA HAUTEUR DE LA CARTE (2026-08-29, retour user)
+
+**Retour** : « on pourrait pas tenter un truc pour que ce soit les jaquettes des jeux qui donnent la hauteur de
+chaque élément liste ? C est-à-dire ne plus avoir aucune marge haute, basse et gauche par rapport à la jaquette ».
+
+**Mesuré AVANT de coder** : sur les 69 cartes, le contenu texte fait **64 à 86px** — donc moins que les 88 de la
+jaquette — sauf **5 cartes** qui portent une ligne d extensions (105px, et 140 pour Cthulhu Death May Die).
+L idée tenait donc pour 64 cartes sur 69, et il fallait décider du sort des 5 autres.
+
+  · `.game` : `padding: 0 22px 0 0` (la bande droite du chevron reste) et **`align-items: stretch`** — c est
+    lui qui fait que la colonne de la jaquette occupe TOUTE la hauteur.
+  · `.game-thumb` : `min-height: 88px` et non `height` — la jaquette ne descend jamais sous ses 88px mais
+    **suit le texte quand il est plus haut**. Sur les 5 cartes à extensions, l image s allonge et se recadre
+    (`object-fit: cover`) au lieu de laisser un vide sous elle.
+  · ⚠️ **Les coins ÉPOUSENT ceux de la carte** du côté où elle la touche : `border-radius: var(--r-card) 0 0
+    var(--r-card)`. Sans ça un angle droit dépasserait de l angle arrondi de la carte. À droite elle garde 0 :
+    elle est en pleine matière, elle ne s y termine pas.
+  · Le **retrait vertical descend dans `.game-body`** (`padding: 11px 0`, `align-self: center`) : la jaquette
+    touche les bords, le texte respire quand même.
+
+**Mesuré après** : **69 cartes sur 69** font exactement la hauteur de leur jaquette, et celle-ci colle aux trois
+bords (0 / 0 / 0). Hauteurs de **88** à 162px, contre 110 uniformes avant : la liste gagne 20 % de densité sur
+la grande majorité des jeux. Wishlist vérifiée (crayon et prix intacts), aucun débordement de page.
+
+
 ## ✅ LES DEUX FAMILLES SUIVENT LA MÊME RÈGLE DE PLACEMENT (2026-08-29, retour user)
 
 **Retour** : « en vue liste c est très étrange que les tags ne soient pas affichés de la même manière que les

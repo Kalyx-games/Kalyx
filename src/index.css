@@ -1407,8 +1407,13 @@ body {
   display: grid;
   grid-template-columns: 88px 1fr;
   gap: 13px;
-  align-items: start; /* tout le contenu aligné en haut (image, infos) */
-  padding: 11px 22px 11px 11px; /* bande droite réservée au chevron */
+  /* ⚠️ `stretch` et non `start` : c'est ce qui fait que la colonne de la jaquette occupe
+     TOUTE la hauteur de la carte. */
+  align-items: stretch;
+  /* ⚠️ AUCUNE marge en haut, en bas ni à gauche : la jaquette touche les trois bords et
+     DICTE la hauteur de la carte (demande user). Le texte, lui, garde son air — c'est
+     `.game-body` qui porte le retrait vertical. La bande droite de 22px reste réservée. */
+  padding: 0 22px 0 0;
   background: var(--card);
   border-radius: var(--r-card); /* rayons resserrés (les gros arrondis partout = tic des applis IA) */
   box-shadow: var(--card-shadow);
@@ -1432,7 +1437,7 @@ body {
 .game-thumb-wrap {
   position: relative;
   width: 88px;
-  height: 88px;
+  min-height: 88px;
   flex-shrink: 0;
 }
 .game-thumb {
@@ -1440,8 +1445,13 @@ body {
      La carte gagne quelques pixels de hauteur sur les jeux à 2 lignes d'infos — c'est
      l'image qui la dicte désormais, pas le texte. */
   width: 88px;
-  height: 88px;
-  border-radius: 5px; /* l'ART est le plus serré : la jaquette redevient une vraie boîte de jeu */
+  /* ⚠️ min-height et non height : la jaquette ne descend jamais sous ses 88px, mais suit le
+     texte quand il est plus haut. */
+  min-height: 88px;
+  /* ⚠️ Les coins ÉPOUSENT ceux de la carte du côté où elle la touche — sinon un angle droit
+     dépasserait de l'angle arrondi de la carte. À droite elle garde 0 : elle est en pleine
+     matière, elle ne s'y termine pas. */
+  border-radius: var(--r-card) 0 0 var(--r-card);
   overflow: hidden;
   background: var(--soft); /* placeholder NEUTRE pendant le chargement (fini le flash violet) */
   display: flex;
@@ -1458,6 +1468,10 @@ body {
 .game-img {
   opacity: 0;
   transition: opacity 0.45s ease;
+  /* Elle remplit la boîte quelle qu'en soit la hauteur : recadrée, jamais déformée. */
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .game-img.loaded {
   opacity: 1;
@@ -1532,6 +1546,10 @@ body {
 
 .game-body {
   min-width: 0;
+  /* Le retrait vertical vit ICI depuis que la carte n'en a plus : la jaquette touche les
+     bords, le texte respire. */
+  padding: 11px 0;
+  align-self: center;
 }
 .game-head {
   display: flex;
@@ -1601,6 +1619,16 @@ body {
   align-items: center;
   justify-content: flex-end;
   gap: 5px;
+}
+/* La jaquette occupe toute la hauteur de la carte : sur la grande majorité des jeux c'est
+   ELLE qui la donne (contenu mesuré entre 64 et 86px, soit moins que ses 88) ; sur les rares
+   fiches à extensions, le texte l'emporte et l'image s'allonge avec, recadrée sans jamais se
+   déformer (`object-fit: cover`). */
+.game-thumb-col,
+.game-thumb-wrap,
+.game-thumb {
+  height: 100%;
+  align-self: stretch;
 }
 .game-meta {
   display: grid;
