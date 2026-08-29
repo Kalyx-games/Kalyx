@@ -291,6 +291,28 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅ WISHLIST : LE BOUTON DEVIENT LE TRANSFERT, LE GLISSÉ DEVIENT L ÉDITION (2026-08-29, demande user)
+
+**Demande user** : « il faudrait mieux que l action sur la tuile jeu soit le transfert vers la collection et
+que la modification soit l action en swipant à droite ».
+
+Les deux sont donc ÉCHANGÉS, en vue liste comme en vue grille :
+  · **Le bouton de la carte/tuile** (44 px, coin haut-droit) fait le **transfert vers la collection** —
+    `CollectionIcon` en `currentColor` (⚠️ sa couleur par défaut est un vert FIGÉ `#4e7a5c` : sans ce
+    `color=currentColor` l icône aurait ignoré la couleur du bouton). Il ouvre le dialogue de
+    confirmation existant.
+  · **Le glissé à DROITE ouvre l ÉDITION**, fond **`#3e6c8e`** — l ardoise que ce projet emploie pour
+    « Éditer » depuis l ancien menu de glissement — et le crayon.
+  · Le glissé à GAUCHE (BoardGameGeek) et toute la COLLECTION sont inchangés.
+
+**La raison, et elle vaut comme règle** : sur cette liste, le passage en collection est le geste qu on cherche
+du regard — il mérite un bouton. L édition est plus rare : un geste lui suffit.
+
+**Mesuré en dev, les deux vues** : bouton « Déplacer vers la collection » → dialogue « Déplacer vers la
+collection ? » ; glissé droite → fond `rgb(62,108,142)` puis « Éditer le jeu ». **Collection intacte** :
+0 bouton, glissé droite vert, et l action mène bien à la partie (ou à la création de fiche quand le jeu n en a
+pas encore).
+
 ## ✅ L AVATAR DU COMPTE NE SCINTILLE PLUS EN « CL » (2026-08-29, question user)
 
 **Question user** : « quand j actualise ça met toujours le compte en "CL" pendant un instant. Une raison ?

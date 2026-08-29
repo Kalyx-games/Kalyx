@@ -138,7 +138,11 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
   const cardRef = useRef(null)
   const { offset, arme, sens, dragging, gRef } = useGlisseAction(cardRef, {
     gauche: online ? onBgg || null : null,
-    droite: online ? onNewPlay || onMove || null : null,
+    // ⚠️ En WISHLIST, le glissé à droite ÉDITE (et le bouton de la carte fait le transfert
+    // vers la collection) — l'inverse de la collection, où le glissé lance une partie.
+    // Demande user : le passage en collection est le geste qu'on cherche du regard, il mérite
+    // un bouton ; l'édition est plus rare et se contente d'un geste.
+    droite: online ? onNewPlay || onEdit || null : null,
     // Le rappel mensuel : App désigne la première carte, le hook joue le faux geste et le
     // VRAI fond apparaît dessous — puisque c'est `sens` qui le monte.
     demo,
@@ -163,8 +167,8 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
     : { indispo: true, label: raisonBgg || 'Indisponible', node: <IndispoIcon size={20} /> }
   const fondDroite = onNewPlay
     ? { bg: '#4e7a5c', node: <DieIcon size={20} /> }
-    : onMove
-    ? { bg: '#4e7a5c', node: <CollectionIcon size={20} color="#fff" /> }
+    : onEdit
+    ? { bg: '#3e6c8e', node: <PencilIcon size={20} /> } // l'ardoise de l'édition
     : { indispo: true, label: 'Hors ligne', node: <IndispoIcon size={20} /> }
 
 
@@ -288,16 +292,16 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
       {/* ⚠️ ÉDITER, uniquement en WISHLIST. En collection le tap ouvre la fiche, qui porte
           déjà « Éditer » ; en wishlist il mène chez Philibert — sans ce bouton, un jeu de la
           wishlist ne serait plus modifiable nulle part depuis la liste. */}
-      {onEdit && (
+      {onMove && (
         <button
           type="button"
           className="game-edit"
-          onClick={(e) => { e.stopPropagation(); if (gRef.current.justSwiped) return; onEdit() }}
+          onClick={(e) => { e.stopPropagation(); if (gRef.current.justSwiped) return; onMove() }}
           disabled={!online}
-          aria-label="Éditer"
-          title="Éditer"
+          aria-label="Déplacer vers la collection"
+          title="Déplacer vers la collection"
         >
-          <PencilIcon size={17} />
+          <CollectionIcon size={18} color="currentColor" />
         </button>
       )}
     </article>

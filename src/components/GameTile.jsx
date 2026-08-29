@@ -32,7 +32,9 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
   // depuis qu'elle porte le glissé et son propre crayon) — à gauche BoardGameGeek.
   const { offset, arme, sens, dragging, gRef } = useGlisseAction(rowRef, {
     gauche: online ? onBgg || null : null,
-    droite: online ? onNewPlay || onMove || null : null,
+    // Même inversion qu'en vue liste (voir GameCard) : en wishlist le glissé édite, et le
+    // bouton de la tuile fait le transfert vers la collection.
+    droite: online ? onNewPlay || onEdit || null : null,
     // Le MÊME rappel qu'en vue liste, par le MÊME hook : c'est ce qui garantit qu'il ne
     // pourra jamais diverger d'une vue à l'autre.
     demo,
@@ -72,8 +74,8 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
         droite={
           onNewPlay
             ? { bg: '#4e7a5c', node: <DieIcon size={22} /> }
-            : onMove
-            ? { bg: '#4e7a5c', node: <CollectionIcon size={22} color="#fff" /> }
+            : onEdit
+            ? { bg: '#3e6c8e', node: <PencilIcon size={22} /> }
             : { indispo: true, label: 'Hors ligne', node: <IndispoIcon size={20} /> }
         }
       />
@@ -137,18 +139,19 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
           metaLine && <span className="gtile-sub">{metaLine}</span>
         )}
       </button>
-      {/* ⚠️ ÉDITER, en wishlist seulement — même raison qu'en vue liste : là, le tap mène chez
-          Philibert, donc sans ce bouton un jeu de la wishlist ne serait plus modifiable. */}
-      {onEdit && (
+      {/* ⚠️ LE TRANSFERT VERS LA COLLECTION, en wishlist seulement. C'est le geste qu'on cherche
+          du regard sur cette liste — il a donc un bouton, tandis que l'édition, plus rare, est
+          passée sur le glissé (demande user). Le tap sur la tuile mène toujours chez Philibert. */}
+      {onMove && (
         <button
           type="button"
           className="gtile-edit"
-          onClick={(e) => { e.stopPropagation(); if (gRef.current.justSwiped) return; onEdit() }}
+          onClick={(e) => { e.stopPropagation(); if (gRef.current.justSwiped) return; onMove() }}
           disabled={!online}
-          aria-label="Éditer"
-          title="Éditer"
+          aria-label="Déplacer vers la collection"
+          title="Déplacer vers la collection"
         >
-          <PencilIcon size={15} />
+          <CollectionIcon size={16} color="currentColor" />
         </button>
       )}
     </div>
