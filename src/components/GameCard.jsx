@@ -57,10 +57,14 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
   const ownerList = parseOwners(game.owner).filter((o) => o !== compte)
   // Les tags du compte actif (+ les communs) : celui d'un AUTRE foyer ne s'affiche pas ici.
   const tagList = tagsPourCompte(game.tags, compte)
-  const bubbleCount = ownerList.length + tagList.length
   const BUBBLE_H = 20
   const BUBBLE_GAP = 3
-  const stackH = bubbleCount ? bubbleCount * BUBBLE_H + (bubbleCount - 1) * BUBBLE_GAP : 0
+  const pileH = (n) => (n ? n * BUBBLE_H + (n - 1) * BUBBLE_GAP : 0)
+  // ⚠️ Les deux familles occupent maintenant DEUX COINS DISTINCTS : c'est la plus HAUTE des
+  // deux colonnes qui commande, plus leur somme. Sans ce max, la carte s'agrandirait pour une
+  // hauteur qu'aucune colonne n'atteint (mesuré : le pire cas réel passe de 66 à 43px, et le
+  // seuil d'agrandissement de 98 devient inatteignable).
+  const stackH = Math.max(pileH(ownerList.length), pileH(tagList.length))
   // La pile de bulles déborde sous l'image quand elle dépasse sa hauteur → on réserve la place.
   const thumbColStyle = stackH > THUMB_H + 10 ? { minHeight: stackH - 10 } : undefined
 
@@ -217,9 +221,12 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
               </span>
             )}
           </div>
-          {/* Bulles empilées en bas à gauche : la 1re (propriétaire) est à cheval sur le
-              coin bas-gauche, les suivantes montent. */}
-          {bubbleCount > 0 && (
+          {/* LES AUTRES FOYERS, à cheval sur le coin bas-GAUCHE (ils viennent du dehors).
+              ⚠️ Les étiquettes sont au coin OPPOSÉ : empilées ici, elles se lisaient comme la
+              suite de la même liste — « on dirait que les tags se rapportent aux autres
+              personnes » (retour user). C'est un problème de PROXIMITÉ, pas d'attribution :
+              les tags affichés sont toujours ceux du compte actif. */}
+          {ownerList.length > 0 && (
             <div className="owner-bubbles" onClick={(e) => e.stopPropagation()}>
               {ownerList.map((o) => {
                 const d = ownerDisplay(o, ownerMap)
@@ -229,6 +236,12 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
                   </span>
                 )
               })}
+            </div>
+          )}
+          {/* VOS ÉTIQUETTES, entièrement DANS la jaquette, coin bas-droit. 74px les séparent
+              des pastilles : le groupement perceptif est cassé. */}
+          {tagList.length > 0 && (
+            <div className="tag-bubbles" onClick={(e) => e.stopPropagation()}>
               {tagList.map((t) => {
                 const d = ownerDisplay(t, tagMap)
                 return (

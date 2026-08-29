@@ -383,6 +383,51 @@ SOURDE (`muteOwnerColor`, posé à l initialisation de l état). Aucun effet vis
 par là — mais la couleur vive d origine est perdue en base, ce que le commentaire historique décrivait comme
 « réversible ». Constaté sur « À Vendre » (#f59e0b → #8a6a47).
 
+## ✅ LES DEUX FAMILLES DE BULLES CHANGENT DE COIN (2026-08-29, retour user)
+
+**Retour** : « sur une carte, ça ne me va pas que les tags et les comptes soient toujours empilés. On dirait
+que les tags se rapportent aux autres personnes quand il y a un tag sur un jeu possédé par plusieurs comptes. »
+
+⚠️ **Le grief n est PAS une erreur d attribution** — `tagList` vaut `tagsPourCompte(game.tags, compte)`, ce sont
+TOUJOURS les siens. C est un problème de **PROXIMITÉ** : une seule pile `column-reverse`, 3 px d écart, deux
+familles collées que l œil lit comme une liste. Il suffit de casser le groupement.
+
+**Trois pistes maquettées avec ses vraies jaquettes** (artifact https://claude.ai/code/artifact/be992746-a2b0-4809-ae76-e5ac5dbcaca0),
+**choix user : la piste A**.
+  · **A — deux coins** : les pastilles de compte restent à cheval sur le bord gauche (`left:-10`), les
+    étiquettes passent entièrement DANS la jaquette au coin opposé (`right:4; bottom:4`). Coût ZÉRO pixel.
+  · B — le tag devient du texte sous les infos : le plus lisible, mais +21 px sur 35 jeux et **ne tient pas en
+    grille** (la sous-ligne est déjà prise par le prix ou le tri). Écartée par le juge : une piste qui ne vaut
+    que dans une vue sur deux n en est pas une.
+  · C — aucun tag sur la carte : la plus honnête aujourd hui (33 des 35 jeux tagués portent un tag COMMUN),
+    mais elle retire le repère au moment où l user investit dans les tags.
+
+⚠️ **On ne va PAS jusqu à « dedans = chez moi »** : tant que l éclatement paresseux n a pas tourné, 33 jeux sur
+35 portent des items communs qui valent pour tout le monde — une mise en page qui AFFIRMERAIT l appartenance
+mentirait. On sépare, on ne promet rien. C est ce qui rend cette piste livrable AVANT la refonte du modèle.
+
+  · ⚠️ **`stackH` devient un MAX, plus une somme** : deux coins distincts → c est la plus HAUTE des deux
+    colonnes qui commande. Sans ça la carte s agrandirait pour une hauteur qu aucune colonne n atteint.
+    Le pire cas réel passe de **66 à 43 px** et le seuil d agrandissement (98) devient inatteignable.
+  · ⚠️ **Liseré SOMBRE sur les étiquettes** (`rgba(0,0,0,.35)`, celui de la grille) et non `var(--card)` :
+    posées sur l image et non à cheval sur la marge, un anneau couleur carte ne séparerait rien.
+  · ⚠️ La règle `.gtile-bulles .owner-bubble` est ÉTENDUE, pas remplacée (couper une liste de sélecteurs
+    désactive tout ce qui suit — piège déjà vécu ici).
+
+**Trois signaux indépendants** distinguent désormais les familles : le **lieu**, la **forme** (disque / carré
+`--r-ctl`) et le **registre** (deux lettres / un emoji — les tags de l user portent 📦 et 💸).
+
+**Mesuré sur Abalone** (le pire cas de la collection : deux foyers, deux étiquettes) : liste = pastille à
+x=17 (débord de 10), étiquettes à x=91 entièrement dans les 88 px de vignette, **54 px d écart**, carte à
+110 px **inchangée** ; grille = 20 / 112, **72 px d écart**, tags dans la tuile.
+
+⚠️ **Limite connue, à NE PAS pré-construire** : en wishlist grille, `.gtile-edit` occupe y 4→34. Une colonne
+de tags est sûre jusqu à **3 tags** (y=37,7), collision à 4. Maximum actuel : 2. Le jour où ça arrive, passer
+`.gtile-edit` en `left: 4px`.
+
+**Garde-fou d espacement : 397 → 399** (les deux `gap` des nouvelles colonnes).
+
+
 ## ✅ LES FENÊTRES SORTENT COMME ELLES ENTRENT (2026-08-29, retour user)
 
 **Retour** : « quand les popup apparaissent elles ont un fondu mais quand elles disparaissent c est trop

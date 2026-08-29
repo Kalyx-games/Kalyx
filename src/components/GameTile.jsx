@@ -109,7 +109,9 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
           ) : (
             <span className="gtile-fallback" style={{ background: ownerColor(game.name) }}>{monogram(game.name)}</span>
           )}
-          {(ownerList.length > 0 || tagList.length > 0) && (
+          {/* Deux coins, comme en vue liste : les autres foyers à gauche, vos étiquettes à
+              droite. Les deux vues ne peuvent pas diverger. */}
+          {ownerList.length > 0 && (
             <span className="gtile-bulles" onClick={(e) => e.stopPropagation()}>
               {ownerList.map((o) => {
                 const d = ownerDisplay(o, ownerMap)
@@ -119,6 +121,10 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
                   </span>
                 )
               })}
+            </span>
+          )}
+          {tagList.length > 0 && (
+            <span className="gtile-tags" onClick={(e) => e.stopPropagation()}>
               {tagList.map((t) => {
                 const d = ownerDisplay(t, tagMap)
                 return (
