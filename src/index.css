@@ -3268,7 +3268,7 @@ body {
   /* ⚠️ .swipe-row et .gtile, PAS .game : l'apparition en cascade a été déplacée sur la ligne
      entière (et les tuiles de la grille l'ont reprise) — viser .game ne neutralisait plus rien. */
   .swipe-row,
-  .gtile {
+  .gtile-row {
     animation: none !important;
   }
   .sk::after {
@@ -5843,6 +5843,55 @@ input[type='number'] {
 }
 /* Le message « aucun jeu » et les squelettes occupent toute la largeur. */
 .list.list-grid .empty { grid-column: 1 / -1; }
+/* La CASE de la grille : elle ne bouge pas, la tuile glisse dedans. C'est elle qui porte
+   l'apparition (sinon le fond BoardGameGeek transparaîtrait pendant le fondu) et qui masque
+   ce qui dépasse — la tuile reste ainsi dans sa colonne, même tirée à fond. */
+.gtile-row {
+  position: relative;
+  overflow: hidden;
+  animation: kx-card-in 0.34s ease both; /* même arrivée que les cartes de la liste */
+}
+/* Révélé de part et d'autre quand la tuile glisse : le logo est au centre de la jaquette,
+   donc visible quel que soit le sens du geste. */
+.gtile-bgg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 5px;
+  background: var(--soft);
+  transition: background 0.16s ease;
+}
+/* ⚠️ Le MÊME habit que l'action BGG du menu de glissement de la vue liste (#566070, blanc,
+   logo) : c'est le même geste et la même action, il doit se dire de la même façon. La couleur
+   est en dur, comme là-bas : elle est posée sur elle-même, pas sur une surface de page. */
+.gtile-row.arme .gtile-bgg {
+  background: #566070;
+}
+.gtile-bgg img {
+  width: 26px;
+  height: 26px;
+  opacity: 0.45;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.gtile-row.arme .gtile-bgg img {
+  opacity: 1;
+  transform: scale(1.12);
+}
+.gtile-bgg span {
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+.gtile-row.arme .gtile-bgg span { opacity: 1; }
 .gtile {
   display: flex;
   flex-direction: column;
@@ -5852,10 +5901,16 @@ input[type='number'] {
   background: none;
   text-align: left;
   cursor: pointer;
-  animation: kx-card-in 0.34s ease both; /* même arrivée que les cartes de la liste */
+  width: 100%;
+  position: relative;
+  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }
 .gtile:disabled { cursor: default; }
+/* ⚠️ Pas d'enfoncement pendant le glissé : le transform du geste est posé en ligne et les
+   deux se contrediraient. `:not(.gtile-row.arme *)` n'existe pas — on neutralise donc via la
+   case, qui sait, elle, qu'un geste est en cours. */
 .gtile:active { transform: scale(0.97); }
+.gtile-row.arme .gtile:active { transform: none; }
 .gtile-art {
   position: relative;
   aspect-ratio: 1;

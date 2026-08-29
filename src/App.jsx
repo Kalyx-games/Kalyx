@@ -1983,6 +1983,11 @@ export default function App() {
                 game={g}
                 index={i}
                 online={online}
+                onBgg={
+                  g.bgg_id && online
+                    ? () => window.open(`https://boardgamegeek.com/boardgame/${g.bgg_id}`, '_blank', 'noopener')
+                    : undefined
+                }
                 onCardClick={
                   !online
                     ? undefined

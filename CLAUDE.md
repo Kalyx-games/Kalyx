@@ -169,7 +169,7 @@ Audit en workflow (3 lentilles : cohérence / composition / finition, puis synth
 ```bash
 grep -cE '^s*(margin|padding|gap|row-gap|column-gap)[a-z-]*s*:.*[0-9]px' src/index.css
 ```
-**Valeur de référence au 26/08/2026 : 363** (349 → 356 avec la carte du face-à-face, puis 363 avec le verdict de la table et la ligne « Reprendre la dernière table ») (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
+**Valeur de référence au 29/08/2026 : 368** (349 → 356 avec la carte du face-à-face, puis 363 avec le verdict de la table et la ligne « Reprendre la dernière table ») (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
 
 **NON FAIT, et assumé** : le resserrement réel (faire tomber 10→8, 14→12, 6→4 …). Il déplacerait ~40 % des espacements pour un bénéfice invisible, sur une app que l’user a déjà fait itérer trois fois sur des retours visuels. À ne relancer QUE si l’user demande explicitement un rythme plus serré, écran par écran, et jamais en une passe globale.
 
@@ -290,6 +290,45 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - **Les butées disent les extrémités** (la demande) : avant la première ancre → l'étiquette du PREMIER groupe ; à `scrollY ≥ max − 1` → celle du DERNIER (sans ce forçage, la butée basse affichait le groupe à la ligne de lecture, un entre-deux).
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
+
+## ✅ LA TUILE SE GLISSE AUSSI (2026-08-29, demande user)
+
+**Demande user** : « il faudrait pouvoir swiper un jeu vers la gauche ou la droite, même en mode grille,
+pour ouvrir BGG (en mode liste c est déjà le cas vers la droite) ».
+
+La vue grille n avait AUCUN geste — c était la « limite assumée » notée au chantier 6 (pas de menu de
+glissement sur une tuile). Elle tombe : le glissé y ouvre BoardGameGeek, **dans les deux sens**.
+
+### Ce qui a été fait
+
+  · **Une CASE (`.gtile-row`) enveloppe la tuile.** Elle ne bouge pas, la tuile glisse dedans
+    (`overflow: hidden` → la tuile reste dans sa colonne même tirée à fond). ⚠️ **C est la case qui porte
+    désormais l apparition `kx-card-in`** : sur la tuile, le fond BGG aurait transparu pendant le fondu.
+    Le bloc `prefers-reduced-motion` vise donc `.gtile-row` (et non plus `.gtile`).
+  · **Le fond révélé reprend l HABIT EXACT de l action BGG de la vue liste** : même `#566070`, même logo,
+    même libellé « BGG ». C est le même geste et la même action — il doit se dire de la même façon. Il
+    couvre la zone de la JAQUETTE (`aspect-ratio: 1`), donc le logo reste centré quel que soit le sens.
+  · **Proportions en fraction de la LARGEUR de la tuile**, pas en pixels : elle fait `120 px sur un
+    téléphone et `180 sur grand écran. Suivi 1:1 jusqu à 55 %, résistance (`mou`) au-delà ; armement à
+    38 % ; hystérésis de 10 % pour qu un doigt posé sur le seuil ne fasse pas clignoter l état.
+  · **Écouteurs tactiles NATIFS non passifs** (ceux de React sont passifs et ne peuvent pas
+    `preventDefault`) ; dominance horizontale à 8 px, sinon la grille défile normalement.
+  · **`touchcancel` a son propre gestionnaire** : un geste repris par le système ne lance rien — la leçon
+    du défaut n°16 corrigé la veille sur les cartes.
+  · **Sans BoardGameGeek** (hors ligne, ou jeu sans `bgg_id`) : élastique seul, aucun fond rendu, rien ne
+    s arme, rien ne se lance.
+  · **`justSwiped` (130 ms)** neutralise le clic de fin de geste : lâcher la tuile n ouvre pas sa fiche.
+  · **`onBgg` n entre PAS dans le comparateur du memo** : sa présence ne dépend que de `game` et `online`,
+    tous deux déjà comparés — l y mettre annulerait le memo (le callback est recréé à chaque rendu).
+
+**Mesuré en dev par gestes synthétiques sur la vraie cible** (tuile de 120 px) : suivi 1:1 à 10/25/45 px,
+résistance ensuite (70 → 68, 100 → 76), armement à partir de 46 px (= 38 %), retour à 0 au relâché.
+Glissé à DROITE sur Ahoy → `boardgame/359402` ; à GAUCHE sur Aurignac → `boardgame/369560` ; glissé trop
+court → rien ; geste annulé → rien ; glissé VERTICAL → la tuile ne bouge pas et la grille défile ; tap →
+la bonne fiche ; tap juste après un glissé → rien. Hors ligne : 0 fond rendu, élastique seul, rien lancé.
+**Vue liste re-testée intacte** (menu à −228 px, aimantation inchangée).
+
+**Garde-fou d espacement : 367 → 368** (le `gap: 4px` entre le logo et le libellé du fond révélé).
 
 ## ✅ CHASSE AUX DÉFAUTS : 27 CORRIGÉS D UN LOT (2026-08-28, demande user « corrige toutes les erreurs »)
 
