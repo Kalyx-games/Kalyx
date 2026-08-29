@@ -135,6 +135,16 @@ function noteRappel(t) {
     /* stockage indispo : tant pis, on ne rappellera pas */
   }
 }
+// Réarme le rappel : il rejouera dès qu'une liste sera de nouveau à l'écran. Branché sur
+// « Vérifier les mises à jour » des Réglages — le seul bouton qu'on tape en voulant vérifier
+// que l'app va bien, donc l'endroit naturel pour revoir l'animation à volonté.
+function reArmeRappel() {
+  try {
+    localStorage.removeItem(RAPPEL_KEY)
+  } catch {
+    /* stockage indispo : rien à réarmer */
+  }
+}
 
 const LAYOUT_KEY = 'kalyx-layout' // collection (nom historique : la clé existante est conservée)
 const LAYOUT_KEY_WISH = 'kalyx-layout-wishlist'
@@ -955,7 +965,19 @@ export default function App() {
       })
     } else {
       filters.owners.forEach((o) =>
-        chips.push({ key: 'o:' + o, label: o, remove: () => setFilters((f) => ({ ...f, owners: f.owners.filter((x) => x !== o) })) })
+        chips.push({
+          key: 'o:' + o,
+          label: o,
+          // ⚠️ Retirer la DERNIÈRE étiquette de compte ramène CHEZ SOI, pas à « tous les
+          // comptes » : dans une logique de comptes, l'état de repos est sa propre collection,
+          // et c'est justement celui qui ne porte aucune étiquette. Voir tout le monde reste
+          // possible, mais c'est un choix qu'on fait — pas là où l'on retombe.
+          remove: () =>
+            setFilters((f) => {
+              const reste = f.owners.filter((x) => x !== o)
+              return { ...f, owners: reste.length || !compte ? reste : [compte] }
+            }),
+        })
       )
     }
     if (statsOpen || view !== 'wishlist') {
@@ -989,16 +1011,19 @@ export default function App() {
   // pas pendant le chargement (les squelettes bougeraient), pas sous un écran plein, pas si
   // l'utilisateur a demandé moins d'animations. On note la date AVANT de jouer : même si
   // l'animation est interrompue, on ne la rejouera pas au prochain lancement.
+  // ⚠️ Les écrans pleins sont dans les DÉPENDANCES, pas seulement dans la garde : c'est ce qui
+  // permet au rappel de se jouer en REVENANT des Réglages — donc juste après le bouton
+  // « Vérifier les mises à jour », qui le réarme. Sans eux, l'effet ne se rejouerait jamais.
   useEffect(() => {
     if (booting || games === null || !games.length) return
-    if (statsOpen || settingsOpen || compteOuvert) return
+    if (statsOpen || settingsOpen || compteOuvert || choixCompte) return
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     const t = Date.now()
     if (t - rappelDu() < RAPPEL_DELAI) return
     noteRappel(t)
     setRappelGlisse(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [booting, games])
+  }, [booting, games, statsOpen, settingsOpen, compteOuvert, choixCompte])
 
   // ⚠️ Le retrait vit dans SON PROPRE effet. Placé dans celui du dessus, son nettoyage était
   // déclenché au rafraîchissement suivant de `games` (cache puis réseau) : le minuteur était
@@ -1880,6 +1905,7 @@ export default function App() {
             compte={compte ?? null}
             comptes={comptesChoisissables}
             onChangerCompte={() => setChoixCompte(true)}
+            onRejouerIndice={reArmeRappel}
             onEnterCode={() => setCodeAsk(true)}
             onChangeCode={() => setCodeChange(true)}
             deviceAuthorized={authorized}

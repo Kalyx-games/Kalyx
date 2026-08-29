@@ -65,7 +65,7 @@ export default function Settings({
   onExport, onExportCsv, onImportFile,
   backupFreq, onSetBackupFreq, backups, backupBusy, onBackupNow, onRestore,
   onOpenPlayers,
-  onEnterCode, onChangeCode, deviceAuthorized,
+  onEnterCode, onChangeCode, deviceAuthorized, onRejouerIndice,
   online, onClose,
 }) {
   const fileRef = useRef(null)
@@ -78,6 +78,9 @@ export default function Settings({
   const [toutesSauvegardes, setToutesSauvegardes] = useState(false)
   const runUpdateCheck = async () => {
     setUpd('checking')
+    // Réarme au passage le rappel du geste de glissé : il rejouera dès le retour à la liste.
+    // C'est le moyen offert à l'utilisateur de le revoir quand il veut, sans réglage dédié.
+    onRejouerIndice?.()
     try {
       const { aJour } = await checkForUpdate()
       if (aJour) {

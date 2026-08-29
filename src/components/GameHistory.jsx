@@ -3,7 +3,7 @@ import { computePlayStats, faceAFace, computeEntityStats, playWinners, scoreCoun
 import { effectivePlayersSet } from '../lib/games'
 import SortMenu from './SortMenu'
 import FilterSheet from './FilterSheet'
-import { FilterIcon, BackIcon, CrownIcon, DieIcon, PlayersIcon, CalendarIcon, ExtIcon, TargetIcon, FlagIcon, PencilIcon, TrashIcon } from './icons'
+import { FilterIcon, BackIcon, CrownIcon, DieIcon, PlayersIcon, CalendarIcon, ExtIcon, TargetIcon, FlagIcon, PencilIcon, TrashIcon, RetournerIcon } from './icons'
 
 // Filtres des stats des parties (vide = tout).
 const EMPTY_HFILTERS = { players: [], period: 'all', extensions: [], scenarios: [], counts: [] }
@@ -49,11 +49,13 @@ function Tile({ value, label, holder }) {
     >
       <span className="tile-inner">
         <span className="tile-face stat-tile">
-          {/* L'indice : la couronne en chuchotement. Elle annonce le CONTENU du verso (« il y
-              a quelqu'un derrière ce nombre »), pas le mécanisme — une flèche circulaire
-              dirait « ça tourne » sans dire pourquoi on tournerait. Et elle se lit parce que
-              la tuile n'est JAMAIS seule : sa jumelle « score moyen », à sa droite, est nue. */}
-          <span className="tile-hint" aria-hidden="true"><CrownIcon size={14} /></span>
+          {/* L'indice de retournement, en chuchotement. ⚠️ C'était une COURONNE (elle annonçait
+              le CONTENU du verso plutôt que le mécanisme) ; l'user l'a remplacée par le glyphe de
+              la jaquette de fiche : DEUX surfaces qui se retournent dans l'app, un seul signe
+              pour le dire. Un vocabulaire cohérent vaut mieux qu'une allusion bien trouvée mais
+              isolée. Elle se lit d'autant mieux que la tuile n'est jamais seule : sa jumelle
+              « score moyen », à sa droite, est nue. */}
+          <span className="tile-hint" aria-hidden="true"><RetournerIcon size={14} /></span>
           <span className="stat-tile-value">{value}</span>
           <span className="stat-tile-label">{label}</span>
         </span>

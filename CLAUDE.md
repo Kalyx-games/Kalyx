@@ -291,6 +291,38 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅ TROIS RETOUCHES : REVOIR L INDICE À VOLONTÉ, UN SEUL SIGNE POUR « ÇA SE RETOURNE », L ÉTAT DE REPOS (2026-08-29)
+
+**1. « Vérifier les mises à jour » RÉARME le rappel du geste.** Demande user : « j aimerais voir l indice de
+swipe ; on peut dire qu il se déclenche après chaque appui sur ce bouton, comme ça je peux l observer autant
+que souhaité ». `reArmeRappel()` (App) efface `kalyx-rappel-glisse` ; `Settings` reçoit `onRejouerIndice` et
+l appelle en tête de `runUpdateCheck`. Le rappel rejoue dès le retour à la liste.
+  · ⚠️ **Il a fallu élargir les DÉPENDANCES de l effet déclencheur** (`statsOpen, settingsOpen, compteOuvert,
+    choixCompte` s ajoutent à `booting, games`) : les écrans pleins n étaient que dans la GARDE, donc l effet
+    ne se rejouait jamais en revenant des Réglages — le réarmement serait resté sans effet jusqu au prochain
+    lancement. **RÈGLE : un état qui garde un effet doit être dans ses dépendances si l effet doit rejouer
+    quand cet état retombe.**
+  · **Mesuré par le vrai chemin** : mémoire « notée » → bouton → « effacée » → retour à la liste → la première
+    carte parcourt **+25 px puis −25 px** puis revient à 0 (les deux sens, l information à faire passer).
+
+**2. LA TUILE « MEILLEUR SCORE » PREND LE GLYPHE DE LA JAQUETTE.** Elle portait une COURONNE, choisie pour
+annoncer le CONTENU du verso (« il y a quelqu un derrière ce nombre ») plutôt que le mécanisme. L user :
+« comme la jaquette dit qu elle se retourne, autant mettre la même chose plutôt que la couronne floue ».
+**Deux surfaces se retournent dans l app, elles disent désormais la même chose du même signe** (`RetournerIcon`
+à 14 px, `--gold-ink`). Un vocabulaire cohérent vaut mieux qu une allusion bien trouvée mais isolée.
+  · Vérifié : recto = glyphe seul (la jumelle « score moyen » reste nue, c est ce contraste qui le fait lire),
+    tap → verso « Catherine », re-tap → recto. ⚠️ **Piège de test** : la classe `flipped` vit sur
+    `.stat-tile-flip`, pas sur `.tile-inner` — un sélecteur trop précis m a fait croire à une panne alors que
+    la capture montrait le verso.
+
+**3. RETIRER L ÉTIQUETTE D UN COMPTE RAMÈNE CHEZ SOI.** Elle remettait « Tous les comptes ». Dans une logique
+de comptes, **l état de repos est sa propre collection** — et c est justement celui qui ne porte AUCUNE
+étiquette. Voir tout le monde reste possible, mais c est un choix qu on fait, pas là où l on retombe.
+`remove` renvoie `[compte]` quand on vient de retirer le dernier nom (garde `!compte` : sans compte actif, il
+n y a nulle part où revenir → on vide comme avant).
+  · **Mesuré** : « Mathilde & Mathieu » → 1 jeu, une étiquette ; × → **0 étiquette, 43 jeux**, filtre
+    remémorisé sur « Claire & Nazim ».
+
 ## ✅ LE PRIX DEVIENT UNE INFO + LE RAPPEL MENSUEL DU GESTE + 3 AUTRES (2026-08-29, 5 retours user)
 
 **1. LE PRIX EST UNE INFO COMME LES AUTRES** — petite icône (`PrixIcon`, une étiquette) + montant, sous les
