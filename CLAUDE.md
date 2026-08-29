@@ -48,6 +48,86 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅⚠️ UN INTERRUPTEUR À DEUX ÉTATS + 7 CONSTATS DE REVUE (2026-08-29, retour user)
+
+**Retour user** : « il faut que l en tête s appelle "Noms des jeux en vue grille" et que les boutons soient
+"affichés" et "masqués" (au pluriel). Aussi, quand j appuie, ça met un petit délai avant de basculer d un
+bouton à l autre. Ça pourrait être bien d avoir un toggle pour ce genre de bouton à 2 états (en règle
+générale) et d avoir un feedback si un chargement est en cours ».
+
+### `src/components/Bascule.jsx` (NOUVEAU)
+
+Deux segments accolés et une **pastille qui glisse** dessous — la grammaire du bac de navigation
+(`.navbar-pill`), c est déjà la façon dont cette app dit « on passe d un état à l autre ». Les deux
+corrections vivent DANS le composant, pas chez chaque appelant :
+  · ⚠️ **ELLE EST OPTIMISTE.** Le délai venait de l aller-retour : on écrivait en base, on rechargeait la
+    table, et l état ne changeait qu ensuite. **Mesuré : la pastille part à 30 ms.**
+  · Pendant l écriture la pastille **RESPIRE** (`kx-bascule-attend`), et un second tap est ignoré.
+  · `onChange` peut être synchrone (un setState) ou rendre une promesse : le composant n attend que ce qui
+    est attendable.
+
+⚠️⚠️ **UNE GRILLE, ET PAS UN FLEX.** La pastille est fixée à 50 %, les deux segments doivent donc faire
+EXACTEMENT la moitié. En flex ils butent sur leur **taille minimale automatique** (mesuré : « Masqués »
+88 px contre « Affichés » 83) et la pastille ne coïncide avec aucun des deux — `flex: 1 1 0` n y change
+rien, c est `min-width: auto` qui plancher. Deux colonnes `1fr` prennent chacune la largeur du plus long.
+
+**⚠️ DEUX DÉFAUTS DE CÂBLAGE que la bascule optimiste a révélés**, tous deux corrigés :
+  1. **`handlePrefCompte` AVALAIT l erreur** (`catch` → `setError`, point). Avec une bascule optimiste,
+     l interrupteur serait resté sur la valeur choisie **alors que rien n était enregistré** : il mentirait.
+     Elle est **relancée** après affichage. **RÈGLE : une commande optimiste exige que son `onChange`
+     REJETTE en cas d échec** — sinon l optimisme devient un mensonge.
+  2. `reloadOwners` ne rendait pas sa promesse → la pulsation s arrêtait avant l arrivée réelle des données.
+
+**Mesuré en dev** (où l écriture est refusée par la RLS — le banc parfait pour ce cas) : basculée à **30 ms**
+(pastille à 28 px sur 88, `en-cours` posée, animation en route), **revenue à la vérité à 2,5 s** avec la
+raison écrite. Contrastes : clair pastille encre + texte blanc, sombre pastille claire + texte encre.
+
+**Employé sur les deux RÉGLAGES à deux états** : « Noms des jeux en vue grille » (`EcranCompte`) et
+« Masqués / Visibles » des tags (`EditeurBulle`). **Les trois autres paires de puces de l app sont des
+choix de SAISIE** — statut d un jeu (GameForm), filtre de joueurs (GameHistory), gagné/perdu (ScoreSheet) :
+laissées telles quelles, ce ne sont pas des interrupteurs. L ordre suit une règle : **l état par défaut à
+gauche** (`grilleNoms: true` ; un tag naît masquant).
+
+### REVUE ADVERSARIALE (18 agents, 3 lentilles) sur les deux lots de la veille — 7 retenus, tous corrigés
+
+  1. ⚠️⚠️ **`prefs` manquait à `BUBBLE_OPT` : la préférence n était dans AUCUNE sauvegarde.** Une restauration
+     **après renommage d un compte** l aurait effacée : l upsert par `name` ne trouve pas l ancien nom →
+     INSERT d une ligne neuve à `prefs` NULL, puis `deleteExtra` supprime la ligne renommée, **la seule qui
+     portait le réglage**. Une ligne de correctif ; le commentaire juste au-dessus décrivait mot pour mot le
+     trou qu on venait de creuser. **RÈGLE : toute colonne ajoutée à `OPTIONAL_COLS` doit entrer dans
+     `BUBBLE_OPT` le même jour.**
+  2. **`tagMap` lisait `compte` et `mesTags` mais ne dépendait que de `tagsList`** (ses deux memos voisins
+     avaient été mis à jour, pas lui) : changer de compte laissait la couleur d un tag homonyme de l autre
+     foyer jusqu à la réponse réseau — l invariant « MA couleur l emporte » rompu.
+  3. ⚠️⚠️ **Un `fetchOwners` en échec passager EFFAÇAIT la vue mémorisée du compte.** `ownersLoaded` passe à
+     true **même en échec**, et `loadBubblesCache` rend `[]` sur tout `catch` → le `|| null` ne distinguait
+     pas « absent » de « pas encore arrivé » et détruisait **le seul repli qui porte avatar, couleur ET
+     préférences**. Au lancement suivant : noms réapparus, avatar recalculé, et `prefsDispo` faux → la carte
+     « Affichage » même plus là pour corriger. On n écrit désormais `null` que si la table est un VRAI tableau.
+  4. **Le nom masqué en grille : l `aria-label` promis n existait pas** (voir la section du lot précédent).
+  5. **La réserve de hauteur des bulles était calée sur le débord `-10px`** disparu quand les pastilles sont
+     rentrées dans la jaquette. **Branche morte aujourd hui** (2 noms de tag en base) — dit franchement : elle
+     se réveille dès qu on crée deux tags de plus. Le calcul suit maintenant la géométrie réelle
+     (`stackH + 8` : la pile est DANS la jaquette, `bottom: 4px`, et la carte est en `overflow: hidden` —
+     une pile trop haute serait **tranchée par le haut**, pas débordée sous l image).
+  6. **`.sk` reprenait le rayon de `.game-thumb`** à spécificité égale (déclarée 1878 lignes plus bas) : depuis
+     que la jaquette est bord à bord, le bloc fantôme montrait **deux encoches claires à droite** là où une
+     vraie image est à angle vif.
+  7. **`.game-thumb-col` : `justify-content: flex-end` et `gap: 5px` inertes** depuis le `height: 100%`, avec
+     un commentaire qui promettait le contraire — exactement la fausse assurance qui a laissé passer le n°5.
+
+⚠️ **Les relecteurs lisent le COMMIT, pas l arbre de travail** — chaque constat a été revérifié dans le code
+avant application. Cinq propositions écartées avec leur motif (dont un correctif d accessibilité qui aurait
+livré des puces d apparence active mais inertes, `.fchip` n ayant aucune règle `:disabled`).
+
+**Mesuré à 412 px** : 47 cartes carrées sur 69, une seule à 162 (Cthulhu, 9 extensions) — la règle « carrée
+par défaut, plus haute quand le contenu l exige » tient. ⚠️ **Piège de banc** : la pane du navigateur est
+étroite (231 px de carte) et y fabrique une carte de 269 px qui n existe sur aucun téléphone — **mesurer à
+375/412 px, jamais à la largeur de la pane.**
+
+**Base intacte** : 147 jeux, 220 parties, 62 fiches, 3 comptes, 4 tags, 4 tierlists.
+**Garde-fou d espacement : 400 → 401.**
+
 ## ✅ CHWAZI DESCEND DANS LE BAC + 3 DÉFAUTS « PAR JOUEUR » + ACCÈS EN LIGNE D’ÉTAT (2026-08-20)
 
 **Retour user : « c'est la fonctionnalité que j'utilise le plus mais pour l'ouvrir c'est 3 petits points perdus en haut à droite ».** Diagnostic mesuré (workflow 12 agents, 4 pistes jugées sur 2 lentilles) — quatre défauts CUMULÉS, tous vérifiables :
@@ -489,14 +569,17 @@ ajoutée aussi à `schema.sql`). **Tant qu elle n est pas lancée, le réglage n
   · ⚠️⚠️ **La vue mémorisée (`kalyx-compte-vue`) porte AUSSI les prefs.** Sans elles, au démarrage les noms
     s afficheraient puis disparaîtraient dès l arrivée de la table `owners` (cache PUIS réseau, toujours
     asynchrone) — le même scintillement que le « CL » de l avatar, corrigé pour la même raison.
-  · Le nom masqué reste **accessible** : `title` et `aria-label` du bouton sont inchangés. On retire une aide
-    visuelle, pas l information.
+  · ⚠️ **Le nom masqué reste accessible — mais l `aria-label` a dû être ÉCRIT** (la revue l a attrapé :
+    j avais affirmé qu il existait, le bouton `.gtile` ne portait qu un `title`). Sans lui, le nom
+    accessible retombait sur ce qui restait dans le bouton — la sous-ligne — et un lecteur d écran
+    annonçait « 12 parties, bouton » soixante-neuf fois. Il porte le nom **et** la sous-ligne, sinon on
+    la retirerait à qui affiche les noms.
   · `montreNom` entre dans le comparateur du memo de GameTile.
 
 **Mesuré en dev, les deux mondes** : AVANT migration, la carte « Affichage » n apparaît pas (seule « Tags » est
 là) et les 69 noms restent. APRÈS (stub de lecture) : le réglage paraît — « Nom des jeux en grille », puces
 [Affiché] [Masqué] à 40px — et sur « Masqué » : **0 nom, la tuile tombe à 120px = la hauteur exacte de la
-jaquette**, le nom accessible reste (`aria-label` « 7 Wonders »), et **la vue LISTE est intacte** (69 noms).
+jaquette**, et **la vue LISTE est intacte** (69 noms).
 Stub retiré, `owners.js` vérifié identique à l avant-test.
 
 
