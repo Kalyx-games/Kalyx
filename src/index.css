@@ -1624,16 +1624,15 @@ body {
 .game:has(.game-edit) .game-head { padding-right: 42px; }
 .game-edit:active { transform: scale(0.92); }
 
-/* Première colonne : la jaquette et sa pile de bulles — le prix, lui, est passé dans le
-   corps de la carte, sous les repères du jeu. Alignée en bas :
-   si la colonne grandit (beaucoup de bulles), l'image reste en bas et la pile de
-   bulles monte dans l'espace gagné. */
+/* Première colonne : la jaquette seule (le prix est passé dans le corps de la carte, sous les
+   repères du jeu). Elle suit la hauteur de la carte — son unique enfant est étiré par le
+   `height: 100%` ci-dessous, donc rien ici ne peut « remonter dans l'espace gagné ». Ce sont
+   les piles de pastilles, posées en absolu dans la jaquette, qui doivent tenir dedans : leur
+   place est réservée par le `min-height` que GameCard pose en ligne. */
 .game-thumb-col {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
 }
 /* La jaquette occupe toute la hauteur de la carte : sur la grande majorité des jeux c'est
    ELLE qui la donne (contenu mesuré entre 64 et 86px, soit moins que ses 88) ; sur les rares
@@ -3330,6 +3329,12 @@ body {
   overflow: hidden;
   background: var(--input-bg);
   border-radius: var(--r-ctl);
+}
+/* ⚠️ `.sk` est déclarée APRÈS `.game-thumb` à spécificité égale : elle lui reprenait son
+   rayon, et depuis que la jaquette est bord à bord, le bloc fantôme montrait deux encoches
+   claires à droite là où une vraie image est à angle vif. */
+.game-thumb.sk {
+  border-radius: var(--r-card) 0 0 var(--r-card);
 }
 .sk::after {
   content: '';
@@ -6429,4 +6434,63 @@ input[type='number'] {
 /* Une `color` explicite écrase l'atténuation du navigateur : on la rend nous-mêmes. */
 .btn-primary.btn-accent:disabled {
   opacity: 0.55;
+}
+
+/* UN RÉGLAGE À DEUX ÉTATS : deux segments accolés, une pastille qui glisse dessous.
+   La pastille glissante est la grammaire du bac de navigation (`.navbar-pill`) — c'est déjà
+   la façon dont cette app dit « on passe d'un état à l'autre ». */
+.bascule {
+  position: relative;
+  /* ⚠️ UNE GRILLE, ET PAS UN FLEX. La pastille est fixée à 50 % : les deux segments doivent
+     donc faire EXACTEMENT la moitié. En flex ils butent sur leur taille minimale automatique
+     (mesuré : « Masqués » 88 px contre « Affichés » 83) et la pastille ne coïncide avec aucun
+     des deux. Deux colonnes `1fr` prennent la largeur du plus long libellé, chacune. */
+  display: inline-grid;
+  grid-template-columns: repeat(2, 1fr);
+  padding: 3px;
+  background: var(--input-bg);
+  border-radius: var(--r-ctl);
+  isolation: isolate;
+}
+.bascule-pastille {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  background: var(--primary);
+  border-radius: calc(var(--r-ctl) - 1px);
+  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+  z-index: -1; /* sous les libellés, sans les rendre inertes */
+}
+.bascule-seg {
+  min-height: 40px; /* la norme des puces de l'app */
+  padding: 0 16px;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: var(--fs-body-s);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+/* ⚠️ `--on-primary` et JAMAIS #fff : la pastille porte `--primary`, qui S'INVERSE avec le
+   thème (encre en clair, presque blanc en sombre). Du blanc figé serait illisible en sombre. */
+.bascule-seg.on {
+  color: var(--on-primary);
+}
+.bascule-seg:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* Le retour d'attente : la pastille RESPIRE tant que l'écriture n'a pas abouti. */
+.bascule.en-cours .bascule-pastille {
+  animation: kx-bascule-attend 1s ease-in-out infinite;
+}
+@keyframes kx-bascule-attend {
+  50% { opacity: 0.5; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bascule-pastille { transition: none; }
+  .bascule.en-cours .bascule-pastille { animation: none; opacity: 0.6; }
 }

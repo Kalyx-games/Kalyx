@@ -480,8 +480,10 @@ export default function App() {
     window.scrollTo(0, 0)
   }, [])
 
+  // ⚠️ Rend sa PROMESSE : la bascule des préférences pulse tant que l'écriture ET la relecture
+  // ne sont pas revenues. Les autres appelants l'ignorent, ça ne change rien pour eux.
   const reloadOwners = useCallback(() => {
-    fetchOwners().then((v) => {
+    return fetchOwners().then((v) => {
       if (v) {
         setOwnersList(v)
         saveBubblesCache('owners', v)
@@ -884,7 +886,10 @@ export default function App() {
       m[t.name] = t
     })
     return m
-  }, [tagsList])
+    // ⚠️ `mesTags` DOIT figurer ici : le corps s'en sert (et de `compte` à travers lui) pour
+    // faire gagner MA couleur sur celle d'un homonyme. Sans lui, changer de compte laissait la
+    // table de l'autre foyer en place jusqu'à la réponse du réseau.
+  }, [tagsList, mesTags])
   // Les tags qui NE masquent PAS, pour le compte actif.
   // ⚠️ Un tag absent d'ici masque — ligne supprimée, table absente, migration non lancée :
   // on retombe sur le comportement d'avant cette colonne. C'est le repli sûr.
@@ -1276,9 +1281,13 @@ export default function App() {
     if (!compteLigne?.id) return
     try {
       await updateOwner(compteLigne.id, { prefs: { ...prefsDe(compteLigne), [cle]: valeur } })
-      reloadOwners()
+      await reloadOwners()
     } catch (e) {
       setError(messageUtilisateur(e))
+      // ⚠️ RELANCÉE, et c'est indispensable : la bascule est OPTIMISTE (elle glisse au doigt).
+      // Une erreur avalée ici la laisserait sur la valeur choisie alors que rien n'a été
+      // enregistré — l'interrupteur mentirait. En relançant, elle revient à la vérité.
+      throw e
     }
   }
   async function handleRenameOwner(id, oldName, newName, patch) {
@@ -1942,7 +1951,14 @@ export default function App() {
   // nouvel avatar : tout passe par ici, il n'y a pas d'autre endroit à tenir à jour.
   useEffect(() => {
     if (!ownersLoaded) return
-    saveCompteVue(compte ? comptesChoisissables.find((c) => c.name === compte) || null : null)
+    if (!compte) return saveCompteVue(null)
+    const ligne = comptesChoisissables.find((c) => c.name === compte)
+    // ⚠️ ON NE DISTINGUE PAS « absent » DE « pas encore arrivé » SANS CE TEST. `ownersLoaded`
+    // passe à true MÊME quand le chargement a échoué (réseau coupé + cache illisible → la liste
+    // vaut null). Un `|| null` effaçait alors la vue mémorisée — c'est-à-dire le SEUL repli qui
+    // porte l'avatar, la couleur et les préférences quand la table manque.
+    if (ligne) saveCompteVue(ligne)
+    else if (Array.isArray(ownersList)) saveCompteVue(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownersLoaded, ownersList, compte])
   // La ligne complète du compte actif (avatar, couleur) : le nom seul ne suffit pas — d'où le

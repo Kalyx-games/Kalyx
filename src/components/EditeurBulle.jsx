@@ -4,6 +4,7 @@ import Avatar from './Avatar'
 import { thumbSrc } from '../lib/img'
 import { parseAvatar, formatAvatar, AVATAR_INITIALES, AVATAR_EMOJI, AVATAR_JEU, EMOJIS_PROPOSES } from '../lib/avatar'
 import { tagVisiblePour } from '../lib/tags'
+import Bascule from './Bascule'
 
 // L'ÉDITEUR d'une « bulle » : un COMPTE (avec son image) ou un TAG (sans).
 // Extrait de BubbleListManager pour servir aussi l'écran Compte — la même main édite
@@ -188,10 +189,15 @@ export default function EditeurBulle({
       {avecModeTag && compte && (
         <div className="oe-field">
           <span className="oe-label">Visibilité</span>
-          <div className="chips">
-            <button type="button" className={`fchip ${visibleMoi ? '' : 'on'}`} onClick={() => setVisibleMoi(false)}>Masqués</button>
-            <button type="button" className={`fchip ${visibleMoi ? 'on' : ''}`} onClick={() => setVisibleMoi(true)}>Visibles</button>
-          </div>
+          <Bascule
+            ariaLabel="Visibilité des jeux tagués"
+            valeur={visibleMoi}
+            onChange={setVisibleMoi}
+            options={[
+              { valeur: false, label: 'Masqués' },
+              { valeur: true, label: 'Visibles' },
+            ]}
+          />
           {/* L'indice ne paraît que sur « Masqués » : c'est le seul des deux à laisser une
               question ouverte (« et je les retrouve comment ? »). */}
           {!visibleMoi && <p className="field-hint">Ces jeux n'apparaissent que si le tag est coché dans les filtres.</p>}

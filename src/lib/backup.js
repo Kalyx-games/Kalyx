@@ -49,7 +49,7 @@ function pick(obj, cols) {
 //    valeur actuelle en base est PRÉSERVÉE. C'est le bon comportement : une vieille sauvegarde
 //    ne doit pas effacer une donnée dont elle ignore l'existence.
 // Écarter `null` confondait ces deux cas et ne servait que le second.
-const BUBBLE_OPT = ['avatar', 'visible_pour', 'compte']
+const BUBBLE_OPT = ['avatar', 'visible_pour', 'compte', 'prefs']
 function pickBubble(o) {
   const out = { name: o.name, initials: o.initials ?? null, color: o.color ?? null }
   for (const c of BUBBLE_OPT) if (o[c] !== undefined) out[c] = o[c]

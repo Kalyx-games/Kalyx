@@ -2,6 +2,7 @@ import { BackIcon } from './icons'
 import Avatar from './Avatar'
 import EditeurBulle from './EditeurBulle'
 import BubbleListManager from './BubbleListManager'
+import Bascule from './Bascule'
 
 // LE MENU DU COMPTE, ouvert depuis la barre du haut.
 //
@@ -86,23 +87,16 @@ export default function EcranCompte({
         <section className="settings-card">
           <h3>Affichage</h3>
           <div className="oe-field">
-            <span className="oe-label">Nom des jeux en grille</span>
-            <div className="chips">
-              <button
-                type="button"
-                className={`fchip ${prefs.grilleNoms ? 'on' : ''}`}
-                onClick={() => onPref('grilleNoms', true)}
-              >
-                Affiché
-              </button>
-              <button
-                type="button"
-                className={`fchip ${prefs.grilleNoms ? '' : 'on'}`}
-                onClick={() => onPref('grilleNoms', false)}
-              >
-                Masqué
-              </button>
-            </div>
+            <span className="oe-label">Noms des jeux en vue grille</span>
+            <Bascule
+              ariaLabel="Noms des jeux en vue grille"
+              valeur={prefs.grilleNoms}
+              onChange={(v) => onPref('grilleNoms', v)}
+              options={[
+                { valeur: true, label: 'Affichés' },
+                { valeur: false, label: 'Masqués' },
+              ]}
+            />
           </div>
         </section>
       )}

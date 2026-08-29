@@ -24,7 +24,8 @@ function formatPrice(p) {
   return `${n.toFixed(2).replace('.', ',')} €`
 }
 
-// Hauteur de la vignette — DOIT rester synchro avec .game-thumb / .game (index.css).
+// Hauteur PLANCHER de la vignette (`min-height` de .game-thumb) — DOIT rester synchro avec
+// index.css. Au-dessus, c'est le corps de la carte qui commande.
 const THUMB_H = 88
 
 // Une seule durée par jeu : on affiche le maximum (les jeux ont min = max).
@@ -67,8 +68,12 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
   // hauteur qu'aucune colonne n'atteint (mesuré : le pire cas réel passe de 66 à 43px, et le
   // seuil d'agrandissement de 98 devient inatteignable).
   const stackH = Math.max(pileH(ownerList.length), pileH(tagList.length))
-  // La pile de bulles déborde sous l'image quand elle dépasse sa hauteur → on réserve la place.
-  const thumbColStyle = stackH > THUMB_H + 10 ? { minHeight: stackH - 10 } : undefined
+  // ⚠️ Les piles vivent DANS la jaquette (`bottom: 4px`) et la carte est en `overflow: hidden` :
+  // une pile plus haute que la vignette serait tranchée par le haut, pas débordée sous elle. On
+  // réserve donc la hauteur de la pile + ses deux respirations de 4px. (Les deux « 10 » d'avant
+  // étaient l'ancien débord `-10px`, disparu quand les pastilles sont rentrées dans l'image.)
+  const besoinH = stackH + 8
+  const thumbColStyle = besoinH > THUMB_H ? { minHeight: besoinH } : undefined
 
   // Joueurs : base, puis entre parenthèses ce que les extensions AJOUTENT.
   const basePlayers = basePlayersSet(game)

@@ -92,6 +92,11 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
         }}
         disabled={!onCardClick}
         title={game.name}
+        /* ⚠️ Le nom est ÉCRIT ICI et pas seulement dans le `title` : quand le compte masque les
+           noms, la tuile ne contient plus que l'image (en `alt=""`) et la sous-ligne — un
+           lecteur d'écran annoncerait « 12 parties, bouton » soixante-neuf fois. On garde la
+           sous-ligne dans l'annonce, sinon on la retirerait aussi à qui affiche les noms. */
+        aria-label={[game.name, price || metaLine].filter(Boolean).join(', ')}
       >
         <div className="gtile-art">
           {showImg ? (
@@ -139,8 +144,8 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
           )}
         </div>
         {/* Le nom peut être masqué depuis le menu Compte : certains préfèrent une grille de
-            pures jaquettes. ⚠️ Le `title` reste, et le nom accessible aussi (aria-label du
-            bouton) : on retire une aide visuelle, pas l'information. */}
+            pures jaquettes. ⚠️ Le `title` ET l'`aria-label` du bouton le portent toujours : on
+            retire une aide visuelle, jamais l'information. */}
         {montreNom && <span className="gtile-name">{game.name}</span>}
         {/* Le prix prend ici la MÊME forme qu'en vue liste : petite icône + montant en vert.
             Il occupe la sous-ligne, que la valeur du tri lui cède (en wishlist, le prix est
