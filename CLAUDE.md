@@ -291,6 +291,121 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## 🔨⚠️ LES TAGS PASSENT DANS LE MENU COMPTE + CHACUN CHOISIT S ILS MASQUENT (2026-08-29, 2 demandes user)
+
+**Demandes** : « la gestion de tag se déplace dans le menu compte pour que chaque compte puisse gérer
+indépendamment ses tags » · « lorsqu un compte crée un tag il puisse choisir si le jeu qui a ce tag coché doit
+toujours apparaître dans la collection ou s il ne doit jamais apparaître tant que la case du filtre n est pas
+cochée. Ça permet aux gens d avoir des usages différents des tags ».
+
+⚠️ **MIGRATION À LANCER PAR L USER : `supabase/migration_tags_mode.sql`** (une colonne `visible_pour text` sur
+`tags` ; ajoutée aussi à `schema.sql`). **Sans elle l app marche exactement comme avant** — et le réglage n est
+même pas PROPOSÉ (voir le garde plus bas).
+
+### ⭐ ARBITRAGE USER : le mode est PROPRE À CHAQUE COMPTE
+
+Question posée avec ses deux conséquences chiffrées. Réponse : **à chaque compte**. Le workflow qui avait étudié
+le sujet écartait cette piste, estimant qu il fallait casser `unique(name)` sur `tags` — la clé de TROIS couches
+de stockage (cache hors ligne `keyPath: name`, `upsert on_conflict: name`, `deleteExtra`). **Sa prémisse était
+fausse : le mode n a pas à vivre DANS le dictionnaire.**
+
+### LE FORMAT : une colonne À CÔTÉ, au format CSV déjà employé partout
+
+    tags.visible_pour = NULL / ""              → masquant pour TOUT LE MONDE (l actuel)
+    tags.visible_pour = "Claire & Nazim"       → toujours visible chez elle, masquant ailleurs
+
+  · `tags.name` reste UNIQUE → cache, sauvegardes, restauration : **rien ne bouge, aucun bump de version**.
+  · Le dictionnaire reste unique → **un tag garde UNE couleur pour tout le monde**, sans quoi la fiche d un jeu
+    ne pourrait plus mettre « Claire : À Vendre » et « Clémence : À Vendre » en regard (le lot précédent).
+  · Le format est **exactement celui de `games.owner` et `games.tags`** : mêmes helpers, mêmes garanties
+    (trimé, non vide, dédoublonné, trié, joint par « , »).
+  · **Additif et réversible** — l inverse (refusionner deux dictionnaires qui ont divergé) ne l aurait pas été.
+
+### Le module (`src/lib/tags.js`)
+
+  · `tagVisiblePour(ligne, compte)` — ⚠️ **sans compte actif → masquant** : on ne sait pas qui regarde, on
+    retombe sur le comportement historique. Repli sûr, cohérent avec `tagsPourCompte`.
+  · `ecritVisiblePour(raw, compte, visible)` — n écrit QUE sa part, forme canonique.
+  · `patchVisiblePour(id, compte, visible)` — **RELIT la ligne juste avant d écrire** : la colonne porte le
+    choix des AUTRES comptes ; sans cette relecture, enregistrer depuis un éditeur ouvert depuis cinq minutes
+    effacerait ce qu un autre foyer vient de poser. Même motif, même raison que `tagsAEcrire`.
+  · `renameCompteDansTagsVisibles` — ⚠️ **INDISPENSABLE** : sans ce suivi, renommer un compte laisserait son nom
+    orphelin et **tous ses tags « visibles » redeviendraient masquants sans un mot**. Jumeau de
+    `renameCompteDansTags`, branché juste après lui dans `handleRenameOwner`.
+  · `OPTIONAL_COLS` + cascade de dégradation recopiés d `owners.js` (regex par CONCATÉNATION — dans un template
+    literal, `\b` est un BACKSPACE ; le piège a déjà coûté une dégradation morte ici).
+
+### ⚠️ LE GARDE QUI ÉVITE LE PIRE : on ne propose pas un réglage qui serait jeté
+
+Avant migration, la cascade retire `visible_pour` et l enregistrement **réussit** — le choix serait donc
+silencieusement perdu. → **`modeTagDispo = (tagsList ?? []).some((t) => "visible_pour" in t)`** : un `select(*)`
+ramène la colonne dès qu elle existe, même vide. Tant que la migration n est pas lancée, **le réglage n apparaît
+pas du tout**. Mieux qu un message d erreur : la question n est pas posée.
+
+### Le filtre (`filtering.js`) — un 7e paramètre, une ligne de logique
+
+    const masquants = ts.filter((t) => !tagsVisibles.has(t))
+    if (masquants.length && !ts.some((t) => filters.tags.includes(t))) return false
+
+  · **Seuls les tags qui MASQUENT retirent le jeu** ; le RETOUR ne change pas (cocher n importe lequel de ses
+    tags le ramène). Donc **un tag masquant suffit à masquer**, même si un autre est réglé visible.
+  · ⚠️ Un tag ABSENT de `tagsVisibles` masque : ligne supprimée, table absente, migration non lancée, **argument
+    oublié** → on retombe sur l avant. **Équivalence prouvée** : à ensemble vide, l expression est littéralement
+    l ancienne.
+  · `tagsOnly` (« Seulement ces tags ») est INCHANGÉ : c est un geste explicite, il ignore les modes. Il devient
+    du même coup le seul moyen de filtrer SUR un tag « visible » — ce qui lui donne enfin une raison d être.
+    Son libellé passe de « N afficher que les jeux ayant les tags sélectionnés » à **« Seulement ces tags »**.
+
+### Le déménagement
+
+  · La carte **Tags** quitte les Réglages pour le **menu Compte** (`EcranCompte`), rendue seulement si
+    `!creation && compte` : le mode se règle POUR quelqu un, il faut donc quelqu un.
+  · **Les Réglages ne parlent plus ni de comptes ni de tags** : Partager · Apparence · Joueurs · Sauvegardes ·
+    Liens. `Settings` perd 5 props et son import.
+  · `EditeurBulle` : prop `avecModeTag` + `compte`. ⚠️ `ref0` gagne `visible` et `modifie` le teste — sans ça,
+    changer UNIQUEMENT le mode laisse « Enregistrer » éteint et on clique dans le vide.
+  · ⚠️ `onValider` s allonge **PAR LA FIN** : `depart` doit rester en 5e position, `App` le lit là
+    (`if (!origine)`) — insérer le mode avant transformerait chaque édition de compte en création.
+  · ⚠️ `visibleMoi` n entre PAS dans le `patch` : il ne se recompose qu après relecture de la ligne.
+  · **`allTags` (les puces du filtre) passe de `tousLesTags` à `tagsPourCompte`** : gérer ses tags chez soi tout
+    en voyant ceux des autres dans son filtre serait contradictoire. Sûr par construction — on ne peut jamais
+    porter la tranche d un autre, donc aucune étiquette ne devient impossible à décocher. **Le FORMULAIRE d un
+    jeu garde tout le vocabulaire** (`GameForm` calcule ses propres `tagChoices`) : on filtre sur ce qu on a, on
+    tague avec ce qui existe.
+  · `GameForm` : « Ajoutez des tags depuis l écran Réglages ⚙️ » → **« Ajoutez des tags depuis le menu Compte. »**
+  · `BUBBLE_OPT = ["avatar", "visible_pour"]` — sans quoi la colonne serait **silencieusement absente de toutes
+    les sauvegardes**, et effacée à la première restauration (le commentaire du fichier le dit déjà).
+
+**Libellés (5 mots en tout)** : « Les jeux tagués » · [ Masqués ] [ Visibles ] · « Ils reviennent en cochant le
+tag. » — cet indice ne paraît que sur « Masqués », le seul des deux à laisser une question ouverte. L écran étant
+le menu Compte, le contexte est posé : le libellé ne le redit pas.
+
+### Défaut préexistant corrigé au passage
+
+`TierlistView` : le `useMemo` du bac lisait `compte` mais ne l avait pas en dépendance → **changer de compte
+pendant qu une tierlist est ouverte laissait le bac sur l ancien périmètre**.
+
+### Mesuré
+
+  · **Logique éprouvée sur le code RÉEL** (bundle esbuild des modules du projet, 21 cas) : les deux helpers, les
+    huit cas du filtre, et l **ÉQUIVALENCE STRICTE** quand le 7e argument est omis.
+  · **En dev, contre-épreuve croisée** (compte « Claire & Nazim ») : **43 jeux** sans le mode = exactement
+    l état actuel · **66** avec « Grenier » réglé visible · **67** en cochant la puce « Grenier ». L écart d un
+    jeu est **Abalone**, qui porte AUSSI « À Vendre » : un masquant suffit à masquer, mais cocher ramène —
+    exactement la règle conçue. Retirer la puce → 43.
+  · **Le garde** : colonne absente → le réglage n est pas rendu, la carte Tags fonctionne quand même. Colonne
+    présente (simulée par un stub de LECTURE, retiré et fichier vérifié identique) → réglage rendu, « Grenier »
+    sur « Visibles✓ », indice masqué.
+  · « Enregistrer » éteint au départ, allumé en changeant le mode, **rééteint en revenant** : l instantané ne
+    dérive pas. Réglages : plus aucune carte Tags. **Aucune écriture** en base pendant les tests.
+
+⚠️ **SIGNALÉ, PAS CORRIGÉ** : `pickBubble` saute les `null` → un tag resté « Masqués » n a pas de
+`visible_pour` dans la sauvegarde, donc **restaurer ne repasse pas un tag « Visibles » sur « Masqués »**. C est
+**le même trou qui existe déjà sur `avatar`** ; le boucher (retirer `&& o[c] !== null`) changerait aussi le
+comportement de l avatar → décision séparée, pas un effet de bord de ce lot.
+
+**Garde-fou d espacement : 395, inchangé** (le réglage réutilise `.oe-field` / `.chips` / `.fchip`).
+
 ## ✅ QUI POSSÈDE, ET CE QUE CHACUN LUI A MIS (2026-08-29, 2 retours user)
 
 **Retour 1** : « Sur la fiche d un jeu les comptes et les tags sont sur une seule ligne, **comme s ils

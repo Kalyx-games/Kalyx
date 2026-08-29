@@ -1,0 +1,22 @@
+-- Tags : le MODE de filtrage, choisi tag par tag ET compte par compte.
+--
+-- Une seule colonne texte sur la table `tags`, au format CSV déjà employé partout dans ce
+-- projet (games.owner, games.tags) : la liste des comptes pour lesquels ce tag NE MASQUE PAS.
+--
+--   NULL / ''                → le jeu tagué est MASQUÉ tant que le tag n'est pas coché (l'actuel)
+--   'Claire & Nazim'         → toujours visible chez Claire & Nazim, masquant chez les autres
+--
+-- ⚠️ La colonne vit à CÔTÉ du dictionnaire, elle ne le divise pas : `tags.name` reste unique,
+-- donc le cache hors ligne (keyPath 'name'), les sauvegardes (upsert on_conflict 'name') et la
+-- restauration ne changent pas d'un octet. Un tag garde UNE couleur pour tout le monde — sans
+-- quoi la fiche d'un jeu ne pourrait plus dire « Claire : À Vendre · Clémence : À Vendre ».
+--
+-- Aucune donnée existante n'est touchée : sans valeur, « Grenier » et « À Vendre » gardent
+-- exactement le comportement qu'ils ont aujourd'hui.
+--
+-- ⚠️ Tant que cette migration n'est pas lancée, l'app fonctionne normalement : addTag /
+-- updateTag / renameTag retirent la colonne et réessaient (cf. src/lib/tags.js).
+--
+-- À lancer une fois dans Supabase → SQL Editor → New query → coller → Run. Idempotent.
+
+alter table public.tags add column if not exists visible_pour text;

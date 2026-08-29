@@ -109,6 +109,8 @@ create table if not exists public.tags (
   color      text,
   created_at timestamptz not null default now()
 );
+-- Les comptes pour lesquels ce tag NE masque pas (CSV de noms ; vide = masque partout).
+alter table public.tags add column if not exists visible_pour text;
 
 alter table public.tags enable row level security;
 drop policy if exists "Lecture ouverte tags"      on public.tags;

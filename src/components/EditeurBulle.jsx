@@ -3,6 +3,7 @@ import { ownerColor, ownerInitials, OWNER_COLORS, muteOwnerColor, parseOwners } 
 import Avatar from './Avatar'
 import { thumbSrc } from '../lib/img'
 import { parseAvatar, formatAvatar, AVATAR_INITIALES, AVATAR_EMOJI, AVATAR_JEU, EMOJIS_PROPOSES } from '../lib/avatar'
+import { tagVisiblePour } from '../lib/tags'
 
 // L'ÉDITEUR d'une « bulle » : un COMPTE (avec son image) ou un TAG (sans).
 // Extrait de BubbleListManager pour servir aussi l'écran Compte — la même main édite
@@ -19,9 +20,11 @@ export default function EditeurBulle({
   titre,
   namePlaceholder,
   avecAvatar = false,
+  avecModeTag = false, // un TAG : il porte en plus son mode de filtrage, propre au compte
+  compte = null, // le compte actif : c'est POUR LUI que le mode se règle
   apercuGrand = false, // l aperçu en tête, en grand : quand l éditeur EST l écran
   jeux = [],
-  onValider, // (nom, initiales, couleur, avatar|undefined, bulleDOrigine)
+  onValider, // (nom, initiales, couleur, avatar|undefined, bulleDOrigine, visibleMoi)
   onAnnuler,
 }) {
   const neuf = bulle === 'new'
@@ -35,6 +38,9 @@ export default function EditeurBulle({
   const [forme, setForme] = useState(avatarDepart.type)
   const [emoji, setEmoji] = useState(avatarDepart.type === AVATAR_EMOJI ? avatarDepart.valeur : '')
   const [jeuId, setJeuId] = useState(avatarDepart.type === AVATAR_JEU ? avatarDepart.valeur : '')
+  // Le mode de filtrage du tag, POUR CE COMPTE. Un tag neuf naît masquant : c'est le
+  // comportement que l'app a toujours eu, et le seul qui ne fasse rien réapparaître.
+  const [visibleMoi, setVisibleMoi] = useState(tagVisiblePour(depart, compte))
   // Les valeurs de DÉPART, figées : elles disent si quelque chose a bougé. Sans ça,
   // un éditeur affiché en permanence propose « Enregistrer » alors qu il n y a rien à
   // enregistrer — le bouton ne dirait plus rien de l état.
@@ -46,7 +52,10 @@ export default function EditeurBulle({
     initials: depart ? depart.initials || ownerInitials(depart.name) : '',
     color: depart ? muteOwnerColor(depart.color) || ownerColor(depart.name) : PALETTE[0],
     avatar: depart?.avatar ?? null,
-  }), [depart])
+    // ⚠️ Sans cette valeur de départ, changer UNIQUEMENT le mode laisserait « Enregistrer »
+    // éteint : on cliquerait dans le vide.
+    visible: tagVisiblePour(depart, compte),
+  }), [depart, compte])
 
   const onNameChange = (v) => {
     setName(v)
@@ -62,7 +71,8 @@ export default function EditeurBulle({
     name.trim() !== ref0.name ||
     (initials || name).trim().slice(0, 2).toUpperCase() !== ref0.initials ||
     color !== ref0.color ||
-    (avecAvatar && (avatarCourant ?? null) !== ref0.avatar)
+    (avecAvatar && (avatarCourant ?? null) !== ref0.avatar) ||
+    (avecModeTag && visibleMoi !== ref0.visible)
 
   // Les jaquettes proposées : les jeux DU COMPTE d'abord (c'est sa collection), les autres
   // ensuite — un compte tout neuf n'a encore aucun jeu à son nom.
@@ -78,7 +88,9 @@ export default function EditeurBulle({
   const valider = () => {
     const nm = name.trim()
     if (!nm) return
-    onValider(nm, (initials || name).trim().slice(0, 2).toUpperCase(), color, avatarCourant, depart)
+    // ⚠️ L'argument s'ajoute PAR LA FIN : `depart` doit rester en 5ᵉ position, App le lit là
+    // (`if (!origine)`) — l'insérer avant ferait passer chaque édition pour une création.
+    onValider(nm, (initials || name).trim().slice(0, 2).toUpperCase(), color, avatarCourant, depart, visibleMoi)
   }
 
   return (
@@ -168,6 +180,21 @@ export default function EditeurBulle({
                 ))}
               </div>
             ))}
+        </div>
+      )}
+
+      {/* Le mode de filtrage, propre à ce compte : l'écran étant le menu Compte, le
+          contexte est déjà posé — le libellé n'a pas à le redire. */}
+      {avecModeTag && compte && (
+        <div className="oe-field">
+          <span className="oe-label">Les jeux tagués</span>
+          <div className="chips">
+            <button type="button" className={`fchip ${visibleMoi ? '' : 'on'}`} onClick={() => setVisibleMoi(false)}>Masqués</button>
+            <button type="button" className={`fchip ${visibleMoi ? 'on' : ''}`} onClick={() => setVisibleMoi(true)}>Visibles</button>
+          </div>
+          {/* L'indice ne paraît que sur « Masqués » : c'est le seul des deux à laisser une
+              question ouverte (« et je les retrouve comment ? »). */}
+          {!visibleMoi && <p className="field-hint">Ils reviennent en cochant le tag.</p>}
         </div>
       )}
 

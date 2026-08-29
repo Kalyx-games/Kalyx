@@ -53,6 +53,7 @@ export default function TierlistView({
   games,
   allOwners,
   allTags,
+  tagsVisibles, // les tags qui ne masquent pas, pour le compte actif
   playerNames,
   online,
   initialPlayer = '',
@@ -111,9 +112,11 @@ export default function TierlistView({
   const tray = useMemo(
     () =>
       games
-        .filter((g) => !placed.has(g.id) && passesFilters(g, filters, '', false, true, compte ?? null))
+        .filter((g) => !placed.has(g.id) && passesFilters(g, filters, '', false, true, compte ?? null, tagsVisibles))
         .sort((a, b) => a.name.localeCompare(b.name, 'fr')),
-    [games, placed, filters]
+    // ⚠️ `compte` et `tagsVisibles` sont bien des dépendances : sans eux, changer de compte
+    // pendant qu'une tierlist est ouverte laisserait le bac sur l'ancien périmètre.
+    [games, placed, filters, compte, tagsVisibles]
   )
 
   // Jeux non classés à montrer EN BAS (dans le défilement) hors édition :
@@ -469,7 +472,7 @@ export default function TierlistView({
 
   // Filtre d'AFFICHAGE (consultation) = MÊME système que la Collection / le bac d'édition :
   // les jeux tagués sont masqués par défaut, et réapparaissent quand un de leurs tags est coché.
-  const displayMatch = (g) => passesFilters(g, filters, '', false, true, compte ?? null)
+  const displayMatch = (g) => passesFilters(g, filters, '', false, true, compte ?? null, tagsVisibles)
   const gamesOf = (ids, filtered) => {
     const gs = ids.map((id) => gameById.get(id)).filter(Boolean)
     return filtered ? gs.filter(displayMatch) : gs

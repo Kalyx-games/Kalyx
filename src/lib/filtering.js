@@ -31,7 +31,12 @@ export const norm = (s) => (s || '').normalize('NFD').replace(DIACRITICS, '').to
 
 // Un jeu passe-t-il la recherche + les filtres ?
 // `includePrice` : n'applique le filtre prix que dans la Wishlist (sans objet ailleurs).
-export function passesFilters(g, filters, q, includePrice, applyTags = true, compte = null) {
+// ⚠️ Ensemble VIDE au niveau du module : ne pas allouer un Set neuf à chaque appel (cette
+// fonction tourne sur toute la collection à chaque frappe).
+const AUCUN_TAG_VISIBLE = new Set()
+
+export function passesFilters(g, filters, q, includePrice, applyTags = true, compte = null,
+                              tagsVisibles = AUCUN_TAG_VISIBLE) {
   // Recherche : nom OU noms d'extensions.
   if (q && !(norm(g.name).includes(q) || norm(extensionNames(g.extensions).join(' ')).includes(q))) return false
 
@@ -53,7 +58,13 @@ export function passesFilters(g, filters, q, includePrice, applyTags = true, com
     if (filters.tagsOnly && filters.tags.length) {
       if (!ts.some((t) => filters.tags.includes(t))) return false
     } else {
-      if (!(ts.length === 0 || ts.some((t) => filters.tags.includes(t)))) return false
+      // Seuls les tags qui MASQUENT retirent le jeu : un jeu qui ne porte que des tags
+      // réglés « toujours visibles » reste affiché. Le RETOUR ne change pas — cocher
+      // n'importe lequel de ses tags le ramène, exactement comme avant.
+      // ⚠️ Un tag ABSENT de `tagsVisibles` masque : ligne supprimée, table absente, migration
+      // non lancée, argument oublié → on retombe sur le comportement d'avant. Repli sûr.
+      const masquants = ts.filter((t) => !tagsVisibles.has(t))
+      if (masquants.length && !ts.some((t) => filters.tags.includes(t))) return false
     }
   }
 

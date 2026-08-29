@@ -1,6 +1,7 @@
 import { BackIcon } from './icons'
 import Avatar from './Avatar'
 import EditeurBulle from './EditeurBulle'
+import BubbleListManager from './BubbleListManager'
 
 // LE MENU DU COMPTE, ouvert depuis la barre du haut.
 //
@@ -17,6 +18,14 @@ export default function EcranCompte({
   onEnregistrer, // (nom, initiales, couleur, avatar, origine)
   onSupprimer,
   onClose,
+  // Les tags vivent ici et non plus dans les Réglages : chaque compte règle SES tags
+  // (leur mode de filtrage lui est propre), donc l'écran de gestion appartient au compte.
+  tags = null,
+  onAddTag,
+  onUpdateTag,
+  onRenameTag,
+  onDeleteTag,
+  modeTagDispo = false, // la colonne `tags.visible_pour` existe-t-elle déjà en base ?
 }) {
   return (
     <div className="settings">
@@ -65,6 +74,24 @@ export default function EcranCompte({
           </>
         )}
       </section>
+
+      {/* Les tags du compte. Pas en création : il n'y a pas encore de compte à qui les
+          rattacher, et le mode de filtrage se règle POUR quelqu'un. */}
+      {!creation && compte && (
+        <BubbleListManager
+          title="Tags"
+          items={tags}
+          namePlaceholder="Nom du tag (ex. Coopératif)"
+          addLabel="Ajouter un tag"
+          online={online}
+          avecModeTag={modeTagDispo}
+          compte={compte.name}
+          onAdd={onAddTag}
+          onUpdate={onUpdateTag}
+          onRename={onRenameTag}
+          onDelete={onDeleteTag}
+        />
+      )}
 
       {/* Changer de compte reste possible hors ligne : c'est un geste local. */}
       {!creation && (

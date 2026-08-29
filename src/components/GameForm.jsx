@@ -533,7 +533,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                   ))}
                 </div>
               ) : (
-                <p className="field-hint">Ajoutez des tags depuis l'écran Réglages ⚙️</p>
+                <p className="field-hint">Ajoutez des tags depuis le menu Compte.</p>
               )}
             </div>
           )}

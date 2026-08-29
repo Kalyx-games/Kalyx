@@ -36,7 +36,7 @@ function pick(obj, cols) {
 // retire d'elle-même si la base ne les connaît pas encore (migration non lancée).
 // Sans cette liste, une colonne neuve serait SILENCIEUSEMENT absente de toutes les
 // sauvegardes — et effacée à la première restauration.
-const BUBBLE_OPT = ['avatar']
+const BUBBLE_OPT = ['avatar', 'visible_pour']
 function pickBubble(o) {
   const out = { name: o.name, initials: o.initials ?? null, color: o.color ?? null }
   for (const c of BUBBLE_OPT) if (o[c] !== undefined && o[c] !== null) out[c] = o[c]

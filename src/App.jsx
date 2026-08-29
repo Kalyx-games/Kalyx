@@ -2,10 +2,10 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Sus
 import lazyRetry from './lib/lazyRetry'
 import { isConfigured, hasCode } from './lib/supabase'
 import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwners } from './lib/games'
-import { tousLesTags, tagsAEcrire, renameCompteDansTags, renameTagDansGames } from './lib/tagsJeux'
+import { tagsPourCompte, tagsAEcrire, renameCompteDansTags, renameTagDansGames } from './lib/tagsJeux'
 import { saveGamesCache, loadGamesCache, saveBubblesCache, loadBubblesCache } from './lib/cache'
 import { fetchOwners, addOwner, updateOwner, renameOwner, deleteOwner } from './lib/owners'
-import { fetchTags, addTag, updateTag, renameTag, deleteTag } from './lib/tags'
+import { fetchTags, addTag, updateTag, renameTag, deleteTag, tagVisiblePour, patchVisiblePour, renameCompteDansTagsVisibles } from './lib/tags'
 import { downloadBackup, downloadCsv, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup, restorePreview } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { EMPTY_FILTERS, PRICE_MIN, PRICE_MAX, norm, passesFilters } from './lib/filtering'
@@ -841,12 +841,15 @@ export default function App() {
   // Tags : liste proposée (gérée ∪ ceux déjà sur les jeux) + correspondance nom -> ligne.
   const allTags = useMemo(() => {
     const set = new Set((tagsList ?? []).map((t) => t.name))
-    // Noms NUS (jamais « tag::compte ») : ce sont les libellés des puces du filtre et des
-    // cases du formulaire. On propose aussi ceux posés par les AUTRES comptes, sinon ils
-    // deviendraient impossibles à cocher.
-    ;(games ?? []).forEach((g) => tousLesTags(g.tags).forEach((t) => set.add(t)))
+    // Noms NUS (jamais « tag::compte ») : ce sont les libellés des puces du FILTRE.
+    // ⚠️ `tagsPourCompte` et non « tous les tags » : gérer ses tags dans son menu Compte
+    // tout en voyant ceux des autres foyers dans son filtre serait contradictoire. Et c'est
+    // sûr par construction — on ne peut jamais porter la tranche d'un autre, donc aucune
+    // étiquette ne devient impossible à décocher. (Le FORMULAIRE d'un jeu, lui, propose
+    // encore tout le vocabulaire : on filtre sur ce qu'on a, on tague avec ce qui existe.)
+    ;(games ?? []).forEach((g) => tagsPourCompte(g.tags, compte ?? null).forEach((t) => set.add(t)))
     return [...set].sort((a, b) => a.localeCompare(b, 'fr'))
-  }, [tagsList, games])
+  }, [tagsList, games, compte])
   const tagMap = useMemo(() => {
     const m = {}
     ;(tagsList ?? []).forEach((t) => {
@@ -854,6 +857,17 @@ export default function App() {
     })
     return m
   }, [tagsList])
+  // Les tags qui NE masquent PAS, pour le compte actif.
+  // ⚠️ Un tag absent d'ici masque — ligne supprimée, table absente, migration non lancée :
+  // on retombe sur le comportement d'avant cette colonne. C'est le repli sûr.
+  // ⚠️ Le réglage du mode n'est proposé QUE si la base connaît la colonne : un select('*')
+  // la ramène dès qu'elle existe, même vide. Sans ce garde, tant que la migration n'est pas
+  // lancée, le choix serait accepté puis JETÉ par la cascade de dégradation — sans un mot.
+  const modeTagDispo = (tagsList ?? []).some((t) => 'visible_pour' in t)
+  const tagsVisibles = useMemo(
+    () => new Set((tagsList ?? []).filter((t) => tagVisiblePour(t, compte)).map((t) => t.name)),
+    [tagsList, compte]
+  )
 
   // Jeu affiché dans la fiche : TOUJOURS dérivé du tableau `games` (pas un instantané figé)
   // → la fiche reflète les modifications (nom, image, joueurs…) faites depuis « Modifier ».
@@ -901,7 +915,7 @@ export default function App() {
   const visible = useMemo(() => {
     const q = norm(search)
     let list = (games ?? []).filter(
-      (g) => g.status === listStatus && passesFilters(g, filters, q, view === 'wishlist', view !== 'wishlist', compte ?? null)
+      (g) => g.status === listStatus && passesFilters(g, filters, q, view === 'wishlist', view !== 'wishlist', compte ?? null, tagsVisibles)
     )
 
     // Tri
@@ -916,7 +930,7 @@ export default function App() {
     else if (sort === 'lastplayed') list = [...list].sort((a, b) => (playMeta[a.id]?.last || '').localeCompare(playMeta[b.id]?.last || '') || (a.name || '').localeCompare(b.name || '', 'fr'))
     if (sortDir === 'desc') list.reverse()
     return list
-  }, [games, search, sort, sortDir, shuffleSeed, filters, listStatus, view, playMeta, compte])
+  }, [games, search, sort, sortDir, shuffleSeed, filters, listStatus, view, playMeta, compte, tagsVisibles])
 
   // Largeur de la 1re colonne (joueurs/idéal) des cartes = largeur du jeu qui en prend le
   // plus → toutes les cartes partagent cette largeur (colonnes alignées).
@@ -980,8 +994,8 @@ export default function App() {
   // La recherche est ignorée sur les Stats (le champ n'y est plus affiché) : une saisie
   // résiduelle faite en Collection ne doit pas filtrer les stats en silence.
   const statsGames = useMemo(() => {
-    return (games ?? []).filter((g) => passesFilters(g, filters, '', false, true, compte ?? null))
-  }, [games, filters, compte])
+    return (games ?? []).filter((g) => passesFilters(g, filters, '', false, true, compte ?? null, tagsVisibles))
+  }, [games, filters, compte, tagsVisibles])
 
   // Y a-t-il au moins un jeu en collection (indépendamment des filtres) ? Sert à
   // distinguer « collection vide » de « aucun jeu ne correspond aux filtres » dans les Stats.
@@ -1216,6 +1230,9 @@ export default function App() {
       // resteraient orphelines, et TOUS les tags de ce compte disparaîtraient de son écran
       // sans un mot. Même famille de défaut que le filtre propriétaire mort, juste au-dessus.
       await renameCompteDansTags(oldName, newName)
+      // ⚠️ Même famille : le nom vit aussi dans `tags.visible_pour`. Sans ce suivi, tous les
+      // tags que ce compte avait réglés sur « visibles » redeviendraient masquants sans un mot.
+      await renameCompteDansTagsVisibles(oldName, newName)
       reloadOwners()
       loadGames() // recharge les jeux : le nom propagé dans games.owner doit s'afficher
       showToast(n ? `« ${newName} » : ${n} jeu${n > 1 ? 'x' : ''} mis à jour.` : `Renommé en « ${newName} ».`)
@@ -1249,25 +1266,31 @@ export default function App() {
   }
 
   // --- Tags (même logique que les propriétaires) ---
-  async function handleAddTag(name, initials, color) {
+  async function handleAddTag(name, initials, color, _avatar, visibleMoi) {
     try {
-      await addTag(name, initials, color)
+      await addTag(name, initials, color, visibleMoi && compte ? compte : null)
       reloadTags()
     } catch (e) {
       setError(messageUtilisateur(e))
     }
   }
-  async function handleUpdateTag(id, patch) {
+  async function handleUpdateTag(id, patch, visibleMoi) {
     try {
-      await updateTag(id, patch)
+      await updateTag(id, await avecModeTag(id, patch, visibleMoi))
       reloadTags()
     } catch (e) {
       setError(messageUtilisateur(e))
     }
   }
-  async function handleRenameTag(id, oldName, newName, patch) {
+  // Le mode de filtrage se recompose à part : la colonne porte aussi le choix des AUTRES
+  // comptes, il faut donc relire la ligne avant d'écrire (cf. patchVisiblePour).
+  async function avecModeTag(id, patch, visibleMoi) {
+    if (visibleMoi === undefined || !compte) return patch
+    return { ...patch, ...(await patchVisiblePour(id, compte, visibleMoi)) }
+  }
+  async function handleRenameTag(id, oldName, newName, patch, visibleMoi) {
     try {
-      const n = await renameTag(id, oldName, newName, patch)
+      const n = await renameTag(id, oldName, newName, await avecModeTag(id, patch, visibleMoi))
       // ⚠️ « renameTag » ne sait renommer que les tags de l'ANCIEN format (il compare l'item
       // entier). Les tranches « tag::compte » se renomment ici, sinon le renommage serait un
       // no-op silencieux sur tous les jeux déjà éclatés.
@@ -1960,6 +1983,12 @@ export default function App() {
 
       {compteOuvert ? (
         <EcranCompte
+          tags={tagsList}
+          onAddTag={handleAddTag}
+          onUpdateTag={handleUpdateTag}
+          onRenameTag={handleRenameTag}
+          onDeleteTag={(tag) => setConfirmingTag(tag)}
+          modeTagDispo={modeTagDispo}
           compte={compteLigne}
           jeux={games ?? []}
           online={online}
@@ -2002,11 +2031,6 @@ export default function App() {
       ) : settingsOpen ? (
         <Suspense fallback={null}>
           <Settings
-            tags={tagsList}
-            onAddTag={handleAddTag}
-            onUpdateTag={handleUpdateTag}
-            onRenameTag={handleRenameTag}
-            onDeleteTag={(tag) => setConfirmingTag(tag)}
             onExport={handleExport}
             onExportCsv={handleExportCsv}
             onImportFile={handleImportFile}
@@ -2567,6 +2591,7 @@ export default function App() {
             games={collectionGames}
             allOwners={allOwners}
             allTags={allTags}
+            tagsVisibles={tagsVisibles}
             playerNames={playerNames}
             online={online}
             onClose={() => setTierlistView(null)}

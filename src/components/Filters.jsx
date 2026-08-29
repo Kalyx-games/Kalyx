@@ -87,7 +87,7 @@ export default function Filters({ owners, tags, filters, setFilters, showPrice, 
           </div>
           <label className="filter-check">
             <input type="checkbox" checked={filters.tagsOnly} onChange={toggleTagsOnly} />
-            N'afficher que les jeux ayant les tags sélectionnés
+            Seulement ces tags
           </label>
         </div>
       )}

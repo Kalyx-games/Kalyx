@@ -5,12 +5,12 @@ import qrcode from 'qrcode-generator'
 import { getTheme, applyTheme } from '../lib/theme'
 import { haptiqueDisponible, haptiqueActive, setHaptique } from '../lib/haptique'
 import { checkForUpdate, forceUpdate } from '../lib/update'
-import BubbleListManager from './BubbleListManager'
 import SortMenu from './SortMenu'
 import { SITE_LOGOS } from '../lib/logos'
 
-// Écran Réglages : tags, sauvegarde, apparence, liens. Les COMPTES ont leur propre écran
-// (le menu Compte de la barre du haut) : les Réglages n'en parlent plus du tout.
+// Écran Réglages : partage, apparence, joueurs, sauvegarde, liens. Ni les COMPTES ni les
+// TAGS n'y vivent plus : les deux appartiennent au compte, et se règlent dans son menu
+// (barre du haut) — un tag n'a pas le même mode de filtrage d'un compte à l'autre.
 
 const LINKS = [
   { label: "Melodice (musiques d'ambiance de jeux)", url: 'https://melodice.org/', domain: 'melodice.org' },
@@ -61,7 +61,6 @@ function relativeTime(iso) {
 }
 
 export default function Settings({
-  tags, onAddTag, onUpdateTag, onRenameTag, onDeleteTag,
   onExport, onExportCsv, onImportFile,
   backupFreq, onSetBackupFreq, backups, backupBusy, onBackupNow, onRestore,
   onOpenPlayers,
@@ -205,17 +204,6 @@ export default function Settings({
       </section>
 
 
-      <BubbleListManager
-        title="Tags"
-        items={tags}
-        namePlaceholder="Nom du tag (ex. Coopératif)"
-        addLabel="Ajouter un tag"
-        online={online}
-        onAdd={onAddTag}
-        onUpdate={onUpdateTag}
-        onRename={onRenameTag}
-        onDelete={onDeleteTag}
-      />
 
       <section className="settings-card">
         <h3>Joueurs</h3>

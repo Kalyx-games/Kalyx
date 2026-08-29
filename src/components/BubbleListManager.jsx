@@ -8,7 +8,7 @@ import EditeurBulle from './EditeurBulle'
 // qu'aux TAGS — mais il reste générique, l'éditeur étant partagé avec l'écran Compte.
 export default function BubbleListManager({
   title, items, namePlaceholder, addLabel, online = true,
-  avecAvatar = false, jeux = [],
+  avecAvatar = false, avecModeTag = false, compte = null, jeux = [],
   onAdd, onUpdate, onRename, onDelete,
 }) {
   // null = éditeur fermé (on ne voit que la liste + le bouton d'ajout) ;
@@ -16,15 +16,17 @@ export default function BubbleListManager({
   const [editing, setEditing] = useState(null)
   const close = () => setEditing(null)
 
-  const valider = (nom, initiales, couleur, avatar, origine) => {
+  // ⚠️ `visibleMoi` n'entre PAS dans le patch : il ne se recompose qu'après relecture de la
+  // ligne (la colonne porte le choix des autres comptes). App s'en charge.
+  const valider = (nom, initiales, couleur, avatar, origine, visibleMoi) => {
     const patch = avecAvatar ? { initials: initiales, color: couleur, avatar } : { initials: initiales, color: couleur }
     if (!origine) {
-      onAdd(nom, initiales, couleur, avatar)
+      onAdd(nom, initiales, couleur, avatar, visibleMoi)
     } else if (nom !== origine.name && onRename) {
       // Le nom a changé → renommage AVEC propagation sur tous les jeux concernés.
-      onRename(origine.id, origine.name, nom, patch)
+      onRename(origine.id, origine.name, nom, patch, visibleMoi)
     } else {
-      onUpdate(origine.id, patch)
+      onUpdate(origine.id, patch, visibleMoi)
     }
     close() // on referme : la liste reste lisible
   }
@@ -71,6 +73,8 @@ export default function BubbleListManager({
               titre={editing === 'new' ? `Nouveau — ${title}` : `Modifier « ${editing.name} »`}
               namePlaceholder={namePlaceholder}
               avecAvatar={avecAvatar}
+              avecModeTag={avecModeTag}
+              compte={compte}
               jeux={jeux}
               onValider={valider}
               onAnnuler={close}
