@@ -1724,6 +1724,30 @@ body {
   font-size: 0.6rem;
   box-shadow: 0 0 0 2px var(--card); /* liseré couleur carte : nette séparation image/marge */
 }
+/* LES ÉTIQUETTES AU COIN OPPOSÉ, entièrement DANS la jaquette.
+   Retour user : « on dirait que les tags se rapportent aux autres personnes ». Le grief
+   n'était pas une erreur d'attribution — les tags affichés sont TOUJOURS ceux du compte
+   actif — mais un problème de PROXIMITÉ : une seule colonne, 3px d'écart, deux familles
+   collées, que l'œil lit comme une liste. 74px les séparent désormais, et trois signaux
+   indépendants les distinguent : le lieu, la forme (disque / carré) et le registre
+   (deux lettres / un emoji).
+   ⚠️ On ne va PAS jusqu'à dire « dedans = chez moi » : sur 33 jeux tagués sur 35 les items
+   sont encore COMMUNS et valent pour tout le monde — une mise en page qui l'affirmerait
+   mentirait tant que l'éclatement paresseux n'a pas tourné.
+   ⚠️ Liseré SOMBRE et non « var(--card) » : posé sur l'image et non à cheval sur la marge, un
+   anneau couleur carte ne séparerait rien. C'est celui de la vue grille. */
+.game-thumb-wrap .tag-bubbles {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 3px;
+}
+.game-thumb-wrap .tag-bubbles .owner-bubble {
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.35);
+}
 .bgg-logo {
   flex-shrink: 0;
   border-radius: 3px;
@@ -5901,14 +5925,7 @@ input[type='number'] {
    ce qui dépasse — la tuile reste ainsi dans sa colonne, même tirée à fond. */
 .gtile-row {
   position: relative;
-  /* ⚠️ `clip` et non `hidden`, avec une marge : la case doit continuer de retenir la tuile
-     pendant un glissé (sinon elle empiète sur ses voisines), MAIS laisser les pastilles de
-     compte déborder du coin bas-gauche — c'est ce que fait la vue liste, où elles débordent
-     dans le padding de la carte. Ici la jaquette occupe toute la colonne : il n'y a de place
-     que dans le `gap` (10px) et, pour la 1re colonne, dans le retrait de page (16px).
-     10px de marge tiennent donc dans les deux cas. */
-  overflow: clip;
-  overflow-clip-margin: 10px;
+  overflow: hidden;
   animation: kx-card-in 0.34s ease both; /* même arrivée que les cartes de la liste */
 }
 .gtile {
@@ -6001,22 +6018,26 @@ input[type='number'] {
 
 /* Les bulles de compte/tag sur une tuile : même coin qu'en vue liste (bas-gauche de la
    jaquette), en pile. Le prix n'est plus sur l'image, il n'y a donc plus de collision. */
-/* L'enrobage porte la position des deux piles : `.gtile-art` reste en `overflow: hidden`
-   (c'est lui qui arrondit l'image), il ne peut donc rien laisser dépasser. */
-.gtile-visuel {
-  position: relative;
-}
 .gtile-bulles {
   position: absolute;
-  /* À cheval sur le coin, comme en vue liste. ⚠️ 5px en bas et non 8 : sous la jaquette il
-     n'y a que 4px avant le titre — au-delà, la pastille mordrait dessus. */
-  left: -8px;
-  bottom: -5px;
+  left: 4px;
+  bottom: 4px;
   display: flex;
   flex-direction: column-reverse;
   gap: 3px;
 }
-.gtile-bulles .owner-bubble {
+.gtile-tags {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 3px;
+}
+/* ⚠️ On ÉTEND la liste de sélecteurs, on ne la remplace pas. */
+.gtile-bulles .owner-bubble,
+.gtile-tags .owner-bubble {
   width: 20px;
   height: 20px;
   font-size: var(--fs-micro);

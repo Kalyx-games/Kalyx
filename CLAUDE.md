@@ -472,63 +472,32 @@ bibliothèque part avec lui) · `retireCompteDeTagsVisibles` (son nom dans `visi
 
 ## ✅⚠️ LES BULLES NE PARAISSENT QUE QUAND ON FILTRE DESSUS (2026-08-29, retour user)
 
-**Retour** : « finalement on va revenir à la mise en page précédente des bulles mais on ne les affichera que
-quand on filtre par un ou plusieurs comptes. Même chose pour les tags ».
+**Retour** : « on ne les affichera que quand on filtre par un ou plusieurs comptes. Même chose pour les tags ».
 
-**Le grief d origine est réglé par le SENS, plus par la position.** La séparation en deux coins (piste A) est
-ANNULÉE : les deux familles reviennent dans **une seule pile** au coin bas-gauche, avec leur débord — en liste
-(10/10, l historique) comme en grille (8/5, le lot précédent, conservé). Elles ne se côtoient désormais que si
-l on filtre volontairement sur les deux, ce qui est un geste, pas un état.
+**La mise en page ne change PAS** : les deux coins du lot précédent restent (pastilles de compte à cheval sur
+le bord gauche en liste, à 4px DANS la jaquette en grille ; étiquettes au coin opposé, dans l image). Seule
+leur PRÉSENCE devient conditionnelle : au repos, une carte ne porte plus que le jeu.
 
   · `montreTags = filters.tags.length > 0` — simple : le filtre tags est vide au repos.
   · ⚠️⚠️ **`montreComptes` n est PAS `filters.owners.length > 0`** — et le premier test l a prouvé :
     `choisirCompte` pose TOUJOURS `owners: [compte]`, la condition n aurait donc JAMAIS été fausse et les
-    pastilles seraient restées affichées en permanence. → **le même prédicat que les puces de filtre**
-    (`activeChips`) : `repos = owners.length === 1 && owners[0] === compte`, et on montre dès qu on regarde
-    autre chose — un autre foyer, plusieurs, ou toute la collection.
+    pastilles seraient restées affichées en permanence, sans que rien ne le signale. → **le même prédicat que
+    les puces de filtre** (`activeChips`) : `repos = owners.length === 1 && owners[0] === compte`, et on
+    montre dès qu on regarde autre chose — un autre foyer, plusieurs, ou toute la collection.
   · ⚠️ Les deux drapeaux entrent dans le **comparateur du memo** de GameCard ET GameTile : sans eux, cocher un
     filtre ne ferait PAS apparaître les bulles — le memo bloquerait le seul rendu qui les montre.
-  · `stackH` redevient une SOMME (une seule pile). `.tag-bubbles` et `.gtile-tags` sont supprimées ;
-    `.gtile-visuel` et le `overflow-clip-margin` RESTENT (c est eux qui portent le débord en grille).
 
-**Mesuré** (compte Clémence & Mathieu) : au repos **0 pastille, 0 étiquette** sur 69 cartes — la carte ne porte
-que le jeu. Filtre à deux comptes → **63 pastilles** sur 121 cartes. Plus le tag « Grenier » → 66 pastilles et
-**7 étiquettes** sur 128. Pile unique dans les deux vues, débord 10/10 en liste et 8/5 en grille, carte à
-110px inchangée, aucun débordement de page.
+**Mesuré** (compte Clémence & Mathieu) : au repos **0 pastille, 0 étiquette** sur 69 cartes. Filtre à deux
+comptes + le tag « Grenier » → **66 pastilles et 7 étiquettes**. Géométrie inchangée : liste = débord 10/10,
+étiquettes dans l image, 54px d écart ; grille = pastilles à **4px dans** la jaquette, 72px d écart.
 
-**Garde-fou d espacement : 399 → 397** (le CSS des deux coins retiré).
-
-
-## ✅ LA PASTILLE DE COMPTE DÉBORDE AUSSI EN GRILLE (2026-08-29, retour user)
-
-**Retour** : « en vue liste j aime bien que les bulles propriétaires dépassent un peu en bas et à gauche de la
-jaquette, ce serait possible de faire quelque chose de proche en grille ? »
-
-⚠️ **Deux `overflow: hidden` l interdisaient**, et chacun a sa raison :
-  · `.gtile-art` — c est lui qui découpe l image à ses coins arrondis (5px) ;
-  · `.gtile-row` — la case retient la tuile pendant un glissé, sinon elle empiète sur ses voisines.
-
-**Géométrie mesurée à 412px** : 3 colonnes de 120px, retrait de page **16px**, `gap: 22px 10px`, et seulement
-**4px** entre la jaquette et son titre. La place disponible est donc le `gap` (10) et, pour la 1re colonne, le
-retrait (16) — mais RIEN sous la jaquette.
-
-**Le correctif, en deux temps :**
-  1. **`.gtile-row` passe de `overflow: hidden` à `overflow: clip; overflow-clip-margin: 10px`.** La case
-     continue de retenir la tuile glissée (mesuré : déplacée de 60px, seuls **10** dépassent), mais laisse
-     passer 10px de débord au repos. `overflow-clip-margin` est supporté (vérifié : `CSS.supports` → true).
-  2. **Les deux piles SORTENT de `.gtile-art`** vers un enrobage `.gtile-visuel` qui ne coupe rien.
-     ⚠️ **Repousser le clip de `.gtile-art` aurait été une fausse bonne idée** : la région de clip s élargit
-     AVEC les coins, l image n aurait plus été arrondie. On n y touche pas.
-
-  · `.gtile-bulles` : `left: -8px; bottom: -5px`. ⚠️ **5px en bas et non 8** : il n y a que 4px avant le
-    titre — au-delà, la pastille mordrait dessus. Mesuré : **1px** de chevauchement, invisible.
-  · Les ÉTIQUETTES ne bougent pas (`right: 4; bottom: 4`, dans l image) : la piste A du lot précédent tient,
-    et l écart entre les deux familles passe même de 72 à **84px**.
-
-**Mesuré** : débord 8px à gauche / 5px en bas sur les colonnes 1, 2 et 3 ; en 1re colonne la pastille tombe à
-x=8, **dans** le retrait de page (jamais hors écran) ; la page ne déborde pas ; `.gtile-art` garde
-`overflow: hidden` et `border-radius: 5px` ; sur Abalone, pastille débordante + étiquettes dans l image.
-
+⛔ **DEUX PISTES ESSAYÉES PUIS ANNULÉES DANS CE LOT, ne pas les reproposer :**
+  1. **Le débord des pastilles en vue GRILLE** (`overflow-clip-margin` sur `.gtile-row` + un enrobage
+     `.gtile-visuel` pour sortir les piles de `.gtile-art`, qui arrondit l image). Techniquement réussi et
+     mesuré (8px à gauche, 5 en bas, 1px seulement sur le titre), mais **l user a demandé de revenir aux
+     bulles DANS la jaquette**. Le code est dans l historique si le besoin revient.
+  2. **Le retour à une pile UNIQUE** (comptes et tags empilés ensemble) : j avais mal lu « revenir à la mise
+     en page précédente », qui ne visait que le placement en grille. **Les deux coins sont gardés.**
 
 ## ✅ LES DEUX FAMILLES DE BULLES CHANGENT DE COIN (2026-08-29, retour user)
 

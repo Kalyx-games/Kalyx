@@ -58,8 +58,8 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
   const price = game.status === 'wishlist' && game.price != null ? formatPrice(game.price) : null
   // Les bulles, comme sur les cartes de la liste : celle du COMPTE ACTIF est retirée (sur ses
   // propres jeux elle est vraie partout, donc elle n'apprend rien et se répète sur cent tuiles).
-  // Comme en vue liste : on ne montre que ce sur quoi on filtre (les deux vues ne peuvent
-  // pas diverger).
+  // ⚠️ LES BULLES NE PARAISSENT QUE QUAND ELLES APPRENNENT QUELQUE CHOSE, c'est-à-dire quand
+  // on filtre dessus (demande user) : au repos, une carte ne porte que le jeu.
   const ownerList = montreComptes ? parseOwners(game.owner).filter((o) => o !== compte) : []
   const tagList = montreTags ? tagsPourCompte(game.tags, compte) : []
 
@@ -93,11 +93,7 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
         disabled={!onCardClick}
         title={game.name}
       >
-        {/* ⚠️ Un enrobage qui ne coupe RIEN : les pastilles doivent déborder de la jaquette
-            (comme en vue liste), or `.gtile-art` est en `overflow: hidden` — c'est lui qui
-            découpe l'image à ses coins arrondis, on n'y touche pas. */}
-        <div className="gtile-visuel">
-          <div className="gtile-art">
+        <div className="gtile-art">
           {showImg ? (
             <img
               ref={imgRef}
@@ -115,9 +111,9 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
           ) : (
             <span className="gtile-fallback" style={{ background: ownerColor(game.name) }}>{monogram(game.name)}</span>
           )}
-          </div>
-          {/* Une seule pile, comme en vue liste : les deux vues ne peuvent pas diverger. */}
-          {(ownerList.length > 0 || tagList.length > 0) && (
+          {/* Deux coins, comme en vue liste : les autres foyers à gauche, vos étiquettes à
+              droite. Les deux vues ne peuvent pas diverger. */}
+          {ownerList.length > 0 && (
             <span className="gtile-bulles" onClick={(e) => e.stopPropagation()}>
               {ownerList.map((o) => {
                 const d = ownerDisplay(o, ownerMap)
@@ -127,6 +123,10 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
                   </span>
                 )
               })}
+            </span>
+          )}
+          {tagList.length > 0 && (
+            <span className="gtile-tags" onClick={(e) => e.stopPropagation()}>
               {tagList.map((t) => {
                 const d = ownerDisplay(t, tagMap)
                 return (
