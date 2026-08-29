@@ -27,9 +27,9 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
   const [loaded, setLoaded] = useState(false)
   const imgRef = useRef(null)
   const rowRef = useRef(null)
-  // Le MÊME geste que la vue liste : à droite l'action « positive » de l'écran, à gauche
-  // BoardGameGeek. (La grille est interdite en wishlist, donc `onNewPlay` y est la seule
-  // action de droite possible.)
+  // Le MÊME geste que la vue liste : à droite l'action « positive » de l'écran — « Nouvelle
+  // partie » en collection, le passage en collection en wishlist (la grille y est ouverte
+  // depuis qu'elle porte le glissé et son propre crayon) — à gauche BoardGameGeek.
   const { offset, arme, sens, dragging, gRef } = useGlisseAction(rowRef, {
     gauche: online ? onBgg || null : null,
     droite: online ? onNewPlay || onMove || null : null,

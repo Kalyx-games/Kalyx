@@ -1584,7 +1584,8 @@ body {
 .game:has(.game-edit) .game-head { padding-right: 42px; }
 .game-edit:active { transform: scale(0.92); }
 
-/* Première colonne : image + (en wishlist) prix juste en dessous. Alignée en bas :
+/* Première colonne : la jaquette et sa pile de bulles — le prix, lui, est passé dans le
+   corps de la carte, sous les repères du jeu. Alignée en bas :
    si la colonne grandit (beaucoup de bulles), l'image reste en bas et la pile de
    bulles monte dans l'espace gagné. */
 .game-thumb-col {

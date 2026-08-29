@@ -324,14 +324,19 @@ export function IndispoIcon({ size = 20, ...p }) {
 export function PrixIcon({ size = 13, ...p }) {
   return (
     <Ico size={size} {...p}>
+      {/* ⚠️ Le trou est ÉVIDÉ dans le tracé (fillRule evenodd, le motif de DieIcon), il n'est
+          PAS repeint : un `fill: var(--card)` supposait que l'icône est posée sur une carte —
+          faux en vue grille, où la surface est `--bg` (le trou s'y lisait comme un point clair).
+          Une icône n'a qu'UNE couleur, currentColor, et vaut alors sur n'importe quel fond.
+          Le trou est à r=2.2 et non 1.6 : le stroke de 1.6 en ronge 0.8 au passage. */}
       <path
-        d="M11.6 3H5.4A2.4 2.4 0 0 0 3 5.4v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.6-6.6a2 2 0 0 0 0-2.8L13 3.6a2 2 0 0 0-1.4-.6Z"
+        fillRule="evenodd"
+        d="M11.6 3H5.4A2.4 2.4 0 0 0 3 5.4v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.6-6.6a2 2 0 0 0 0-2.8L13 3.6a2 2 0 0 0-1.4-.6ZM8 5.8a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4Z"
         fill="currentColor"
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinejoin="round"
       />
-      <circle cx="8" cy="8" r="1.6" fill="var(--card)" />
     </Ico>
   )
 }

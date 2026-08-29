@@ -291,6 +291,66 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅⚠️⚠️ REVUE ADVERSARIALE DU LOT « PRIX + RAPPEL DU GESTE » : 2 DÉFAUTS, DONT UN QUI LANÇAIT UNE ACTION SUR UN ÉCRAN FIGÉ (2026-08-29)
+
+Workflow de 4 agents (3 lentilles + synthèse) sur le lot de la veille. **26 constats bruts → 6 retenus, dont
+2 vrais défauts** ; 12 doublons, 5 prémisses fausses, 2 comportements déjà assumés, 1 refonte déguisée.
+⚠️ Les relecteurs ont lu le COMMIT, pas l arbre de travail — plusieurs de leurs constats étaient déjà corrigés
+par des modifications non commitées. **Toujours leur donner l état RÉEL du code, ou revérifier chaque constat
+avant d y croire** (c est ce qui a été fait ici : les deux défauts ont été reproduits à la mesure).
+
+### ⚠️⚠️ DÉFAUT 1 — le rappel FIGEAIT la première carte, mais son geste partait quand même
+
+La règle du rappel (`.rappel-glisse .swipe-row:first-child .game`) anime **EXACTEMENT l élément qui porte la
+position du doigt**, posée en style EN LIGNE par `useGlisseAction` (`translateX(offset)`). Or dans la cascade,
+une **ANIMATION l emporte sur une déclaration d auteur, attribut `style` compris** — seul un `!important` la
+bat. Pendant les 3 s du rappel, la carte ne suivait donc PAS le doigt, alors que le geste s armait normalement
+(vibration de seuil comprise) et **lançait son action au relâché**.
+  · **MESURÉ, et pire que décrit** : on tire vers la GAUCHE (300 → 170 px) et la carte part vers la **DROITE**
+    (+6, +17, +23, +25 px — l animation), le fond d action se révèle, et au relâché **BoardGameGeek s ouvre**.
+    Écran qui bouge à contresens, puis navigation surgie de nulle part.
+  · ⚠️ **Ce lot-ci le rendait FACILE à rencontrer** : le bouton « Vérifier les mises à jour » rejoue le rappel
+    à volonté — donc l user allait taper le bouton PUIS essayer de glisser, c est-à-dire exactement le chemin.
+  · **Fix : le premier contact rend la main.** `onTouchStartCapture` sur la liste retire la classe dès qu un
+    doigt se pose. Une démonstration cède toujours la place à l utilisateur.
+  · **RÈGLE, générale** : ne jamais animer en CSS une propriété qu un geste écrit en style en ligne sur le même
+    élément — l animation gagne. Si les deux doivent coexister, l un des deux cède explicitement.
+  · **Vérifié après correctif, par le chemin réel** (Réglages → bouton → retour → glissé) : animation
+    `kx-rappel-glisse` avant le contact, `none` après, classe retirée, et la carte suit le doigt : **−20, −50,
+    −80, −110**. Le retour à 0 et l ouverture de BGG restent volontaires.
+
+### ⚠️ DÉFAUT 2 — le rappel se CONSOMMAIT sans qu aucune carte soit à l écran (brûlé 30 jours)
+
+La date est notée AVANT de jouer (pour qu une animation interrompue ne se rejoue pas). Encore faut-il qu il y
+ait quelque chose à montrer. Trois trous :
+  1. `games.length` et non `visible.length` : un filtre mémorisé, la wishlist d un compte, une recherche en
+     cours → 137 jeux en mémoire, **0 carte à l écran** (`.empty` est rendu à la place).
+  2. La garde ne connaissait que 4 écrans pleins, alors que **la liste reste MONTÉE dessous** : une
+     actualisation qui restaure une fiche jeu faisait osciller la carte sous la fiche.
+  3. Au TOUT PREMIER lancement, l écran des avatars **REMPLACE le rendu sans être une couche**
+     (`compte === undefined`) — et c est justement le nouvel arrivant qui a le plus besoin du geste.
+  · **Fix** : `!visible.length`, puis `layerCount || compte === undefined`. **`layerCount` couvre les 26
+    couches d un coup** et se maintiendra tout seul si une couche s ajoute — bien mieux que d énumérer six
+    états à la main.
+  · **Mesuré** : recherche sans résultat → réarmement par le bouton → retour sur liste vide → **la mémoire
+    reste effacée** (rien de brûlé) ; on efface la recherche → **le rappel se joue**. Il attend son public.
+
+### Les quatre autres
+
+  3. **Le trou de `PrixIcon` était REPEINT en `var(--card)`** — vrai en vue liste (le prix est sur une carte),
+     faux en vue GRILLE, où la surface est `--bg` : le trou s y lisait comme un point clair. Passé en tracé
+     unique **évidé** (`fillRule evenodd`, le motif de `DieIcon`), donc juste sur n importe quel fond. Trou à
+     r=2.2 et non 1.6 : le `stroke` de 1.6 en ronge 0.8. **RÈGLE (déjà écrite en tête d icons.jsx, enfreinte
+     ici) : une icône n a QU UNE couleur, `currentColor` — repeindre une surface, c est parier sur son fond.**
+  4. ⚠️ **QUATRE props mortes passées à `Settings`** (`jeux`, `compte`, `comptes`, `onChangerCompte`) : sa
+     signature ne les déclare même pas. Reliquat du chantier où le menu du compte est sorti des Réglages.
+     **Conséquence : mon propre correctif de la veille sur « la porte des Réglages vers l écran des comptes »
+     était SANS OBJET** — cette porte n existe pas. Retirées.
+  5. **Le cas ZÉRO des libellés** : « Voir les 0 jeux » (le nouveau gabarit ne traitait à part que 1). Devient
+     **« Aucun jeu »** / « Aucune partie » — la phrase dit ce qui se passe au lieu de compter jusqu à zéro.
+  6. Deux commentaires devenus faux : `.game-thumb-col` décrivait encore le prix sous la jaquette, et
+     `GameTile` affirmait « la grille est interdite en wishlist » à trois lignes du code qui gère la wishlist.
+
 ## ✅ TROIS RETOUCHES : REVOIR L INDICE À VOLONTÉ, UN SEUL SIGNE POUR « ÇA SE RETOURNE », L ÉTAT DE REPOS (2026-08-29)
 
 **1. « Vérifier les mises à jour » RÉARME le rappel du geste.** Demande user : « j aimerais voir l indice de

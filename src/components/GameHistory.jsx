@@ -388,7 +388,9 @@ export default function GameHistory({ game, plays, template, online, view = 'sta
           {showFilters && (
             <FilterSheet
               resetCount={activeFilters}
-              visibleLabel={filtered.length === 1 ? 'Voir la partie' : `Voir les ${filtered.length} parties`}
+              visibleLabel={
+                filtered.length === 0 ? 'Aucune partie' : filtered.length === 1 ? 'Voir la partie' : `Voir les ${filtered.length} parties`
+              }
               onReset={resetFilters}
               onClose={() => setShowFilters(false)}
             >

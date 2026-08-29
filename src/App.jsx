@@ -1011,19 +1011,28 @@ export default function App() {
   // pas pendant le chargement (les squelettes bougeraient), pas sous un écran plein, pas si
   // l'utilisateur a demandé moins d'animations. On note la date AVANT de jouer : même si
   // l'animation est interrompue, on ne la rejouera pas au prochain lancement.
-  // ⚠️ Les écrans pleins sont dans les DÉPENDANCES, pas seulement dans la garde : c'est ce qui
-  // permet au rappel de se jouer en REVENANT des Réglages — donc juste après le bouton
-  // « Vérifier les mises à jour », qui le réarme. Sans eux, l'effet ne se rejouerait jamais.
+  // ⚠️ `layerCount` est dans les DÉPENDANCES, pas seulement dans la garde : c'est ce qui permet
+  // au rappel de se jouer en REVENANT des Réglages — donc juste après le bouton « Vérifier les
+  // mises à jour », qui le réarme. Un état qui garde un effet doit être dans ses dépendances si
+  // l'effet doit rejouer quand cet état retombe.
   useEffect(() => {
-    if (booting || games === null || !games.length) return
-    if (statsOpen || settingsOpen || compteOuvert || choixCompte) return
+    // ⚠️ La date est notée AVANT de jouer : il faut donc être certain qu'une carte est
+    // réellement visible, sinon le rappel est BRÛLÉ POUR 30 JOURS sans avoir été vu.
+    // `visible` et non `games` : un filtre mémorisé ou la wishlist vide laissent la liste
+    // pleine de jeux mais l'écran vide. `layerCount` couvre les 26 couches d'un coup (la
+    // liste reste MONTÉE sous un écran plein) et se maintiendra tout seul si une couche
+    // s'ajoute. `compte === undefined` : au tout premier lancement l'écran des avatars
+    // REMPLACE le rendu sans être une couche — et c'est justement le nouvel arrivant qui a
+    // le plus besoin de découvrir le geste.
+    if (booting || games === null || !visible.length) return
+    if (layerCount || compte === undefined) return
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     const t = Date.now()
     if (t - rappelDu() < RAPPEL_DELAI) return
     noteRappel(t)
     setRappelGlisse(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [booting, games, statsOpen, settingsOpen, compteOuvert, choixCompte])
+  }, [booting, games, visible, layerCount, compte])
 
   // ⚠️ Le retrait vit dans SON PROPRE effet. Placé dans celui du dessus, son nettoyage était
   // déclenché au rafraîchissement suivant de `games` (cache puis réseau) : le minuteur était
@@ -1901,10 +1910,6 @@ export default function App() {
                 .catch(() => setRestorePlan({ games: 0, plays: 0, sheets: 0, names: [], owners: [], tags: [] }))
             }}
             onOpenPlayers={handleOpenPlayers}
-            jeux={games ?? []}
-            compte={compte ?? null}
-            comptes={comptesChoisissables}
-            onChangerCompte={() => setChoixCompte(true)}
             onRejouerIndice={reArmeRappel}
             onEnterCode={() => setCodeAsk(true)}
             onChangeCode={() => setCodeChange(true)}
@@ -2012,7 +2017,9 @@ export default function App() {
       {showFilters && (
         <FilterSheet
           resetCount={activeFilterCount - (filters.owners.length ? 1 : 0)}
-          visibleLabel={filterShownCount === 1 ? 'Voir le jeu' : `Voir les ${filterShownCount} jeux`}
+          visibleLabel={
+            filterShownCount === 0 ? 'Aucun jeu' : filterShownCount === 1 ? 'Voir le jeu' : `Voir les ${filterShownCount} jeux`
+          }
           onReset={resetFilters}
           onClose={() => setShowFilters(false)}
           closeRef={filterCloseRef}
@@ -2047,7 +2054,17 @@ export default function App() {
           />
         </Suspense>
       ) : (
-      <main className={`list${grille ? ' list-grid' : ''}${rappelGlisse ? ' rappel-glisse' : ''}`} ref={listRef}>
+      <main
+        className={`list${grille ? ' list-grid' : ''}${rappelGlisse ? ' rappel-glisse' : ''}`}
+        ref={listRef}
+        // ⚠️⚠️ Le rappel anime le MÊME élément que le geste (.game / .gtile portent le
+        // translateX du doigt en style EN LIGNE), et dans la cascade une ANIMATION l'emporte
+        // sur une déclaration d'auteur, attribut style compris. Tant que la classe est là, la
+        // carte ne suit donc PAS le doigt — mesuré : on tire à gauche, elle part à droite —
+        // alors que le geste s'arme et lance son action au relâché. Le premier contact rend
+        // la main immédiatement : une démonstration cède toujours la place à l'utilisateur.
+        onTouchStartCapture={rappelGlisse ? () => setRappelGlisse(false) : undefined}
+      >
         {games === null || booting ? (
           Array.from({ length: grille ? 9 : 5 }).map((_, i) =>
             grille ? <div key={i} className="gtile-skeleton sk" /> : <SkeletonCard key={i} />
