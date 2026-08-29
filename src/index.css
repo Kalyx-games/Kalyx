@@ -5951,24 +5951,6 @@ input[type='number'] {
   box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.35);
 }
 
-/* RAPPEL DU GESTE : une fois par mois, à l'ouverture, la première carte fait un aller-retour
-   des deux côtés. Le glissé n'a aucune affordance permanente (c'est le prix de cartes
-   propres) — sans piqûre de rappel, on oublie qu'il existe. Amplitude volontairement faible :
-   on suggère, on ne joue pas une démonstration. */
-@keyframes kx-rappel-glisse {
-  0%, 12% { transform: translateX(0); }
-  28% { transform: translateX(26px); }
-  44% { transform: translateX(0); }
-  60% { transform: translateX(-26px); }
-  76%, 100% { transform: translateX(0); }
-}
-/* La PREMIÈRE carte seulement : toute la liste qui ondule serait une démonstration, pas un
-   rappel. */
-.rappel-glisse .swipe-row:first-child .game,
-.rappel-glisse .gtile-row:first-child .gtile {
-  animation: kx-rappel-glisse 2.1s cubic-bezier(0.4, 0, 0.2, 1) 0.5s both;
-}
-
 .gtile-name {
   font-size: var(--fs-caption);
   font-weight: 600;

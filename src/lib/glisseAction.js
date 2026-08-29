@@ -20,7 +20,32 @@ const SEUIL_MAX = 96
 const HYST = 0.1 // hystérésis : sans elle, un doigt posé sur le seuil ferait clignoter l'état
 const LIBRE = 0.55 // au-delà, l'élément résiste au lieu de suivre le doigt
 
-export function useGlisseAction(ref, { gauche, droite } = {}) {
+// LE RAPPEL DU GESTE — une DÉMONSTRATION jouée par le CHEMIN DU DOIGT.
+// Calendrier, en millisecondes depuis la pose de `demo` :
+//   0     · on laisse la ligne finir son apparition (`kx-card-in` dure 0,34 s)
+//   340   · départ à DROITE — l'action « positive » de l'écran
+//   700   · retour au repos
+//   1000  · départ à GAUCHE — BoardGameGeek
+//   1360  · retour au repos
+//   1580  · fin : `sens` retombe à 0, le fond se démonte
+// Le premier pixel bouge donc à 340 ms au lieu de ~950 mesurées (l'ancienne animation CSS
+// cumulait 500 ms de délai et un palier mort), et le tout dure 1,58 s au lieu de 3.
+// ⚠️ AUCUNE transition n'est posée ici, et c'est volontaire : `.game` (0,2 s) et `.gtile`
+// (0,22 s) en portent DÉJÀ une sur `transform`, et pendant un vrai glissé elles la coupent
+// elles-mêmes. En poser une de plus la ferait survivre au glissé — exactement le genre de
+// conflit qu'on vient de retirer.
+const DEMO_ATTENTE = 340 // la ligne finit d'arriver avant qu'on ne bouge (kx-card-in = 0,34 s)
+const DEMO_COURSE = 220 // un aller ou un retour : la plus longue des deux transitions existantes
+const DEMO_TENUE = 140 // on TIENT la position : le temps de lire la couleur et l'icône
+const DEMO_PAUSE = 80 // repos net entre les deux côtés, sinon les 2 sens se lisent en un seul S
+const DEMO_PART = 0.32 // amplitude en fraction de la largeur…
+const DEMO_MIN = 30 // …avec un PLANCHER (cf. le commentaire de l'effet) et un plafond
+const DEMO_MAX = 64
+// Durée totale, EXPORTÉE : App s'en sert pour retirer la démonstration plutôt que d'entretenir
+// un second nombre qui dériverait de celui-ci. Une seule source de vérité.
+export const DEMO_TOTAL = DEMO_ATTENTE + 4 * DEMO_COURSE + 2 * DEMO_TENUE + DEMO_PAUSE // 1580
+
+export function useGlisseAction(ref, { gauche, droite, demo = false } = {}) {
   const [offset, setOffset] = useState(0)
   const [arme, setArme] = useState(false)
   const [sens, setSens] = useState(0) // -1 vers la gauche, +1 vers la droite, 0 au repos
@@ -110,6 +135,72 @@ export function useGlisseAction(ref, { gauche, droite } = {}) {
       el.removeEventListener('touchcancel', onCancel)
     }
   }, [ref])
+
+  // --- LE RAPPEL DU GESTE : une DÉMONSTRATION qui emprunte le CHEMIN DU DOIGT ---
+  //
+  // ⚠️ Avant, le rappel mensuel était une animation CSS posée sur la carte. Deux défauts, et
+  // c'est tout ce que l'utilisateur voyait : (a) une ANIMATION l'emporte sur le `transform`
+  // en ligne du geste, donc tant qu'elle jouait la carte ne suivait plus le doigt ; (b) elle
+  // ne parlait pas à React, donc `sens` restait à 0, donc `FondGlisse` ne se montait jamais —
+  // une carte qui glissait sur du fond de page, sans couleur ni icône.
+  // En écrivant `offset` et `sens` par les MÊMES setters que le doigt, le décor révélé est le
+  // VRAI décor (mêmes couleurs, mêmes icônes, état « indisponible » compris) — et il l'est
+  // dans les deux vues sans une seule ligne spécifique, puisque la grille appelle ce hook.
+  //
+  // ⚠️⚠️ LA GARANTIE, et c'est elle qui rend le procédé sûr : on n'écrit QUE des états React.
+  // `gRef.current` n'est JAMAIS touché — donc ni `g.arme`, la seule condition qui lance une
+  // action au relâché, ni `g.dir`, la seule qui fait entrer dans `onEnd`. Et aucun `touchend`
+  // n'est fabriqué : `onEnd` ne part que d'un vrai événement du navigateur.
+  useEffect(() => {
+    if (!demo) return
+    const el = ref.current
+    if (!el) return
+    const g = gRef.current
+    if (g.dir) return // un vrai geste est déjà en cours : il a la priorité, toujours
+    // Garde VIVANTE : App a vérifié au déclenchement, mais le réglage a pu changer depuis.
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const w = el.offsetWidth
+    if (!w) return
+    // Amplitude en fraction de la largeur (une carte fait ~343 px, une tuile ~120 : une valeur
+    // en pixels serait timide ici et démesurée là).
+    // ⚠️ Le PLANCHER n'est pas décoratif : il faut dégager le retrait de `.glisse-fond-act`
+    // PLUS la largeur de son icône, sinon on découvre une bande de couleur sans l'icône qui
+    // dit l'action — 12 + 22 = 34 px en liste, 6 + 24 = 30 px en grille. Sur un écran étroit
+    // une tuile tombe à ~89 px, où 32 % ne feraient que 28.
+    // ⚠️ L'amplitude reste SOUS le seuil d'armement dans tous les cas : la démonstration montre
+    // le mouvement, jamais le point où lâcher déclencherait — ce qu'elle enseigne est exact.
+    const ampl = Math.round(Math.min(DEMO_MAX, Math.max(DEMO_MIN, w * DEMO_PART)))
+
+    const minuteurs = []
+    const ECOUTE = { capture: true, passive: true }
+    const repos = () => { setOffset(0); setSens(0) }
+    const coupe = () => {
+      minuteurs.forEach(clearTimeout)
+      minuteurs.length = 0
+      document.removeEventListener('pointerdown', coupe, ECOUTE)
+      document.removeEventListener('touchstart', coupe, ECOUTE)
+      repos()
+    }
+    const etape = (t, fn) => minuteurs.push(setTimeout(fn, DEMO_ATTENTE + t))
+
+    // DROITE d'abord (l'action « positive » de l'écran : nouvelle partie, ou passage en
+    // collection), GAUCHE ensuite (BoardGameGeek). Ce qu'on oublie du geste, ce n'est pas
+    // qu'il existe — c'est qu'il marche des DEUX côtés.
+    etape(0, () => { setSens(1); setOffset(ampl) })
+    etape(DEMO_COURSE + DEMO_TENUE, () => setOffset(0))
+    etape(2 * DEMO_COURSE + DEMO_TENUE + DEMO_PAUSE, () => { setSens(-1); setOffset(-ampl) })
+    etape(3 * DEMO_COURSE + 2 * DEMO_TENUE + DEMO_PAUSE, () => setOffset(0))
+    etape(4 * DEMO_COURSE + 2 * DEMO_TENUE + DEMO_PAUSE, repos)
+
+    // ⚠️ LE CONTACT REND LA MAIN, d'où qu'il vienne — en CAPTURE sur le document, donc AVANT
+    // que l'événement n'atteigne `onStart` (phase cible). C'est indispensable : en vue liste
+    // le geste écoute `.game`, alors que la bande dégagée appartient à `.swipe-row` ; un doigt
+    // posé là n'atteindrait jamais `onStart`. Ces écouteurs ne vivent que le temps de la
+    // démonstration : zéro écouteur au repos. Une démonstration cède toujours à l'utilisateur.
+    document.addEventListener('pointerdown', coupe, ECOUTE)
+    document.addEventListener('touchstart', coupe, ECOUTE)
+    return coupe
+  }, [demo, ref])
 
   return { offset, arme, sens, dragging, gRef }
 }

@@ -291,6 +291,105 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅⚠️ LE RAPPEL DU GESTE DEVIENT UN FAUX GESTE : IL MONTRE LE VRAI DÉCOR (2026-08-29, 3 retours user)
+
+**Retour user** : « le tuto de glissement doit être plus rapide à se déclencher et montrer les couleurs de
+chaque action sous lui, là c est juste une carte qui bouge avec du blanc derrière. Le tuto doit se jouer aussi
+sur la vue grille ».
+
+### ⚠️ Prémisse corrigée à la mesure : il SE JOUAIT déjà en grille
+
+Mesuré avant de toucher au code : en vue grille la tuile bougeait bien (+23 puis −26 px) — le sélecteur CSS
+visait les deux vues depuis le début. **Les trois plaintes n avaient qu UNE cause : il n y avait pas de
+décor.** `FondGlisse` n est monté que quand `sens` ≠ 0, or `sens` n est écrit que par un vrai `touchmove` —
+une animation CSS ne parle pas à React. Dans la zone dégagée il ne restait que `.swipe-row`, transparente :
+on voyait le fond de page (le « blanc »). Et en grille, une tuile de 120 px qui bouge de 26 px dans du vide
+ne se remarque tout simplement pas : d où « ça ne se joue pas en grille ».
+**RÈGLE DE DIAGNOSTIC** : quand trois symptômes arrivent ensemble, chercher la cause unique avant de coder
+trois correctifs.
+
+### La refonte : la démonstration emprunte le CHEMIN DU DOIGT
+
+Conception choisie par workflow (3 relevés + 2 conceptions rivales + un juge qui a rouvert les fichiers).
+**L animation CSS est SUPPRIMÉE** ; le rappel écrit `offset` et `sens` par les MÊMES setters que le geste,
+dans un effet isolé de `useGlisseAction` (prop `demo`).
+  · **Le décor est donc le VRAI décor** : mêmes couleurs, mêmes icônes, état « indisponible » compris. Rien
+    à recopier, rien à synchroniser — le jour où une action change, le rappel suit tout seul.
+  · **La vue grille est gratuite** : elle appelle le même hook. Zéro ligne spécifique, et les deux vues ne
+    pourront jamais diverger.
+  · **Le conflit de cascade disparaît par disparition de la cause** : il n y a plus AUCUNE animation CSS sur
+    `.game` / `.gtile`, donc plus rien qui puisse battre le `transform` en ligne du doigt. Le
+    `onTouchStartCapture` posé la veille et son commentaire de six lignes sont supprimés ; l interruption vit
+    désormais dans le hook, au plus près du geste.
+
+⚠️⚠️ **LA GARANTIE DE SÛRETÉ, vérifiable d une commande** : la démonstration n écrit QUE des états React.
+`gRef.current` n est jamais MODIFIÉ — donc ni `g.arme` (la seule condition qui lance une action au relâché),
+ni `g.dir` (la seule qui fait entrer dans `onEnd`) ; et aucun `touchend` n est fabriqué. Elle le LIT une fois
+(`if (g.dir) return`) pour céder à un vrai geste déjà en cours. Contrôle : toutes les écritures `g.x =` du
+fichier doivent rester dans le premier effet.
+  · L amplitude reste SOUS le seuil d armement dans les deux vues (64 px pour un seuil de 96 en liste ; 38
+    pour 45 en grille) : la démonstration montre le mouvement, jamais le point où lâcher déclencherait — ce
+    qu elle enseigne est donc exact.
+  · **Le contact rend la main d où qu il vienne** : écouteurs `pointerdown`/`touchstart` en CAPTURE sur le
+    document, donc AVANT `onStart`. Indispensable : en vue liste le geste écoute `.game`, alors que la bande
+    dégagée appartient à `.swipe-row` — un doigt posé là n atteindrait jamais `onStart`. Ces écouteurs ne
+    vivent que le temps de la démonstration : zéro écouteur au repos.
+
+### Le calendrier, et pourquoi chaque durée
+
+| t (ms) | ce qui se passe | pourquoi |
+|---|---|---|
+| 0 | rien ne bouge | `kx-card-in` dure 0,34 s : bouger avant superpose deux mouvements illisibles |
+| 340 | départ à DROITE, fond vert + dé | l action « positive » de l écran |
+| 560 | on TIENT | sous `120 ms l œil voit un mouvement, pas un contenu — c est ce palier qui répond au « juste une carte qui bouge » |
+| 700 | retour au repos | la plus longue des deux transitions existantes (0,22 s) |
+| 920 | pause franche | sans elle les deux sens se lisent en un seul S, et « ça marche des deux côtés » est perdu |
+| 1000 | départ à GAUCHE, fond ardoise + logo BGG | |
+| 1580 | fin, le fond se démonte | `DEMO_TOTAL`, **exporté** : App s en sert au lieu d entretenir un second nombre qui dériverait |
+
+**Premier pixel à 340 ms au lieu de `950 mesurées** (l ancienne animation cumulait 500 ms de délai et un
+palier mort), et 1,58 s au total au lieu de 3.
+⚠️ **AUCUNE transition n est posée par la démonstration** : `.game` (0,2 s) et `.gtile` (0,22 s) en portent
+déjà une sur `transform`, et elles la coupent elles-mêmes pendant un vrai glissé. En poser une de plus la
+ferait survivre au glissé — le conflit qu on vient justement de retirer.
+
+### Une garde de plus : HORS LIGNE, ON NE BRÛLE PAS LE MOIS
+
+Les deux actions du geste tombent hors ligne : la démonstration ne montrerait que deux panneaux gris « Hors
+ligne », et le rappel serait consommé pour 30 jours sans rien apprendre. `online` est en DÉPENDANCE, pas
+seulement dans la garde → **il part dès la reconnexion** (mesuré).
+
+### Mesuré, par le chemin réel (Réglages → « Vérifier les mises à jour » → retour)
+
+  · **Liste** : 467 ms → +64 px, fond `rgb(78,122,92)` côté droite ; 844 → repos ; 1133 → −64 px, fond
+    `rgb(86,96,112)` côté gauche ; 1488 → repos ; 1720 → fond démonté. **Jamais armé**, aucune transition en
+    ligne, **0 ouverture**, 0 écran ouvert. Icône découverte sur 44 px.
+  · **Grille** : tuile de 120 px → 38 px d amplitude, même vert, classe `glisse-fond-tuile`, icône découverte
+    sur 34 px.
+  · **Interruption** : +38 → 0 instantanément au `pointerdown`, fond démonté, rien ne repart.
+  · **Non-régression du vrai geste, les DEUX vues** : suivi 1:1 (−10/−25/−45), armement au seuil, BGG lancé
+    au relâché armé, retour au repos, glissé trop court → rien.
+  · **reduced-motion** et **hors ligne** : rien ne bouge ET le mois n est pas brûlé ; reconnexion → la
+    démonstration part avec ses deux côtés.
+  · **Thème clair** : couleurs identiques (posées en hex), icône blanche, contraste net.
+  · **Base intacte** : 220 parties / 147 jeux / 62 fiches, inchangé.
+
+### Code mort supprimé au passage
+
+  · `@keyframes kx-rappel-glisse` + la règle `.rappel-glisse` + la classe posée sur le `<main>`.
+  · `onTouchStartCapture` et son commentaire (le conflit qu il désamorçait n existe plus).
+  · Le littéral `3000` → `DEMO_TOTAL + 200`.
+  · ⚠️ `GameCard` : `DEBORD_DROITE` + `retenue()` (18 lignes) — **jamais appelés, et `retenue` référence `mou`,
+    NON IMPORTÉ dans ce fichier : un `ReferenceError` en embuscade** si on l avait rebranché. Plus un
+    commentaire orphelin décrivant le registre du menu de glissement, parti depuis longtemps.
+  · Un commentaire d `App.jsx` décrivait `LAYOUT_KEY`, déclaré 32 lignes plus bas : remis à sa place.
+
+**NON FAIT, volontairement** : la cadence reste à 30 jours. « Plus rapide à se déclencher » qualifie une
+vitesse (le délai d entrée, traité), pas une fréquence ; changer un rythme que l user connaît demande sa
+parole. Une ligne si besoin : `RAPPEL_DELAI`.
+
+**Garde-fou d espacement : 369, inchangé.**
+
 ## ✅⚠️⚠️ REVUE ADVERSARIALE DU LOT « PRIX + RAPPEL DU GESTE » : 2 DÉFAUTS, DONT UN QUI LANÇAIT UNE ACTION SUR UN ÉCRAN FIGÉ (2026-08-29)
 
 Workflow de 4 agents (3 lentilles + synthèse) sur le lot de la veille. **26 constats bruts → 6 retenus, dont

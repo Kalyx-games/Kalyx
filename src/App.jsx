@@ -11,6 +11,7 @@ import { EMPTY_FILTERS, PRICE_MIN, PRICE_MAX, norm, passesFilters } from './lib/
 import { messageUtilisateur } from './lib/messages'
 import { faitNotable } from './lib/faits'
 import { lettreDe, useLettreDefilement } from './lib/lettre'
+import { DEMO_TOTAL } from './lib/glisseAction'
 import Ascenseur from './components/Ascenseur'
 import { useExitLayer } from './lib/useExitLayer'
 import { fetchScoresheets, saveScoresheet } from './lib/scoresheets'
@@ -112,12 +113,12 @@ function saveView(v) {
   }
 }
 
-// ⚠️ UNE PRÉFÉRENCE PAR ONGLET : on ne regarde pas sa collection et sa wishlist de la même
-// façon (l'une se parcourt à la jaquette, l'autre se lit au prix). Passer la collection en
-// grille ne doit donc pas basculer la wishlist, ni l'inverse.
 // RAPPEL DU GESTE. Le glissé n'a aucune affordance permanente : on finit par oublier qu'il
 // existe, et surtout qu'il marche des DEUX côtés. Une fois par mois, à l'ouverture, la
 // première carte fait un aller-retour — assez pour rappeler, trop court pour agacer.
+// ⚠️ Ce n'est PLUS une animation CSS : la démonstration écrit `offset` et `sens` par le chemin
+// du doigt (`lib/glisseAction.js`), donc le VRAI fond révélé apparaît dessous, avec sa couleur
+// et son icône, en vue liste comme en vue grille.
 const RAPPEL_KEY = 'kalyx-rappel-glisse'
 const RAPPEL_DELAI = 30 * 24 * 3600 * 1000
 function rappelDu() {
@@ -146,6 +147,9 @@ function reArmeRappel() {
   }
 }
 
+// ⚠️ UNE PRÉFÉRENCE PAR ONGLET : on ne regarde pas sa collection et sa wishlist de la même
+// façon (l'une se parcourt à la jaquette, l'autre se lit au prix). Passer la collection en
+// grille ne doit donc pas basculer la wishlist, ni l'inverse.
 const LAYOUT_KEY = 'kalyx-layout' // collection (nom historique : la clé existante est conservée)
 const LAYOUT_KEY_WISH = 'kalyx-layout-wishlist'
 const cleLayout = (statut) => (statut === 'wishlist' ? LAYOUT_KEY_WISH : LAYOUT_KEY)
@@ -1026,20 +1030,29 @@ export default function App() {
     // le plus besoin de découvrir le geste.
     if (booting || games === null || !visible.length) return
     if (layerCount || compte === undefined) return
+    // ⚠️ HORS LIGNE, ON NE BRÛLE PAS LE MOIS : les deux actions du geste tombent (BoardGameGeek
+    // et « nouvelle partie » exigent le réseau), la démonstration ne montrerait donc que deux
+    // panneaux gris « Hors ligne » — et le rappel serait consommé pour 30 jours sans avoir rien
+    // appris. `online` est en DÉPENDANCE, pas seulement dans la garde : il rejouera à la
+    // reconnexion.
+    if (!online) return
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     const t = Date.now()
     if (t - rappelDu() < RAPPEL_DELAI) return
     noteRappel(t)
     setRappelGlisse(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [booting, games, visible, layerCount, compte])
+  }, [booting, games, visible, layerCount, compte, online])
 
   // ⚠️ Le retrait vit dans SON PROPRE effet. Placé dans celui du dessus, son nettoyage était
   // déclenché au rafraîchissement suivant de `games` (cache puis réseau) : le minuteur était
   // annulé, la garde du mois empêchait de le réarmer, et la classe restait posée À VIE.
   useEffect(() => {
     if (!rappelGlisse) return
-    const fin = setTimeout(() => setRappelGlisse(false), 3000)
+    // ⚠️ UNE SEULE source de vérité : `DEMO_TOTAL` vient du hook qui joue la démonstration.
+    // La marge de 200 ms garantit qu'on ne coupe jamais son dernier retour — à cet instant la
+    // carte est déjà au repos, la marge ne coûte donc rien à l'œil.
+    const fin = setTimeout(() => setRappelGlisse(false), DEMO_TOTAL + 200)
     return () => clearTimeout(fin)
   }, [rappelGlisse])
 
@@ -2054,17 +2067,7 @@ export default function App() {
           />
         </Suspense>
       ) : (
-      <main
-        className={`list${grille ? ' list-grid' : ''}${rappelGlisse ? ' rappel-glisse' : ''}`}
-        ref={listRef}
-        // ⚠️⚠️ Le rappel anime le MÊME élément que le geste (.game / .gtile portent le
-        // translateX du doigt en style EN LIGNE), et dans la cascade une ANIMATION l'emporte
-        // sur une déclaration d'auteur, attribut style compris. Tant que la classe est là, la
-        // carte ne suit donc PAS le doigt — mesuré : on tire à gauche, elle part à droite —
-        // alors que le geste s'arme et lance son action au relâché. Le premier contact rend
-        // la main immédiatement : une démonstration cède toujours la place à l'utilisateur.
-        onTouchStartCapture={rappelGlisse ? () => setRappelGlisse(false) : undefined}
-      >
+      <main className={`list${grille ? ' list-grid' : ''}`} ref={listRef}>
         {games === null || booting ? (
           Array.from({ length: grille ? 9 : 5 }).map((_, i) =>
             grille ? <div key={i} className="gtile-skeleton sk" /> : <SkeletonCard key={i} />
@@ -2092,6 +2095,9 @@ export default function App() {
                 key={g.id}
                 game={g}
                 index={i}
+                // Le rappel mensuel du geste : la PREMIÈRE tuile seulement — toute la grille
+                // qui ondule serait une démonstration, pas un rappel.
+                demo={rappelGlisse && i === 0}
                 online={online}
                 onBgg={
                   g.bgg_id && online
@@ -2118,6 +2124,7 @@ export default function App() {
               key={g.id}
               game={g}
               index={i}
+              demo={rappelGlisse && i === 0}
               online={online}
               // ⚠️ Le crayon n existe QU EN WISHLIST : en collection le tap ouvre la fiche, qui
               // porte déjà « Éditer ». Passer onEdit partout le faisait apparaître en collection

@@ -38,29 +38,7 @@ function durationLabel(g) {
   return m === 0 ? `${h} h` : `${h}h${String(m).padStart(2, '0')}`
 }
 
-// Une seule carte « swipée » ouverte à la fois : on garde une référence vers la
-// dernière ouverte pour la refermer quand une autre s'ouvre.
-
-// Au-delà d'une butée, la carte SUIT toujours le doigt, de moins en moins : elle résiste
-// au lieu de buter. La courbe est asymptotique — on peut tirer aussi fort qu'on veut, on
-// n'ira jamais bien loin — et elle démarre à 0,42 pour que le premier millimètre au-delà
-// de la butée reste franchement perceptible (mesuré : à 400 px de doigt, 28 px de carte).
-// ⚠️ le débord vers la DROITE est plafonné plus court : `.swipe-row` est en overflow:hidden
-// et porte l'ombre de la carte, donc au-delà la carte glisserait dans un cadre immobile.
-const DEBORD_DROITE = 14
-// `fond` : la butée profonde quand une action de bout existe (BGG). La carte SUIT alors le
-// doigt au-delà du menu — c'est le chemin du « glissé jusqu'au bout » — au lieu de résister.
-// Sans action de bout (hors ligne, jeu sans fiche BGG), l'élastique reste.
-function retenue(x, ouvert, fond) {
-  if (x > 0) return Math.min(DEBORD_DROITE, mou(x))
-  if (x < ouvert) {
-    if (fond != null) return Math.max(x, fond)
-    return ouvert + mou(x - ouvert)
-  }
-  return x
-}
-
-function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick, onImageClick, metaLine, ownerMap, tagMap, compte = null, index = 0 }) {
+function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick, onImageClick, metaLine, ownerMap, tagMap, compte = null, index = 0, demo = false }) {
   const complexity = game.complexity ? Number(game.complexity) : null
   // Complexité sur 3 barres : plafonnée à 3, arrondie au demi près (remplissage partiel possible).
   const cx = complexity ? Math.min(3, complexity) : 0
@@ -161,6 +139,9 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
   const { offset, arme, sens, dragging, gRef } = useGlisseAction(cardRef, {
     gauche: online ? onBgg || null : null,
     droite: online ? onNewPlay || onMove || null : null,
+    // Le rappel mensuel : App désigne la première carte, le hook joue le faux geste et le
+    // VRAI fond apparaît dessous — puisque c'est `sens` qui le monte.
+    demo,
   })
   // ⚠️ Quand l'action n'est pas disponible, on montre quand même quelque chose : un fond gris
   // qui dit POURQUOI. Sans cela, la carte glissait sur le vide et on pouvait croire à une panne.
@@ -340,5 +321,8 @@ export default memo(
     // onCardClick (sans fiche) et recliquer rouvrait l'éditeur au lieu de l'historique.
     prev.hasSheet === next.hasSheet &&
     // La ligne d'info dépend du tri : elle doit se redessiner quand le tri change.
-    prev.metaLine === next.metaLine
+    prev.metaLine === next.metaLine &&
+    // ⚠️ SANS CETTE LIGNE le rappel ne partirait JAMAIS : le memo bloquerait le seul rendu qui
+    // le déclenche — une panne SILENCIEUSE, exactement la famille de défaut qu'on corrige ici.
+    prev.demo === next.demo
 )

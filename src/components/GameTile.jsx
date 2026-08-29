@@ -22,7 +22,7 @@ function formatPrice(p) {
   return `${n.toFixed(2).replace('.', ',')} €`
 }
 
-function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit, metaLine, ownerMap, tagMap, compte = null, index = 0 }) {
+function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit, metaLine, ownerMap, tagMap, compte = null, index = 0, demo = false }) {
   const [broken, setBroken] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const imgRef = useRef(null)
@@ -33,6 +33,9 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
   const { offset, arme, sens, dragging, gRef } = useGlisseAction(rowRef, {
     gauche: online ? onBgg || null : null,
     droite: online ? onNewPlay || onMove || null : null,
+    // Le MÊME rappel qu'en vue liste, par le MÊME hook : c'est ce qui garantit qu'il ne
+    // pourra jamais diverger d'une vue à l'autre.
+    demo,
   })
   const fullImg = game.image_url
   // L'image du jeu peut changer sans que la tuile soit remontée (correction d'une URL
@@ -165,5 +168,7 @@ export default memo(
     // redessinerait pas les tuiles.
     prev.ownerMap === next.ownerMap &&
     prev.tagMap === next.tagMap &&
-    prev.compte === next.compte
+    prev.compte === next.compte &&
+    // ⚠️ Même raison qu'en vue liste : sans ça, la tuile ne recevrait jamais l'ordre de jouer.
+    prev.demo === next.demo
 )
