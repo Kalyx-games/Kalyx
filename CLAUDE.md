@@ -470,6 +470,35 @@ bibliothèque part avec lui) · `retireCompteDeTagsVisibles` (son nom dans `visi
 
 **Garde-fou d espacement : 399, inchangé** (aucun CSS touché).
 
+## ✅⚠️ LES BULLES NE PARAISSENT QUE QUAND ON FILTRE DESSUS (2026-08-29, retour user)
+
+**Retour** : « finalement on va revenir à la mise en page précédente des bulles mais on ne les affichera que
+quand on filtre par un ou plusieurs comptes. Même chose pour les tags ».
+
+**Le grief d origine est réglé par le SENS, plus par la position.** La séparation en deux coins (piste A) est
+ANNULÉE : les deux familles reviennent dans **une seule pile** au coin bas-gauche, avec leur débord — en liste
+(10/10, l historique) comme en grille (8/5, le lot précédent, conservé). Elles ne se côtoient désormais que si
+l on filtre volontairement sur les deux, ce qui est un geste, pas un état.
+
+  · `montreTags = filters.tags.length > 0` — simple : le filtre tags est vide au repos.
+  · ⚠️⚠️ **`montreComptes` n est PAS `filters.owners.length > 0`** — et le premier test l a prouvé :
+    `choisirCompte` pose TOUJOURS `owners: [compte]`, la condition n aurait donc JAMAIS été fausse et les
+    pastilles seraient restées affichées en permanence. → **le même prédicat que les puces de filtre**
+    (`activeChips`) : `repos = owners.length === 1 && owners[0] === compte`, et on montre dès qu on regarde
+    autre chose — un autre foyer, plusieurs, ou toute la collection.
+  · ⚠️ Les deux drapeaux entrent dans le **comparateur du memo** de GameCard ET GameTile : sans eux, cocher un
+    filtre ne ferait PAS apparaître les bulles — le memo bloquerait le seul rendu qui les montre.
+  · `stackH` redevient une SOMME (une seule pile). `.tag-bubbles` et `.gtile-tags` sont supprimées ;
+    `.gtile-visuel` et le `overflow-clip-margin` RESTENT (c est eux qui portent le débord en grille).
+
+**Mesuré** (compte Clémence & Mathieu) : au repos **0 pastille, 0 étiquette** sur 69 cartes — la carte ne porte
+que le jeu. Filtre à deux comptes → **63 pastilles** sur 121 cartes. Plus le tag « Grenier » → 66 pastilles et
+**7 étiquettes** sur 128. Pile unique dans les deux vues, débord 10/10 en liste et 8/5 en grille, carte à
+110px inchangée, aucun débordement de page.
+
+**Garde-fou d espacement : 399 → 397** (le CSS des deux coins retiré).
+
+
 ## ✅ LA PASTILLE DE COMPTE DÉBORDE AUSSI EN GRILLE (2026-08-29, retour user)
 
 **Retour** : « en vue liste j aime bien que les bulles propriétaires dépassent un peu en bas et à gauche de la

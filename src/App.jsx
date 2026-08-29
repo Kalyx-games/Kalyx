@@ -888,6 +888,17 @@ export default function App() {
   // la ramène dès qu'elle existe, même vide. Sans ce garde, tant que la migration n'est pas
   // lancée, le choix serait accepté puis JETÉ par la cascade de dégradation — sans un mot.
   const modeTagDispo = mesTags.some((t) => 'visible_pour' in t)
+  // ⚠️ Les bulles des cartes ne paraissent que quand elles APPRENNENT quelque chose : quand on
+  // filtre dessus (demande user). Au repos la carte ne porte que le jeu — et les deux familles
+  // ne se côtoient plus que si l on filtre volontairement sur les deux.
+  // ⚠️ Pour les COMPTES, le test n'est PAS « un filtre est posé » : `choisirCompte` pose
+  // toujours `owners: [compte]`, il ne serait donc JAMAIS faux. C'est le même prédicat que
+  // celui des puces de filtre (`activeChips`) : au repos — sa propre collection — la pastille
+  // est vraie partout, donc muette ; dès qu'on regarde autre chose (un autre foyer, plusieurs,
+  // ou toute la collection), elle dit enfin quelque chose.
+  const reposComptes = filters.owners.length === 1 && filters.owners[0] === compte
+  const montreComptes = !reposComptes
+  const montreTags = filters.tags.length > 0
   const tagsVisibles = useMemo(
     () => new Set(mesTags.filter((t) => tagVisiblePour(t, compte)).map((t) => t.name)),
     [mesTags, compte]
@@ -2304,6 +2315,8 @@ export default function App() {
                 onEdit={view === 'wishlist' ? () => setEditing(g) : undefined}
                 ownerMap={ownerMap}
                 tagMap={tagMap}
+                montreComptes={montreComptes}
+                montreTags={montreTags}
                 compte={compte ?? null}
                 onCardClick={
                   !online
@@ -2348,6 +2361,8 @@ export default function App() {
               }
               ownerMap={ownerMap}
               tagMap={tagMap}
+              montreComptes={montreComptes}
+              montreTags={montreTags}
               hasSheet={!!(scoresheets && scoresheets[g.id])}
             />
             )

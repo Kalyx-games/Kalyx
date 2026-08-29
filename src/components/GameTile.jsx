@@ -23,7 +23,7 @@ function formatPrice(p) {
   return `${n.toFixed(2).replace('.', ',')} €`
 }
 
-function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit, metaLine, ownerMap, tagMap, compte = null, index = 0, demo = false }) {
+function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit, metaLine, ownerMap, tagMap, compte = null, montreComptes = false, montreTags = false, index = 0, demo = false }) {
   const [broken, setBroken] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const imgRef = useRef(null)
@@ -58,8 +58,10 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
   const price = game.status === 'wishlist' && game.price != null ? formatPrice(game.price) : null
   // Les bulles, comme sur les cartes de la liste : celle du COMPTE ACTIF est retirée (sur ses
   // propres jeux elle est vraie partout, donc elle n'apprend rien et se répète sur cent tuiles).
-  const ownerList = parseOwners(game.owner).filter((o) => o !== compte)
-  const tagList = tagsPourCompte(game.tags, compte)
+  // Comme en vue liste : on ne montre que ce sur quoi on filtre (les deux vues ne peuvent
+  // pas diverger).
+  const ownerList = montreComptes ? parseOwners(game.owner).filter((o) => o !== compte) : []
+  const tagList = montreTags ? tagsPourCompte(game.tags, compte) : []
 
   return (
     <div className={`gtile-row${arme ? ' arme' : ''}`} ref={rowRef} style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}>
@@ -114,9 +116,8 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
             <span className="gtile-fallback" style={{ background: ownerColor(game.name) }}>{monogram(game.name)}</span>
           )}
           </div>
-          {/* Deux coins, comme en vue liste : les autres foyers à gauche, vos étiquettes à
-              droite. Les deux vues ne peuvent pas diverger. */}
-          {ownerList.length > 0 && (
+          {/* Une seule pile, comme en vue liste : les deux vues ne peuvent pas diverger. */}
+          {(ownerList.length > 0 || tagList.length > 0) && (
             <span className="gtile-bulles" onClick={(e) => e.stopPropagation()}>
               {ownerList.map((o) => {
                 const d = ownerDisplay(o, ownerMap)
@@ -126,10 +127,6 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
                   </span>
                 )
               })}
-            </span>
-          )}
-          {tagList.length > 0 && (
-            <span className="gtile-tags" onClick={(e) => e.stopPropagation()}>
               {tagList.map((t) => {
                 const d = ownerDisplay(t, tagMap)
                 return (
@@ -184,6 +181,8 @@ export default memo(
     prev.ownerMap === next.ownerMap &&
     prev.tagMap === next.tagMap &&
     prev.compte === next.compte &&
+    prev.montreComptes === next.montreComptes &&
+    prev.montreTags === next.montreTags &&
     // ⚠️ Même raison qu'en vue liste : sans ça, la tuile ne recevrait jamais l'ordre de jouer.
     prev.demo === next.demo
 )
