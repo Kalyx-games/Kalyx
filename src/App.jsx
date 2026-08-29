@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Sus
 import lazyRetry from './lib/lazyRetry'
 import { isConfigured, hasCode } from './lib/supabase'
 import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwners } from './lib/games'
-import { tagsPourCompte, tagsAEcrire, renameCompteDansTags, renameTagDansGames } from './lib/tagsJeux'
+import { tagsPourCompte, tagsAEcrire, renameCompteDansTags, renameTagDansGames, supprimeTagDansGames, supprimeCompteDansTags } from './lib/tagsJeux'
 import { saveGamesCache, loadGamesCache, saveBubblesCache, loadBubblesCache } from './lib/cache'
 import { fetchOwners, addOwner, updateOwner, renameOwner, deleteOwner } from './lib/owners'
 import { fetchTags, addTag, updateTag, renameTag, deleteTag, tagVisiblePour, patchVisiblePour, renameCompteDansTagsVisibles } from './lib/tags'
@@ -1234,6 +1234,11 @@ export default function App() {
       // tags que ce compte avait réglés sur « visibles » redeviendraient masquants sans un mot.
       await renameCompteDansTagsVisibles(oldName, newName)
       reloadOwners()
+      // ⚠️ INDISPENSABLE : les deux appels ci-dessus viennent de réécrire la table `tags`.
+      // Sans ce rechargement, l'état local garde l'ANCIEN nom pendant que `compte` porte déjà
+      // le nouveau → tous les tags réglés « visibles » redeviennent masquants à l'écran, et le
+      // geste suivant sur un tag écraserait le réglage en base à partir d'une ligne périmée.
+      reloadTags()
       loadGames() // recharge les jeux : le nom propagé dans games.owner doit s'afficher
       showToast(n ? `« ${newName} » : ${n} jeu${n > 1 ? 'x' : ''} mis à jour.` : `Renommé en « ${newName} ».`)
     } catch (e) {
@@ -1247,6 +1252,10 @@ export default function App() {
     try {
       const supprime = confirmingOwner.name
       await deleteOwner(confirmingOwner.id)
+      // ⚠️ Ses tranches « tag::lui » resteraient dans games.tags : la fiche d'un jeu
+      // afficherait alors une ligne au nom d'un compte qui n'existe plus. Symétrique du
+      // renommage, juste au-dessus.
+      const nbTags = await supprimeCompteDansTags(supprime)
       // Même raison qu au renommage : rester « sur » un compte supprimé laisse un filtre
       // mort. On revient à toute la collection et on redemande qui regarde.
       if (supprime === compte) {
@@ -1257,6 +1266,8 @@ export default function App() {
         setChoixCompte(true)
       }
       reloadOwners()
+      reloadTags()
+      if (nbTags) loadGames()
       setConfirmingOwner(null)
     } catch (e) {
       setError(messageUtilisateur(e))
@@ -1286,7 +1297,9 @@ export default function App() {
   // comptes, il faut donc relire la ligne avant d'écrire (cf. patchVisiblePour).
   async function avecModeTag(id, patch, visibleMoi) {
     if (visibleMoi === undefined || !compte) return patch
-    return { ...patch, ...(await patchVisiblePour(id, compte, visibleMoi)) }
+    // La valeur déjà chargée sert de repli : si la relecture échoue, on ne repart pas de rien.
+    const connu = (tagsList ?? []).find((t) => t.id === id)?.visible_pour
+    return { ...patch, ...(await patchVisiblePour(id, compte, visibleMoi, connu)) }
   }
   async function handleRenameTag(id, oldName, newName, patch, visibleMoi) {
     try {
@@ -1308,8 +1321,14 @@ export default function App() {
     setDeletingTagBusy(true)
     setError(null)
     try {
+      // ⚠️ Les jeux D'ABORD : si `deleteTag` échoue ensuite, l'état reste réparable (le tag
+      // existe encore dans la liste). Sans cette propagation, l'item resterait dans games.tags
+      // sans ligne pour lui donner un mode de filtrage → il redeviendrait masquant et ses jeux
+      // quitteraient la collection sans un mot. Symétrique de `renameTagDansGames`.
+      const nb = await supprimeTagDansGames(confirmingTag.name)
       await deleteTag(confirmingTag.id)
       reloadTags()
+      if (nb) loadGames()
       setConfirmingTag(null)
     } catch (e) {
       setError(messageUtilisateur(e))
@@ -2319,7 +2338,6 @@ export default function App() {
           game={detailLayer.value}
           closing={detailLayer.closing}
           online={online}
-          compte={compte ?? null}
           hasSheet={Boolean(scoresheets?.[detailLayer.value.id])}
           playCount={playMeta[detailLayer.value.id]?.count ?? 0}
           lastPlayedLabel={playMeta[detailLayer.value.id]?.last ? formatDay(playMeta[detailLayer.value.id].last) : null}
@@ -2399,7 +2417,7 @@ export default function App() {
       {confirmingTag && (
         <ConfirmDialog
           title="Supprimer ce tag ?"
-          message={<><strong>{confirmingTag.name}</strong> sera retiré de la liste des tags. Les jeux qui le portent ne seront pas supprimés.</>}
+          message={<><strong>{confirmingTag.name}</strong> sera retiré de la liste des tags et des jeux qui le portent. Aucun jeu ne sera supprimé.</>}
           confirmLabel="Supprimer"
           busy={deletingTagBusy}
           onConfirm={handleConfirmDeleteTag}

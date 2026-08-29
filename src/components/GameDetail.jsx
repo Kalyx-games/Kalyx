@@ -29,7 +29,7 @@ const complexityWord = (n) => (n == null ? '' : n < 2 ? 'Simple' : n < 3 ? 'Moye
 // l'image. TOUTES les actions renvoient vers les écrans existants (rien n'est perdu).
 export default function GameDetail({
   game, online, hasSheet, playCount = 0, lastPlayedLabel,
-  fait, verdict = [], ownerMap, tagMap, compte = null, siblings = [], onNavigate, closing = false,
+  fait, verdict = [], ownerMap, tagMap, siblings = [], onNavigate, closing = false,
   onClose, onNewPlay, onStats, onHistory, onCreateSheet, onEdit, onBgg,
 }) {
   const basePlayers = basePlayersSet(game)

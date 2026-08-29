@@ -1,5 +1,6 @@
 import { erreurUtilisateur } from './messages'
 import { supabase, writeDb } from './supabase'
+import { tousLesTags } from './tagsJeux'
 import { fetchAllPlays } from './plays'
 import { fetchAllScoresheets } from './scoresheets'
 import { fetchAllTierlists } from './tierlists'
@@ -122,7 +123,9 @@ export async function downloadCsv(games, owners, tags, dateStr) {
   const jeux = data.games.map((g) => [
     g.name, g.status === 'wishlist' ? 'wishlist' : 'collection', g.players,
     g.players_best, g.duration_max ?? g.duration_min, g.complexity, g.price,
-    g.owner, g.tags, g.bgg_id, g.image_url,
+    // ⚠️ Les NOMS de tags, jamais la colonne brute : depuis les tags par compte, un item
+    // peut valoir « Grenier::Claire & Nazim », illisible et intriable dans un tableur.
+    g.owner, tousLesTags(g.tags).join(', '), g.bgg_id, g.image_url,
   ])
   telecharger(
     toCsv(

@@ -52,13 +52,18 @@ export const ecritVisiblePour = (raw, compte, visible) => {
 // ⚠️ `visible_pour` porte le choix des AUTRES comptes : sans cette relecture, enregistrer
 // depuis un éditeur ouvert depuis cinq minutes effacerait le réglage qu'un autre foyer vient
 // de poser. Même motif, et pour la même raison, que `tagsAEcrire` dans tagsJeux.js.
-export async function patchVisiblePour(id, compte, visible) {
-  let raw = null
+// ⚠️⚠️ `rawFallback` = la valeur DÉJÀ CHARGÉE. Elle n'est pas un confort : postgrest-js
+// **ne lève pas** sur un échec de requête, il résout `{ data: null, error }` — le `catch` ne
+// voit donc rien passer. Sans ce repli, une lecture qui échoue (réseau capricieux, colonne
+// absente) fait recomposer la colonne À PARTIR DE RIEN et **efface le réglage des autres
+// foyers**. Exactement le motif de `tagsAEcrire` (tagsJeux.js), qui a ce repli depuis le début.
+export async function patchVisiblePour(id, compte, visible, rawFallback) {
+  let raw = rawFallback ?? null
   try {
-    const { data } = await supabase.from('tags').select('visible_pour').eq('id', id).single()
-    raw = data?.visible_pour ?? null
+    const { data, error } = await supabase.from('tags').select('visible_pour').eq('id', id).single()
+    if (!error && data) raw = data.visible_pour ?? null
   } catch {
-    /* colonne absente ou lecture en échec : on repart de rien, le pire cas est l'ancien état */
+    /* client indisponible : on garde le repli */
   }
   return { visible_pour: ecritVisiblePour(raw, compte, visible) }
 }
@@ -71,7 +76,13 @@ export async function renameCompteDansTagsVisibles(oldName, newName) {
   const to = String(newName || '').trim()
   if (!from || !to || from === to) return 0
   const { data, error } = await supabase.from('tags').select('id, visible_pour')
-  if (error) return 0 // table ou colonne absente : rien à suivre
+  if (error) {
+    // ⚠️ Colonne ou table absente : il n'y a rien à suivre, on se tait. Mais toute AUTRE panne
+    // doit remonter : le compte vient d'être renommé PARTOUT ailleurs, et abandonner ici en
+    // silence laisserait tous ses tags « visibles » redevenir masquants sans un mot.
+    if (/does not exist|schema cache|relation|could not find/i.test(error.message || '')) return 0
+    throw error
+  }
   let changed = 0
   for (const t of data ?? []) {
     const l = parseOwners(t.visible_pour)

@@ -174,12 +174,12 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  // Cases proposées = propriétaires gérés (Réglages) + ceux déjà sur ce jeu.
+  // Cases proposées = propriétaires gérés (écran des comptes) + ceux déjà sur ce jeu.
   const ownerChoices = (() => {
     const set = new Set([...(owners || []), ...parseOwners(game?.owner)])
     return [...set].sort((a, b) => a.localeCompare(b, 'fr'))
   })()
-  // Cases proposées pour les tags = tags gérés (Réglages) + ceux déjà sur ce jeu.
+  // Cases proposées pour les tags = tags gérés (menu Compte) + ceux déjà sur ce jeu.
   const tagChoices = (() => {
     // Tous les noms existants sont PROPOSÉS, y compris ceux posés par un autre compte —
     // sinon ils deviendraient impossibles à cocher pour soi.

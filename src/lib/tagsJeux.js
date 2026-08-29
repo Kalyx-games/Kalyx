@@ -70,21 +70,6 @@ export function tousLesTags(raw) {
   return [...new Set(parseTagItems(raw).map((it) => it.tag))]
 }
 
-// Ce que les AUTRES comptes ont posé : [{ compte, tags }] — pour la FICHE seulement, jamais
-// sur une carte. Sans cela, « pourquoi ce jeu n'apparaît pas chez moi » reste un angle mort.
-export function tagsDesAutresComptes(raw, compte) {
-  if (!compte) return []
-  const m = new Map()
-  parseTagItems(raw).forEach((it) => {
-    if (!it.compte || it.compte === compte) return
-    if (!m.has(it.compte)) m.set(it.compte, [])
-    m.get(it.compte).push(it.tag)
-  })
-  return [...m.entries()]
-    .map(([c, tags]) => ({ compte: c, tags: [...new Set(tags)].sort((a, b) => a.localeCompare(b, 'fr')) }))
-    .sort((a, b) => a.compte.localeCompare(b.compte, 'fr'))
-}
-
 // QUI POSSÈDE LE JEU, ET CE QUE CHACUN LUI A MIS — pour la fiche.
 // Renvoie [{ compte, proprietaire, tags }] : les propriétaires du jeu d'abord, puis les
 // comptes qui ont posé un tag sans le posséder (rare, mais on ne le cache pas).
@@ -179,6 +164,44 @@ export function renameCompteDansTags(oldName, newName) {
     oldName,
     newName
   )
+}
+
+// Retire de TOUS les jeux les items qui matchent, toutes tranches confondues.
+// ⚠️ Sert à deux suppressions qui, sans elle, laissent une trace VISIBLE :
+//  · un TAG supprimé de la liste resterait dans games.tags — sans ligne, il n'a plus de mode
+//    de filtrage, redevient donc masquant, et ses jeux QUITTENT la collection sans un mot ;
+//  · un COMPTE supprimé laisserait ses tranches « tag::lui » — la fiche d'un jeu afficherait
+//    alors une ligne au nom d'un compte qui n'existe plus.
+async function retireDesTags(garde) {
+  const { data, error } = await supabase.from('games').select('id, tags')
+  if (error) throw error
+  let changed = 0
+  for (const g of data ?? []) {
+    const items = parseTagItems(g.tags)
+    const restants = items.filter(garde)
+    if (restants.length === items.length) continue
+    const { error: e2 } = await writeDb().from('games')
+      .update({ tags: serializeTagItems(restants) }).eq('id', g.id)
+    if (e2) throw e2
+    changed++
+  }
+  return changed
+}
+
+// Supprimer un tag le retire aussi des jeux — c'est ce que le geste promet, et c'est le
+// symétrique de `renameTagDansGames`, qui propage déjà le renommage.
+export function supprimeTagDansGames(nom) {
+  const cible = String(nom || '').trim()
+  if (!cible) return Promise.resolve(0)
+  return retireDesTags((it) => it.tag !== cible)
+}
+
+// Supprimer un compte retire les tranches qui lui appartiennent. Les tags COMMUNS (sans
+// compte) sont conservés : ils n'appartiennent à personne en particulier.
+export function supprimeCompteDansTags(nom) {
+  const cible = String(nom || '').trim()
+  if (!cible) return Promise.resolve(0)
+  return retireDesTags((it) => it.compte !== cible)
 }
 
 async function remplaceDansTags(match, remplace, oldName, newName) {

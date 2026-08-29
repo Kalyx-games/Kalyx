@@ -2,7 +2,7 @@ import { erreurUtilisateur } from './messages'
 import { supabase, writeDb } from './supabase'
 import { renameInGamesCsv } from './games'
 
-// Liste gérée des propriétaires (table "owners"), éditée depuis les Réglages.
+// Liste gérée des propriétaires (table "owners"), éditée depuis l'écran des comptes.
 
 // ⚠️ Colonnes qui peuvent manquer si une migration n'a pas été lancée. Même motif que
 // les jeux (OPTIONAL_COLS de games.js) : si l'écriture échoue à cause d'une de ces

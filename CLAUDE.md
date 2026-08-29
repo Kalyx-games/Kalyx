@@ -291,7 +291,79 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
-## 🔨⚠️ LES TAGS PASSENT DANS LE MENU COMPTE + CHACUN CHOISIT S ILS MASQUENT (2026-08-29, 2 demandes user)
+## ✅⚠️ REVUE ADVERSARIALE DU LOT « TAGS PAR COMPTE » : 8 DÉFAUTS, DONT 3 QUI PERDAIENT DES DONNÉES (2026-08-29)
+
+Workflow de 18 agents (4 lentilles → un réfutateur PAR constat → une synthèse qui a rouvert chaque fichier).
+**13 constats bruts → 7 retenus, 3 écartés, 2 paires fusionnées** ; j ai revérifié les 7 dans le code avant
+d appliquer, et ajouté un 8e que la revue signalait sans le retenir.
+
+### ⚠️⚠️ Les trois qui perdaient des données
+
+  1. **Renommer son compte faisait disparaître tous ses jeux tagués « visibles »** — puis EFFAÇAIT le réglage
+     en base. `handleRenameOwner` migrait bien `tags.visible_pour` mais ne rechargeait jamais la table :
+     l état local gardait l ANCIEN nom pendant que `compte` portait déjà le nouveau → `tagsVisibles` devenait
+     vide → tout se remasquait. **Aggravation** : la liste des tags est juste en dessous ; toucher à la
+     couleur d un tag envoyait alors `visibleMoi = false` calculé sur une ligne périmée, et
+     `patchVisiblePour` RETIRAIT le nouveau nom. Un rechargement corrigeait le symptôme, pas la base.
+     → **`reloadTags()`**, une ligne.
+  2. ⚠️⚠️ **`patchVisiblePour` ne destructurait pas `error`** — et **postgrest-js NE LÈVE PAS** sur un échec
+     de requête (`index.mjs:326` : `if (!this.shouldThrowOnError) res = res.catch(...)`), il résout
+     `{ data: null, error }`. Le `catch` était donc **mort sur le chemin normal de l échec** : `raw` valait
+     `null` et la colonne se recomposait **à partir de rien**, effaçant le réglage des AUTRES foyers. Une
+     lecture capricieuse pendant qu un compte change juste la COULEUR d un tag suffisait.
+     → paramètre **`rawFallback`** (la valeur déjà chargée) + `if (!error && data)`, le motif que
+     `tagsAEcrire` avait depuis le début. **RÈGLE : avec supabase-js, un `try/catch` ne suffit JAMAIS —
+     il faut lire `error`.**
+  3. **Supprimer un tag « visible » faisait disparaître ses jeux**, et le dialogue promettait le contraire.
+     `handleConfirmDeleteTag` ne touchait pas à `games.tags` : l item restait, sans ligne pour lui donner un
+     mode → redevenait masquant → les jeux quittaient la collection, sans puce ni compteur pour le dire.
+     Incohérent avec le RENOMMAGE, qui propage déjà. → `supprimeTagDansGames` + le message dit désormais
+     « sera retiré de la liste des tags **et des jeux qui le portent**. Aucun jeu ne sera supprimé. »
+
+### Les cinq autres
+
+  4. `renameCompteDansTagsVisibles` prenait **toute panne pour « colonne absente »** (`if (error) return 0`)
+     et abandonnait en silence, alors que le compte venait d être renommé partout ailleurs. → on ne se tait
+     que sur `/does not exist|schema cache|relation|could not find/`, sinon on lève.
+  5. **L export tableur recrachait le séparateur interne** : `Grenier::Claire & Nazim` dans la colonne Tags
+     d Excel, intriable. Régression de mon lot 1. → `tousLesTags(g.tags).join(", ")` **dans le CSV seulement**
+     (le JSON de sauvegarde doit garder la colonne brute).
+  6. **Code mort** : la prop `compte` de `GameDetail` (plus aucun lecteur depuis que la fiche affiche une
+     ligne par compte) et `tagsDesAutresComptes` (écrite en prévision, jamais importée).
+  7. Trois **commentaires** renvoyaient encore aux Réglages pour des listes qui n y sont plus.
+  8. **AJOUTÉ par moi, même famille que 1 et 3** : supprimer un COMPTE laissait ses tranches
+     « tag::lui » → la fiche d un jeu affichait une ligne au nom d un compte qui n existe plus.
+     → `supprimeCompteDansTags` (les tags COMMUNS survivent : ils n appartiennent à personne).
+
+`supprimeTagDansGames` et `supprimeCompteDansTags` partagent `retireDesTags(garde)` — deux prédicats d une
+ligne, une seule mécanique.
+
+### Les trois écartés (pour ne pas relancer le même faux problème)
+
+  · « Sans compte choisi, la gestion des tags devient inatteignable » (vu par DEUX lentilles) — **faux** :
+    `EcranCompte` affiche dans cet état exact un bouton « Choisir un compte », et `App` court-circuite
+    explicitement le seuil de 2 comptes. Deux taps suffisent.
+  · « Le formulaire d un jeu ne propose plus les tags des autres comptes » — **faux** : `allTags` part de
+    TOUTE la table `tags` (le dictionnaire commun) ; seule la part venant des JEUX est restreinte, et
+    `GameForm` ajoute en plus `tousLesTags(game.tags)`.
+
+### Mesuré
+
+  · **14 cas sur le code réel** (bundle esbuild) : les deux prédicats de suppression, le repli de
+    `patchVisiblePour` — le test montre noir sur blanc que **sans repli le réglage de l autre est effacé** —,
+    et l invariant du vieux bundle, toujours à l octet près.
+  · **En dev** : 43 jeux inchangés, 0 crash, le dialogue de suppression dit la vérité, la fiche d un jeu
+    partagé reste juste.
+  · **EN PROD, par le chemin réel, avant cette revue** (migration lancée par l user) : le réglage apparaît,
+    « Grenier » sur Visibles → **43 → 66 jeux** chez Claire & Nazim, **Clémence reste à 69 avec « Masqués »**
+    (7 jeux du grenier lui restent masqués, vérifié en cochant sa puce : 76). Rebascule → 43. Les **STATS
+    suivent la liste** dans les deux états (66/66 et 43/43). **Base restaurée à l identique** ensuite
+    (couleur comprise : ⚠️ passer par l éditeur réécrit la couleur en version SOURDE — effet préexistant de
+    `muteOwnerColor`, sans conséquence visuelle mais réel en base).
+
+**Garde-fou d espacement : 395, inchangé.**
+
+## ✅⚠️ LES TAGS PASSENT DANS LE MENU COMPTE + CHACUN CHOISIT S ILS MASQUENT (2026-08-29, 2 demandes user)
 
 **Demandes** : « la gestion de tag se déplace dans le menu compte pour que chaque compte puisse gérer
 indépendamment ses tags » · « lorsqu un compte crée un tag il puisse choisir si le jeu qui a ce tag coché doit
