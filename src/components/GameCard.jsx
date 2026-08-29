@@ -2,8 +2,8 @@ import { memo, useEffect, useRef, useState } from 'react'
 import { parseOwners, parseTags, ownerDisplay, ownerColor, parseExtensions, basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText } from '../lib/games'
 import { CollectionIcon, PlayersIcon, StarIcon, ClockIcon, ExtIcon, BarsIcon, PencilIcon, DieIcon } from './icons'
 import { thumbSrc } from '../lib/img'
-import { mou } from '../lib/geste'
-import { vibre } from '../lib/haptique'
+import { useGlisseAction } from '../lib/glisseAction'
+import FondGlisse from './FondGlisse'
 import { BGG_LOGO } from '../lib/logos'
 
 // Une carte compacte représentant un jeu dans la liste.
@@ -40,7 +40,6 @@ function durationLabel(g) {
 
 // Une seule carte « swipée » ouverte à la fois : on garde une référence vers la
 // dernière ouverte pour la refermer quand une autre s'ouvre.
-let openCard = null // { close: () => void }
 
 // Au-delà d'une butée, la carte SUIT toujours le doigt, de moins en moins : elle résiste
 // au lieu de buter. La courbe est asymptotique — on peut tirer aussi fort qu'on veut, on
@@ -152,180 +151,48 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
   // Apparition en cascade : petit décalage selon la position (plafonné pour rester vif).
   const delay = `${Math.min(index, 12) * 28}ms`
 
-  // --- Glisser-pour-éditer, avec « peek » : un liseré de l'action « Éditer » reste
-  // toujours visible au bord droit (affordance + zone cliquable de secours). On glisse
-  // la carte vers la gauche pour la révéler entièrement. Écouteurs tactiles NATIFS non
-  // passifs (les seuls capables de preventDefault sur iOS pour capter le geste). ---
-  // Menu au dos de la carte, révélé en glissant vers la gauche (ou en tapant le chevron).
-  // Rendu de gauche à droite ; le geste part du BORD DROIT → le dernier élément du tableau
-  // est le plus proche du pouce (« tout à droite »).
-  //   Collection : Éditer · Nouvelle partie · BGG (au bout — le glissé complet le lance)
-  //   Wishlist   : Éditer · Vers collection · BGG (idem : cohérent d'un écran à l'autre)
-  const ACTION_W = 76
-  const actions = []
-  if (onEdit) actions.push({ key: 'edit', label: 'Éditer', node: <PencilIcon size={20} />, bg: '#3e6c8e', fg: '#fff', run: onEdit })
-  // L'action du milieu varie selon l'écran : collection → Nouvelle partie ; wishlist →
-  // Vers collection.
-  if (onNewPlay) actions.push({ key: 'play', label: 'Partie', node: <DieIcon size={20} />, bg: '#4e7a5c', fg: '#fff', run: onNewPlay })
-  if (onMove) actions.push({ key: 'move', label: 'Vers collection', node: <CollectionIcon size={20} color="#fff" />, bg: '#4e7a5c', fg: '#fff', run: onMove })
-  // ⚠️ BGG est TOUJOURS au bout (demande user) : c'est l'action que lance le glissé complet,
-  // et elle doit être la même d'un écran à l'autre. Éditer reste toujours en premier.
-  if (onBgg)
-    actions.push({
-      key: 'bgg',
-      label: 'BGG',
-      node: (
-        <img
-          className="bgg-logo"
-          src={BGG_LOGO}
-          alt=""
-          width="22"
-          height="22"
-          onError={(e) => { e.currentTarget.style.display = 'none' }}
-        />
-      ),
-      bg: '#566070',
-      fg: '#fff',
-      run: onBgg,
-    })
-  const menuW = actions.length * ACTION_W
-  const OPEN = -menuW
-  const [offset, setOffset] = useState(0)
-  const [dragging, setDragging] = useState(false)
-  // ARMÉ = on est allé au bout du glissé : BGG s'étale sur toute la carte, et lâcher le
-  // lance. L'état est VISIBLE et RÉVERSIBLE avant de lâcher — c'est la condition qui
-  // sépare un raccourci d'une roulette.
-  const [arme, setArme] = useState(false)
-  const bggRef = useRef(null)
-  bggRef.current = onBgg || null
-  const offsetRef = useRef(0)
-  offsetRef.current = offset
-  const openRef = useRef(OPEN)
-  openRef.current = OPEN
+  // --- LE GESTE : deux actions directionnelles, plus de menu ---
+  // Tirer vers la DROITE lance l'action « positive » de l'écran (nouvelle partie en
+  // collection, passage en collection en wishlist) ; vers la GAUCHE, BoardGameGeek. Même
+  // geste, mêmes côtés, en vue liste comme en vue grille.
+  // ⚠️ L'édition n'est plus un geste : en collection elle vit sur la fiche (que le tap
+  // ouvre), en wishlist sur un bouton de la carte — car là, le tap mène chez Philibert.
   const cardRef = useRef(null)
-  const gRef = useRef({ startX: 0, startY: 0, base: 0, dir: null, moved: false, justSwiped: false })
+  const { offset, arme, sens, dragging, gRef } = useGlisseAction(cardRef, {
+    gauche: online ? onBgg || null : null,
+    droite: online ? onNewPlay || onMove || null : null,
+  })
+  const fondGauche = onBgg
+    ? {
+        label: 'BGG',
+        bg: '#566070',
+        node: (
+          <img
+            className="bgg-logo"
+            src={BGG_LOGO}
+            alt=""
+            width="22"
+            height="22"
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
+          />
+        ),
+      }
+    : null
+  const fondDroite = onNewPlay
+    ? { label: 'Partie', bg: '#4e7a5c', node: <DieIcon size={20} /> }
+    : onMove
+    ? { label: 'Vers collection', bg: '#4e7a5c', node: <CollectionIcon size={20} color="#fff" /> }
+    : null
 
-  // Une seule carte ouverte à la fois : à l'ouverture, on referme la précédente.
-  const meRef = useRef(null)
-  if (!meRef.current) meRef.current = { close: () => {} }
-  meRef.current.close = () => setOffset(0)
-  useEffect(() => {
-    if (offset !== 0) {
-      if (openCard && openCard !== meRef.current) openCard.close()
-      openCard = meRef.current
-    } else if (openCard === meRef.current) {
-      openCard = null
-    }
-  }, [offset])
-  // Démontage carte ouverte (bascule en vue grille, filtre qui la retire…) : sans ça, le
-  // registre garderait une carte disparue et n'en refermerait plus d'autre.
-  useEffect(
-    () => () => {
-      if (openCard === meRef.current) openCard = null
-    },
-    []
-  )
-
-  useEffect(() => {
-    const el = cardRef.current
-    if (!el || !onEdit) return
-    const g = gRef.current
-    const onStart = (e) => {
-      const t = e.touches[0]
-      g.startX = t.clientX; g.startY = t.clientY; g.base = offsetRef.current; g.dir = null; g.moved = false
-      g.width = el.offsetWidth // la butée profonde et le seuil d'armement en dépendent
-    }
-    const onMove = (e) => {
-      const t = e.touches[0]
-      const dx = t.clientX - g.startX
-      const dy = t.clientY - g.startY
-      if (!g.dir) {
-        if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) + 2) { g.dir = 'h'; setDragging(true) }
-        else if (Math.abs(dy) > 8) g.dir = 'v' // vertical → on laisse défiler la liste
-      }
-      if (g.dir === 'h') {
-        e.preventDefault() // on prend le geste (pas de scroll)
-        g.moved = true
-        const brut = g.base + dx
-        const fond = bggRef.current ? -(g.width - 36) : null
-        setOffset(retenue(brut, openRef.current, fond))
-        if (fond != null) {
-          // Armement 48 px AU-DELÀ du menu complet (le dépassement dit l'intention), avec
-          // 16 px d'hystérésis — sans elle, un doigt posé sur le seuil ferait clignoter l'état.
-          if (!g.arme && brut < openRef.current - 48) {
-            g.arme = true
-            setArme(true)
-            vibre('seuil')
-          } else if (g.arme && brut > openRef.current - 32) {
-            g.arme = false
-            setArme(false)
-            vibre('cran')
-          }
-        }
-      }
-    }
-    // `annule` : le système a repris le geste (appel entrant, notification, multi-touch…). On range
-    // la carte SANS exécuter l'action armée — un glissé interrompu n'est pas un glissé validé.
-    const onEnd = (annule) => {
-      if (g.dir === 'h') {
-        setDragging(false)
-        if (g.arme) {
-          // Le bout du glissé lance l'action : BGG occupait toute la carte, on a lâché dessus.
-          g.arme = false
-          setArme(false)
-          setOffset(0)
-          if (annule !== true) bggRef.current?.()
-        } else {
-          setOffset((o) => (o < openRef.current / 2 ? openRef.current : 0)) // aimante ouvert/fermé
-        }
-        g.justSwiped = true
-        setTimeout(() => { g.justSwiped = false }, 130)
-      }
-      g.dir = null
-    }
-    const onCancel = () => onEnd(true)
-    el.addEventListener('touchstart', onStart, { passive: true })
-    el.addEventListener('touchmove', onMove, { passive: false })
-    el.addEventListener('touchend', onEnd, { passive: true })
-    el.addEventListener('touchcancel', onCancel, { passive: true })
-    return () => {
-      el.removeEventListener('touchstart', onStart)
-      el.removeEventListener('touchmove', onMove)
-      el.removeEventListener('touchend', onEnd)
-      el.removeEventListener('touchcancel', onCancel)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onEdit])
 
   const onCardTap = () => {
     if (gRef.current.justSwiped) return // on vient de glisser → pas de navigation
-    if (offset !== 0) { setOffset(0); return } // ouverte → on referme
     if (onCardClick) onCardClick()
   }
 
   return (
     <div className="swipe-row" style={{ animationDelay: delay }}>
-      {actions.length > 0 && (
-        /* Le menu s'étire avec la carte au-delà de son ouverture : l'action de bout (BGG)
-           absorbe le surplus, et à l'armement elle occupe tout — on voit exactement ce qui
-           va se produire avant de lâcher. */
-        <div className={`swipe-menu${arme ? ' arme' : ''}`} style={{ width: Math.max(menuW, -offset) }}>
-          {actions.map((a) => (
-            <button
-              key={a.key}
-              type="button"
-              className={`swipe-act${a.key === 'bgg' ? ' swipe-act-fin' : ''}`}
-              style={{ background: a.bg, color: a.fg || 'var(--ink)' }}
-              onClick={() => { setOffset(0); a.run() }}
-              disabled={!online}
-              aria-label={a.label}
-            >
-              <span className="swipe-act-ico">{a.node || a.ico}</span>
-              <span>{a.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      <FondGlisse sens={sens} arme={arme} gauche={fondGauche} droite={fondDroite} />
     <article
       ref={cardRef}
       className={`game ${onCardClick ? 'clickable' : ''} ${dragging ? 'swiping' : ''}`}
@@ -432,19 +299,19 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
         {metaLine && <div className="game-playinfo">{metaLine}</div>}
       </div>
 
-      {/* Chevron discret au bord droit : indique qu'on peut glisser la carte ; le taper
-          ouvre (ou referme) le menu derrière la carte. */}
-      {actions.length > 0 && (
+      {/* ⚠️ ÉDITER, uniquement en WISHLIST. En collection le tap ouvre la fiche, qui porte
+          déjà « Éditer » ; en wishlist il mène chez Philibert — sans ce bouton, un jeu de la
+          wishlist ne serait plus modifiable nulle part depuis la liste. */}
+      {onEdit && !onNewPlay && (
         <button
           type="button"
-          className={`swipe-hint ${offset !== 0 ? 'open' : ''}`}
-          onClick={(e) => { e.stopPropagation(); setOffset(offsetRef.current === 0 ? OPEN : 0) }}
-          aria-label={offset !== 0 ? 'Fermer le menu' : 'Ouvrir le menu'}
-          title="Glisser ou toucher pour ouvrir le menu"
+          className="game-edit"
+          onClick={(e) => { e.stopPropagation(); if (gRef.current.justSwiped) return; onEdit() }}
+          disabled={!online}
+          aria-label="Éditer"
+          title="Éditer"
         >
-          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
-            <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <PencilIcon size={17} />
         </button>
       )}
     </article>

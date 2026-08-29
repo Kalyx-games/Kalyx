@@ -169,7 +169,7 @@ Audit en workflow (3 lentilles : cohérence / composition / finition, puis synth
 ```bash
 grep -cE '^s*(margin|padding|gap|row-gap|column-gap)[a-z-]*s*:.*[0-9]px' src/index.css
 ```
-**Valeur de référence au 29/08/2026 : 368** (349 → 356 avec la carte du face-à-face, puis 363 avec le verdict de la table et la ligne « Reprendre la dernière table ») (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
+**Valeur de référence au 29/08/2026 : 370** (349 → 356 avec la carte du face-à-face, puis 363 avec le verdict de la table et la ligne « Reprendre la dernière table ») (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
 
 **NON FAIT, et assumé** : le resserrement réel (faire tomber 10→8, 14→12, 6→4 …). Il déplacerait ~40 % des espacements pour un bénéfice invisible, sur une app que l’user a déjà fait itérer trois fois sur des retours visuels. À ne relancer QUE si l’user demande explicitement un rythme plus serré, écran par écran, et jamais en une passe globale.
 
@@ -290,6 +290,51 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - **Les butées disent les extrémités** (la demande) : avant la première ancre → l'étiquette du PREMIER groupe ; à `scrollY ≥ max − 1` → celle du DERNIER (sans ce forçage, la butée basse affichait le groupe à la ligne de lecture, un entre-deux).
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
+
+## ✅⚠️ LE MENU DE GLISSEMENT DISPARAÎT : DEUX ACTIONS DIRECTIONNELLES (2026-08-29, demande user)
+
+**Demande user** : « supprimer la fonction éditer du menu swipe, et donc mettre ce bouton sur les jeux de la
+vue liste quand on est dans la wishlist (sinon on ne peut plus les modifier). On peut alors faire en sorte que
+swiper à droite fasse une nouvelle partie et swiper à gauche ouvre BGG, et ce même en vue liste (en wishlist,
+swiper à droite ajoute donc à la collection) ».
+
+**Le menu de glissement est SUPPRIMÉ** (avec son chevron, son aimantation ouvert/fermé et le registre
+« une seule carte ouverte à la fois »). À la place, **deux actions directionnelles**, les mêmes en liste
+et en grille :
+  · **vers la DROITE** → « Partie » en collection, « Vers collection » en wishlist ;
+  · **vers la GAUCHE** → BoardGameGeek.
+
+### Le geste est PARTAGÉ, pas recopié
+
+**`src/lib/glisseAction.js` (NOUVEAU)** : le hook `useGlisseAction(ref, { gauche, droite })` porte tout le
+mécanisme (engagement, suivi, résistance, armement, hystérésis, `justSwiped`, `touchcancel`). **`FondGlisse.jsx`**
+(NOUVEAU) porte le rendu du fond révélé. La vue liste et la vue grille appellent les deux — elles ne peuvent
+plus diverger, ce qui était le risque immédiat après le geste ajouté sur la tuile la veille.
+  · Seuil et course en FRACTION de la largeur (une carte fait `343 px, une tuile `120), mais le seuil est
+    **plafonné à 96 px** : sans ce plafond, une carte large demanderait un geste démesuré.
+  · Le fond révélé s aligne du côté qui SE DÉGAGE (on tire à droite → l action paraît à gauche), prend la
+    couleur de son action une fois armé, et reprend les teintes de l ancien menu (#4e7a5c, #566070).
+  · **Sans action de ce côté** (hors ligne, jeu sans `bgg_id`) : élastique seul, rien ne s arme, rien ne part.
+
+### Le bouton ÉDITER, en wishlist seulement
+
+⚠️ **C est la condition pour retirer « Éditer » du glissé** : en collection le tap ouvre la fiche, qui porte
+déjà « Éditer » ; en wishlist le tap mène chez PHILIBERT — sans bouton, un jeu de la wishlist ne serait plus
+modifiable depuis la liste. Le crayon (`.game-edit`, 44 px, la norme maison) est posé en haut à droite de la
+carte, hors du flux : il ne rétablit PAS la colonne d actions qu un chantier a retirée. Il est rendu sur la
+condition `onEdit && !onNewPlay` — c est-à-dire exactement « on peut éditer, mais on n est pas en collection ».
+
+**Vérifié en dev, par gestes synthétiques sur la vraie cible** : en LISTE, glissé à droite → « Partie » et la
+saisie s ouvre sur Ahoy ; à gauche → BGG (`boardgame/359402`). En WISHLIST : à droite → « Vers collection » et
+le dialogue de confirmation paraît ; le crayon ouvre « Éditer le jeu ». En GRILLE : les deux sens marchent à
+l identique. **Base intacte après les tests** (220 parties, 62 fiches, aucune fiche créée pour Aurignac).
+
+⚠️ **PIÈGE REVÉCU (3e fois du chantier)** : `vite build` PASSE avec un symbole non importé — ici
+`useGlisseAction` dans GameCard, après qu un script d édition a échoué en silence sur ses bornes. L app tombait
+sur l ErrorBoundary. **Après un refactor, contrôler les imports par script** (symboles JSX + hooks utilisés vs
+importés) : le build ne le fera pas.
+
+**Garde-fou d espacement : 368 → 370** (les deux `gap` du fond révélé, en liste et en colonne pour la tuile).
 
 ## ✅ LA TUILE SE GLISSE AUSSI (2026-08-29, demande user)
 

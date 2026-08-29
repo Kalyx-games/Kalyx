@@ -1988,6 +1988,7 @@ export default function App() {
                     ? () => window.open(`https://boardgamegeek.com/boardgame/${g.bgg_id}`, '_blank', 'noopener')
                     : undefined
                 }
+                onNewPlay={online ? () => handleNewPlayFromCard(g) : undefined}
                 onCardClick={
                   !online
                     ? undefined
@@ -2017,7 +2018,6 @@ export default function App() {
               }
               compte={compte ?? null}
               onImageClick={(url) => setZoomImage(url)}
-              // « Nouvelle partie » RETIRÉ du menu de glissement → uniquement sur la fiche jeu.
               // Quand on trie par une info absente des cartes, on l'affiche dessus.
               metaLine={
                 sort === 'lastplayed'
