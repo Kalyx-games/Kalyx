@@ -97,15 +97,12 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
   const [playVariantOptions, setPlayVariantOptions] = useState(() => (perPlayVariant?.options || []).map((n) => mkOption(n)))
   const [teamList, setTeamList] = useState(() => (template?.teams?.list || []).map(mkTeam))
 
-  // ⚠️ Les lignes déjà renseignées s'ouvrent d'office (« rempli ⇒ ouvert ») : on ne
-  // replie jamais un travail existant. Les deux états naissent ensemble pour que les
-  // identifiants concordent.
-  const [depart] = useState(() => {
-    const c = (template?.categories || []).map(mkCat)
-    return { cats: c, ouvertes: c.filter((x) => x.hint || x.value !== '' || x.ext).map((x) => x.id) }
-  })
-  const [cats, setCats] = useState(depart.cats)
-  const [lignesOuvertes, setLignesOuvertes] = useState(() => new Set(depart.ouvertes))
+  // ⚠️ TOUT EST REPLIÉ À L'OUVERTURE, sans exception. J'avais d'abord ouvert d'office les
+  // lignes déjà renseignées (« rempli ⇒ ouvert ») ; sur une fiche comme Abyss cela en
+  // déployait quatre d'un coup, et l'user a tranché : « j'aimerais qu'ils soient tous
+  // repliés ». Une page qui s'ouvre calme vaut mieux qu'une page qui devine.
+  const [cats, setCats] = useState(() => (template?.categories || []).map(mkCat))
+  const [lignesOuvertes, setLignesOuvertes] = useState(() => new Set())
   const basculeLigne = (id) =>
     setLignesOuvertes((s) => {
       const n = new Set(s)
@@ -129,14 +126,10 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
   const [err, setErr] = useState('')
   const [detail, setDetail] = useState(() => (template?.categories || []).length > 0)
 
-  // Les trois lignes de la carte « Autres réglages » : ouvertes si elles portent déjà
-  // quelque chose, sinon repliées — mais toujours NOMMÉES, avec leur valeur à droite.
-  const [ouverts, setOuverts] = useState(() => {
-    const s = new Set()
-    if (perPlayerVariant?.label || perPlayVariant?.label) s.add('variantes')
-    if (template?.notes) s.add('notes')
-    return s
-  })
+  // Les lignes de « Autres réglages » : repliées elles aussi, et sans rien perdre — elles
+  // portent leur VALEUR à droite (« Héros, par joueur »), donc on sait ce qu'il y a dedans
+  // sans ouvrir.
+  const [ouverts, setOuverts] = useState(() => new Set())
   const bascule = (k) =>
     setOuverts((s) => {
       const n = new Set(s)
@@ -444,7 +437,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
             <p className="fs-lab">Vos équipes <span className="field-opt">(facultatif)</span></p>
             {teamList.map((t) => (
               <div key={t.id} className="team-edit">
-                <input className="cat-edit-label" value={t.name} onChange={(e) => updTeam(t.id, 'name', e.target.value)} placeholder="ex. Les Rouges" />
+                <input className="cat-edit-label" value={t.name} onChange={(e) => updTeam(t.id, 'name', e.target.value)} placeholder="ex. Rouge" />
                 <input className="team-size" type="number" inputMode="numeric" min="1" value={t.size} onChange={(e) => updTeam(t.id, 'size', e.target.value)} placeholder="effectif" />
                 <button type="button" className="ext-row-x" onClick={() => delTeam(t.id)} aria-label="Retirer l’équipe">×</button>
               </div>

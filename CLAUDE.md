@@ -314,7 +314,7 @@ de rendu avant d affirmer que quelqu un « voit » quelque chose.
 
 > **La page a toujours exactement TROIS cartes, dans le même ordre, avec les mêmes titres. Rien n apparaît,
 > rien ne disparaît : une carte qui n a rien à demander devient une PHRASE.**
-> **Rempli ⇒ ouvert. Vide ⇒ replié, mais NOMMÉ, avec sa valeur écrite à côté.**
+> **TOUT est replié à l ouverture** — mais NOMMÉ, avec sa valeur écrite à côté.
 
 Jamais de trappe anonyme (« plus d options ») : chaque ligne repliée dit ce qu elle contient — « Variantes ·
 Aucune », « Extensions · 2 cochées d avance ».
@@ -334,7 +334,10 @@ Aucune », « Extensions · 2 cochées d avance ».
   2. **« Ce qu on compte »** — QUATRE VISAGES, la carte ne disparaît jamais : lignes de score · « une seule
      case Points par joueur » + bouton « Détailler le score » · « en équipes, un score par équipe » · « rien à
      compter ». Le mot « catégorie » n apparaît qu une fois qu on a demandé le détail.
-     · Le détail d une ligne (explication, valeur fixe, extension) est **replié par ligne**. ⚠️ La « valeur
+     · Le détail d une ligne (explication, valeur fixe, extension) est **replié par ligne**, et TOUJOURS
+     replié à l ouverture. ⚠️ J avais d abord ouvert d office les lignes déjà renseignées (« rempli ⇒
+     ouvert ») : sur Abyss cela en déployait quatre d un coup. Retour user : « j aimerais qu ils soient tous
+     repliés ». **Une page qui s ouvre calme vaut mieux qu une page qui devine.** ⚠️ La « valeur
        fixe » cachait son explication dans un attribut `title`, **invisible au tactile** : elle devient une
        case à cocher avec son libellé.
      · La poignée de glissé n est rendue **qu à partir de 2 lignes** (réordonner une ligne seule n a pas de
@@ -450,8 +453,7 @@ seule case « Points » par joueur. » · « Une seule case pour le groupe. »
        vivaient dans des LISTES de sélecteurs : on retire la ligne, jamais la règle — couper une liste
        désactive silencieusement tout ce qui suit (piège déjà vécu ici).
   4. **Passe sur les 28 placeholders de l app** (demande : « clairs, thématiques dans une app de jeux sans
-     être clichés et simples ») : « Nom de l extension… » → **ex. Kraken** · « Nom de l équipe » → **ex. Les
-     Rouges** · « ex. Carte » (ambigu : à jouer ? géographique ?) → **ex. Mission** et sa valeur « ex. Dragon »
+     être clichés et simples ») : « Nom de l extension… » → **ex. Kraken** · « Nom de l équipe » → **ex. Rouge** · « ex. Carte » (ambigu : à jouer ? géographique ?) → **ex. Mission** et sa valeur « ex. Dragon »
      → **ex. Évasion** · « Rappels de règles, variante maison, précisions de score… » → **« Rappels de règles,
      variante maison… »** (2 endroits). Gardés tels quels : « Rechercher », les codes d accès, « ex.
      Terraforming Mars », « ex. Seigneurs », « ex. Héros / ex. Barbare », « 0 » des cases de score (le zéro
