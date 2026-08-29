@@ -187,14 +187,14 @@ export default function EditeurBulle({
           contexte est déjà posé — le libellé n'a pas à le redire. */}
       {avecModeTag && compte && (
         <div className="oe-field">
-          <span className="oe-label">Les jeux tagués</span>
+          <span className="oe-label">Visibilité</span>
           <div className="chips">
             <button type="button" className={`fchip ${visibleMoi ? '' : 'on'}`} onClick={() => setVisibleMoi(false)}>Masqués</button>
             <button type="button" className={`fchip ${visibleMoi ? 'on' : ''}`} onClick={() => setVisibleMoi(true)}>Visibles</button>
           </div>
           {/* L'indice ne paraît que sur « Masqués » : c'est le seul des deux à laisser une
               question ouverte (« et je les retrouve comment ? »). */}
-          {!visibleMoi && <p className="field-hint">Ils reviennent en cochant le tag.</p>}
+          {!visibleMoi && <p className="field-hint">Ces jeux n'apparaissent que si le tag est coché dans les filtres.</p>}
         </div>
       )}
 

@@ -2312,6 +2312,19 @@ body {
   flex: 1;
   min-width: 0;
 }
+/* ⚠️ `.oe-field` est écrit pour vivre DANS un `.oe-row`, qui porte l'espacement (12px). Posé
+   directement dans l'éditeur — Image, Visibilité, Couleur — il n'en avait AUCUN : les blocs se
+   touchaient, et l'indice d'un réglage semblait appartenir au titre suivant.
+   ⚠️ 12px = la valeur de `.oe-row`, c'est une ÉGALITÉ À TENIR : les réglages doivent respirer
+   pareil qu'ils soient sur une rangée ou seuls. */
+.owner-editor > .oe-field {
+  margin-bottom: 12px;
+}
+/* Un indice appartient au contrôle qu'il explique : 6px au-dessus (la même valeur que
+   `.oe-label` met sous lui), et les 12px ci-dessus le séparent du réglage suivant. */
+.owner-editor .field-hint {
+  margin-top: 6px;
+}
 .oe-label {
   display: block;
   font-size: var(--fs-footnote);

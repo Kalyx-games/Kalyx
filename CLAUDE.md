@@ -383,7 +383,20 @@ SOURDE (`muteOwnerColor`, posé à l initialisation de l état). Aucun effet vis
 par là — mais la couleur vive d origine est perdue en base, ce que le commentaire historique décrivait comme
 « réversible ». Constaté sur « À Vendre » (#f59e0b → #8a6a47).
 
-**Garde-fou d espacement : 395, inchangé.**
+### ✅ Trois retours user sur l écran, dans la foulée
+
+  · ⚠️ **Les blocs de l éditeur se touchaient** (mesuré : **0 px** entre les puces, leur indice et le titre
+    suivant — l indice semblait appartenir au réglage d en dessous). Cause : `.oe-field` est écrit pour vivre
+    DANS un `.oe-row`, qui porte l espacement ; posé directement dans l éditeur il n en avait aucun.
+    → `.owner-editor > .oe-field { margin-bottom: 12px }` (**égalité à tenir** avec `.oe-row`) et
+    `.owner-editor .field-hint { margin-top: 6px }`. **Le défaut existait aussi sur l éditeur du COMPTE**
+    (Image collée à Couleur) : il est corrigé du même coup. Mesuré après : 6 px et 12 px.
+  · **« Les jeux tagués » nommait le sujet, pas ce qu on règle** → **« Visibilité »**.
+  · **« Ils reviennent en cochant le tag » demandait de décoder deux choses** (à quoi renvoie « ils », et où
+    l on coche) → **« Ces jeux n apparaissent que si le tag est coché dans les filtres. »** — la condition
+    en entier, et l endroit.
+
+**Garde-fou d espacement : 395 → 397** (les deux règles ci-dessus).
 
 ## ✅⚠️ LES TAGS PASSENT DANS LE MENU COMPTE + CHACUN CHOISIT S ILS MASQUENT (2026-08-29, 2 demandes user)
 
