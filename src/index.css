@@ -108,6 +108,11 @@
   --bar-on: #2e2e33; /* barres de graphes = encre adoucie (la longueur porte l'info, pas la teinte) */
   --bar-off: #e7e7ea;
   --danger: #e11d48;
+  /* Texte posé SUR --danger. ⚠️ Le rouge s éclaircit en thème sombre (#fb7185) : le blanc y
+     tombait à 2,69:1, très en dessous du seuil, sur les sept boutons « Supprimer ». Même
+     motif que --on-primary, et pour la même raison — une surface qui s inverse ne peut pas
+     porter une couleur de texte figée. */
+  --on-danger: #ffffff;
   --danger-bg: #fef2f2;
   --danger-border: #fecaca;
   --danger-ink: #b91c1c;
@@ -179,6 +184,7 @@
     --bar-on: #d8d8dc;
     --bar-off: #2a2a2e;
     --danger: #fb7185;
+    --on-danger: #131316; /* 6,89:1 sur le rouge clair du thème sombre */
     --danger-bg: #33161f;
     --danger-border: #7f2233;
     --danger-ink: #fca5a5;
@@ -236,6 +242,7 @@
   --bar-on: #d8d8dc;
   --bar-off: #2a2a2e;
   --danger: #fb7185;
+  --on-danger: #131316;
   --danger-bg: #33161f;
   --danger-border: #7f2233;
   --danger-ink: #fca5a5;
@@ -2008,7 +2015,7 @@ body {
 }
 .btn-danger {
   background: var(--danger);
-  color: white;
+  color: var(--on-danger);
 }
 .btn-danger:disabled {
   opacity: 0.6;

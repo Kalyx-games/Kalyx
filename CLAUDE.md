@@ -310,6 +310,12 @@ pourrait avoir le bouton ajouter du même vert que l icône de collection. »
     `color` en ligne écraserait l atténuation que le navigateur applique à `:disabled`, et le bouton paraîtrait
     actif pendant l enregistrement. Le piège est documenté ici depuis longtemps ; la règle `.btn-accent:disabled`
     rend l atténuation à la main.
+  · ⚠️⚠️ **DÉFAUT PRÉEXISTANT TROUVÉ PAR LE RELEVÉ, ET CORRIGÉ** : `.btn-danger` posait `color: white` sur
+    `--danger`, qui **s éclaircit en thème sombre** (`#fb7185`). Le blanc y tombait à **2,69:1** — très en
+    dessous du seuil AA — sur les **sept boutons « Supprimer »**. Recalculé à la main avant d y croire, puis
+    mesuré dans l app. Nouveau token **`--on-danger`** (blanc en clair, `#131316` en sombre) : **6,89:1**.
+    C est exactement le motif de `--on-primary`, et pour la même raison — **une surface qui s inverse avec le
+    thème ne peut pas porter une couleur de texte figée**. Le thème clair ne bouge pas (4,70:1, blanc).
   · **Mesuré** : blanc sur `#4e7a5c` = **4,93:1** (au-dessus du seuil), identique dans les deux thèmes puisque
     le bouton est opaque. Vérifié à l écran en clair et en sombre : fond `rgb(78,122,92)`, texte blanc, sur
     carte blanche comme sur carte sombre.
