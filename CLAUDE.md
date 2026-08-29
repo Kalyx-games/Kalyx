@@ -485,15 +485,18 @@ carrées sur 69**. Deux causes, aucune n étant celle qu on croit :
      : sortie du flux, elle ne décide plus de rien, elle REMPLIT la boîte (recadrée, jamais déformée).
      ⚠️ Il faut alors `position: relative` sur **`.game-thumb`** : un absolu n est rogné que par son PROPRE
      bloc conteneur — ancré sur `.game-thumb-wrap`, il aurait débordé des coins arrondis.
-  2. **Le retrait vertical du texte** poussait 18 cartes hors du carré. Mesuré : le texte fait 64 à 86px sur
-     **65 cartes sur 69**, donc il tient dans les 88 de la jaquette — mais **dès 8px de padding, 18 cartes
-     basculent** (47 carrées au lieu de 65). Padding 8, 12, 16 ou 22 donnent tous le même résultat : 47.
-     → `.game-body` n a **AUCUN retrait vertical**. Le texte étant CENTRÉ, il respire de lui-même (12px de
-     part et d autre sur une carte ordinaire) et ne se serre que là où il est vraiment long.
+  2. ⛔⛔ **ERREUR QUE J AI FAITE, ET QU IL NE FAUT PAS REFAIRE** : j ai retiré le retrait vertical de
+     `.game-body` pour forcer 65 jaquettes dans le carré. **C est l inverse de la demande.** Réaction user, mot
+     pour mot : « j ai dit de faire comme tu faisais quand davantage de hauteur est nécessaire COMME ABYSS et
+     là t as juste tassé toutes les cartes avec des extensions ». La règle est : **carré par défaut, PLUS HAUT
+     quand le contenu l exige** — une carte à extensions DOIT grandir, pas se tasser. `padding: 11px 0` restauré.
 
-**Après** : **65 jaquettes carrées sur 69**, et seulement **3 hauteurs** — 88, 105, 140. Les quatre exceptions
-sont exactement celles dont le texte l exige (Cthulhu Death May Die 140 ; Faraway, Mystic Vale, Viticulture 105
-— toutes avec une ligne d extensions).
+**Après** : **47 jaquettes carrées sur 69** et **4 hauteurs seulement** — 88, 109, 127, 162 (contre 10 avant).
+Les 22 cartes plus hautes portent **TOUTES** une ligne d extensions, sans une exception. Et les jaquettes
+portrait sont rentrées dans le carré : Belote, Botanik, Altered, Catan : Duel font désormais 88.
+
+**LA LEÇON** : le désordre venait des IMAGES, pas du texte. Corriger la bonne cause suffisait ; toucher au
+texte en plus a cassé ce qui marchait.
 
 **Le saut à la ligne de Jungle Speed est réglé par la mise en page elle-même** : la carte ayant perdu ses
 marges, la colonne des infos a gagné en largeur et « 3-8, 10 » tient désormais sur UNE ligne (vérifié).

@@ -1556,11 +1556,14 @@ body {
 
 .game-body {
   min-width: 0;
-  /* ⚠️ AUCUN retrait vertical, et c'est mesuré : le texte fait 64 à 86px sur 65 cartes sur 69,
-     donc il tient dans les 88px de la jaquette — mais dès qu'on lui ajoute ne serait-ce que
-     8px, 18 cartes basculent au-dessus et la jaquette cesse d'être carrée. Le texte étant
-     CENTRÉ, il respire de lui-même : 12px de part et d'autre sur une carte ordinaire, et il
-     ne se serre que là où il est vraiment long. */
+  /* Le retrait vertical vit ICI depuis que la carte n'en a plus : la jaquette touche les
+     bords, le texte respire.
+     ⚠️ NE PAS le retirer pour forcer davantage de jaquettes dans le carré : c'est ce que
+     j'avais fait, et ça TASSE les cartes qui portent une ligne d'extensions au lieu de leur
+     donner la hauteur dont elles ont besoin. La règle voulue est l'inverse — carré par
+     défaut, PLUS HAUT quand le contenu l'exige (« comme Abyss », mot pour mot). Le désordre
+     des hauteurs ne venait pas d'ici mais des jaquettes PORTRAIT, réglées à part. */
+  padding: 11px 0;
   align-self: center;
 }
 .game-head {
