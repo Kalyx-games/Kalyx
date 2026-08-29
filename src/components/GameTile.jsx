@@ -91,7 +91,11 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
         disabled={!onCardClick}
         title={game.name}
       >
-        <div className="gtile-art">
+        {/* ⚠️ Un enrobage qui ne coupe RIEN : les pastilles doivent déborder de la jaquette
+            (comme en vue liste), or `.gtile-art` est en `overflow: hidden` — c'est lui qui
+            découpe l'image à ses coins arrondis, on n'y touche pas. */}
+        <div className="gtile-visuel">
+          <div className="gtile-art">
           {showImg ? (
             <img
               ref={imgRef}
@@ -109,6 +113,7 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
           ) : (
             <span className="gtile-fallback" style={{ background: ownerColor(game.name) }}>{monogram(game.name)}</span>
           )}
+          </div>
           {/* Deux coins, comme en vue liste : les autres foyers à gauche, vos étiquettes à
               droite. Les deux vues ne peuvent pas diverger. */}
           {ownerList.length > 0 && (

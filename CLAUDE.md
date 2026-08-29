@@ -470,6 +470,37 @@ bibliothèque part avec lui) · `retireCompteDeTagsVisibles` (son nom dans `visi
 
 **Garde-fou d espacement : 399, inchangé** (aucun CSS touché).
 
+## ✅ LA PASTILLE DE COMPTE DÉBORDE AUSSI EN GRILLE (2026-08-29, retour user)
+
+**Retour** : « en vue liste j aime bien que les bulles propriétaires dépassent un peu en bas et à gauche de la
+jaquette, ce serait possible de faire quelque chose de proche en grille ? »
+
+⚠️ **Deux `overflow: hidden` l interdisaient**, et chacun a sa raison :
+  · `.gtile-art` — c est lui qui découpe l image à ses coins arrondis (5px) ;
+  · `.gtile-row` — la case retient la tuile pendant un glissé, sinon elle empiète sur ses voisines.
+
+**Géométrie mesurée à 412px** : 3 colonnes de 120px, retrait de page **16px**, `gap: 22px 10px`, et seulement
+**4px** entre la jaquette et son titre. La place disponible est donc le `gap` (10) et, pour la 1re colonne, le
+retrait (16) — mais RIEN sous la jaquette.
+
+**Le correctif, en deux temps :**
+  1. **`.gtile-row` passe de `overflow: hidden` à `overflow: clip; overflow-clip-margin: 10px`.** La case
+     continue de retenir la tuile glissée (mesuré : déplacée de 60px, seuls **10** dépassent), mais laisse
+     passer 10px de débord au repos. `overflow-clip-margin` est supporté (vérifié : `CSS.supports` → true).
+  2. **Les deux piles SORTENT de `.gtile-art`** vers un enrobage `.gtile-visuel` qui ne coupe rien.
+     ⚠️ **Repousser le clip de `.gtile-art` aurait été une fausse bonne idée** : la région de clip s élargit
+     AVEC les coins, l image n aurait plus été arrondie. On n y touche pas.
+
+  · `.gtile-bulles` : `left: -8px; bottom: -5px`. ⚠️ **5px en bas et non 8** : il n y a que 4px avant le
+    titre — au-delà, la pastille mordrait dessus. Mesuré : **1px** de chevauchement, invisible.
+  · Les ÉTIQUETTES ne bougent pas (`right: 4; bottom: 4`, dans l image) : la piste A du lot précédent tient,
+    et l écart entre les deux familles passe même de 72 à **84px**.
+
+**Mesuré** : débord 8px à gauche / 5px en bas sur les colonnes 1, 2 et 3 ; en 1re colonne la pastille tombe à
+x=8, **dans** le retrait de page (jamais hors écran) ; la page ne déborde pas ; `.gtile-art` garde
+`overflow: hidden` et `border-radius: 5px` ; sur Abalone, pastille débordante + étiquettes dans l image.
+
+
 ## ✅ LES DEUX FAMILLES DE BULLES CHANGENT DE COIN (2026-08-29, retour user)
 
 **Retour** : « sur une carte, ça ne me va pas que les tags et les comptes soient toujours empilés. On dirait

@@ -5925,7 +5925,14 @@ input[type='number'] {
    ce qui dépasse — la tuile reste ainsi dans sa colonne, même tirée à fond. */
 .gtile-row {
   position: relative;
-  overflow: hidden;
+  /* ⚠️ `clip` et non `hidden`, avec une marge : la case doit continuer de retenir la tuile
+     pendant un glissé (sinon elle empiète sur ses voisines), MAIS laisser les pastilles de
+     compte déborder du coin bas-gauche — c'est ce que fait la vue liste, où elles débordent
+     dans le padding de la carte. Ici la jaquette occupe toute la colonne : il n'y a de place
+     que dans le `gap` (10px) et, pour la 1re colonne, dans le retrait de page (16px).
+     10px de marge tiennent donc dans les deux cas. */
+  overflow: clip;
+  overflow-clip-margin: 10px;
   animation: kx-card-in 0.34s ease both; /* même arrivée que les cartes de la liste */
 }
 .gtile {
@@ -6018,10 +6025,17 @@ input[type='number'] {
 
 /* Les bulles de compte/tag sur une tuile : même coin qu'en vue liste (bas-gauche de la
    jaquette), en pile. Le prix n'est plus sur l'image, il n'y a donc plus de collision. */
+/* L'enrobage porte la position des deux piles : `.gtile-art` reste en `overflow: hidden`
+   (c'est lui qui arrondit l'image), il ne peut donc rien laisser dépasser. */
+.gtile-visuel {
+  position: relative;
+}
 .gtile-bulles {
   position: absolute;
-  left: 4px;
-  bottom: 4px;
+  /* À cheval sur le coin, comme en vue liste. ⚠️ 5px en bas et non 8 : sous la jaquette il
+     n'y a que 4px avant le titre — au-delà, la pastille mordrait dessus. */
+  left: -8px;
+  bottom: -5px;
   display: flex;
   flex-direction: column-reverse;
   gap: 3px;
