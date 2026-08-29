@@ -470,6 +470,39 @@ bibliothèque part avec lui) · `retireCompteDeTagsVisibles` (son nom dans `visi
 
 **Garde-fou d espacement : 399, inchangé** (aucun CSS touché).
 
+## ✅⚠️ LA JAQUETTE RESTE CARRÉE, SAUF QUAND LE TEXTE L EXIGE (2026-08-29, retour user)
+
+**Retour** : « il faut que toutes les jaquettes gardent un format carré, hormis quand davantage de hauteur est
+nécessaire (comme Abyss) sinon ça devient anarchique ». Et : le vrai grief sur Jungle Speed n était pas la
+donnée « 3-8, 10 » mais **son saut à la ligne**.
+
+**Mesuré : 10 hauteurs de carte distinctes** (88, 89, 109, 122, 123, 126, 127, 128, 133, 162) et **42 jaquettes
+carrées sur 69**. Deux causes, aucune n étant celle qu on croit :
+
+  1. ⚠️⚠️ **L IMAGE imposait sa hauteur.** Dix jaquettes de la collection ne sont pas carrées — Belote 1,51 ·
+     Catan : Duel 1,45 · Altered 1,40 · Botanik 1,39. Dans le FLUX, une jaquette portrait de ratio 1,51
+     étirait la carte à **133px pour 64px de texte**. → `.game-img` passe en **`position: absolute; inset: 0`**
+     : sortie du flux, elle ne décide plus de rien, elle REMPLIT la boîte (recadrée, jamais déformée).
+     ⚠️ Il faut alors `position: relative` sur **`.game-thumb`** : un absolu n est rogné que par son PROPRE
+     bloc conteneur — ancré sur `.game-thumb-wrap`, il aurait débordé des coins arrondis.
+  2. **Le retrait vertical du texte** poussait 18 cartes hors du carré. Mesuré : le texte fait 64 à 86px sur
+     **65 cartes sur 69**, donc il tient dans les 88 de la jaquette — mais **dès 8px de padding, 18 cartes
+     basculent** (47 carrées au lieu de 65). Padding 8, 12, 16 ou 22 donnent tous le même résultat : 47.
+     → `.game-body` n a **AUCUN retrait vertical**. Le texte étant CENTRÉ, il respire de lui-même (12px de
+     part et d autre sur une carte ordinaire) et ne se serre que là où il est vraiment long.
+
+**Après** : **65 jaquettes carrées sur 69**, et seulement **3 hauteurs** — 88, 105, 140. Les quatre exceptions
+sont exactement celles dont le texte l exige (Cthulhu Death May Die 140 ; Faraway, Mystic Vale, Viticulture 105
+— toutes avec une ligne d extensions).
+
+**Le saut à la ligne de Jungle Speed est réglé par la mise en page elle-même** : la carte ayant perdu ses
+marges, la colonne des infos a gagné en largeur et « 3-8, 10 » tient désormais sur UNE ligne (vérifié).
+⚠️ **La donnée, elle, est juste** : `players` vaut bien « 3-8, 10 », soit l ensemble {3..8, 10}. Cinq jeux ont
+une plage à trou et quatre sont légitimes — **Challengers!** se joue en nombre PAIR (2, 4, 6, 8), **Altered** et
+**Yu-Gi-Oh!** en duel ou à quatre, **Twin It!** 2-6, 8. Seul le « 10 » de Jungle Speed est douteux (import
+initial du tableur) : à corriger dans la fiche du jeu, pas dans le code.
+
+
 ## ✅ LA JAQUETTE DONNE LA HAUTEUR DE LA CARTE (2026-08-29, retour user)
 
 **Retour** : « on pourrait pas tenter un truc pour que ce soit les jaquettes des jeux qui donnent la hauteur de
