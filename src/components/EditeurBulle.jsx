@@ -131,7 +131,7 @@ export default function EditeurBulle({
         {avecAvatar ? (
           apercuGrand ? null : <Avatar compte={apercu} jeux={jeux} taille={44} className="oe-preview" />
         ) : (
-          <span className="owner-bubble oe-preview" style={{ background: color }}>{previewInitials}</span>
+          <span className="owner-bubble bulle-tag oe-preview" style={{ background: color }}>{previewInitials}</span>
         )}
       </div>
 

@@ -441,8 +441,9 @@ MÊME `.owner-bubble` — un disque de 20px — donc rien ne disait laquelle ét
   · **Mesuré** en liste ET en grille : MD (compte) à `50%`, 💸 et 📦 (tags) à `6px`.
   · **RÈGLE** : partout où un compte et un tag se côtoient, le tag porte `bulle-tag`.
 
-⚠️ **RESTE** : la carte « Tags » des Réglages (`BubbleListManager`) garde des bulles rondes — à traiter
-avec son déménagement dans le menu Compte, pour ne pas faire le travail deux fois.
+**Étendu au menu Compte** : la liste de gestion des tags y vit désormais sous l avatar du compte — les deux
+formes se côtoient, donc ses bulles et l aperçu de son éditeur portent aussi `bulle-tag` (mesuré : avatar
+du compte à 50 %, tags à 6 px).
 
 ## ✅⚠️⚠️ LES TAGS DEVIENNENT PROPRES À CHAQUE COMPTE (2026-08-29, demande user)
 

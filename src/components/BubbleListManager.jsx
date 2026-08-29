@@ -42,7 +42,7 @@ export default function BubbleListManager({
             <ul className="owner-list">
               {items.map((o) => (
                 <li key={o.id} className={editing !== 'new' && editing && editing.id === o.id ? 'editing' : ''}>
-                  <span className="owner-bubble" style={{ background: o.color ? muteOwnerColor(o.color) : ownerColor(o.name) }}>
+                  <span className="owner-bubble bulle-tag" style={{ background: o.color ? muteOwnerColor(o.color) : ownerColor(o.name) }}>
                     {o.initials || ownerInitials(o.name)}
                   </span>
                   <span className="owner-name-txt">{o.name}</span>
