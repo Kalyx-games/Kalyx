@@ -341,17 +341,52 @@ fichier doivent rester dans le premier effet.
 |---|---|---|
 | 0 | rien ne bouge | `kx-card-in` dure 0,34 s : bouger avant superpose deux mouvements illisibles |
 | 340 | départ à DROITE, fond vert + dé | l action « positive » de l écran |
-| 560 | on TIENT | sous `120 ms l œil voit un mouvement, pas un contenu — c est ce palier qui répond au « juste une carte qui bouge » |
-| 700 | retour au repos | la plus longue des deux transitions existantes (0,22 s) |
-| 920 | pause franche | sans elle les deux sens se lisent en un seul S, et « ça marche des deux côtés » est perdu |
-| 1000 | départ à GAUCHE, fond ardoise + logo BGG | |
-| 1580 | fin, le fond se démonte | `DEMO_TOTAL`, **exporté** : App s en sert au lieu d entretenir un second nombre qui dériverait |
+| 560 | on TIENT | sous ~120 ms l œil voit un mouvement, pas un contenu — c est ce palier qui répond au « juste une carte qui bouge » |
+| 700 | **TRAVERSÉE d un seul tenant** jusqu à GAUCHE, fond ardoise + logo BGG | voir ci-dessous |
+| 920 | on TIENT | |
+| 1060 | retour au repos | la plus longue des deux transitions existantes (0,22 s) |
+| 1280 | fin, le fond se démonte | `DEMO_TOTAL`, **exporté** : App s en sert au lieu d entretenir un second nombre qui dériverait |
 
-**Premier pixel à 340 ms au lieu de `950 mesurées** (l ancienne animation cumulait 500 ms de délai et un
-palier mort), et 1,58 s au total au lieu de 3.
+**Premier pixel à 340 ms au lieu de ~950 mesurées** (l ancienne animation cumulait 500 ms de délai et un
+palier mort), et 1,28 s au total au lieu de 3.
+
+⚠️ **LA TRAVERSÉE EST UN SEUL MOUVEMENT** (2e retour user : « swipe à droite / swipe à gauche / revient au
+milieu, pour rendre la chose plus fluide »). Une halte au centre se VOIT même sans pause programmée : la
+transition décélère en arrivant à zéro puis réaccélère, ce qui se lit comme une hésitation. En écrivant
+directement −A, la transition balaie les deux côtés d un trait. Mesuré à l échantillon :
+`64 55 36 12 −10 −19 −33 … −64` — la carte passe le milieu en pleine vitesse.
+  · **CE QUI REND ÇA POSSIBLE** : `.glisse-fond` est en `position: absolute; inset: 0` → la COULEUR couvre
+    toute la rangée, seule l ICÔNE change de bord (`justify-content`). Le fond peut donc changer de côté EN
+    COURS DE ROUTE sans laisser le moindre trou — et on le fait au passage par zéro, l instant précis où la
+    carte le recouvre en entier, donc où rien ne se voit.
+  · **`DEMO_BASCULE = 55 ms`** : les deux transitions n ont pas la même courbe (`.game` ease/0,2 s,
+    `.gtile` 0,22 s), leurs passages par zéro tombent à ~73 et ~37 ms. Mesuré au banc : le fond bascule à
+    **+12 px en liste (96 % de la rangée cachée) et à ~−15 px en grille (87 %)**. Affiner par vue ajouterait
+    une constante fragile pour un gain invisible.
 ⚠️ **AUCUNE transition n est posée par la démonstration** : `.game` (0,2 s) et `.gtile` (0,22 s) en portent
 déjà une sur `transform`, et elles la coupent elles-mêmes pendant un vrai glissé. En poser une de plus la
 ferait survivre au glissé — le conflit qu on vient justement de retirer.
+
+### ⚠️ LE FOND SURVIT AU RELÂCHÉ (3e retour user, et ça touchait le VRAI geste)
+
+**Retour user** : « quand on lâche la tuile sans finir le swipe ça fait disparaître l arrière-plan d un coup
+et c est moche. Il faut que ce soit tout le temps affiché tout le long des animations. »
+
+Défaut RÉEL et ANTÉRIEUR à ce chantier : `onEnd` remettait `sens` à 0 **immédiatement**, alors que
+`setOffset(0)` ne fait que LANCER une transition de 0,2 s (liste) ou 0,22 s (grille). Le décor se démontait
+donc d un coup pendant que la carte glissait encore — on voyait le fond de page derrière elle. Même famille
+que le défaut principal du chantier : **un état d affichage retiré avant la fin du mouvement qu il habille.**
+  · **Fix** : `rangeLeFond()` diffère le `setSens(0)` de **300 ms** (`RETOUR_FOND`), annulé dès qu un
+    nouveau geste commence (`onStart`) et nettoyé au démontage.
+  · **Généreux exprès** : une fois l élément rentré il RECOUVRE le fond (`inset: 0`), donc attendre trop ne
+    se voit pas, alors qu attendre trop peu se voit. C est le bon sens de l erreur.
+  · **La démonstration range de la même façon** (`repos()` passe par `rangeLeFond`) : interrompue d un
+    contact, son décor accompagne le retour au lieu de s évanouir.
+  · ⚠️ **Ref SÉPARÉE (`finFondRef`), pas un champ de `gRef`** : la démonstration s en sert aussi, et
+    l invariant « elle n écrit jamais dans `gRef` » doit rester vérifiable d un seul grep.
+  · **Mesuré** : relâché à −60 px → `-60 -47 -21 -6 -1 0`, **le fond est présent à CHAQUE échantillon tant
+    que la carte bouge**, et il ne part qu à 316 ms — 110 ms après qu elle soit rentrée, donc invisible.
+    Vérifié aussi pour un geste ARMÉ, en grille, et sur l interruption de la démonstration.
 
 ### Une garde de plus : HORS LIGNE, ON NE BRÛLE PAS LE MOIS
 
@@ -361,9 +396,10 @@ seulement dans la garde → **il part dès la reconnexion** (mesuré).
 
 ### Mesuré, par le chemin réel (Réglages → « Vérifier les mises à jour » → retour)
 
-  · **Liste** : 467 ms → +64 px, fond `rgb(78,122,92)` côté droite ; 844 → repos ; 1133 → −64 px, fond
-    `rgb(86,96,112)` côté gauche ; 1488 → repos ; 1720 → fond démonté. **Jamais armé**, aucune transition en
-    ligne, **0 ouverture**, 0 écran ouvert. Icône découverte sur 44 px.
+  · **Liste** : 464 ms → +64 px, fond `rgb(78,122,92)` côté droite ; 835 → **−64 px directement** (aucune
+    étape à zéro entre les deux côtés) ; 882 → le fond bascule sur `rgb(86,96,112)` / gauche ; 1194 → repos ;
+    1406 → fond démonté. **Jamais armé**, aucune transition en ligne, **0 ouverture**, 0 écran ouvert. Icône
+    découverte sur 44 px.
   · **Grille** : tuile de 120 px → 38 px d amplitude, même vert, classe `glisse-fond-tuile`, icône découverte
     sur 34 px.
   · **Interruption** : +38 → 0 instantanément au `pointerdown`, fond démonté, rien ne repart.
@@ -946,7 +982,7 @@ avait bien lieu, **derrière l écran resté ouvert**. D où « ça ne fait rien
 ⚠️ **`.sheet` porte `box-shadow: -16px 0 34px` sur son bord GAUCHE** (le bord qui avance). L ombre s étend donc
 jusqu à **50 px À L INTÉRIEUR** de la feuille. La sortie `kx-page-out` s arrêtait à `translateX(100%)` : ce bord
 se calait AU RAS de l écran, et les 50 px d ombre restaient donc visibles en bande sombre sur le bord droit
-jusqu au démontage (courbe très décélérée : la feuille est arrivée dès `150 ms, le démontage à 240 ms → environ
+jusqu au démontage (courbe très décélérée : la feuille est arrivée dès ~150 ms, le démontage à 240 ms → environ
 **90 ms d ombre immobile**). Exactement ce que décrivait l user.
   - **Fix : `to { transform: translateX(calc(100% + 64px)) }`** — on pousse la feuille de la largeur de sa propre
     ombre, qui sort donc avec elle. `kx-page-in` n est PAS touché : à l ouverture, l ombre qui entre est voulue.
