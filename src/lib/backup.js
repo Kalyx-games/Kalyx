@@ -49,7 +49,7 @@ function pick(obj, cols) {
 //    valeur actuelle en base est PRÉSERVÉE. C'est le bon comportement : une vieille sauvegarde
 //    ne doit pas effacer une donnée dont elle ignore l'existence.
 // Écarter `null` confondait ces deux cas et ne servait que le second.
-const BUBBLE_OPT = ['avatar', 'visible_pour']
+const BUBBLE_OPT = ['avatar', 'visible_pour', 'compte']
 function pickBubble(o) {
   const out = { name: o.name, initials: o.initials ?? null, color: o.color ?? null }
   for (const c of BUBBLE_OPT) if (o[c] !== undefined) out[c] = o[c]
@@ -213,11 +213,29 @@ export function parseBackup(text) {
 async function upsertBubbles(table, list) {
   if (!list || !list.length) return
   let rows = list.map((o) => ({ ...pickBubble(o), name: String(o.name).trim() }))
+  // ⚠️ Depuis les bibliothèques par compte, un tag est unique par (name, compte) : deux
+  // foyers peuvent avoir chacun leur « Grenier ». Viser `name` seul en écraserait un.
+  // `compte` est normalisé à '' quand la sauvegarde ne le porte pas (fichier antérieur à la
+  // migration) : c'est le tag commun, et la restauration redevient un vrai retour arrière.
+  let cible = 'name'
+  if (table === 'tags' && rows.some((r) => r.compte !== undefined)) {
+    rows = rows.map((r) => ({ ...r, compte: r.compte ?? '' }))
+    cible = 'name,compte'
+  }
   // Dégradation en cascade, comme pour les jeux : si la base ne connaît pas encore une
   // colonne optionnelle, on la retire et on réessaie → le reste se restaure quand même.
   for (;;) {
-    const { error } = await writeDb().from(table).upsert(rows, { onConflict: 'name' })
+    const { error } = await writeDb().from(table).upsert(rows, { onConflict: cible })
     if (!error) return
+    // ⚠️ 42P10 = « no unique or exclusion constraint matching the ON CONFLICT specification » :
+    // la base ne connaît pas encore le monde par compte (migration non lancée). Ce code n'est
+    // reconnu NI par la boucle de colonnes NI par `tableMissing` → sans cette branche, la
+    // restauration s'arrêterait net et la sauvegarde d'urgence deviendrait inutilisable.
+    if (cible !== 'name' && (error.code === '42P10' || /ON CONFLICT/i.test(error.message || ''))) {
+      cible = 'name'
+      rows = rows.map(({ compte: _c, ...reste }) => reste)
+      continue
+    }
     // ⚠️⚠️ DEUX FAUTES QUI S'ADDITIONNAIENT ICI, et la dégradation était morte deux fois :
     //  1. le test « table absente » passait EN PREMIER — or PostgREST annonce une COLONNE manquante
     //     par « Could not find the 'avatar' column … in the schema cache », qui contient « schema
@@ -418,6 +436,25 @@ export async function maybeAutoBackup(frequency, games, owners, tags) {
 }
 
 // Supprime dans `table` les lignes dont la clé (keyCol) n'est pas dans `keep` (Set).
+// La clé d'un tag depuis les bibliothèques par compte. '' = commun (avant migration).
+const cleTag = (name, compte) => String(name ?? '').trim() + '|' + String(compte ?? '').trim()
+
+// Jumeau de `deleteExtra` pour les tags : on compare la PAIRE et on supprime par id.
+// ⚠️ Dégradation : si la base ne connaît pas encore `compte`, le select échoue → on retombe
+// sur l'ancien comportement (par nom), qui est le bon dans ce monde-là.
+async function deleteExtraTags(keep) {
+  const { data, error } = await supabase.from('tags').select('id, name, compte')
+  if (error) {
+    if (tableMissing(error)) return
+    return deleteExtra('tags', 'name', new Set([...keep].map((k) => k.split('|')[0])))
+  }
+  const toDelete = (data ?? []).filter((r) => !keep.has(cleTag(r.name, r.compte))).map((r) => r.id)
+  if (toDelete.length) {
+    const { error: delErr } = await writeDb().from('tags').delete().in('id', toDelete)
+    if (delErr) throw delErr
+  }
+}
+
 async function deleteExtra(table, keyCol, keep) {
   const { data, error } = await supabase.from(table).select(keyCol)
   if (error) {
@@ -446,15 +483,21 @@ export async function restorePreview(backupId) {
   // ni combien. Le jour où un compte porte un avatar choisi, le perdre en silence se voit.
   const nomsDe = (l) => new Set((Array.isArray(l) ? l : []).map((b) => String(b?.name ?? '').trim()).filter(Boolean))
   const gardeOwners = nomsDe(snap.owners)
-  const gardeTags = nomsDe(snap.tags)
+  // ⚠️ Les tags se comparent sur la PAIRE (nom, compte) — deux foyers ont chacun le leur.
+  const gardeTags = new Set(
+    (Array.isArray(snap.tags) ? snap.tags : []).map((t) => cleTag(t?.name, t?.compte))
+  )
   const [{ data: curOwners }, { data: curTags }] = await Promise.all([
     supabase.from('owners').select('name'),
-    supabase.from('tags').select('name'),
+    supabase.from('tags').select('name, compte'),
   ])
   const perdus = (cur, garde) =>
     (cur ?? []).map((r) => String(r.name ?? '').trim()).filter((n) => n && !garde.has(n))
   const ownersPerdus = perdus(curOwners, gardeOwners)
-  const tagsPerdus = perdus(curTags, gardeTags)
+  // On NOMME le compte : « À Vendre — Claire & Nazim » dit lequel des deux disparaîtrait.
+  const tagsPerdus = (curTags ?? [])
+    .filter((r) => String(r.name ?? '').trim() && !gardeTags.has(cleTag(r.name, r.compte)))
+    .map((r) => (r.compte ? `${r.name} — ${r.compte}` : String(r.name).trim()))
 
   const base = { games: 0, plays: 0, sheets: 0, names: [], owners: ownersPerdus, tags: tagsPerdus }
   if (!doomed.length) return base
@@ -497,7 +540,9 @@ export async function restoreBackup(backupId) {
   // 2) supprime les jeux / propriétaires / tags absents de la sauvegarde (retour arrière)
   await deleteExtra('games', 'id', new Set(games.map((g) => g.id).filter(Boolean)))
   await deleteExtra('owners', 'name', new Set(owners.map((o) => String(o.name).trim())))
-  await deleteExtra('tags', 'name', new Set(tags.map((t) => String(t.name).trim())))
+  // ⚠️ PAS `deleteExtra('tags','name',…)` : la clé est composite. Supprimer par nom
+  // retirerait « À Vendre » de TOUS les comptes parce qu'un seul l'a dans sa sauvegarde.
+  await deleteExtraTags(new Set(tags.map((t) => cleTag(t.name, t.compte))))
 
   return { games: games.length, owners: owners.length, tags: tags.length, plays: res.plays, scoresheets: res.scoresheets, tierlists: res.tierlists }
 }

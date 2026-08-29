@@ -3,9 +3,9 @@ import lazyRetry from './lib/lazyRetry'
 import { isConfigured, hasCode } from './lib/supabase'
 import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwners } from './lib/games'
 import { tagsPourCompte, tagsAEcrire, renameCompteDansTags, renameTagDansGames, supprimeTagDansGames, supprimeCompteDansTags } from './lib/tagsJeux'
-import { saveGamesCache, loadGamesCache, saveBubblesCache, loadBubblesCache } from './lib/cache'
+import { saveGamesCache, loadGamesCache, saveBubblesCache, loadBubblesCache, saveTagsCache, loadTagsCache } from './lib/cache'
 import { fetchOwners, addOwner, updateOwner, renameOwner, deleteOwner } from './lib/owners'
-import { fetchTags, addTag, updateTag, renameTag, deleteTag, tagVisiblePour, patchVisiblePour, renameCompteDansTagsVisibles } from './lib/tags'
+import { fetchTags, addTag, updateTag, renameTag, deleteTag, tagVisiblePour, patchVisiblePour, renameCompteDansTagsVisibles, estMonTag, renameCompteDesTagsRows, supprimeTagsDuCompte, retireCompteDeTagsVisibles } from './lib/tags'
 import { downloadBackup, downloadCsv, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup, restorePreview } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { EMPTY_FILTERS, PRICE_MIN, PRICE_MAX, norm, passesFilters } from './lib/filtering'
@@ -464,7 +464,9 @@ export default function App() {
   const choisirCompte = useCallback((nom) => {
     setCompte(nom ?? null)
     saveCompte(nom ?? null)
-    setFilters((f) => ({ ...f, owners: nom ? [nom] : [] }))
+    // ⚠️ On vide les tags cochés : ils appartenaient à l'ANCIENNE bibliothèque. Avec
+    // « Seulement ces tags », la collection du nouveau compte se viderait sans un mot.
+    setFilters((f) => ({ ...f, owners: nom ? [nom] : [], tags: [], tagsOnly: false }))
     setChoixCompte(false)
     // Choisir CONCLUT le geste : on veut voir la collection du compte, pas retomber sur le
     // menu d où l on venait. (Fermer deux couches d un coup est sûr depuis que la traversée
@@ -489,13 +491,21 @@ export default function App() {
     fetchTags().then((v) => {
       if (v) {
         setTagsList(v)
-        saveBubblesCache('tags', v)
+        // ⚠️ DEUX caches, et c'est voulu : `kalyx-tags` (clé = id) porte la table ENTIÈRE, y
+        // compris deux « Grenier » homonymes ; le store historique de `kalyx` a pour clé le
+        // NOM et en écraserait un — on n'y met donc que ma bibliothèque, pour qu'un vieux
+        // bundle servi par le service worker continue d'y trouver quelque chose de juste.
+        saveTagsCache(v)
+        saveBubblesCache('tags', v.filter((t) => estMonTag(t, compte)))
       } else {
-        loadBubblesCache('tags').then((c) => setTagsList(c.length ? c : null))
+        loadTagsCache().then((c) => {
+          if (c.length) return setTagsList(c)
+          loadBubblesCache('tags').then((b) => setTagsList(b.length ? b : null))
+        })
       }
       setTagsLoaded(true)
     })
-  }, [])
+  }, [compte])
   useEffect(() => {
     reloadOwners()
     reloadTags()
@@ -839,8 +849,17 @@ export default function App() {
   }, [ownersList])
 
   // Tags : liste proposée (gérée ∪ ceux déjà sur les jeux) + correspondance nom -> ligne.
+  // La base connaît-elle le monde par compte ? Même motif que `modeTagDispo` : un select('*')
+  // ramène la colonne dès qu'elle existe. Tant qu'elle n'existe pas, la bibliothèque reste
+  // COMMUNE — c'est-à-dire exactement le comportement d'aujourd'hui.
+  const tagsParCompteDispo = (tagsList ?? []).some((t) => 'compte' in t)
+  // MA bibliothèque : ce que je gère, ce que je filtre, ce que je propose au formulaire.
+  const mesTags = useMemo(
+    () => (tagsParCompteDispo ? (tagsList ?? []).filter((t) => estMonTag(t, compte)) : (tagsList ?? [])),
+    [tagsList, compte, tagsParCompteDispo]
+  )
   const allTags = useMemo(() => {
-    const set = new Set((tagsList ?? []).map((t) => t.name))
+    const set = new Set(mesTags.map((t) => t.name))
     // Noms NUS (jamais « tag::compte ») : ce sont les libellés des puces du FILTRE.
     // ⚠️ `tagsPourCompte` et non « tous les tags » : gérer ses tags dans son menu Compte
     // tout en voyant ceux des autres foyers dans son filtre serait contradictoire. Et c'est
@@ -849,10 +868,15 @@ export default function App() {
     // encore tout le vocabulaire : on filtre sur ce qu'on a, on tague avec ce qui existe.)
     ;(games ?? []).forEach((g) => tagsPourCompte(g.tags, compte ?? null).forEach((t) => set.add(t)))
     return [...set].sort((a, b) => a.localeCompare(b, 'fr'))
-  }, [tagsList, games, compte])
+  }, [mesTags, games, compte])
+  // ⚠️ tagMap n'est PAS restreint à ma bibliothèque : `GameDetail` y cherche la couleur des
+  // tags des AUTRES comptes (c'est tout l'objet de la ligne « qui possède, et ce que chacun lui
+  // a mis »). Le restreindre ferait tomber leurs pastilles sur une couleur calculée.
+  // En cas d'homonymes, la boucle laisse gagner la DERNIÈRE ligne écrite : on met donc la
+  // mienne en dernier, pour que MA couleur l'emporte sur mes propres écrans.
   const tagMap = useMemo(() => {
     const m = {}
-    ;(tagsList ?? []).forEach((t) => {
+    ;[...(tagsList ?? []).filter((t) => !estMonTag(t, compte)), ...mesTags].forEach((t) => {
       m[t.name] = t
     })
     return m
@@ -863,10 +887,10 @@ export default function App() {
   // ⚠️ Le réglage du mode n'est proposé QUE si la base connaît la colonne : un select('*')
   // la ramène dès qu'elle existe, même vide. Sans ce garde, tant que la migration n'est pas
   // lancée, le choix serait accepté puis JETÉ par la cascade de dégradation — sans un mot.
-  const modeTagDispo = (tagsList ?? []).some((t) => 'visible_pour' in t)
+  const modeTagDispo = mesTags.some((t) => 'visible_pour' in t)
   const tagsVisibles = useMemo(
-    () => new Set((tagsList ?? []).filter((t) => tagVisiblePour(t, compte)).map((t) => t.name)),
-    [tagsList, compte]
+    () => new Set(mesTags.filter((t) => tagVisiblePour(t, compte)).map((t) => t.name)),
+    [mesTags, compte]
   )
 
   // Jeu affiché dans la fiche : TOUJOURS dérivé du tableau `games` (pas un instantané figé)
@@ -1250,6 +1274,9 @@ export default function App() {
       // ⚠️ Même famille : le nom vit aussi dans `tags.visible_pour`. Sans ce suivi, tous les
       // tags que ce compte avait réglés sur « visibles » redeviendraient masquants sans un mot.
       await renameCompteDansTagsVisibles(oldName, newName)
+      // ⚠️ 6ᵉ propagation : TOUTE sa bibliothèque de tags est rattachée à son nom. Sans elle,
+      // renommer son compte lui ferait perdre ses tags d'un coup.
+      await renameCompteDesTagsRows(oldName, newName)
       reloadOwners()
       // ⚠️ INDISPENSABLE : les deux appels ci-dessus viennent de réécrire la table `tags`.
       // Sans ce rechargement, l'état local garde l'ANCIEN nom pendant que `compte` porte déjà
@@ -1273,6 +1300,11 @@ export default function App() {
       // afficherait alors une ligne au nom d'un compte qui n'existe plus. Symétrique du
       // renommage, juste au-dessus.
       const nbTags = await supprimeCompteDansTags(supprime)
+      // Sa bibliothèque part avec lui : ses lignes n'appartiennent à personne d'autre, et
+      // deux lignes homonymes orphelines réapparaîtraient chez tout le monde.
+      await supprimeTagsDuCompte(supprime)
+      // Son nom dans « visible_pour » (trou préexistant, fermé ici).
+      await retireCompteDeTagsVisibles(supprime)
       // Même raison qu au renommage : rester « sur » un compte supprimé laisse un filtre
       // mort. On revient à toute la collection et on redemande qui regarde.
       if (supprime === compte) {
@@ -1296,7 +1328,7 @@ export default function App() {
   // --- Tags (même logique que les propriétaires) ---
   async function handleAddTag(name, initials, color, _avatar, visibleMoi) {
     try {
-      await addTag(name, initials, color, visibleMoi && compte ? compte : null)
+      await addTag(name, initials, color, visibleMoi && compte ? compte : null, compte ?? '')
       reloadTags()
     } catch (e) {
       setError(messageUtilisateur(e))
@@ -1320,14 +1352,16 @@ export default function App() {
   }
   async function handleRenameTag(id, oldName, newName, patch, visibleMoi) {
     try {
-      const n = await renameTag(id, oldName, newName, await avecModeTag(id, patch, visibleMoi))
+      await renameTag(id, oldName, newName, await avecModeTag(id, patch, visibleMoi))
       // ⚠️ « renameTag » ne sait renommer que les tags de l'ANCIEN format (il compare l'item
       // entier). Les tranches « tag::compte » se renomment ici, sinon le renommage serait un
       // no-op silencieux sur tous les jeux déjà éclatés.
-      const nb = await renameTagDansGames(oldName, newName)
+      const nb = await renameTagDansGames(oldName, newName, compte ?? null)
       reloadTags()
       loadGames() // recharge les jeux : le nom propagé dans games.tags doit s'afficher
-      const total = (n || 0) + (nb || 0)
+      // ⚠️ Seul `renameTagDansGames` propage désormais : `renameTag` renvoie 0 (son ancien
+      // appel à `renameInGamesCsv` était redondant et doublait ce compteur).
+      const total = nb || 0
       showToast(total ? `« ${newName} » : ${total} jeu${total > 1 ? 'x' : ''} mis à jour.` : `Renommé en « ${newName} ».`)
     } catch (e) {
       setError(messageUtilisateur(e))
@@ -1342,7 +1376,7 @@ export default function App() {
       // existe encore dans la liste). Sans cette propagation, l'item resterait dans games.tags
       // sans ligne pour lui donner un mode de filtrage → il redeviendrait masquant et ses jeux
       // quitteraient la collection sans un mot. Symétrique de `renameTagDansGames`.
-      const nb = await supprimeTagDansGames(confirmingTag.name)
+      const nb = await supprimeTagDansGames(confirmingTag.name, compte ?? null)
       await deleteTag(confirmingTag.id)
       reloadTags()
       if (nb) loadGames()
@@ -2019,7 +2053,7 @@ export default function App() {
 
       {compteOuvert ? (
         <EcranCompte
-          tags={tagsList}
+          tags={mesTags}
           onAddTag={handleAddTag}
           onUpdateTag={handleUpdateTag}
           onRenameTag={handleRenameTag}

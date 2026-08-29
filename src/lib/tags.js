@@ -1,6 +1,6 @@
 import { erreurUtilisateur } from './messages'
 import { supabase, writeDb } from './supabase'
-import { renameInGamesCsv, parseOwners } from './games'
+import { parseOwners } from './games'
 
 // Liste gérée des tags (table "tags"), éditée depuis le MENU COMPTE.
 // Même structure et même logique que les propriétaires (owners).
@@ -24,7 +24,7 @@ import { renameInGamesCsv, parseOwners } from './games'
 // ⚠️ Colonnes qui peuvent manquer si une migration n'a pas été lancée. Même motif que les
 // comptes : si l'écriture échoue à cause d'une de ces colonnes, on la retire et on réessaie
 // → le reste s'enregistre, et l'app fonctionne normalement AVANT la migration.
-const OPTIONAL_COLS = ['visible_pour']
+const OPTIONAL_COLS = ['visible_pour', 'compte']
 const colManquante = (error, payload) => {
   if (!error) return null
   // ⚠️ Regex par CONCATÉNATION : dans un template literal, `\b` est le caractère BACKSPACE.
@@ -39,6 +39,14 @@ const colManquante = (error, payload) => {
 // comportement historique : masquant. C'est le repli sûr, et il est cohérent avec le reste.
 export const tagVisiblePour = (ligne, compte) =>
   Boolean(compte) && parseOwners(ligne?.visible_pour).includes(compte)
+
+// Cette ligne appartient-elle à MA bibliothèque ?
+// ⚠️ `compte === undefined` = la base ne connaît pas encore la colonne (migration non
+// lancée) → tout m'appartient, c'est-à-dire exactement le comportement d'avant.
+// `''` = tag commun (ancien format) → il appartient à tout le monde. Repli sûr dans les
+// deux cas : on ne fait JAMAIS disparaître une bibliothèque parce qu'une colonne manque.
+export const estMonTag = (t, compte) =>
+  t?.compte === undefined || t?.compte === '' || t?.compte === compte
 
 // Recompose la colonne en n'écrivant QUE la part de ce compte. Forme canonique (trimée,
 // dédoublonnée, triée, jointe par « , ») — la même que `ownersToText`.
@@ -97,15 +105,72 @@ export async function renameCompteDansTagsVisibles(oldName, newName) {
 
 // Renvoie la liste des tags, ou null si la table n'existe pas encore
 // (migration migration_tags.sql pas encore lancée).
+// ⚠️ INDISPENSABLE : le compte est mémorisé PAR SON NOM partout dans ce projet. Renommer un
+// compte sans suivre ici laisserait TOUTE sa bibliothèque orpheline — ses tags
+// disparaîtraient de son écran sans un mot.
+export async function renameCompteDesTagsRows(oldName, newName) {
+  const from = String(oldName || '').trim()
+  const to = String(newName || '').trim()
+  if (!from || !to || from === to) return 0
+  const { data, error } = await supabase.from('tags').select('id').eq('compte', from)
+  if (error) {
+    if (/does not exist|schema cache|relation|could not find/i.test(error.message || '')) return 0
+    throw error
+  }
+  if (!data?.length) return 0
+  const { error: e2 } = await writeDb().from('tags').update({ compte: to }).eq('compte', from)
+  if (e2) throw e2
+  return data.length
+}
+
+// Supprimer un compte emporte SA bibliothèque : ses lignes n'appartiennent à personne
+// d'autre, et deux lignes homonymes orphelines réapparaîtraient chez tout le monde.
+export async function supprimeTagsDuCompte(nom) {
+  const cible = String(nom || '').trim()
+  if (!cible) return 0
+  const { data, error } = await supabase.from('tags').select('id').eq('compte', cible)
+  if (error) {
+    if (/does not exist|schema cache|relation|could not find/i.test(error.message || '')) return 0
+    throw error
+  }
+  if (!data?.length) return 0
+  const { error: e2 } = await writeDb().from('tags').delete().eq('compte', cible)
+  if (e2) throw e2
+  return data.length
+}
+
+// Jumeau de `renameCompteDansTagsVisibles` pour la SUPPRESSION : sans lui, le nom d'un compte
+// disparu reste pour toujours dans `visible_pour`. (Trou PRÉEXISTANT, fermé au passage.)
+export async function retireCompteDeTagsVisibles(nom) {
+  const cible = String(nom || '').trim()
+  if (!cible) return 0
+  const { data, error } = await supabase.from('tags').select('id, visible_pour')
+  if (error) {
+    if (/does not exist|schema cache|relation|could not find/i.test(error.message || '')) return 0
+    throw error
+  }
+  let changed = 0
+  for (const t of data ?? []) {
+    if (!parseOwners(t.visible_pour).includes(cible)) continue
+    const next = ecritVisiblePour(t.visible_pour, cible, false)
+    const { error: e2 } = await writeDb().from('tags').update({ visible_pour: next }).eq('id', t.id)
+    if (e2) throw e2
+    changed++
+  }
+  return changed
+}
+
 export async function fetchTags() {
   const { data, error } = await supabase.from('tags').select('*').order('name')
   if (error) return null
   return data
 }
 
-export async function addTag(name, initials, color, visiblePour) {
+export async function addTag(name, initials, color, visiblePour, compte) {
   const payload = { name: name.trim(), initials: initials || null, color: color || null }
   if (visiblePour !== undefined) payload.visible_pour = visiblePour || null
+  // Le tag naît DANS la bibliothèque de son créateur. '' = commun (avant migration).
+  if (compte !== undefined) payload.compte = compte || ''
   let { data, error } = await writeDb().from('tags').insert(payload).select().single()
   let col
   while ((col = colManquante(error, payload))) {
@@ -149,5 +214,9 @@ export async function renameTag(id, oldName, newName, patch = {}) {
   }
   if (error) throw error
   if (!data || data.length === 0) throw erreurUtilisateur('Modification impossible (base non prête ?).')
-  return renameInGamesCsv('tags', oldName, to)
+  // ⚠️ On ne propage PAS ici. `renameInGamesCsv` compare l'ITEM ENTIER, ce que games.js
+  // interdit explicitement pour `tags` depuis le format « tag::compte » — et `handleRenameTag`
+  // appelle DÉJÀ `renameTagDansGames` juste après, qui couvre aussi les items communs.
+  // L'appel était donc redondant depuis toujours, et doublait le compteur du toast.
+  return 0
 }

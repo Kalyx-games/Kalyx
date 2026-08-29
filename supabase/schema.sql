@@ -111,6 +111,25 @@ create table if not exists public.tags (
 );
 -- Les comptes pour lesquels ce tag NE masque pas (CSV de noms ; vide = masque partout).
 alter table public.tags add column if not exists visible_pour text;
+-- La bibliothèque de tags est PROPRE À CHAQUE COMPTE : le nom n'est unique qu'à l'intérieur
+-- d'une bibliothèque. '' = tag commun (ancien format, avant migration).
+-- ⚠️ NOT NULL DEFAULT '' et non NULL : sur PostgreSQL deux NULL sont DISTINCTS, un index
+-- unique nullable ne contraindrait donc rien.
+alter table public.tags add column if not exists compte text not null default '';
+do $
+declare c text;
+begin
+  select con.conname into c
+    from pg_constraint con
+    join pg_attribute a on a.attrelid = con.conrelid and a.attname = 'name'
+   where con.conrelid = 'public.tags'::regclass
+     and con.contype = 'u'
+     and con.conkey = array[a.attnum];
+  if c is not null then
+    execute format('alter table public.tags drop constraint %I', c);
+  end if;
+end $;
+create unique index if not exists tags_name_compte_key on public.tags (name, compte);
 
 alter table public.tags enable row level security;
 drop policy if exists "Lecture ouverte tags"      on public.tags;

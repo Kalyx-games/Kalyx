@@ -97,11 +97,11 @@ export function ecritTagsDuCompte(raw, compte, tagsChoisis, ownerAvant) {
   const items = parseTagItems(raw)
   const choisis = [...new Set((tagsChoisis || []).map((t) => String(t).trim()).filter(Boolean))]
   if (!compte) {
-    // Aucun compte actif : on n'édite que la tranche COMMUNE ; les tranches nommées restent.
-    return serializeTagItems([
-      ...items.filter((it) => it.compte),
-      ...choisis.map((tag) => ({ tag, compte: null })),
-    ])
+    // ⚠️ Sans compte actif on n'écrit RIEN. L'ancienne branche reposait les tags « en commun »
+    // — or `tagsPourCompte(raw, null)` rend TOUT : un simple « Modifier / Enregistrer » depuis
+    // « tout voir » RENDAIT À TOUT LE MONDE les tags privés de chacun. Le champ Tags est
+    // d'ailleurs masqué dans ce cas (GameForm), donc il n'y a rien à enregistrer.
+    return raw ?? ''
   }
   const proprios = parseOwners(ownerAvant)
   // ÉCLATEMENT des communs vers les propriétaires du jeu, dès qu'il y en a.
@@ -145,12 +145,14 @@ export async function tagsAEcrire(gameId, compte, tagsChoisis, rawFallback, owne
 // ⚠️ `renameInGamesCsv` NE PEUT PLUS servir ici : il compare l'ITEM ENTIER au nom cherché,
 // donc « Grenier » ne matcherait pas « Grenier::Claire & Nazim ». Le renommage ne
 // propagerait rien et le tag se dédoublerait — une panne parfaitement silencieuse.
-export function renameTagDansGames(oldName, newName) {
+export function renameTagDansGames(oldName, newName, compte = null) {
+  const from = String(oldName || '').trim()
   return remplaceDansTags(
-    (it) => it.tag === String(oldName || '').trim(),
+    compte ? (it) => it.tag === from && it.compte === compte : (it) => it.tag === from,
     (it, to) => ({ ...it, tag: to }),
     oldName,
-    newName
+    newName,
+    compte
   )
 }
 
@@ -172,16 +174,30 @@ export function renameCompteDansTags(oldName, newName) {
 //    de filtrage, redevient donc masquant, et ses jeux QUITTENT la collection sans un mot ;
 //  · un COMPTE supprimé laisserait ses tranches « tag::lui » — la fiche d'un jeu afficherait
 //    alors une ligne au nom d'un compte qui n'existe plus.
-async function retireDesTags(garde) {
-  const { data, error } = await supabase.from('games').select('id, tags')
+// ⚠️⚠️ L'ÉCLATEMENT PRÉALABLE, et pourquoi il n'est pas optionnel.
+// Depuis que la bibliothèque appartient à un compte, une propagation qui ne touche QUE ma
+// tranche doit d'abord rattacher les items COMMUNS à leurs propriétaires. Sans lui, renommer
+// mon « Grenier » laisserait derrière un item commun « Grenier » — qui n'a plus de ligne chez
+// personne, donc plus de mode de filtrage, donc redevient masquant : des jeux quitteraient la
+// collection en silence. C'est exactement la règle qu'applique déjà `ecritTagsDuCompte`.
+const eclate = (items, ownerText) => {
+  const proprios = parseOwners(ownerText)
+  if (!proprios.length) return items // jeu sans propriétaire : personne à qui rattacher
+  return items.flatMap((it) => (it.compte ? [it] : proprios.map((p) => ({ tag: it.tag, compte: p }))))
+}
+
+// `compte` non nul → on n'agit que sur MA tranche, après éclatement. Null → tout (l'ancien
+// comportement, employé par la suppression d'un compte, qui vise justement toutes ses tranches).
+async function retireDesTags(garde, compte = null) {
+  const { data, error } = await supabase.from('games').select('id, tags, owner')
   if (error) throw error
   let changed = 0
   for (const g of data ?? []) {
-    const items = parseTagItems(g.tags)
+    const items = compte ? eclate(parseTagItems(g.tags), g.owner) : parseTagItems(g.tags)
     const restants = items.filter(garde)
-    if (restants.length === items.length) continue
-    const { error: e2 } = await writeDb().from('games')
-      .update({ tags: serializeTagItems(restants) }).eq('id', g.id)
+    const next = serializeTagItems(restants)
+    if (next === (g.tags ?? '')) continue
+    const { error: e2 } = await writeDb().from('games').update({ tags: next }).eq('id', g.id)
     if (e2) throw e2
     changed++
   }
@@ -190,10 +206,14 @@ async function retireDesTags(garde) {
 
 // Supprimer un tag le retire aussi des jeux — c'est ce que le geste promet, et c'est le
 // symétrique de `renameTagDansGames`, qui propage déjà le renommage.
-export function supprimeTagDansGames(nom) {
+export function supprimeTagDansGames(nom, compte = null) {
   const cible = String(nom || '').trim()
   if (!cible) return Promise.resolve(0)
-  return retireDesTags((it) => it.tag !== cible)
+  // Sans compte : toutes les tranches (le monde d'avant la migration).
+  const garde = compte
+    ? (it) => !(it.tag === cible && it.compte === compte)
+    : (it) => it.tag !== cible
+  return retireDesTags(garde, compte)
 }
 
 // Supprimer un compte retire les tranches qui lui appartiennent. Les tags COMMUNS (sans
@@ -204,17 +224,18 @@ export function supprimeCompteDansTags(nom) {
   return retireDesTags((it) => it.compte !== cible)
 }
 
-async function remplaceDansTags(match, remplace, oldName, newName) {
+async function remplaceDansTags(match, remplace, oldName, newName, compte = null) {
   const from = String(oldName || '').trim()
   const to = String(newName || '').trim()
   if (!from || !to || from === to) return 0
-  const { data, error } = await supabase.from('games').select('id, tags')
+  const { data, error } = await supabase.from('games').select('id, tags, owner')
   if (error) throw error
   let changed = 0
   for (const g of data ?? []) {
-    const items = parseTagItems(g.tags)
+    const items = compte ? eclate(parseTagItems(g.tags), g.owner) : parseTagItems(g.tags)
     if (!items.some(match)) continue
     const next = serializeTagItems(items.map((it) => (match(it) ? remplace(it, to) : it)))
+    if (next === (g.tags ?? '')) continue
     const { error: e2 } = await writeDb().from('games').update({ tags: next }).eq('id', g.id)
     if (e2) throw e2
     changed++

@@ -383,6 +383,93 @@ SOURDE (`muteOwnerColor`, posé à l initialisation de l état). Aucun effet vis
 par là — mais la couleur vive d origine est perdue en base, ce que le commentaire historique décrivait comme
 « réversible ». Constaté sur « À Vendre » (#f59e0b → #8a6a47).
 
+## 🔨⚠️⚠️ CHACUN SA BIBLIOTHÈQUE DE TAGS (2026-08-29, demande user) — ⚠️ MIGRATION À LANCER
+
+**Demande** : « je ne veux pas que les tags soient communs à tout le monde, je veux que chacun puisse créer
+sa propre bibliothèque de tags ». Puis, question posée : **deux « Grenier » chez deux comptes sont-ils DEUX
+tags indépendants, ou un vocabulaire commun ?** → **arbitrage user : DEUX TAGS INDÉPENDANTS** (chacun son
+emoji, sa couleur, son mode ; renommer le sien ne touche pas l autre).
+
+⚠️ **MIGRATION À LANCER PAR L USER : `supabase/migration_tags_par_compte.sql`**, en 5 étapes indissociables.
+**Tant qu elle n est pas lancée, l app se comporte EXACTEMENT comme avant** (voir la dégradation).
+
+### Le modèle : `tags.compte`, et l unicité devient (name, compte)
+
+  · `compte text NOT NULL DEFAULT ''` — ⚠️ **pas NULL** : sur PostgreSQL deux NULL sont DISTINCTS, un index
+    unique nullable ne contraindrait rien. `''` garde le sens de l item sans « :: » : « vaut pour tous ».
+  · La contrainte unique sur `name` seul est CHERCHÉE puis supprimée (son nom dépend de l historique de la
+    base, on ne le suppose pas), remplacée par `unique (name, compte)`.
+  · ⚠️ **Les étapes 3 et 5 du SQL sont INDISSOCIABLES** : un item commun resté dans `games.tags` après le
+    split n aurait plus de ligne chez personne → plus de mode de filtrage → il redevient masquant, et jusqu à
+    31 jeux quitteraient la collection sans un mot. Le script est **idempotent : le relancer répare**.
+  · **Qui hérite de quoi** (mesuré) : 2 lignes → **4**. Grenier/Claire & Nazim (24 jeux) · Grenier/Clémence &
+    Mathieu (7) · À Vendre/Clémence & Mathieu (8) · À Vendre/Claire & Nazim (1). Un item COMMUN vaut pour
+    CHAQUE propriétaire du jeu — c est déjà la règle de `ecritTagsDuCompte`, et le statu quo : la base ne peut
+    pas deviner qui a posé un tag commun, l attribuer aux deux préserve ce que chacun VOIT.
+  · « Mathilde & Mathieu » n a aucun jeu tagué → **bibliothèque vide** (défaut assumé : elle créera les siens
+    en deux taps, et une bibliothèque vide n a jamais menti sur ce qu elle contient).
+  · `visible_pour` **ne bouge pas**. La ligne étant désormais mono-compte, sa colonne ne contient au plus que
+    son propre nom : `tagVisiblePour`, `ecritVisiblePour` et `patchVisiblePour` restent valides mot pour mot.
+    Le nettoyage attendra un lot dédié — deux changements sémantiques dans la même fenêtre, c est un de trop.
+
+### ⚠️⚠️ LE PIÈGE LE PLUS GRAVE, ÉVITÉ : NE PAS BUMPER LE CACHE `kalyx`
+
+Passer `kalyx` en v3 aurait été **catastrophique** : un vieux bundle servi par le service worker ouvre
+`openDB('kalyx', 2)` ; sur une base en v3 il prend un **VersionError**, et TOUS les `catch` de `cache.js`
+rendent `[]` → hors ligne, l appareil n aurait plus affiché **AUCUN jeu, les 147 compris**.
+→ **base séparée `kalyx-tags` (v1, keyPath `id`)**, qui ne peut rien casser. Le store historique `tags` de
+`kalyx` (keyPath `name`) reste alimenté, mais avec **MA seule bibliothèque** : deux « Grenier » homonymes s y
+écraseraient, et hors ligne un compte hériterait de la couleur ET du masquage de l autre.
+
+### La restauration : la clé devient composite
+
+  · `BUBBLE_OPT` gagne `compte` (sans quoi la colonne serait absente de toutes les sauvegardes puis effacée à
+    la première restauration).
+  · `upsertBubbles` vise `name,compte` pour les tags — et **retombe sur `name` si la base répond 42P10**
+    (« no unique or exclusion constraint matching the ON CONFLICT specification »). ⚠️ Ce code n est reconnu NI
+    par la boucle de colonnes NI par `tableMissing` : sans cette branche, la restauration s arrêtait net et la
+    **sauvegarde d urgence devenait inutilisable**.
+  · `deleteExtraTags` remplace `deleteExtra('tags','name',…)` : on compare la PAIRE et on supprime par `id`.
+    Sinon la première restauration supprimait « À Vendre » **de tous les comptes** en annonçant un succès.
+  · `restorePreview` nomme le compte : « À Vendre — Claire & Nazim ».
+
+### Deux défauts PRÉEXISTANTS trouvés et fermés en passant
+
+  1. ⚠️ `ecritTagsDuCompte`, branche « sans compte actif » : elle reposait en COMMUN tout ce que rendait
+     `tagsPourCompte(raw, null)` — c est-à-dire **TOUT**. Un simple « Modifier / Enregistrer » depuis « tout
+     voir » **rendait à tout le monde les tags privés de chacun**. Elle n écrit plus rien (et le champ Tags du
+     formulaire est masqué sans compte actif : un champ qui ne fait rien mentirait).
+  2. ⚠️ `renameTag` finissait par `renameInGamesCsv('tags', …)`, **ce que `games.js` interdit explicitement**
+     depuis le format « tag::compte » — et `handleRenameTag` appelle DÉJÀ `renameTagDansGames` juste après.
+     L appel était redondant depuis toujours et **doublait le compteur du toast**. → `return 0`.
+
+### ⚠️ L ÉCLATEMENT PRÉALABLE des propagations
+
+`renameTagDansGames` et `supprimeTagDansGames` prennent un `compte` et n agissent que sur MA tranche — mais
+**après avoir rattaché les items communs à leurs propriétaires** (`eclate()`, la règle de `ecritTagsDuCompte`).
+Sans lui, renommer mon « Grenier » laisserait derrière un item commun sans ligne chez personne : donc masquant,
+donc des jeux qui quittent la collection en silence.
+
+### Trois propagations de plus au renommage / à la suppression d un compte
+
+`renameCompteDesTagsRows` (toute sa bibliothèque est rattachée à son NOM) · `supprimeTagsDuCompte` (sa
+bibliothèque part avec lui) · `retireCompteDeTagsVisibles` (son nom dans `visible_pour` — trou préexistant).
+
+### Mesuré en dev, les DEUX mondes
+
+  · **AVANT migration** (base réelle, colonne absente) : 43 jeux, 2 puces, 2 tags dans la bibliothèque —
+    **identique à aujourd hui**. `estMonTag` rend vrai quand `compte === undefined` : on ne fait jamais
+    disparaître une bibliothèque parce qu une colonne manque.
+  · **APRÈS migration** (stub de LECTURE simulant les 4 lignes + un « Prêté » chez Claire) : Claire voit
+    **Grenier 📦 · À Vendre 🏷️ · Prêté 🤝** ; Clémence voit **Grenier 🗃️ · À Vendre 💸** — ses propres emojis,
+    et **« Prêté » lui est invisible**. Son Grenier réglé « Visibles » lui donne **76 jeux** au lieu de 69.
+    Stub retiré, `tags.js` vérifié identique à l avant-test.
+  · ⚠️ **Zone morte temporelle attrapée** : `allTags`, `tagMap` et `modeTagDispo` lisent `mesTags`, qui était
+    déclaré 35 lignes plus bas → ReferenceError au premier rendu. **`vite build` ne l attrape pas** (piège déjà
+    vécu avec `glisse` dans GameDetail). Bloc remonté.
+
+**Garde-fou d espacement : 399, inchangé** (aucun CSS touché).
+
 ## ✅ LES DEUX FAMILLES DE BULLES CHANGENT DE COIN (2026-08-29, retour user)
 
 **Retour** : « sur une carte, ça ne me va pas que les tags et les comptes soient toujours empilés. On dirait

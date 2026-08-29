@@ -3,7 +3,7 @@ import PlayerPicker from './PlayerPicker'
 import { PlayersIcon, StarIcon, ExtIcon, PlusIcon, TrashIcon } from './icons'
 import { CollectionIcon, WishlistIcon } from './icons'
 import { expandRange, parseCounts, countsToText, parseOwners, ownersToText, parseExtensions, serializeExtensions } from '../lib/games'
-import { tagsPourCompte, tousLesTags } from '../lib/tagsJeux'
+import { tagsPourCompte } from '../lib/tagsJeux'
 import { philibertSearchUrl } from '../lib/philibert'
 import { BGG_LOGO, PHILIBERT_LOGO } from '../lib/logos'
 
@@ -183,7 +183,9 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
   const tagChoices = (() => {
     // Tous les noms existants sont PROPOSÉS, y compris ceux posés par un autre compte —
     // sinon ils deviendraient impossibles à cocher pour soi.
-    const set = new Set([...(tags || []), ...tousLesTags(game?.tags)])
+    // ⚠️ `tagsPourCompte` et non `tousLesTags` : proposer le tag d un AUTRE foyer créerait un
+    // item sans ligne dans ma bibliothèque — donc sans couleur, et masquant.
+    const set = new Set([...(tags || []), ...tagsPourCompte(game?.tags, compte ?? null)])
     return [...set].sort((a, b) => a.localeCompare(b, 'fr'))
   })()
   const isEdit = Boolean(game)
@@ -521,7 +523,9 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
             )}
           </div>
 
-          {form.status !== 'wishlist' && (
+          {/* ⚠️ Sans compte actif, l écriture des tags est INERTE (ecritTagsDuCompte rend la
+              colonne telle quelle) : un champ qui ne fait rien mentirait. */}
+          {form.status !== 'wishlist' && compte && (
             <div className="field">
               <span className="field-label">Tags</span>
               {tagChoices.length > 0 ? (

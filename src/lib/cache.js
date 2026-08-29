@@ -72,3 +72,47 @@ export async function loadBubblesCache(kind) {
     return []
   }
 }
+
+// ── Cache des TAGS, dans sa PROPRE base ────────────────────────────────────────
+// ⚠️ Base séparée et non un store de plus dans `kalyx` : depuis les tags par compte, deux
+// lignes peuvent porter le même `name` (« Grenier » chez deux foyers) — le keyPath 'name' du
+// store historique en écraserait une, et hors ligne un compte hériterait de la couleur ET du
+// mode de masquage de l'autre.
+// ⚠️⚠️ Base SÉPARÉE et surtout PAS `kalyx` en v3 : un vieux bundle servi par le service
+// worker ouvre `kalyx` en v2 ; sur une base passée en v3 il prend un VersionError, et TOUS
+// les catch de ce fichier rendent [] — l'appareil n'afficherait plus AUCUN jeu hors ligne,
+// les 147 compris. Une base neuve, elle, ne peut rien casser.
+const TAGS_DB = 'kalyx-tags'
+const TAGS_STORE = 'tags'
+
+function getTagsDb() {
+  return openDB(TAGS_DB, 1, {
+    upgrade(db) {
+      if (!db.objectStoreNames.contains(TAGS_STORE)) {
+        db.createObjectStore(TAGS_STORE, { keyPath: 'id' })
+      }
+    },
+  })
+}
+
+export async function saveTagsCache(list) {
+  if (!Array.isArray(list)) return
+  try {
+    const db = await getTagsDb()
+    const tx = db.transaction(TAGS_STORE, 'readwrite')
+    await tx.store.clear()
+    for (const t of list) if (t && t.id) await tx.store.put(t)
+    await tx.done
+  } catch {
+    /* le cache est un confort : jamais une raison de faire échouer un chargement */
+  }
+}
+
+export async function loadTagsCache() {
+  try {
+    const db = await getTagsDb()
+    return await db.getAll(TAGS_STORE)
+  } catch {
+    return []
+  }
+}
