@@ -2365,6 +2365,7 @@ export default function App() {
       {moving && (
         <ConfirmDialog
           title="Déplacer vers la collection ?"
+          accent="#4e7a5c" // le vert de la collection : celui de l'icône et du fond révélé du glissé
           message={<><strong>{moving.name}</strong> passera de votre wishlist à votre collection.</>}
           confirmLabel="Déplacer"
           danger={false}

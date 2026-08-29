@@ -6263,3 +6263,16 @@ input[type='number'] {
     transition: none;
   }
 }
+
+/* Le bouton d'une confirmation peut porter la couleur de SON action, quand cette action a
+   déjà une couleur ailleurs (le vert de la collection, par exemple). Blanc sur #4e7a5c :
+   contraste 4,9:1 — au-dessus du seuil, et identique dans les deux thèmes puisque le bouton
+   est opaque. */
+.btn-primary.btn-accent {
+  background: var(--btn-accent);
+  color: #fff;
+}
+/* Une `color` explicite écrase l'atténuation du navigateur : on la rend nous-mêmes. */
+.btn-primary.btn-accent:disabled {
+  opacity: 0.55;
+}

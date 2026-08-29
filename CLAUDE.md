@@ -291,6 +291,29 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅ UNE CONFIRMATION PEUT PORTER LA COULEUR DE SON ACTION (2026-08-29, demande user)
+
+**Demande user** : « sur les boîtes de dialogue qui pourraient avoir une couleur associée, ce serait bien de
+la mettre sur le bouton. Là je n en vois qu une : la boîte qui demande si on veut ajouter à la collection
+pourrait avoir le bouton ajouter du même vert que l icône de collection. »
+
+**Inventaire des 10 dialogues** : 5 suppressions (jeu, compte, tag, partie, tierlist) + import + restauration
++ 2 « Quitter sans enregistrer » sont TOUS destructifs → déjà en rouge. **Il n en restait qu UN de neutre** :
+« Déplacer vers la collection ? ». L user avait donc vu juste, et le compte est bon.
+
+  · `ConfirmDialog` gagne une prop **`accent`** : la couleur de l ACTION, **quand elle en a déjà une ailleurs**.
+    Le transfert est vert partout (l icône, le fond révélé du glissé) → la confirmation le dit du même vert,
+    et on reconnaît le geste avant même de lire.
+  · ⚠️ **RÈGLE : on n invente jamais cette couleur.** Sans couleur établie ailleurs dans l app, un bouton de
+    confirmation reste à l encre. Colorer pour colorer contredirait la charte.
+  · ⚠️ **La couleur passe par une VARIABLE CSS (`--btn-accent`), pas par un style inline complet** : poser une
+    `color` en ligne écraserait l atténuation que le navigateur applique à `:disabled`, et le bouton paraîtrait
+    actif pendant l enregistrement. Le piège est documenté ici depuis longtemps ; la règle `.btn-accent:disabled`
+    rend l atténuation à la main.
+  · **Mesuré** : blanc sur `#4e7a5c` = **4,93:1** (au-dessus du seuil), identique dans les deux thèmes puisque
+    le bouton est opaque. Vérifié à l écran en clair et en sombre : fond `rgb(78,122,92)`, texte blanc, sur
+    carte blanche comme sur carte sombre.
+
 ## ✅ WISHLIST : LE BOUTON DEVIENT LE TRANSFERT, LE GLISSÉ DEVIENT L ÉDITION (2026-08-29, demande user)
 
 **Demande user** : « il faudrait mieux que l action sur la tuile jeu soit le transfert vers la collection et
