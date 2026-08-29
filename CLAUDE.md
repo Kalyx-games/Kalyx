@@ -470,6 +470,28 @@ bibliothèque part avec lui) · `retireCompteDeTagsVisibles` (son nom dans `visi
 
 **Garde-fou d espacement : 399, inchangé** (aucun CSS touché).
 
+## ✅ LES DEUX FAMILLES SUIVENT LA MÊME RÈGLE DE PLACEMENT (2026-08-29, retour user)
+
+**Retour** : « en vue liste c est très étrange que les tags ne soient pas affichés de la même manière que les
+comptes. Rentre la bulle des comptes dans la jaquette pour que ce soit uniformisé ».
+
+Les pastilles de compte **DÉBORDAIENT** de la vignette en vue liste (`left/bottom: -10px`) — un héritage du
+temps où elles y étaient seules. Depuis que les étiquettes occupent le coin opposé, **deux familles posées sur
+la même image suivaient deux règles de placement**, ce qui les faisait passer pour deux espèces d objets.
+
+  · `.game-thumb-wrap .owner-bubbles` passe à **`left: 4px; bottom: 4px`** — le miroir exact des étiquettes,
+    et la même valeur qu en vue grille. **Une seule recette pour les trois.**
+  · ⚠️ Le liseré suit : `box-shadow` passe de `2px var(--card)` à **`1,5px rgba(0,0,0,.35)`**. Le liseré
+    couleur carte servait à séparer l image de la marge quand la pastille était À CHEVAL ; posée SUR l image,
+    elle ne se détacherait plus de rien.
+
+**Mesuré** sur Jungle Speed (deux familles présentes) : comptes à 4px du bord gauche et 4px du bas, étiquettes
+à 4px du bord droit et 4px du bas — **symétrie exacte**, même liseré, carte à 110px inchangée.
+
+⛔ **Le débord des pastilles est donc RETIRÉ PARTOUT** (il l avait déjà été en grille au lot précédent).
+Ne pas le reproposer : il a été demandé, essayé, puis retiré dans les deux vues.
+
+
 ## ✅⚠️ LES BULLES NE PARAISSENT QUE QUAND ON FILTRE DESSUS (2026-08-29, retour user)
 
 **Retour** : « on ne les affichera que quand on filtre par un ou plusieurs comptes. Même chose pour les tags ».

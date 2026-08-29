@@ -195,7 +195,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
       style={{ transform: `translateX(${offset}px)` }}
     >
       <div className="game-thumb-col" style={thumbColStyle}>
-        {/* Conteneur non-rogné : permet à la 1re bulle de déborder à gauche de l'image. */}
+        {/* Conteneur non rogné : il porte les deux piles de bulles, posées en absolu. */}
         <div className="game-thumb-wrap">
           <div className="game-thumb">
             {showImg ? (

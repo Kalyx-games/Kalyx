@@ -1707,12 +1707,16 @@ body {
   flex-shrink: 0;
 }
 .owner-bubble.bulle-tag { border-radius: var(--r-ctl); }
-/* Sur la carte : bulles EMPILÉES au coin bas-gauche, la 1re à cheval sur le coin
-   (même débord en bas qu'à gauche → 10px). Les suivantes montent (column-reverse). */
+/* Sur la carte : les pastilles de compte au coin bas-GAUCHE, entièrement DANS la jaquette
+   — exactement comme les étiquettes au coin opposé, et comme en vue grille.
+   ⚠️ Elles DÉBORDAIENT auparavant (left/bottom: -10px). Retour user : « c'est très étrange
+   que les tags ne soient pas affichés de la même manière que les comptes ». Deux familles
+   côte à côte sur la même image ne peuvent pas suivre deux règles de placement : le débord
+   faisait passer les pastilles pour une autre espèce d'objet. */
 .game-thumb-wrap .owner-bubbles {
   position: absolute;
-  left: -10px;
-  bottom: -10px;
+  left: 4px;
+  bottom: 4px;
   display: flex;
   flex-direction: column-reverse;
   align-items: flex-start;
@@ -1722,7 +1726,10 @@ body {
   width: 20px;
   height: 20px;
   font-size: 0.6rem;
-  box-shadow: 0 0 0 2px var(--card); /* liseré couleur carte : nette séparation image/marge */
+  /* ⚠️ Liseré SOMBRE et non « var(--card) » : posée sur l'image et non plus à cheval sur la
+     marge, une pastille cerclée de la couleur de la carte ne se détacherait de rien. C'est
+     le liseré des étiquettes et de la vue grille — une seule recette pour les trois. */
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.35);
 }
 /* LES ÉTIQUETTES AU COIN OPPOSÉ, entièrement DANS la jaquette.
    Retour user : « on dirait que les tags se rapportent aux autres personnes ». Le grief
