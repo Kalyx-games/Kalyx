@@ -361,6 +361,28 @@ ligne, une seule mécanique.
     (couleur comprise : ⚠️ passer par l éditeur réécrit la couleur en version SOURDE — effet préexistant de
     `muteOwnerColor`, sans conséquence visuelle mais réel en base).
 
+### ✅ Le trou de restauration est bouché (demande user, dans la foulée)
+
+⚠️⚠️ **Le test de `pickBubble` porte désormais sur `undefined`, JAMAIS sur `null`** — et la nuance est tout
+le sujet, parce que la fonction sert à DEUX moments, sur deux sortes d objets :
+  · **à la sauvegarde**, sur une ligne venue de la base : la clé est toujours là, éventuellement à `null`. Ce
+    `null` DOIT partir dans le fichier, sinon la restauration ne peut rien remettre à sa valeur d origine —
+    un tag repassé « visibles » après coup restait visible, un avatar ajouté après coup restait en place.
+  · **à la restauration**, sur un objet venu du FICHIER : une sauvegarde ANCIENNE, faite avant l ajout de la
+    colonne, n a pas la clé du tout → `undefined` → on ne l envoie pas, et la valeur en base est PRÉSERVÉE.
+    Une vieille sauvegarde ne doit pas effacer une donnée dont elle ignore l existence.
+Écarter `null` confondait les deux cas et ne servait que le second. **Vaut pour `avatar` comme pour
+`visible_pour`** — c était le même trou.
+
+**Mesuré** : 10 cas sur le code réel, dont le scénario complet (sauvegarde masquante → bascule en visible →
+restauration → masquant) et la non-régression des vieilles sauvegardes. **Export RÉEL en dev** sur les vraies
+données : le fichier porte bien `visible_pour: null` et `avatar: null`, clés présentes.
+
+⚠️ **SIGNALÉ, pas corrigé** : ouvrir l éditeur d une bulle et enregistrer réécrit sa couleur en version
+SOURDE (`muteOwnerColor`, posé à l initialisation de l état). Aucun effet visuel — l affichage passait déjà
+par là — mais la couleur vive d origine est perdue en base, ce que le commentaire historique décrivait comme
+« réversible ». Constaté sur « À Vendre » (#f59e0b → #8a6a47).
+
 **Garde-fou d espacement : 395, inchangé.**
 
 ## ✅⚠️ LES TAGS PASSENT DANS LE MENU COMPTE + CHACUN CHOISIT S ILS MASQUENT (2026-08-29, 2 demandes user)

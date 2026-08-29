@@ -33,14 +33,26 @@ function pick(obj, cols) {
 
 // Une bulle gérée (compte ou tag) → objet à sauvegarder.
 // ⚠️ Les trois champs de base existent depuis toujours. `BUBBLE_OPT` liste les colonnes
-// AJOUTÉES PLUS TARD : elles ne sont recopiées que si la donnée existe, et l'upsert les
+// AJOUTÉES PLUS TARD : elles ne sont recopiées que si la LIGNE les porte, et l'upsert les
 // retire d'elle-même si la base ne les connaît pas encore (migration non lancée).
 // Sans cette liste, une colonne neuve serait SILENCIEUSEMENT absente de toutes les
 // sauvegardes — et effacée à la première restauration.
+//
+// ⚠️⚠️ LE TEST PORTE SUR `undefined`, JAMAIS SUR `null` — et la nuance est tout le sujet.
+// Cette fonction sert à DEUX moments, sur deux sortes d'objets :
+//  · à la SAUVEGARDE, sur une ligne venue de la base : la clé est toujours là, éventuellement
+//    à `null`. Un `null` DOIT partir dans le fichier, sinon la restauration ne peut pas
+//    remettre un réglage à sa valeur d'origine — un tag repassé « visibles » après coup
+//    resterait visible, un avatar ajouté après coup resterait en place. C'était le trou.
+//  · à la RESTAURATION, sur un objet venu du FICHIER : une sauvegarde ANCIENNE, faite avant
+//    l'ajout de la colonne, n'a pas la clé du tout → `undefined` → on ne l'envoie pas, et la
+//    valeur actuelle en base est PRÉSERVÉE. C'est le bon comportement : une vieille sauvegarde
+//    ne doit pas effacer une donnée dont elle ignore l'existence.
+// Écarter `null` confondait ces deux cas et ne servait que le second.
 const BUBBLE_OPT = ['avatar', 'visible_pour']
 function pickBubble(o) {
   const out = { name: o.name, initials: o.initials ?? null, color: o.color ?? null }
-  for (const c of BUBBLE_OPT) if (o[c] !== undefined && o[c] !== null) out[c] = o[c]
+  for (const c of BUBBLE_OPT) if (o[c] !== undefined) out[c] = o[c]
   return out
 }
 
