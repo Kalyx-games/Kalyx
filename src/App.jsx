@@ -886,6 +886,23 @@ export default function App() {
   const tlViewLayer = useExitLayer(tierlistView)
   const scoringLayer = useExitLayer(scoringGame)
   const editSheetLayer = useExitLayer(editingSheet)
+  // Les FENÊTRES sortent aussi en fondu (retour user : « quand elles disparaissent c'est trop
+  // brusque »). Le hook les garde montées le temps de l'animation — donc TOUS les chemins de
+  // fermeture en profitent, le bouton retour d'Android compris, sans rien changer à la
+  // comptabilité d'historique : `layerCount` lit l'état BRUT, qui retombe tout de suite.
+  // 0,2 s : une fenêtre part plus vite qu'un écran plein (0,24 s).
+  const sortieConfirm = useExitLayer(confirming, 200)
+  const sortieCompte = useExitLayer(confirmingOwner, 200)
+  const sortieTag = useExitLayer(confirmingTag, 200)
+  const sortieMove = useExitLayer(moving, 200)
+  const sortieImport = useExitLayer(importing, 200)
+  const sortieRestore = useExitLayer(restoring, 200)
+  const sortiePartie = useExitLayer(confirmingPlay, 200)
+  const sortieTierlist = useExitLayer(confirmingTierlist, 200)
+  const sortieGardeScore = useExitLayer(scoreExitConfirm, 200)
+  const sortieGardeFiche = useExitLayer(sheetExitConfirm, 200)
+  const sortieCode = useExitLayer(codeAsk, 200)
+  const sortieCodeChange = useExitLayer(codeChange, 200)
 
   // Changement d'onglet de l'accueil : `key={tabKey}` remonte le contenu → sur Collection/Wishlist les
   // cartes rejouent leur petite arrivée (léger mouvement vers le haut) = repère « on a changé d'onglet ».
@@ -2374,17 +2391,18 @@ export default function App() {
         />
       )}
 
-      {confirming && (
+      {sortieConfirm.mounted && (
         <ConfirmDialog
+          closing={sortieConfirm.closing}
           title="Supprimer ce jeu ?"
           message={(() => {
             // Les parties et la fiche sont supprimées en cascade par la base : on le dit.
-            const n = playMeta[confirming.id]?.count || 0
-            const sheet = Boolean(scoresheets?.[confirming.id])
+            const n = playMeta[sortieConfirm.value.id]?.count || 0
+            const sheet = Boolean(scoresheets?.[sortieConfirm.value.id])
             const plusieurs = n + (sheet ? 1 : 0) > 1 // « parties » et « fiche » sont féminins
             return (
               <>
-                <strong>{confirming.name}</strong> sera définitivement retiré de la base.
+                <strong>{sortieConfirm.value.name}</strong> sera définitivement retiré de la base.
                 {(n > 0 || sheet) && (
                   <>
                     {' '}⚠️ {n > 0 && <>ses <strong>{n} partie{n > 1 ? 's' : ''} enregistrée{n > 1 ? 's' : ''}</strong></>}
@@ -2403,10 +2421,11 @@ export default function App() {
         />
       )}
 
-      {confirmingOwner && (
+      {sortieCompte.mounted && (
         <ConfirmDialog
+          closing={sortieCompte.closing}
           title="Supprimer ce compte ?"
-          message={<><strong>{confirmingOwner.name}</strong> sera retiré de la liste des comptes. Les jeux qui lui sont associés ne seront pas supprimés.</>}
+          message={<><strong>{sortieCompte.value.name}</strong> sera retiré de la liste des comptes. Les jeux qui lui sont associés ne seront pas supprimés.</>}
           confirmLabel="Supprimer"
           busy={deletingOwnerBusy}
           onConfirm={handleConfirmDeleteOwner}
@@ -2414,10 +2433,11 @@ export default function App() {
         />
       )}
 
-      {confirmingTag && (
+      {sortieTag.mounted && (
         <ConfirmDialog
+          closing={sortieTag.closing}
           title="Supprimer ce tag ?"
-          message={<><strong>{confirmingTag.name}</strong> sera retiré de la liste des tags et des jeux qui le portent. Aucun jeu ne sera supprimé.</>}
+          message={<><strong>{sortieTag.value.name}</strong> sera retiré de la liste des tags et des jeux qui le portent. Aucun jeu ne sera supprimé.</>}
           confirmLabel="Supprimer"
           busy={deletingTagBusy}
           onConfirm={handleConfirmDeleteTag}
@@ -2425,11 +2445,12 @@ export default function App() {
         />
       )}
 
-      {moving && (
+      {sortieMove.mounted && (
         <ConfirmDialog
+          closing={sortieMove.closing}
           title="Déplacer vers la collection ?"
           accent="#4e7a5c" // le vert de la collection : celui de l'icône et du fond révélé du glissé
-          message={<><strong>{moving.name}</strong> passera de votre wishlist à votre collection.</>}
+          message={<><strong>{sortieMove.value.name}</strong> passera de votre wishlist à votre collection.</>}
           confirmLabel="Déplacer"
           danger={false}
           busy={movingBusy}
@@ -2438,13 +2459,14 @@ export default function App() {
         />
       )}
 
-      {importing && (
+      {sortieImport.mounted && (
         <ConfirmDialog
+          closing={sortieImport.closing}
           title="Importer cette sauvegarde ?"
           message={
             <>
-              <strong>{importing.games.length}</strong> jeu{importing.games.length > 1 ? 'x' : ''}
-              {importing.owners.length > 0 && <> et <strong>{importing.owners.length}</strong> compte{importing.owners.length > 1 ? 's' : ''}</>} vont être importés.
+              <strong>{sortieImport.value.games.length}</strong> jeu{sortieImport.value.games.length > 1 ? 'x' : ''}
+              {sortieImport.value.owners.length > 0 && <> et <strong>{sortieImport.value.owners.length}</strong> compte{sortieImport.value.owners.length > 1 ? 's' : ''}</>} vont être importés.
               Les jeux déjà présents (même identifiant) seront mis à jour.
             </>
           }
@@ -2456,12 +2478,13 @@ export default function App() {
         />
       )}
 
-      {restoring && (
+      {sortieRestore.mounted && (
         <ConfirmDialog
+          closing={sortieRestore.closing}
           title="Restaurer cette sauvegarde ?"
           message={
             <>
-              L'état de cette sauvegarde (<strong>{restoring.games_count}</strong> jeu{restoring.games_count > 1 ? 'x' : ''})
+              L'état de cette sauvegarde (<strong>{sortieRestore.value.games_count}</strong> jeu{sortieRestore.value.games_count > 1 ? 'x' : ''})
               va <strong>remplacer</strong> votre collection actuelle.
               {restorePlan == null ? (
                 <> Vérification de ce qui sera supprimé…</>
@@ -2496,8 +2519,9 @@ export default function App() {
         />
       )}
 
-      {confirmingPlay && (
+      {sortiePartie.mounted && (
         <ConfirmDialog
+          closing={sortiePartie.closing}
           title="Supprimer cette partie ?"
           message={<>Cette partie sera retirée de l'historique et des statistiques.</>}
           confirmLabel="Supprimer"
@@ -2506,8 +2530,9 @@ export default function App() {
         />
       )}
 
-      {confirmingTierlist && (
+      {sortieTierlist.mounted && (
         <ConfirmDialog
+          closing={sortieTierlist.closing}
           title="Supprimer cette tierlist ?"
           message={<>La tierlist{tierlistView?.player ? <> de <b>{tierlistView.player}</b></> : ''} sera définitivement supprimée.</>}
           confirmLabel="Supprimer"
@@ -2638,8 +2663,9 @@ export default function App() {
         </Suspense>
       )}
 
-      {scoreExitConfirm && (
+      {sortieGardeScore.mounted && (
         <ConfirmDialog
+          closing={sortieGardeScore.closing}
           title="Quitter sans enregistrer ?"
           message="La partie en cours de saisie sera perdue."
           confirmLabel="Quitter"
@@ -2669,8 +2695,9 @@ export default function App() {
         </Suspense>
       )}
 
-      {sheetExitConfirm && (
+      {sortieGardeFiche.mounted && (
         <ConfirmDialog
+          closing={sortieGardeFiche.closing}
           title="Quitter sans enregistrer ?"
           message="La fiche en cours ne sera pas enregistrée."
           confirmLabel="Quitter"
@@ -2685,8 +2712,9 @@ export default function App() {
 
       {zoomImage && <ImageZoom src={zoomImage} onClose={() => setZoomImage(null)} />}
 
-      {codeAsk && (
+      {sortieCode.mounted && (
         <CodeDialog
+          closing={sortieCode.closing}
           onDone={() => {
             setAuthorized(true)
             setCodeAsk(false)
@@ -2699,8 +2727,9 @@ export default function App() {
         />
       )}
 
-      {codeChange && (
+      {sortieCodeChange.mounted && (
         <ChangeCodeDialog
+          closing={sortieCodeChange.closing}
           onDone={() => {
             setCodeChange(false)
             showToast('Code changé. Les autres appareils devront le re-saisir.')

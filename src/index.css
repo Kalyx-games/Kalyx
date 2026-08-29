@@ -3191,6 +3191,16 @@ body {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
+/* La SORTIE d'une fenêtre, miroir de son entrée. Sans elle, le dialogue disparaissait d'un
+   coup alors qu'il était apparu en fondu — l'asymétrie se remarque tout de suite (retour user).
+   ⚠️ Les règles `.closing` sont déclarées APRÈS celles de l'entrée ET à spécificité supérieure
+   (deux classes) : à spécificité égale, l'animation d'entrée l'emporterait. */
+@keyframes kx-fade-out {
+  to { opacity: 0; }
+}
+@keyframes kx-pop-out {
+  to { opacity: 0; transform: translateY(6px) scale(0.97); }
+}
 @keyframes kx-pop {
   from { opacity: 0; transform: scale(0.94); }
   to { opacity: 1; transform: scale(1); }
@@ -3211,6 +3221,17 @@ body {
 }
 .confirm {
   animation: kx-pop 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.modal-backdrop.closing {
+  animation: kx-fade-out 0.2s ease forwards;
+  /* ⚠️ Une fenêtre qui part ne doit plus rien recevoir : sans ça, un second tap pendant les
+     0,2 s de sortie relancerait l action (supprimer deux fois, par exemple). */
+  pointer-events: none;
+}
+/* Courbe ACCÉLÉRÉE à la sortie (l'entrée décélère) : une fenêtre qu'on referme part, elle ne
+   se pose pas. */
+.confirm.closing {
+  animation: kx-pop-out 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
 /* Cartes de jeux : apparition en fondu/glissé (cascade via un délai en ligne). */

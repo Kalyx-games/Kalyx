@@ -3,7 +3,7 @@ import { verifyCode, setCode } from '../lib/supabase'
 
 // Demande le CODE d'accès de l'appareil (une seule fois par appareil). Le code est vérifié
 // auprès du serveur ; s'il est bon, il est mémorisé (localStorage) et l'appareil peut écrire.
-export default function CodeDialog({ onDone, onClose }) {
+export default function CodeDialog({ onDone, onClose, closing = false }) {
   const [code, setCodeInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -30,8 +30,8 @@ export default function CodeDialog({ onDone, onClose }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={busy ? undefined : onClose}>
-      <div className="confirm" onClick={(e) => e.stopPropagation()}>
+    <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={busy ? undefined : onClose}>
+      <div className={`confirm${closing ? ' closing' : ''}`} onClick={(e) => e.stopPropagation()}>
         <h2>Autoriser cet appareil</h2>
         <p className="confirm-msg">
           Entrez le code d'accès <strong>une seule fois</strong> sur cet appareil. Il sera mémorisé ensuite.

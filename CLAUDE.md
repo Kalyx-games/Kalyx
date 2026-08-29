@@ -383,6 +383,34 @@ SOURDE (`muteOwnerColor`, posé à l initialisation de l état). Aucun effet vis
 par là — mais la couleur vive d origine est perdue en base, ce que le commentaire historique décrivait comme
 « réversible ». Constaté sur « À Vendre » (#f59e0b → #8a6a47).
 
+## ✅ LES FENÊTRES SORTENT COMME ELLES ENTRENT (2026-08-29, retour user)
+
+**Retour** : « quand les popup apparaissent elles ont un fondu mais quand elles disparaissent c est trop
+brusque ». Vrai : `.modal-backdrop` et `.confirm` avaient `kx-fade` / `kx-pop` à l ENTRÉE et rien à la
+sortie — React démontait le nœud d un coup.
+
+**Le mécanisme est celui qui existait déjà pour les écrans pleins : `useExitLayer`.** Il garde la fenêtre
+montée le temps de l animation, donc **TOUS les chemins de fermeture en profitent** — Annuler, Confirmer, tap
+sur le fond, ET le bouton retour d Android. Les autres pistes (animer dans le composant, ou une ref partagée
+`closeRef` comme GameForm) laissaient toutes le retour Android à découvert ou touchaient à la comptabilité
+d historique — le mécanisme le plus fragile du projet.
+  · **12 fenêtres branchées** (8 confirmations + les 2 gardes anti-perte + les 2 fenêtres de code), un hook
+    chacune, à côté de ceux des écrans pleins. **0,2 s** : une fenêtre part plus vite qu un écran plein (0,24).
+  · ⚠️ **Rien ne change dans la comptabilité d historique** : `layerCount` lit l état BRUT, qui retombe tout
+    de suite ; seule l image reste 200 ms de plus. Vérifié : retour → la fenêtre sort en fondu ET on reste sur
+    l écran du dessous.
+  · ⚠️ **`pointer-events: none` sur le voile qui part** : sans ça, un second tap pendant la sortie relancerait
+    l action (supprimer deux fois).
+  · ⚠️ Les règles `.closing` sont déclarées APRÈS l entrée et à spécificité supérieure (deux classes) : à
+    spécificité égale, l animation d entrée l emporterait. Courbe ACCÉLÉRÉE à la sortie (l entrée décélère) :
+    une fenêtre qu on referme part, elle ne se pose pas.
+  · reduced-motion : `useExitLayer` démonte immédiatement, sans animation.
+
+**Mesuré** : ouverture `kx-pop` ; fermeture par Annuler → `.closing` + `kx-pop-out` à 30/90/150 ms, démontage
+à 210 ms, clics bloqués pendant toute la sortie ; fermeture par le bouton retour → même fondu, écran du
+dessous intact.
+
+
 ### ✅ Trois retours user sur l écran, dans la foulée
 
   · ⚠️ **Les blocs de l éditeur se touchaient** (mesuré : **0 px** entre les puces, leur indice et le titre

@@ -4,7 +4,7 @@ import { setWriteCode, setCode } from '../lib/supabase'
 // Change LE code d'accès (pour tous les appareils). Depuis un appareil déjà autorisé :
 // on saisit le nouveau code deux fois, on stocke son hash en base, puis on met à jour le
 // code local. Les AUTRES appareils devront ensuite re-saisir le nouveau code.
-export default function ChangeCodeDialog({ onDone, onClose }) {
+export default function ChangeCodeDialog({ onDone, onClose, closing = false }) {
   const [c1, setC1] = useState('')
   const [c2, setC2] = useState('')
   const [busy, setBusy] = useState(false)
@@ -35,8 +35,8 @@ export default function ChangeCodeDialog({ onDone, onClose }) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={busy ? undefined : onClose}>
-      <div className="confirm" onClick={(e) => e.stopPropagation()}>
+    <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={busy ? undefined : onClose}>
+      <div className={`confirm${closing ? ' closing' : ''}`} onClick={(e) => e.stopPropagation()}>
         <h2>Changer le code d'accès</h2>
         <p className="confirm-msg">
           Choisissez un <strong>nouveau code</strong> pour toute l'appli. Ensuite, chaque appareil devra le

@@ -5,10 +5,13 @@
 // transfert vers la collection est vert partout (l'icône, le fond révélé du glissé) : la
 // confirmation le dit de la même couleur, et on reconnaît le geste avant de lire.
 // ⚠️ On ne l'invente jamais : sans couleur établie ailleurs, un bouton reste à l'encre.
-export default function ConfirmDialog({ title, message, confirmLabel = 'Confirmer', danger = true, accent, busy, onConfirm, onCancel }) {
+// `closing` : la fenêtre sort en fondu au lieu de disparaître d'un coup. L'état vient de
+// `useExitLayer` côté App, qui la garde montée le temps de l'animation — donc TOUS les chemins
+// de fermeture en profitent, y compris le bouton retour d'Android.
+export default function ConfirmDialog({ title, message, confirmLabel = 'Confirmer', danger = true, accent, busy, closing = false, onConfirm, onCancel }) {
   return (
-    <div className="modal-backdrop" onClick={busy ? undefined : onCancel}>
-      <div className="confirm" onClick={(e) => e.stopPropagation()}>
+    <div className={`modal-backdrop${closing ? ' closing' : ''}`} onClick={busy ? undefined : onCancel}>
+      <div className={`confirm${closing ? ' closing' : ''}`} onClick={(e) => e.stopPropagation()}>
         <h2>{title}</h2>
         {message && <p className="confirm-msg">{message}</p>}
         <div className="modal-actions">
