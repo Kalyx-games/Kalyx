@@ -291,6 +291,33 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅ L AVATAR DU COMPTE NE SCINTILLE PLUS EN « CL » (2026-08-29, question user)
+
+**Question user** : « quand j actualise ça met toujours le compte en "CL" pendant un instant. Une raison ?
+Est-ce un bug ? Faut-il le corriger ? » — Oui, oui, et c est fait.
+
+**La cause**, déjà à moitié documentée ici (palier 1 des comptes) : `compteLigne` vaut
+`comptesChoisissables.find(...) || { name: compte }`. Tant que la table `owners` n est pas arrivée — elle vient
+du cache IndexedDB PUIS du réseau, toujours de façon asynchrone — la liste est vide, le repli ne porte que le
+NOM, et `Avatar` retombe sur `ownerInitials(nom)` = **les deux premières lettres**. D où « CL », qui est
+d ailleurs le même pour « Claire & Nazim » et « Clémence & Mathieu » — la collision que ce projet avait déjà
+mesurée. La couleur était fausse aussi, et un avatar emoji ou jaquette n apparaissait pas du tout.
+
+**Le correctif : on mémorise la LIGNE, plus seulement le nom.** Nouvelle clé `kalyx-compte-vue` (localStorage,
+donc **lisible dès la première image**, contrairement à IndexedDB) qui garde `{name, initials, color, avatar}`
+du compte actif. `compteLigne` s en sert comme repli, et un effet la tient à jour dès que la table arrive —
+un seul endroit couvre donc le changement de compte, le renommage et le changement d avatar.
+  · Une vue périmée (avatar changé sur un autre appareil) est écrasée dès l arrivée de la table : le pire cas
+    est une image juste, brièvement.
+  · Il reste un cas où le calcul parle : le TOUT PREMIER lancement sur un appareil, où la vue n existe pas
+    encore. C est irréductible et sans conséquence — il n y a rien de mémorisé à afficher.
+  · **Prouvé sans course** : en pointant le compte actif sur un nom ABSENT de la table (le `find` échoue donc
+    toujours, seul le repli parle) avec une vue mémorisée « ZZ / #8e4f6b », l avatar affiche **ZZ et sa
+    couleur** — et non « CO », les deux premières lettres calculées de « Compte Fantôme ».
+  · ⚠️ **Piège de banc** : la fenêtre dure quelques centaines de millisecondes, moins que la latence entre deux
+    appels du harnais — impossible à échantillonner directement. D où la preuve par un état STABLE plutôt que
+    par une capture au vol.
+
 ## ✅⚠️ L ÉDITEUR DE FICHE DE SCORE REFONDU : TROIS CARTES QUI NE BOUGENT PLUS (2026-08-29, demande user)
 
 **Retour user** : « j aimerais reprendre le système de création de fiche de score, je le trouve actuellement

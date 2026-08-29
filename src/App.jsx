@@ -86,6 +86,33 @@ function saveCompte(nom) {
     /* stockage indispo : tant pis */
   }
 }
+// ⚠️ LA LIGNE COMPLÈTE DU COMPTE ACTIF (initiales choisies, couleur, avatar), mémorisée en
+// LOCAL — donc lisible dès la PREMIÈRE image, contrairement à la table `owners` qui arrive
+// du cache IndexedDB puis du réseau, toujours de façon asynchrone.
+// Sans elle, l'avatar de la barre du haut retombait quelques centaines de millisecondes sur
+// des initiales CALCULÉES (les deux premières lettres du nom) et une couleur calculée : au
+// rechargement, on voyait « CL » scintiller — le même « CL » pour « Claire & Nazim » et
+// « Clémence & Mathieu », et l'emoji ou la jaquette choisis n'apparaissaient pas du tout.
+// Une valeur périmée (avatar changé sur un autre appareil) est écrasée dès que la table
+// arrive : le pire cas est une image juste, brièvement.
+const COMPTE_VUE_KEY = 'kalyx-compte-vue'
+function loadCompteVue() {
+  try {
+    const v = localStorage.getItem(COMPTE_VUE_KEY)
+    const o = v ? JSON.parse(v) : null
+    return o && o.name ? o : null
+  } catch {
+    return null
+  }
+}
+function saveCompteVue(ligne) {
+  try {
+    if (ligne && ligne.name) localStorage.setItem(COMPTE_VUE_KEY, JSON.stringify(ligne))
+    else localStorage.removeItem(COMPTE_VUE_KEY)
+  } catch {
+    /* stockage indispo : on retombera sur les initiales calculées, comme avant */
+  }
+}
 
 function saveOwnerFilter(arr) {
   try {
@@ -397,6 +424,7 @@ export default function App() {
   // sauvegarde auto ne se déclencherait JAMAIS (null = « en cours » ET « absente » sans ça).
   const [ownersLoaded, setOwnersLoaded] = useState(false)
   const [compte, setCompte] = useState(loadCompte) // nom du compte actif | null (aucun) | undefined (jamais choisi)
+  const [compteVue] = useState(loadCompteVue) // sa ligne complète, telle qu'on l'a vue la dernière fois
   const [choixCompte, setChoixCompte] = useState(false) // écran des avatars rouvert volontairement
   const [rappelGlisse, setRappelGlisse] = useState(false) // piqûre de rappel du geste (1×/mois)
   const [compteOuvert, setCompteOuvert] = useState(false) // menu Compte (barre du haut)
@@ -1772,8 +1800,20 @@ export default function App() {
   // sinon il s'afficherait vide une fraction de seconde. Sous deux comptes il n'a rien à
   // demander : on ne fait pas choisir entre une seule porte.
   const comptesChoisissables = ownersList ?? []
-  // La ligne complète du compte actif (avatar, couleur) : le nom seul ne suffit pas.
-  const compteLigne = compte ? comptesChoisissables.find((c) => c.name === compte) || { name: compte } : null
+  // Dès que la table est là, la vue mémorisée suit — changement de compte, renommage,
+  // nouvel avatar : tout passe par ici, il n'y a pas d'autre endroit à tenir à jour.
+  useEffect(() => {
+    if (!ownersLoaded) return
+    saveCompteVue(compte ? comptesChoisissables.find((c) => c.name === compte) || null : null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ownersLoaded, ownersList, compte])
+  // La ligne complète du compte actif (avatar, couleur) : le nom seul ne suffit pas — d'où le
+  // repli sur la vue mémorisée tant que la table n'est pas arrivée, et seulement ensuite sur
+  // le nom nu (premier lancement d'un appareil, ou compte tout juste créé).
+  const compteLigne = compte
+    ? comptesChoisissables.find((c) => c.name === compte) ||
+      (compteVue && compteVue.name === compte ? compteVue : { name: compte })
+    : null
   // ⚠️ `!ajoutCompte` : au TOUT PREMIER lancement, `compte === undefined` reste vrai après le tap sur
   // « Ajouter un compte » → l'écran des avatars continuait de s'afficher et le formulaire de création
   // n'apparaissait JAMAIS, tout en poussant une entrée d'historique pour une couche jamais rendue.
