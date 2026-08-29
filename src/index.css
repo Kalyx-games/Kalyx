@@ -4263,9 +4263,7 @@ button {
 /* Champs de l'éditeur : MÊME recette que les champs de saisie (.input) — padding, taille,
    fond, focus — pour que tous les champs de l'app aient exactement la même tête. */
 .cat-edit-label,
-.cat-edit-hint,
-.cat-edit-value,
-.cat-edit-ext {
+.cat-edit-value {
   width: 100%;
   padding: var(--pad-champ);
   border: 0; /* champ « rempli » : le fond suffit, l'anneau n'apparaît qu'au focus */
@@ -4277,9 +4275,7 @@ button {
   font-size: var(--fs-body);
 }
 .cat-edit-label:focus,
-.cat-edit-hint:focus,
 .cat-edit-value:focus,
-.cat-edit-ext:focus,
 .team-size:focus,
 .sheet .ext-row input:focus {
   outline: none;
@@ -4291,15 +4287,7 @@ button {
   min-width: 0;
   font-weight: 600;
 }
-.cat-edit-hint {
-  font-size: var(--fs-body-s);
-}
 /* Explication + valeur fixe côte à côte (la valeur reste un petit champ discret). */
-.cat-edit-row2 {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
 .cat-edit-value {
   width: 104px;
   flex-shrink: 0;
@@ -6220,7 +6208,7 @@ input[type='number'] {
 .fs-ligne-detail .cat-edit-value {
   margin-top: 8px;
 }
-.fs-ligne-detail .cat-edit-ext {
+.fs-ligne-detail .chips {
   margin-top: 8px;
 }
 /* ⚠️ Case de 44px de haut : l'ancienne « valeur fixe » cachait son explication dans un

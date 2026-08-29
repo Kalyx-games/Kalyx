@@ -432,6 +432,31 @@ tiennent chacun en **une phrase de trois mots** : « Rien à compter. » · « U
 seule case « Points » par joueur. » · « Une seule case pour le groupe. »
 **Deux règles CSS devenues mortes retirées** (`.fs-rang-a`, `.fs-apres`).
 
+### 3e retour user : la phrase, l exemple, le menu natif, et TOUS les placeholders
+
+  1. **« À la partie : … » ne veut rien dire** → le préfixe saute. La phrase dit désormais directement la
+     conséquence, au futur : « **Chacun tape ses points, le plus haut gagne.** » · « Vous désignerez le
+     gagnant, sans compter de points. » · « Un score par équipe… » · « Vous direz si le groupe a gagné ou
+     perdu. »
+  2. **« 3 comptoirs alignés » ne veut rien dire** → « **ex. 4 pions alignés** ».
+  3. ⚠️⚠️ **LE MENU NATIF D ANDROID** : « pourquoi le champ "réservé à une extension" ouvre une espèce de menu
+     android pleine page alors qu il n y a ça nulle part ailleurs ? » — **exact, et vérifié : c était le SEUL**
+     `<select>` de toute l app. Le commentaire de `SortMenu.jsx` dit pourtant noir sur blanc que le natif avait été
+     remplacé parce qu il était « peu esthétique ». Il devient des **puces `.fchip`** — le motif déjà utilisé pour
+     les extensions, à trois centimètres de là, dans la même page.
+     · **RÈGLE : plus aucun `<select>` dans l app.** Un choix se fait en puces, ou par `SortMenu`. Vérifié :
+       les 2 occurrences restantes du mot dans `src/` sont des COMMENTAIRES.
+     · Trois classes CSS devenues mortes retirées (`.cat-edit-ext`, `.cat-edit-hint`, `.cat-edit-row2`). ⚠️ Deux
+       vivaient dans des LISTES de sélecteurs : on retire la ligne, jamais la règle — couper une liste
+       désactive silencieusement tout ce qui suit (piège déjà vécu ici).
+  4. **Passe sur les 28 placeholders de l app** (demande : « clairs, thématiques dans une app de jeux sans
+     être clichés et simples ») : « Nom de l extension… » → **ex. Kraken** · « Nom de l équipe » → **ex. Les
+     Rouges** · « ex. Carte » (ambigu : à jouer ? géographique ?) → **ex. Mission** et sa valeur « ex. Dragon »
+     → **ex. Évasion** · « Rappels de règles, variante maison, précisions de score… » → **« Rappels de règles,
+     variante maison… »** (2 endroits). Gardés tels quels : « Rechercher », les codes d accès, « ex.
+     Terraforming Mars », « ex. Seigneurs », « ex. Héros / ex. Barbare », « 0 » des cases de score (le zéro
+     grisé est voulu), « effectif », « Votre nom ».
+
 ### Mesuré en dev
 
   · **Fiche neuve (le cas majoritaire)** : **1 233 px / 1,5 écran / 13 contrôles** — contre **2 436 px /

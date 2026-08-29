@@ -268,16 +268,16 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
   const phrase = (() => {
     if (qui === 'groupe') {
       return scoring === 'none'
-        ? <>À la partie : vous dites si le groupe a <b>gagné ou perdu</b>.</>
-        : <>À la partie : vous dites si le groupe a gagné ou perdu, <b>et son score</b>.</>
+        ? <>Vous direz si le groupe a <b>gagné ou perdu</b>.</>
+        : <>Vous direz si le groupe a gagné ou perdu, <b>et son score</b>.</>
     }
     if (qui === 'equipe') {
       return scoring === 'none'
-        ? <>À la partie : vous <b>désignez l’équipe gagnante</b>.</>
-        : <>À la partie : un score <b>par équipe</b>, {scoring === 'low' ? 'le plus petit' : 'le plus haut'} gagne.</>
+        ? <>Vous <b>désignerez l’équipe gagnante</b>.</>
+        : <>Un score <b>par équipe</b>, {scoring === 'low' ? 'le plus petit' : 'le plus haut'} gagne.</>
     }
-    if (scoring === 'none') return <>À la partie : vous <b>désignez le gagnant</b>, sans compter de points.</>
-    return <>À la partie : chacun tape ses points, <b>{scoring === 'low' ? 'le plus petit' : 'le plus haut'} gagne</b>.</>
+    if (scoring === 'none') return <>Vous <b>désignerez le gagnant</b>, sans compter de points.</>
+    return <>Chacun tape ses points, <b>{scoring === 'low' ? 'le plus petit' : 'le plus haut'} gagne</b>.</>
   })()
   // ⚠️ PAS de compléments (« Score détaillé en 9 lignes », « Une partie peut se gagner d'un
   // coup »…) : ils redisent ce que la case cochée et les lignes montrent à trois centimètres.
@@ -444,7 +444,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
             <p className="fs-lab">Vos équipes <span className="field-opt">(facultatif)</span></p>
             {teamList.map((t) => (
               <div key={t.id} className="team-edit">
-                <input className="cat-edit-label" value={t.name} onChange={(e) => updTeam(t.id, 'name', e.target.value)} placeholder="Nom de l’équipe" />
+                <input className="cat-edit-label" value={t.name} onChange={(e) => updTeam(t.id, 'name', e.target.value)} placeholder="ex. Les Rouges" />
                 <input className="team-size" type="number" inputMode="numeric" min="1" value={t.size} onChange={(e) => updTeam(t.id, 'size', e.target.value)} placeholder="effectif" />
                 <button type="button" className="ext-row-x" onClick={() => delTeam(t.id)} aria-label="Retirer l’équipe">×</button>
               </div>
@@ -480,7 +480,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
             <p className="fs-lab">Façons de gagner <span className="field-opt">(facultatif)</span></p>
             {triggers.map((t) => (
               <div key={t.id} className="ext-chip-row">
-                <input className="cat-edit-label" value={t.name} onChange={(e) => updTrigger(t.id, e.target.value)} placeholder="ex. 3 comptoirs alignés" />
+                <input className="cat-edit-label" value={t.name} onChange={(e) => updTrigger(t.id, e.target.value)} placeholder="ex. 4 pions alignés" />
                 <button type="button" className="ext-row-x" onClick={() => delTrigger(t.id)} aria-label="Retirer cette façon de gagner">×</button>
               </div>
             ))}
@@ -582,11 +582,22 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
                             </label>
                             {c.ext && (
                               <>
-                                <select className="cat-edit-ext" value={c.ext} onChange={(e) => updCat(c.id, 'ext', e.target.value)}>
+                                {/* ⚠️ Des puces, pas un <select> : le menu natif d'Android s'ouvre en
+                                    plein écran, un objet étranger à l'app — qui a banni le natif
+                                    partout ailleurs (voir SortMenu). Et c'est déjà le motif des
+                                    extensions, dans la même page. */}
+                                <div className="chips">
                                   {availableExts.map((n) => (
-                                    <option key={n} value={n}>{n}</option>
+                                    <button
+                                      key={n}
+                                      type="button"
+                                      className={`fchip ${c.ext === n ? 'on' : ''}`}
+                                      onClick={() => updCat(c.id, 'ext', n)}
+                                    >
+                                      {n}
+                                    </button>
                                   ))}
-                                </select>
+                                </div>
                               </>
                             )}
                           </>
@@ -637,13 +648,13 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
               </div>
             )}
             <p className="fs-lab fs-lab-2">Une pour toute la partie</p>
-            <input className="cat-edit-label" value={playVariantLabel} onChange={(e) => setPlayVariantLabel(e.target.value)} placeholder="ex. Carte" />
+            <input className="cat-edit-label" value={playVariantLabel} onChange={(e) => setPlayVariantLabel(e.target.value)} placeholder="ex. Mission" />
             {playVariantLabel.trim() && (
               <div className="fs-sous">
                 <p className="fs-lab">Valeurs proposées <span className="field-opt">(facultatif)</span></p>
                 {playVariantOptions.map((o) => (
                   <div key={o.id} className="ext-chip-row">
-                    <input className="cat-edit-label" value={o.name} onChange={(e) => updPlayVariantOption(o.id, e.target.value)} placeholder="ex. Dragon" />
+                    <input className="cat-edit-label" value={o.name} onChange={(e) => updPlayVariantOption(o.id, e.target.value)} placeholder="ex. Évasion" />
                     <button type="button" className="ext-row-x" onClick={() => delPlayVariantOption(o.id)} aria-label="Retirer la valeur">×</button>
                   </div>
                 ))}
@@ -676,7 +687,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
               className="notes-area"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Rappels de règles, variante maison, précisions de score…"
+              placeholder="Rappels de règles, variante maison…"
               rows={4}
             />
           </>

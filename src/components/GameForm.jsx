@@ -649,7 +649,7 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
                     <input
                       value={x.name}
                       onChange={(e) => updateExt(x.id, 'name', e.target.value)}
-                      placeholder="Nom de l'extension…"
+                      placeholder="ex. Kraken"
                       enterKeyHint="search"
                       onKeyDown={(e) => {
                         // Entrée → cherche l'extension sur BGG (et masque le clavier). On stoppe la

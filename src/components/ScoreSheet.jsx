@@ -791,7 +791,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         className="notes-area"
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="Rappels de règles, variante maison, précisions de score…"
+        placeholder="Rappels de règles, variante maison…"
         rows={2}
       />
     </div>
