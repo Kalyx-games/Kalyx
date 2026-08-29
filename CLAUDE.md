@@ -386,10 +386,56 @@ extension détache silencieusement ses catégories ».
 
 **AUCUNE MIGRATION** : le template écrit est identique champ pour champ. Seul `extensions` change de source.
 
+### ⚠️⚠️ 2e RETOUR USER, LE PLUS IMPORTANT DU CHANTIER : « il y a encore beaucoup trop de texte partout »
+
+Mot pour mot : « **le but de cette refonte graphique est d alléger l interface et tu l as alourdie** avec
+plein de surexplication, de redondance malvenue et de libellés trop longs. Il faut être le plus clair et
+épuré possible, sans sacrifier la compréhension. » Avec des exemples pris sur la fiche d Abyss, et la
+précision que la liste **n était pas exhaustive**.
+
+Il avait raison : j avais remplacé un fouillis STRUCTUREL par du BAVARDAGE. Ses griefs, un par un :
+  · « Score détaillé en 9 lignes » — inutile, les lignes sont juste dessous.
+  · « Chacun pour soi : une seule personne gagne » — **l intitulé du bouton suffit**, et c est vrai de TOUS
+    les textes d aide posés sous un bouton.
+  · « Elle s affiche pendant la partie » — évident.
+  · « Cette ligne vaut toujours le même nombre de points » — beaucoup trop long : **« Nombre de points fixe »**.
+  · « Cette ligne ne sert qu à… » — **on ne redit pas le contexte au début de chaque phrase** quand il est
+    évident : « Réservée à une extension ».
+  · « Elle n apparaîtra que si… » — « on n est pas loin d un commentaire de code ».
+  · « Un héros, une faction… » — **à quoi bon des exemples hors du champ si le champ en porte déjà un ?**
+  · « Comment saisir les scores » — libellé si long qu il était coupé, et hiérarchisé si bas qu il passait
+    pour un commentaire.
+
+**LA RÈGLE, écrite en tête de ScoreSheetEditor.jsx :**
+
+> **LE LIBELLÉ PORTE LE SENS.** On n explique pas ce que l interface montre déjà ; on ne redit pas le
+> contexte au début de chaque ligne ; un exemple vit DANS le champ, jamais à côté.
+> Un texte n est gardé que s il apprend quelque chose qu on ne peut PAS déduire de l écran.
+
+**Passe complète : 19 textes supprimés, 6 libellés raccourcis.** Les compléments de la phrase du haut
+(elle ne garde que la conséquence) · les 3 aides sous les réponses · le paragraphe de la case « d un coup » ·
+« Elles vous seront proposées à la partie » · « Laissez vide pour les nommer » · « Une ligne par façon de
+marquer » · « Détaillez seulement si… » · « Elle s affiche pendant la partie » · « Pendant la partie, il n y
+aura qu une case » · « Elle n apparaîtra que si… » · les 2 aides des modes de saisie · le paragraphe des
+variantes · l aide des extensions · l aide des notes. Raccourcis : « Comment désigne-t-on le gagnant ? » →
+**« Comment on le désigne »** · « Ces façons de gagner » → **« Façons de gagner »** · « Comment saisir les
+scores / Une page par catégorie » → **« Saisie des scores / Par catégorie »** (il tient enfin sur une ligne) ·
+« Une partie peut AUSSI se gagner d un coup » → **« La partie peut se gagner d un coup »** · les placeholders
+« Nom (ex. Héros, Faction) » → **« ex. Héros »** · et le bouton **« Enregistrer »** tout court (il passait sur
+deux lignes ; on est déjà dans la fiche, le reste était du remplissage).
+
+**Mesuré après élagage** : **0 phrase d explication** sur toute la page (`.field-hint` visibles = 0 en mode
+normal), **116 mots au total** dont les noms de lignes saisis par l user, et il ne reste que **6 libellés** :
+« Qui peut gagner », « Comment on le désigne », « Façons de gagner (facultatif) », « Explication
+(facultatif) », « Une par joueur », « Une pour toute la partie ». Les quatre visages de « Ce qu on compte »
+tiennent chacun en **une phrase de trois mots** : « Rien à compter. » · « Un score par équipe. » · « Une
+seule case « Points » par joueur. » · « Une seule case pour le groupe. »
+**Deux règles CSS devenues mortes retirées** (`.fs-rang-a`, `.fs-apres`).
+
 ### Mesuré en dev
 
   · **Fiche neuve (le cas majoritaire)** : **1 233 px / 1,5 écran / 13 contrôles** — contre **2 436 px /
-    3,7 écrans / 52 contrôles**. Fiche à 8 catégories : 2 068 px contre 2 436.
+    3,7 écrans / 52 contrôles**. Fiche à 8 catégories : 1 864 px après élagage, contre 2 436.
   · **Les trois cartes restent en place dans les QUATRE états** (points / sans points / équipe / groupe) :
     seul le contenu de « Ce qu on compte » change, et la phrase du haut suit. Retour à l état initial →
     hauteur identique au pixel et « Rien n a changé pour l instant » : l instantané ne dérive pas.
@@ -398,10 +444,10 @@ extension détache silencieusement ses catégories ».
     enregistrer ? » ; Annuler → on reste, le choix modifié conservé ; Quitter → on sort sans enregistrer.
   · **Base intacte** : 62 fiches, dernière modification datant du 28/08 — aucun test n a écrit.
 
-**Garde-fou d espacement : 369 → 395** (le bloc CSS de l éditeur : rangées, cases, replis, barre).
+**Garde-fou d espacement : 369 → 394** (le bloc CSS de l éditeur : rangées, cases, replis, barre).
 
-**RESTE** : valider avec l user la phrase « À la partie… » (il n avait pas compris la question), et
-l enchaînement après création de fiche à éprouver EN PROD (l écriture est bloquée en dev par le RLS).
+**Vérifié EN PROD** : le mur est tombé — glissé « Nouvelle partie » sur un jeu sans fiche → l éditeur →
+enregistrement → on atterrit sur « Qui joue ? ». Fiche de test supprimée derrière (62 fiches, 220 parties).
 
 ## ✅⚠️ LE RAPPEL DU GESTE DEVIENT UN FAUX GESTE : IL MONTRE LE VRAI DÉCOR (2026-08-29, 3 retours user)
 

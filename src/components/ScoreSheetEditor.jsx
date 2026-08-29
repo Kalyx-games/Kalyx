@@ -16,6 +16,13 @@ import { parseExtensions } from '../lib/games'
 // n'en ont aucune ; et surtout des CARTES ENTIÈRES s'évaporaient quand on changeait un
 // réglage (taper « Pas de points » faisait disparaître les catégories, sans un mot).
 //
+// ⚠️⚠️ RÈGLE D'ÉCRITURE (retour user après la 1re version : « il y a encore beaucoup trop de
+// texte partout […] tu l'as alourdi avec plein de surexplication, de redondance malvenue et de
+// libellés trop longs ») :
+//    LE LIBELLÉ PORTE LE SENS. On n'explique pas ce que l'interface montre déjà ; on ne redit
+//    pas le contexte au début de chaque ligne ; un exemple vit DANS le champ, jamais à côté.
+// Un texte n'est gardé que s'il apprend quelque chose qu'on ne peut PAS déduire de l'écran.
+//
 // ⚠️ AUCUNE MIGRATION : le template écrit est strictement le même qu'avant. Seul
 // `extensions` change de source — il est DÉDUIT des lignes qui s'y rattachent au lieu
 // d'être saisi à part (vérifié : cette liste ne servait qu'à remplir son propre menu).
@@ -47,9 +54,9 @@ const mkOption = (name = '') => ({ id: ++oid, name })
 // rendent l'état absurde « coopératif + équipes » structurellement impossible, là où il
 // était seulement empêché par un effet de bord.
 const QUI = [
-  { cle: 'solo', titre: 'Un joueur seul', aide: 'Chacun pour soi : une seule personne gagne.' },
-  { cle: 'equipe', titre: 'Une équipe', aide: 'Les joueurs forment des équipes ; le score est celui de l’équipe.' },
-  { cle: 'groupe', titre: 'Tout le monde ensemble', aide: 'Coopératif : on gagne ou on perd tous ensemble.' },
+  { cle: 'solo', titre: 'Un joueur seul' },
+  { cle: 'equipe', titre: 'Une équipe' },
+  { cle: 'groupe', titre: 'Tout le monde ensemble' },
 ]
 
 export default function ScoreSheetEditor({ game, template, online, closing = false, onSave, onClose, dirtyRef }) {
@@ -272,11 +279,9 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
     if (scoring === 'none') return <>À la partie : vous <b>désignez le gagnant</b>, sans compter de points.</>
     return <>À la partie : chacun tape ses points, <b>{scoring === 'low' ? 'le plus petit' : 'le plus haut'} gagne</b>.</>
   })()
-  const complements = []
-  if (instant && scoring !== 'none') complements.push('Une partie peut se gagner d’un coup.')
-  if (detailActif && catsNommees.length) complements.push(`Score détaillé en ${catsNommees.length} ligne${catsNommees.length > 1 ? 's' : ''}.`)
-  if (variantLabel.trim()) complements.push(`Chacun choisit son « ${variantLabel.trim()} ».`)
-  if (playVariantLabel.trim()) complements.push(`Une « ${playVariantLabel.trim()} » pour toute la table.`)
+  // ⚠️ PAS de compléments (« Score détaillé en 9 lignes », « Une partie peut se gagner d'un
+  // coup »…) : ils redisent ce que la case cochée et les lignes montrent à trois centimètres.
+  // La phrase ne garde que ce qu'on ne peut lire nulle part ailleurs — la CONSÉQUENCE.
 
   // ── Ce qui manque, dit dans la barre du bas ──────────────────────────────────────
   // ⚠️ Avant, l'erreur naissait en DERNIER élément d'une page de 2 400 px alors que le
@@ -309,7 +314,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
     : doublons.size
       ? 'Deux lignes portent le même nom.'
       : !isNew && !modifie
-        ? 'Rien n’a changé pour l’instant.'
+        ? 'Rien n’a changé.'
         : err || ''
   const bloque = busy || !online || doublons.size > 0 || (!isNew && !modifie)
 
@@ -390,11 +395,10 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
 
   // Une rangée de choix : pleine largeur, 48 px, exclusive. Remplace les puces qu'on
   // pouvait toutes éteindre — d'où des cartes qui disparaissaient sans explication.
-  const rangee = (actif, titre, onClick, aideTexte) => (
+  const rangee = (actif, titre, onClick) => (
     <button type="button" className={`fs-rang${actif ? ' on' : ''}`} onClick={onClick} aria-pressed={actif}>
       <span className="fs-rond" aria-hidden="true" />
       <span className="fs-rang-t">{titre}</span>
-      {actif && aideTexte && <span className="fs-rang-a">{aideTexte}</span>}
     </button>
   )
 
@@ -427,21 +431,17 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
         </div>
       </div>
 
-      <p className="fs-phrase">
-        {phrase}
-        {complements.length > 0 && <small>{complements.join(' ')}</small>}
-      </p>
+      <p className="fs-phrase">{phrase}</p>
 
       <section className="settings-card">
         <h3>Comment on gagne</h3>
 
-        <p className="fs-lab">Qui peut gagner ?</p>
-        {QUI.map((q) => rangee(qui === q.cle, q.titre, () => choisirQui(q.cle), q.aide))}
+        <p className="fs-lab">Qui peut gagner</p>
+        {QUI.map((q) => rangee(qui === q.cle, q.titre, () => choisirQui(q.cle)))}
 
         {qui === 'equipe' && (
           <div className="fs-sous">
             <p className="fs-lab">Vos équipes <span className="field-opt">(facultatif)</span></p>
-            <p className="field-hint">Laissez vide pour les nommer au moment de la partie.</p>
             {teamList.map((t) => (
               <div key={t.id} className="team-edit">
                 <input className="cat-edit-label" value={t.name} onChange={(e) => updTeam(t.id, 'name', e.target.value)} placeholder="Nom de l’équipe" />
@@ -453,7 +453,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
           </div>
         )}
 
-        <p className="fs-lab fs-lab-2">Comment désigne-t-on le gagnant ?</p>
+        <p className="fs-lab fs-lab-2">Comment on le désigne</p>
         {qui === 'groupe' ? (
           <>
             {rangee(scoring !== 'none', 'Le groupe marque des points', () => setScoring('high'))}
@@ -470,19 +470,14 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
         {scoring !== 'none' && (
           <button type="button" className={`fs-case${instant ? ' on' : ''}`} onClick={() => setInstant((v) => !v)} aria-pressed={instant}>
             <span className="fs-carre" aria-hidden="true" />
-            <span className="fs-rang-t">Une partie peut aussi se gagner d’un coup</span>
-            <span className="fs-rang-a">
-              Certains jeux s’arrêtent net (suprématie militaire, 3 objectifs remplis…).
-              Vous pourrez alors couronner quelqu’un sans finir le décompte.
-            </span>
+            <span className="fs-rang-t">La partie peut se gagner d’un coup</span>
           </button>
         )}
 
         {(instant || scoring === 'none') && (
           <div className="fs-sous">
-            {/* « Déclencheur » était du vocabulaire d'ingénieur. */}
-            <p className="fs-lab">Ces façons de gagner <span className="field-opt">(facultatif)</span></p>
-            <p className="field-hint">Elles vous seront proposées à la partie, pour dire comment elle s’est terminée.</p>
+            {/* « Déclencheur » était du vocabulaire d'ingénieur ; le placeholder donne l'exemple. */}
+            <p className="fs-lab">Façons de gagner <span className="field-opt">(facultatif)</span></p>
             {triggers.map((t) => (
               <div key={t.id} className="ext-chip-row">
                 <input className="cat-edit-label" value={t.name} onChange={(e) => updTrigger(t.id, e.target.value)} placeholder="ex. 3 comptoirs alignés" />
@@ -501,27 +496,21 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
         <h3>Ce qu’on compte</h3>
 
         {qui === 'equipe' ? (
-          <p className="field-hint fs-seule">En équipes, on note <b>un score par équipe</b>. Rien à détailler ici.</p>
+          <p className="field-hint fs-seule">Un score par équipe.</p>
         ) : scoring === 'none' ? (
-          <p className="field-hint fs-seule">Rien à compter : à la partie, vous cocherez simplement le gagnant.</p>
+          <p className="field-hint fs-seule">Rien à compter.</p>
         ) : qui === 'groupe' && !detail ? (
           <>
-            <p className="field-hint fs-seule">Une seule case pour le score du groupe.</p>
+            <p className="field-hint fs-seule">Une seule case pour le groupe.</p>
             <button type="button" className="btn-ghost fs-detailler" onClick={addCat}>Détailler le score</button>
           </>
         ) : !detail || cats.length === 0 ? (
           <>
-            <p className="field-hint fs-seule">
-              Une seule case « Points » par joueur. Suffisant pour la plupart des jeux.
-            </p>
+            <p className="field-hint fs-seule">Une seule case « Points » par joueur.</p>
             <button type="button" className="btn-ghost fs-detailler" onClick={addCat}>Détailler le score</button>
-            <p className="field-hint fs-apres">
-              Détaillez seulement si vous voulez compter poste par poste (Seigneurs, Lieux, Objectifs…).
-            </p>
           </>
         ) : (
           <>
-            <p className="field-hint fs-seule">Une ligne par façon de marquer des points.</p>
             <div ref={listRef}>
               {cats.map((c) => {
                 const ouverte = lignesOuvertes.has(c.id)
@@ -567,11 +556,10 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
                           onChange={(e) => updCat(c.id, 'hint', e.target.value)}
                           placeholder="ex. 2 points par seigneur allié"
                         />
-                        <p className="field-hint">Elle s’affiche pendant la partie.</p>
 
                         <label className="fs-mini">
                           <input type="checkbox" checked={c.value !== ''} onChange={(e) => updCat(c.id, 'value', e.target.checked ? '0' : '')} />
-                          <span>Cette ligne vaut toujours le même nombre de points</span>
+                          <span>Nombre de points fixe</span>
                         </label>
                         {c.value !== '' && (
                           <>
@@ -583,7 +571,6 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
                               onChange={(e) => updCat(c.id, 'value', e.target.value)}
                               placeholder="0"
                             />
-                            <p className="field-hint">Pendant la partie, il n’y aura qu’une case à cocher au lieu d’un score à taper.</p>
                           </>
                         )}
 
@@ -591,7 +578,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
                           <>
                             <label className="fs-mini">
                               <input type="checkbox" checked={!!c.ext} onChange={(e) => updCat(c.id, 'ext', e.target.checked ? availableExts[0] : '')} />
-                              <span>Cette ligne ne sert qu’avec une extension</span>
+                              <span>Réservée à une extension</span>
                             </label>
                             {c.ext && (
                               <>
@@ -600,7 +587,6 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
                                     <option key={n} value={n}>{n}</option>
                                   ))}
                                 </select>
-                                <p className="field-hint">Elle n’apparaîtra que si vous cochez cette extension au début d’une partie.</p>
                               </>
                             )}
                           </>
@@ -617,11 +603,11 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
             {qui === 'solo' && catsNommees.length >= 2 &&
               ligneRepli(
                 'saisie',
-                'Comment saisir les scores',
-                entry === 'byPlayer' ? 'Une page par joueur' : 'Une page par catégorie',
+                'Saisie des scores',
+                entry === 'byPlayer' ? 'Par joueur' : 'Par catégorie',
                 <>
-                  {rangee(entry === 'byItem', 'Une page par catégorie', () => setEntry('byItem'), 'Chaque page montre une catégorie, avec tous les joueurs.')}
-                  {rangee(entry === 'byPlayer', 'Une page par joueur', () => setEntry('byPlayer'), 'Chaque page montre un joueur, avec toutes ses catégories.')}
+                  {rangee(entry === 'byItem', 'Une page par catégorie', () => setEntry('byItem'))}
+                  {rangee(entry === 'byPlayer', 'Une page par joueur', () => setEntry('byPlayer'))}
                 </>
               )}
           </>
@@ -636,12 +622,8 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
           'Variantes',
           valeurVariantes,
           <>
-            <p className="field-hint">
-              Un héros, une faction, une carte, une mission… Une par joueur, une pour toute la partie,
-              les deux, ou aucune.
-            </p>
-            <p className="fs-lab fs-lab-2">Une par joueur</p>
-            <input className="cat-edit-label" value={variantLabel} onChange={(e) => setVariantLabel(e.target.value)} placeholder="Nom (ex. Héros, Faction)" />
+            <p className="fs-lab">Une par joueur</p>
+            <input className="cat-edit-label" value={variantLabel} onChange={(e) => setVariantLabel(e.target.value)} placeholder="ex. Héros" />
             {variantLabel.trim() && (
               <div className="fs-sous">
                 <p className="fs-lab">Valeurs proposées <span className="field-opt">(facultatif)</span></p>
@@ -655,7 +637,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
               </div>
             )}
             <p className="fs-lab fs-lab-2">Une pour toute la partie</p>
-            <input className="cat-edit-label" value={playVariantLabel} onChange={(e) => setPlayVariantLabel(e.target.value)} placeholder="Nom (ex. Carte, Mission)" />
+            <input className="cat-edit-label" value={playVariantLabel} onChange={(e) => setPlayVariantLabel(e.target.value)} placeholder="ex. Carte" />
             {playVariantLabel.trim() && (
               <div className="fs-sous">
                 <p className="fs-lab">Valeurs proposées <span className="field-opt">(facultatif)</span></p>
@@ -677,10 +659,6 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
             'Extensions',
             extDefault.length ? `${extDefault.length} cochée${extDefault.length > 1 ? 's' : ''} d’avance` : 'Aucune cochée d’avance',
             <>
-              <p className="field-hint">
-                Celles que vous cochez ici seront déjà cochées à l’ouverture d’une partie, et dans le
-                filtre des statistiques.
-              </p>
               <div className="chips">
                 {availableExts.map((n) => (
                   <button key={n} type="button" className={`fchip ${extDefault.includes(n) ? 'on' : ''}`} onClick={() => toggleExtDefault(n)}>{n}</button>
@@ -694,7 +672,6 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
           'Notes',
           notes.trim() ? 'Renseignées' : 'Aucune',
           <>
-            <p className="field-hint">Affichées (et modifiables) à chaque partie.</p>
             <textarea
               className="notes-area"
               value={notes}
@@ -712,7 +689,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
         <div className="fs-barre-btns">
           <button type="button" className="btn-ghost" onClick={onClose}>Annuler</button>
           <button type="button" className="btn-primary" onClick={save} disabled={bloque}>
-            {busy ? '…' : isNew ? 'Enregistrer la fiche' : 'Enregistrer les modifications'}
+            {busy ? '…' : 'Enregistrer'}
           </button>
         </div>
       </div>

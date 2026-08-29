@@ -6100,14 +6100,6 @@ input[type='number'] {
   flex: 1;
   min-width: 0;
 }
-/* L'aide ne s'affiche que sous le choix ACTIF : elle explique ce qu'on vient de choisir,
-   au lieu de faire lire trois explications pour en retenir une. */
-.fs-rang-a {
-  flex: 1 0 100%;
-  font-size: var(--fs-caption);
-  font-weight: 400;
-  opacity: 0.78;
-}
 
 .fs-case {
   display: flex;
@@ -6159,9 +6151,6 @@ input[type='number'] {
 .fs-detailler {
   width: 100%;
   margin-top: 12px;
-}
-.fs-apres {
-  margin: 8px 0 0;
 }
 
 /* Une ligne repliée : toujours NOMMÉE, avec sa valeur à droite. Jamais une trappe
