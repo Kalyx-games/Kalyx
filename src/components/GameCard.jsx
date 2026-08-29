@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { parseOwners, parseTags, ownerDisplay, ownerColor, parseExtensions, basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText } from '../lib/games'
-import { CollectionIcon, PlayersIcon, StarIcon, ClockIcon, ExtIcon, BarsIcon, PencilIcon, DieIcon, IndispoIcon } from './icons'
+import { CollectionIcon, PlayersIcon, StarIcon, ClockIcon, ExtIcon, BarsIcon, PencilIcon, DieIcon, IndispoIcon, PrixIcon } from './icons'
 import { thumbSrc } from '../lib/img'
 import { useGlisseAction } from '../lib/glisseAction'
 import FondGlisse from './FondGlisse'
@@ -252,13 +252,6 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
               })}
             </div>
           )}
-          {/* Le PRIX en wishlist : une pastille sur la jaquette, coin bas-DROIT (les bulles de
-              propriétaire occupent le bas-gauche). Exactement le même traitement qu en vue
-              grille — le prix vit toujours au même endroit, sur l image, et il ne se mêle plus
-              aux infos grises du jeu, où il détonnait. */}
-          {game.status === 'wishlist' && game.price != null && (
-            <span className="prix-pastille">{formatPrice(game.price)}</span>
-          )}
         </div>
       </div>
 
@@ -300,6 +293,12 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
           <div className="game-ext" title="Extensions">
             <ExtIcon size={12} /> <span>{extensions.join(', ')}</span>
           </div>
+        )}
+        {/* Le PRIX, en wishlist : une info comme les autres — petite icône + valeur — juste
+            sous la grille des repères du jeu. Seule sa COULEUR le distingue (le vert des
+            états positifs) ; un badge plein détonnait au milieu d'infos toutes discrètes. */}
+        {game.status === 'wishlist' && game.price != null && (
+          <div className="game-prix"><PrixIcon size={13} /> {formatPrice(game.price)}</div>
         )}
         {/* Info liée au tri en cours (parties jouées, dernière partie…), sinon absente. */}
         {metaLine && <div className="game-playinfo">{metaLine}</div>}

@@ -318,3 +318,37 @@ export function IndispoIcon({ size = 20, ...p }) {
     </Ico>
   )
 }
+
+// Étiquette de prix : la même grammaire que les autres repères d'une carte (forme pleine,
+// arrondie, currentColor) — le prix devient une info parmi les autres, pas un badge à part.
+export function PrixIcon({ size = 13, ...p }) {
+  return (
+    <Ico size={size} {...p}>
+      <path
+        d="M11.6 3H5.4A2.4 2.4 0 0 0 3 5.4v6.2a2 2 0 0 0 .6 1.4l7.4 7.4a2 2 0 0 0 2.8 0l6.6-6.6a2 2 0 0 0 0-2.8L13 3.6a2 2 0 0 0-1.4-.6Z"
+        fill="currentColor"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="8" r="1.6" fill="var(--card)" />
+    </Ico>
+  )
+}
+
+// Deux flèches en boucle : dit qu'un objet se retourne. Posée en coin de jaquette, elle est
+// le seul indice qu'on peut voir le dos de la boîte — sans elle, la fonction est invisible.
+export function RetournerIcon({ size = 16, ...p }) {
+  return (
+    <Ico size={size} {...p}>
+      <path
+        d="M4 9a8 8 0 0 1 13.7-3.3M20 15A8 8 0 0 1 6.3 18.3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.1"
+        strokeLinecap="round"
+      />
+      <path d="M17.5 2.5v3.6h-3.6M6.5 21.5v-3.6h3.6" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
+    </Ico>
+  )
+}

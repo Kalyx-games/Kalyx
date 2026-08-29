@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { BackIcon, ExtIcon, PencilIcon, DieIcon, CrownIcon } from './icons'
+import { BackIcon, ExtIcon, PencilIcon, DieIcon, CrownIcon, RetournerIcon } from './icons'
 import { BGG_LOGO } from '../lib/logos'
 import { vibre } from '../lib/haptique'
 import { mou } from '../lib/geste'
@@ -496,6 +496,12 @@ export default function GameDetail({
               <span aria-hidden="true">🎲</span>
             </button>
           )}
+          {/* ⚠️ LE SEUL INDICE que la boîte se retourne. Sans lui, la fonction est invisible :
+              rien ne distingue une jaquette cliquable d'une simple image. Même parti que
+              l'indice de la tuile « meilleur score » des Stats — un petit glyphe posé dans un
+              coin, qui annonce le geste sans réclamer l'attention. Il disparaît une fois la
+              boîte retournée (le dos, lui, dit clairement comment revenir). */}
+          {!heroActions && <span className="hero-indice" aria-hidden="true"><RetournerIcon size={15} /></span>}
           {/* Le dos. Rendu même sans jaquette : sinon un jeu sans image n'aurait plus AUCUN
               accès à Modifier ni à BGG. */}
           <div className="hero-back" aria-hidden={!heroActions}>

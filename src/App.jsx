@@ -115,6 +115,27 @@ function saveView(v) {
 // ⚠️ UNE PRÉFÉRENCE PAR ONGLET : on ne regarde pas sa collection et sa wishlist de la même
 // façon (l'une se parcourt à la jaquette, l'autre se lit au prix). Passer la collection en
 // grille ne doit donc pas basculer la wishlist, ni l'inverse.
+// RAPPEL DU GESTE. Le glissé n'a aucune affordance permanente : on finit par oublier qu'il
+// existe, et surtout qu'il marche des DEUX côtés. Une fois par mois, à l'ouverture, la
+// première carte fait un aller-retour — assez pour rappeler, trop court pour agacer.
+const RAPPEL_KEY = 'kalyx-rappel-glisse'
+const RAPPEL_DELAI = 30 * 24 * 3600 * 1000
+function rappelDu() {
+  try {
+    const v = Number(localStorage.getItem(RAPPEL_KEY))
+    return Number.isFinite(v) ? v : 0
+  } catch {
+    return 0
+  }
+}
+function noteRappel(t) {
+  try {
+    localStorage.setItem(RAPPEL_KEY, String(t))
+  } catch {
+    /* stockage indispo : tant pis, on ne rappellera pas */
+  }
+}
+
 const LAYOUT_KEY = 'kalyx-layout' // collection (nom historique : la clé existante est conservée)
 const LAYOUT_KEY_WISH = 'kalyx-layout-wishlist'
 const cleLayout = (statut) => (statut === 'wishlist' ? LAYOUT_KEY_WISH : LAYOUT_KEY)
@@ -363,6 +384,7 @@ export default function App() {
   const [ownersLoaded, setOwnersLoaded] = useState(false)
   const [compte, setCompte] = useState(loadCompte) // nom du compte actif | null (aucun) | undefined (jamais choisi)
   const [choixCompte, setChoixCompte] = useState(false) // écran des avatars rouvert volontairement
+  const [rappelGlisse, setRappelGlisse] = useState(false) // piqûre de rappel du geste (1×/mois)
   const [compteOuvert, setCompteOuvert] = useState(false) // menu Compte (barre du haut)
   const [ajoutCompte, setAjoutCompte] = useState(false) // formulaire de création d'un compte
   const [tagsLoaded, setTagsLoaded] = useState(false)
@@ -394,6 +416,11 @@ export default function App() {
     saveCompte(nom ?? null)
     setFilters((f) => ({ ...f, owners: nom ? [nom] : [] }))
     setChoixCompte(false)
+    // Choisir CONCLUT le geste : on veut voir la collection du compte, pas retomber sur le
+    // menu d où l on venait. (Fermer deux couches d un coup est sûr depuis que la traversée
+    // d historique n incrémente plus le compteur de popstate que de 1.)
+    setCompteOuvert(false)
+    setAjoutCompte(false)
     window.scrollTo(0, 0)
   }, [])
 
@@ -481,7 +508,7 @@ export default function App() {
   const formCloseRef = useRef(null)
   const filterCloseRef = useRef(null)
   const uiRef = useRef({})
-  uiRef.current = { codeAsk, codeChange, compteOuvert, editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scoreExitConfirm, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
+  uiRef.current = { choixCompte, codeAsk, codeChange, compteOuvert, editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scoreExitConfirm, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
   viewRef.current = view
 
@@ -575,8 +602,13 @@ export default function App() {
 
   const closeTopLayer = useCallback(() => {
     const s = uiRef.current
+    // ⚠️ L'écran des avatars REMPLACE tout le rendu (return anticipé) : rien ne peut être
+    // au-dessus de lui, il se ferme donc en PREMIER. Il n'est une couche que lorsqu'il a été
+    // rouvert VOLONTAIREMENT (choixCompte) — au tout premier lancement il n'y a rien derrière
+    // où revenir, et aucun tap ne l'a ouvert, donc aucune entrée fiable à pousser.
+    if (s.choixCompte) setChoixCompte(false)
     // L'image en grand est au-dessus de tout → on la ferme en premier.
-    if (s.zoomImage) setZoomImage(null)
+    else if (s.zoomImage) setZoomImage(null)
     // Les fenêtres de code sont rendues APRÈS les confirmations, à z-index égal → elles sont
     // au-dessus. Sans branche ici, le retour fermait l'écran DERRIÈRE le voile (les Réglages),
     // laissant la fenêtre seule à l'écran, puis quittait l'app.
@@ -952,6 +984,30 @@ export default function App() {
     }
     return chips
   }, [filters, statsOpen, view, compte, allOwners])
+
+  // ⚠️ Une seule fois par mois, et seulement quand il y a vraiment une liste à l'écran :
+  // pas pendant le chargement (les squelettes bougeraient), pas sous un écran plein, pas si
+  // l'utilisateur a demandé moins d'animations. On note la date AVANT de jouer : même si
+  // l'animation est interrompue, on ne la rejouera pas au prochain lancement.
+  useEffect(() => {
+    if (booting || games === null || !games.length) return
+    if (statsOpen || settingsOpen || compteOuvert) return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const t = Date.now()
+    if (t - rappelDu() < RAPPEL_DELAI) return
+    noteRappel(t)
+    setRappelGlisse(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booting, games])
+
+  // ⚠️ Le retrait vit dans SON PROPRE effet. Placé dans celui du dessus, son nettoyage était
+  // déclenché au rafraîchissement suivant de `games` (cache puis réseau) : le minuteur était
+  // annulé, la garde du mois empêchait de le réarmer, et la classe restait posée À VIE.
+  useEffect(() => {
+    if (!rappelGlisse) return
+    const fin = setTimeout(() => setRappelGlisse(false), 3000)
+    return () => clearTimeout(fin)
+  }, [rappelGlisse])
 
   const currentCount = (games ?? []).filter((g) => g.status === listStatus).length
 
@@ -1760,9 +1816,9 @@ export default function App() {
           jeux={games ?? []}
           online={online}
           creation={ajoutCompte}
-          // L'écran des avatars REMPLACE le rendu (ce n'est pas une couche) : aucune couche ne doit
-          // lui survivre, sinon le premier retour en fermerait une INVISIBLE sans rien changer.
-          onChangerCompte={() => { setCompteOuvert(false); setStatsOpen(false); setChoixCompte(true) }}
+          // ⚠️ On ne ferme RIEN : l'écran des avatars est une couche par-dessus, et le retour doit
+          // ramener là où l'on était — c'est-à-dire ici, le menu Compte.
+          onChangerCompte={() => setChoixCompte(true)}
           onEnregistrer={(nom, ini, couleur, avatar, origine) => {
             if (!origine) {
               // Une création qui se contente de refermer le formulaire laisse l'écran sur le compte
@@ -1823,7 +1879,7 @@ export default function App() {
             jeux={games ?? []}
             compte={compte ?? null}
             comptes={comptesChoisissables}
-            onChangerCompte={() => { setSettingsOpen(false); setStatsOpen(false); setPlayersOpen(false); setChoixCompte(true) }}
+            onChangerCompte={() => setChoixCompte(true)}
             onEnterCode={() => setCodeAsk(true)}
             onChangeCode={() => setCodeChange(true)}
             deviceAuthorized={authorized}
@@ -1930,7 +1986,7 @@ export default function App() {
       {showFilters && (
         <FilterSheet
           resetCount={activeFilterCount - (filters.owners.length ? 1 : 0)}
-          visibleLabel={`Voir les ${filterShownCount} jeu${filterShownCount > 1 ? 'x' : ''}`}
+          visibleLabel={filterShownCount === 1 ? 'Voir le jeu' : `Voir les ${filterShownCount} jeux`}
           onReset={resetFilters}
           onClose={() => setShowFilters(false)}
           closeRef={filterCloseRef}
@@ -1965,7 +2021,7 @@ export default function App() {
           />
         </Suspense>
       ) : (
-      <main className={`list${grille ? ' list-grid' : ''}`} ref={listRef}>
+      <main className={`list${grille ? ' list-grid' : ''}${rappelGlisse ? ' rappel-glisse' : ''}`} ref={listRef}>
         {games === null || booting ? (
           Array.from({ length: grille ? 9 : 5 }).map((_, i) =>
             grille ? <div key={i} className="gtile-skeleton sk" /> : <SkeletonCard key={i} />
@@ -2002,6 +2058,9 @@ export default function App() {
                 onNewPlay={view !== 'wishlist' && online ? () => handleNewPlayFromCard(g) : undefined}
                 onMove={view === 'wishlist' ? () => setMoving(g) : undefined}
                 onEdit={view === 'wishlist' ? () => setEditing(g) : undefined}
+                ownerMap={ownerMap}
+                tagMap={tagMap}
+                compte={compte ?? null}
                 onCardClick={
                   !online
                     ? undefined

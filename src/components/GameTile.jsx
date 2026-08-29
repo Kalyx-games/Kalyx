@@ -1,9 +1,9 @@
 import { memo, useEffect, useRef, useState } from 'react'
-import { ownerColor } from '../lib/games'
+import { ownerColor, parseOwners, parseTags, ownerDisplay } from '../lib/games'
 import { thumbSrc } from '../lib/img'
 import { useGlisseAction } from '../lib/glisseAction'
 import FondGlisse from './FondGlisse'
-import { DieIcon, CollectionIcon, PencilIcon, IndispoIcon } from './icons'
+import { DieIcon, CollectionIcon, PencilIcon, IndispoIcon, PrixIcon } from './icons'
 import { BGG_LOGO } from '../lib/logos'
 
 // Une TUILE de la vue grille : la jaquette d'abord, le nom dessous. Le tap mène au même
@@ -22,7 +22,7 @@ function formatPrice(p) {
   return `${n.toFixed(2).replace('.', ',')} €`
 }
 
-function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit, metaLine, index = 0 }) {
+function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit, metaLine, ownerMap, tagMap, compte = null, index = 0 }) {
   const [broken, setBroken] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const imgRef = useRef(null)
@@ -50,6 +50,10 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
   // Sous le nom : la valeur du tri en cours si elle n'est pas déjà visible (prix en
   // wishlist, parties jouées…), sinon les deux repères de base.
   const price = game.status === 'wishlist' && game.price != null ? formatPrice(game.price) : null
+  // Les bulles, comme sur les cartes de la liste : celle du COMPTE ACTIF est retirée (sur ses
+  // propres jeux elle est vraie partout, donc elle n'apprend rien et se répète sur cent tuiles).
+  const ownerList = parseOwners(game.owner).filter((o) => o !== compte)
+  const tagList = parseTags(game.tags)
 
   return (
     <div className={`gtile-row${arme ? ' arme' : ''}`} ref={rowRef} style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}>
@@ -99,12 +103,36 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
           ) : (
             <span className="gtile-fallback" style={{ background: ownerColor(game.name) }}>{monogram(game.name)}</span>
           )}
-          {/* La MÊME pastille qu'en vue liste, au même coin : le prix ne prend aucune hauteur
-              et la sous-ligne reste libre pour la valeur du tri. */}
-          {price && <span className="prix-pastille">{price}</span>}
+          {(ownerList.length > 0 || tagList.length > 0) && (
+            <span className="gtile-bulles" onClick={(e) => e.stopPropagation()}>
+              {ownerList.map((o) => {
+                const d = ownerDisplay(o, ownerMap)
+                return (
+                  <span key={`o-${o}`} className="owner-bubble" style={{ background: d.color }} title={o}>
+                    {d.initials}
+                  </span>
+                )
+              })}
+              {tagList.map((t) => {
+                const d = ownerDisplay(t, tagMap)
+                return (
+                  <span key={`t-${t}`} className="owner-bubble" style={{ background: d.color }} title={`Tag : ${t}`}>
+                    {d.initials}
+                  </span>
+                )
+              })}
+            </span>
+          )}
         </div>
         <span className="gtile-name">{game.name}</span>
-        {metaLine && <span className="gtile-sub">{metaLine}</span>}
+        {/* Le prix prend ici la MÊME forme qu'en vue liste : petite icône + montant en vert.
+            Il occupe la sous-ligne, que la valeur du tri lui cède (en wishlist, le prix est
+            l'information qu'on cherche). */}
+        {price ? (
+          <span className="gtile-sub gtile-prix"><PrixIcon size={12} /> {price}</span>
+        ) : (
+          metaLine && <span className="gtile-sub">{metaLine}</span>
+        )}
       </button>
       {/* ⚠️ ÉDITER, en wishlist seulement — même raison qu'en vue liste : là, le tap mène chez
           Philibert, donc sans ce bouton un jeu de la wishlist ne serait plus modifiable. */}
@@ -132,5 +160,10 @@ export default memo(
   (prev, next) =>
     prev.game === next.game &&
     prev.online === next.online &&
-    prev.metaLine === next.metaLine
+    prev.metaLine === next.metaLine &&
+    // Comme sur les cartes : sans ces trois-là, changer de compte ou renommer une bulle ne
+    // redessinerait pas les tuiles.
+    prev.ownerMap === next.ownerMap &&
+    prev.tagMap === next.tagMap &&
+    prev.compte === next.compte
 )

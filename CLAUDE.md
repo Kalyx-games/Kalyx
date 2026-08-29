@@ -169,7 +169,7 @@ Audit en workflow (3 lentilles : cohérence / composition / finition, puis synth
 ```bash
 grep -cE '^s*(margin|padding|gap|row-gap|column-gap)[a-z-]*s*:.*[0-9]px' src/index.css
 ```
-**Valeur de référence au 29/08/2026 : 370** (349 → 356 avec la carte du face-à-face, puis 363 avec le verdict de la table et la ligne « Reprendre la dernière table ») (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
+**Valeur de référence au 29/08/2026 : 369** (349 → 356 avec la carte du face-à-face, puis 363 avec le verdict de la table et la ligne « Reprendre la dernière table ») (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
 
 **NON FAIT, et assumé** : le resserrement réel (faire tomber 10→8, 14→12, 6→4 …). Il déplacerait ~40 % des espacements pour un bénéfice invisible, sur une app que l’user a déjà fait itérer trois fois sur des retours visuels. À ne relancer QUE si l’user demande explicitement un rythme plus serré, écran par écran, et jamais en une passe globale.
 
@@ -290,6 +290,58 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - **Les butées disent les extrémités** (la demande) : avant la première ancre → l'étiquette du PREMIER groupe ; à `scrollY ≥ max − 1` → celle du DERNIER (sans ce forçage, la butée basse affichait le groupe à la ligne de lecture, un entre-deux).
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
+
+## ✅ LE PRIX DEVIENT UNE INFO + LE RAPPEL MENSUEL DU GESTE + 3 AUTRES (2026-08-29, 5 retours user)
+
+**1. LE PRIX EST UNE INFO COMME LES AUTRES** — petite icône (`PrixIcon`, une étiquette) + montant, sous les
+repères du jeu en vue liste, en sous-ligne en vue grille. Seule sa COULEUR le distingue (le vert des états
+positifs). Retour user, mot pour mot : « pas de champ vert arrondi bizarre alors qu on a uniformisé le reste
+de l appli ». La pastille de la veille est SUPPRIMÉE, ainsi que `.game-price`, `.game-price-line`,
+`.game-price-below` et `.gtile-price`, toutes devenues mortes.
+  · ⚠️ **Piège de cascade revécu** : `.gtile-sub` est déclaré PLUS BAS et pose `color: var(--muted)` — à
+    spécificité égale (0-1-0) il gagnait, et le prix ressortait GRIS en grille alors qu il est vert en liste.
+    Sélecteur qualifié en `.gtile-sub.gtile-prix` (0-2-0). Mesuré : `rgb(110,231,183)` dans les deux vues.
+
+**2. RAPPEL MENSUEL DU GESTE.** Le glissé n a aucune affordance permanente (c est le prix de cartes propres)
+— on finit par oublier qu il existe, et surtout qu il marche des DEUX côtés. Une fois tous les 30 jours, à
+l ouverture, **la première carte** joue un aller-retour (`kx-rappel-glisse`, 2,1 s, amplitude 26 px).
+  · Mémoire dans `localStorage` (`kalyx-rappel-glisse`), **notée AVANT de jouer** : une animation interrompue
+    ne se rejouera pas au prochain lancement.
+  · Gardes : pas pendant `booting` (les squelettes bougeraient), pas sous un écran plein, pas si
+    `prefers-reduced-motion`. Sélecteur limité à `:first-child` : toute la liste qui ondule serait une
+    démonstration, pas un rappel.
+  · ⚠️ **DÉFAUT ATTRAPÉ AU TEST** : le retrait de la classe vivait dans l effet déclencheur, dont les
+    dépendances (`[booting, games]`) se rejouent au rafraîchissement de `games` (cache PUIS réseau) — le
+    nettoyage annulait le minuteur, la garde du mois empêchait de le réarmer, et **la classe restait posée à
+    vie** (mesuré : encore présente après 8,8 s). Le retrait a désormais SON PROPRE effet, sur `[rappelGlisse]`.
+  · **RÈGLE** : un minuteur de nettoyage ne doit pas vivre dans un effet dont les dépendances rejouent pour
+    une autre raison que celle qui l a armé.
+
+**3. L ÉCRAN DES AVATARS DEVIENT UNE COUCHE** (`choixCompte` dans `uiRef`), fermé EN PREMIER dans
+`closeTopLayer` puisqu il REMPLACE tout le rendu. Retour user : « quand on clique sur changer de compte puis
+qu on fait retour ça ne revient pas en arrière ». C était vrai : il n était pas une couche (décision du
+palier 3), donc aucune entrée poussée, donc rien à défaire. **C est possible aujourd hui parce qu il s ouvre
+toujours sur un TAP** (entrée non skippable) et que `go(-N)` a été corrigé.
+  · **L ouvrir ne ferme plus RIEN** (ni le menu Compte, ni les Stats) : le retour ramène ainsi au menu
+    Compte, c est-à-dire là d où l on vient. Même principe que les autres écrans pleins.
+  · **Choisir un compte CONCLUT** : `choisirCompte` ferme `choixCompte` ET `compteOuvert` → on atterrit sur
+    la collection du compte choisi, pas sur le menu. (Fermer 2 couches d un coup est sûr depuis R1.)
+  · ⚠️ Il n est une couche que rouvert VOLONTAIREMENT : au tout premier lancement (`compte === undefined`),
+    aucun tap ne l a ouvert et il n y a rien derrière où revenir.
+
+**4. LA JAQUETTE DIT QU ELLE SE RETOURNE.** Retour user : « on n a aucun indice qu on peut cliquer dessus ».
+Un petit glyphe (`.hero-indice`, `RetournerIcon` sur un disque sombre) au coin bas-droit de la jaquette —
+même parti que l indice de la tuile « meilleur score » des Stats : un glyphe discret qui annonce le geste
+sans réclamer l attention. Il disparaît une fois la boîte retournée (le dos dit clairement comment revenir).
+
+**5. LES BULLES DE COMPTE REVIENNENT EN VUE GRILLE** (`.gtile-bulles`, coin bas-gauche de la jaquette, en
+pile) — c était un reliquat de l époque où la tuile n avait aucune surcharge. **Même règle qu en liste** :
+celle du compte ACTIF est masquée (sur ses propres jeux elle n apprend rien). `ownerMap`, `tagMap` et
+`compte` entrent dans le comparateur du memo, sinon changer de compte ne redessinerait pas les tuiles.
+Mesuré : 10 bulles sur 43 tuiles, toutes « Clémence & Mathieu » — exactement comme en vue liste.
+
+**6. « Voir les 1 jeu » → « Voir le jeu »** (et « Voir la partie ») : l accord portait sur le nom mais pas
+sur l article. Au singulier, la phrase change entièrement au lieu de coudre un pluriel.
 
 ## ✅ LE PRIX QUITTE LES INFOS + UNE ACTION INDISPONIBLE SE DIT (2026-08-29, 2 retours user)
 

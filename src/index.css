@@ -1584,26 +1584,6 @@ body {
 .game:has(.game-edit) .game-head { padding-right: 42px; }
 .game-edit:active { transform: scale(0.92); }
 
-/* En wishlist, le prix est une LIGNE D'INFO sous les métas : il y avait là un espace vide,
-   et sous la jaquette il rallongeait la carte pour rien. */
-.game-price-line {
-  display: flex;
-  align-items: center;
-  margin-top: 2px;
-}
-.game-price {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--fs-body);
-  font-weight: 700;
-  color: var(--ok-ink); /* fond VERT (retour user : le prix doit rester vert) */
-  background: var(--ok-bg);
-  padding: 3px 9px;
-  border-radius: var(--r-ctl);
-  white-space: nowrap;
-}
 /* Première colonne : image + (en wishlist) prix juste en dessous. Alignée en bas :
    si la colonne grandit (beaucoup de bulles), l'image reste en bas et la pile de
    bulles monte dans l'espace gagné. */
@@ -1613,10 +1593,6 @@ body {
   align-items: center;
   justify-content: flex-end;
   gap: 5px;
-}
-.game-price-below {
-  font-size: var(--fs-footnote);
-  padding: 2px 7px;
 }
 .game-meta {
   display: grid;
@@ -3729,6 +3705,23 @@ button {
 /* Image à sa taille naturelle (pas pleine largeur → moins imposante), plafonnée à 240px de haut,
    CENTRÉE. La boîte épouse l'image (pas de letterbox) → les coins arrondis se voient bien. */
 .detail-hero img { display: block; width: auto; height: auto; max-width: 100%; max-height: 240px; border-radius: 5px; margin: 0 auto; } /* comme les jaquettes : l'art est le plus serré */
+/* L'indice de retournement, posé sur la jaquette de la fiche. Discret (le contenu prime),
+   mais sur un disque sombre pour rester lisible sur n'importe quelle image. */
+.hero-indice {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(12, 14, 18, 0.5);
+  color: rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+}
+
 .detail-hero-empty {
   width: 240px; /* la boîte épouse son contenu : sans largeur, le carré tombait à la taille du dé */
   max-width: 100%;
@@ -5897,23 +5890,28 @@ input[type='number'] {
   font-size: var(--fs-title-s);
   font-weight: 700;
 }
-/* LA PASTILLE DE PRIX — la MÊME en vue liste et en vue grille, au MÊME coin (bas-droit) :
-   le prix vit toujours au même endroit, sur l'image. Posée là, elle ne consomme aucune
-   hauteur, laisse la sous-ligne à la valeur du tri, et surtout elle ne se mêle plus aux
-   infos grises du jeu (joueurs, durée, complexité), où son fond coloré détonnait. */
-.prix-pastille {
-  position: absolute;
-  right: 4px;
-  bottom: 4px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--ok-bg);
+/* LE PRIX — une info comme les autres, dans les DEUX vues : petite icône + montant, à la
+   même échelle et avec la même sobriété que joueurs / durée / complexité. Seule la COULEUR
+   le distingue (le vert des états positifs). Le badge plein arrondi qu'il était détonnait au
+   milieu d'infos toutes discrètes — c'est tout l'objet de l'uniformisation de l'app. */
+.game-prix,
+.gtile-prix {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: var(--ok-ink);
-  font-size: var(--fs-micro);
   font-weight: 700;
-  box-shadow: var(--elev-1);
-  pointer-events: none;
-  white-space: nowrap;
+}
+.game-prix {
+  margin-top: 2px;
+  font-size: var(--fs-body-s);
+}
+/* ⚠️ .gtile-sub est déclaré PLUS BAS et pose color: var(--muted) : à spécificité égale
+   (0-1-0) il gagnait, et le prix ressortait gris en grille alors qu il est vert en liste.
+   On qualifie donc le sélecteur (0-2-0) — le procédé déjà employé ailleurs dans ce fichier. */
+.gtile-sub.gtile-prix {
+  font-size: var(--fs-caption);
+  color: var(--ok-ink);
 }
 /* ÉDITER sur la tuile, en wishlist seulement (le tap y mène chez Philibert). Posé sur le coin
    haut-droit de la jaquette, sur un disque sombre pour rester lisible sur toute image. */
@@ -5934,6 +5932,41 @@ input[type='number'] {
 }
 .gtile-edit:disabled { opacity: 0.4; cursor: not-allowed; }
 .gtile-edit:active { transform: scale(0.9); }
+
+/* Les bulles de compte/tag sur une tuile : même coin qu'en vue liste (bas-gauche de la
+   jaquette), en pile. Le prix n'est plus sur l'image, il n'y a donc plus de collision. */
+.gtile-bulles {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+}
+.gtile-bulles .owner-bubble {
+  width: 20px;
+  height: 20px;
+  font-size: var(--fs-micro);
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.35);
+}
+
+/* RAPPEL DU GESTE : une fois par mois, à l'ouverture, la première carte fait un aller-retour
+   des deux côtés. Le glissé n'a aucune affordance permanente (c'est le prix de cartes
+   propres) — sans piqûre de rappel, on oublie qu'il existe. Amplitude volontairement faible :
+   on suggère, on ne joue pas une démonstration. */
+@keyframes kx-rappel-glisse {
+  0%, 12% { transform: translateX(0); }
+  28% { transform: translateX(26px); }
+  44% { transform: translateX(0); }
+  60% { transform: translateX(-26px); }
+  76%, 100% { transform: translateX(0); }
+}
+/* La PREMIÈRE carte seulement : toute la liste qui ondule serait une démonstration, pas un
+   rappel. */
+.rappel-glisse .swipe-row:first-child .game,
+.rappel-glisse .gtile-row:first-child .gtile {
+  animation: kx-rappel-glisse 2.1s cubic-bezier(0.4, 0, 0.2, 1) 0.5s both;
+}
 
 .gtile-name {
   font-size: var(--fs-caption);
