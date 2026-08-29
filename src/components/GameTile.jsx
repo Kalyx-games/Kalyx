@@ -23,7 +23,7 @@ function formatPrice(p) {
   return `${n.toFixed(2).replace('.', ',')} €`
 }
 
-function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit, metaLine, ownerMap, tagMap, compte = null, montreComptes = false, montreTags = false, index = 0, demo = false }) {
+function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit, metaLine, ownerMap, tagMap, compte = null, montreComptes = false, montreTags = false, montreNom = true, index = 0, demo = false }) {
   const [broken, setBroken] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const imgRef = useRef(null)
@@ -138,7 +138,10 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
             </span>
           )}
         </div>
-        <span className="gtile-name">{game.name}</span>
+        {/* Le nom peut être masqué depuis le menu Compte : certains préfèrent une grille de
+            pures jaquettes. ⚠️ Le `title` reste, et le nom accessible aussi (aria-label du
+            bouton) : on retire une aide visuelle, pas l'information. */}
+        {montreNom && <span className="gtile-name">{game.name}</span>}
         {/* Le prix prend ici la MÊME forme qu'en vue liste : petite icône + montant en vert.
             Il occupe la sous-ligne, que la valeur du tri lui cède (en wishlist, le prix est
             l'information qu'on cherche). */}
@@ -183,6 +186,7 @@ export default memo(
     prev.compte === next.compte &&
     prev.montreComptes === next.montreComptes &&
     prev.montreTags === next.montreTags &&
+    prev.montreNom === next.montreNom &&
     // ⚠️ Même raison qu'en vue liste : sans ça, la tuile ne recevrait jamais l'ordre de jouer.
     prev.demo === next.demo
 )

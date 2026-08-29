@@ -470,6 +470,36 @@ bibliothèque part avec lui) · `retireCompteDeTagsVisibles` (son nom dans `visi
 
 **Garde-fou d espacement : 399, inchangé** (aucun CSS touché).
 
+## 🔨 LE NOM DES JEUX EN GRILLE, AU CHOIX DU COMPTE (2026-08-29) — ⚠️ MIGRATION À LANCER
+
+**Demande user** : « j aimerais que les personnes aient le choix d afficher ou non le nom des jeux en mode
+grille depuis leur menu compte ». Question posée (compte ou appareil ?) → **arbitrage user : AU COMPTE, en
+base** — il le suit d un appareil à l autre, et chaque foyer garde le sien sur un téléphone partagé.
+
+⚠️ **MIGRATION À LANCER : `supabase/migration_owners_prefs.sql`** (une colonne `prefs jsonb` sur `owners` ;
+ajoutée aussi à `schema.sql`). **Tant qu elle n est pas lancée, le réglage n est même pas PROPOSÉ.**
+
+  · ⚠️ **Un sac `jsonb` et non un booléen par réglage** — le motif de `scoresheets.template` : les prochaines
+    préférences de compte n auront pas besoin d une nouvelle migration. `prefsDe(ligne)` fusionne avec
+    `PREFS_DEFAUT = { grilleNoms: true }`, donc **une clé absente vaut toujours le comportement d avant**.
+  · `OPTIONAL_COLS` d owners.js gagne `prefs` (dégradation : la colonne est retirée et on réessaie).
+  · ⚠️ **`prefsDispo`** (`(ownersList ?? []).some((o) => prefs in o)`) : le réglage n est rendu que si la base
+    connaît la colonne. Sans ce garde on offrirait un interrupteur dont le choix serait jeté sans un mot —
+    exactement le motif de `modeTagDispo` pour les tags.
+  · ⚠️⚠️ **La vue mémorisée (`kalyx-compte-vue`) porte AUSSI les prefs.** Sans elles, au démarrage les noms
+    s afficheraient puis disparaîtraient dès l arrivée de la table `owners` (cache PUIS réseau, toujours
+    asynchrone) — le même scintillement que le « CL » de l avatar, corrigé pour la même raison.
+  · Le nom masqué reste **accessible** : `title` et `aria-label` du bouton sont inchangés. On retire une aide
+    visuelle, pas l information.
+  · `montreNom` entre dans le comparateur du memo de GameTile.
+
+**Mesuré en dev, les deux mondes** : AVANT migration, la carte « Affichage » n apparaît pas (seule « Tags » est
+là) et les 69 noms restent. APRÈS (stub de lecture) : le réglage paraît — « Nom des jeux en grille », puces
+[Affiché] [Masqué] à 40px — et sur « Masqué » : **0 nom, la tuile tombe à 120px = la hauteur exacte de la
+jaquette**, le nom accessible reste (`aria-label` « 7 Wonders »), et **la vue LISTE est intacte** (69 noms).
+Stub retiré, `owners.js` vérifié identique à l avant-test.
+
+
 ## ✅⚠️ LA JAQUETTE RESTE CARRÉE, SAUF QUAND LE TEXTE L EXIGE (2026-08-29, retour user)
 
 **Retour** : « il faut que toutes les jaquettes gardent un format carré, hormis quand davantage de hauteur est

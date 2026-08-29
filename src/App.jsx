@@ -4,7 +4,7 @@ import { isConfigured, hasCode } from './lib/supabase'
 import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwners } from './lib/games'
 import { tagsPourCompte, tagsAEcrire, renameCompteDansTags, renameTagDansGames, supprimeTagDansGames, supprimeCompteDansTags } from './lib/tagsJeux'
 import { saveGamesCache, loadGamesCache, saveBubblesCache, loadBubblesCache, saveTagsCache, loadTagsCache } from './lib/cache'
-import { fetchOwners, addOwner, updateOwner, renameOwner, deleteOwner } from './lib/owners'
+import { fetchOwners, addOwner, updateOwner, renameOwner, deleteOwner, prefsDe } from './lib/owners'
 import { fetchTags, addTag, updateTag, renameTag, deleteTag, tagVisiblePour, patchVisiblePour, renameCompteDansTagsVisibles, estMonTag, renameCompteDesTagsRows, supprimeTagsDuCompte, retireCompteDeTagsVisibles } from './lib/tags'
 import { downloadBackup, downloadCsv, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup, restorePreview } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
@@ -96,6 +96,10 @@ function saveCompte(nom) {
 // « Clémence & Mathieu », et l'emoji ou la jaquette choisis n'apparaissaient pas du tout.
 // Une valeur périmée (avatar changé sur un autre appareil) est écrasée dès que la table
 // arrive : le pire cas est une image juste, brièvement.
+// ⚠️ La vue mémorisée porte AUSSI les préférences : sans elles, au démarrage les noms des
+// jeux s'afficheraient puis disparaîtraient dès l'arrivée de la table `owners` (elle vient du
+// cache PUIS du réseau, toujours de façon asynchrone). C'est le même motif que les initiales
+// et la couleur, ajoutées ici pour la même raison.
 const COMPTE_VUE_KEY = 'kalyx-compte-vue'
 function loadCompteVue() {
   try {
@@ -1266,6 +1270,17 @@ export default function App() {
       setError(messageUtilisateur(e))
     }
   }
+  // Enregistre UNE préférence d'affichage du compte. On fusionne avec celles qu'on connaît :
+  // le sac jsonb est réécrit en entier à chaque fois, il ne faut pas perdre les autres clés.
+  async function handlePrefCompte(cle, valeur) {
+    if (!compteLigne?.id) return
+    try {
+      await updateOwner(compteLigne.id, { prefs: { ...prefsDe(compteLigne), [cle]: valeur } })
+      reloadOwners()
+    } catch (e) {
+      setError(messageUtilisateur(e))
+    }
+  }
   async function handleRenameOwner(id, oldName, newName, patch) {
     try {
       const n = await renameOwner(id, oldName, newName, patch)
@@ -1937,6 +1952,11 @@ export default function App() {
     ? comptesChoisissables.find((c) => c.name === compte) ||
       (compteVue && compteVue.name === compte ? compteVue : { name: compte })
     : null
+  // Les préférences d'affichage du compte. ⚠️ `prefsDispo` : le réglage n'est PROPOSÉ que si la
+  // base connaît la colonne (un select('*') la ramène dès qu'elle existe) — sinon on offrirait
+  // un interrupteur dont le choix serait jeté par la dégradation, sans un mot.
+  const prefsCompte = prefsDe(compteLigne)
+  const prefsDispo = (ownersList ?? []).some((o) => 'prefs' in o)
   // ⚠️ `!ajoutCompte` : au TOUT PREMIER lancement, `compte === undefined` reste vrai après le tap sur
   // « Ajouter un compte » → l'écran des avatars continuait de s'afficher et le formulaire de création
   // n'apparaissait JAMAIS, tout en poussant une entrée d'historique pour une couche jamais rendue.
@@ -2064,6 +2084,9 @@ export default function App() {
 
       {compteOuvert ? (
         <EcranCompte
+          prefs={prefsCompte}
+          prefsDispo={prefsDispo}
+          onPref={handlePrefCompte}
           tags={mesTags}
           onAddTag={handleAddTag}
           onUpdateTag={handleUpdateTag}
@@ -2317,6 +2340,7 @@ export default function App() {
                 tagMap={tagMap}
                 montreComptes={montreComptes}
                 montreTags={montreTags}
+                montreNom={prefsCompte.grilleNoms}
                 compte={compte ?? null}
                 onCardClick={
                   !online

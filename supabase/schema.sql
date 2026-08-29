@@ -86,6 +86,8 @@ alter table public.owners add column if not exists initials text;
 alter table public.owners add column if not exists color    text;
 -- Avatar du compte : NULL = initiales (l'actuel), 'emoji:X', ou 'jeu:<uuid>'.
 alter table public.owners add column if not exists avatar   text;
+-- Les préférences d affichage du compte (sac jsonb, extensible sans migration).
+alter table public.owners add column if not exists prefs    jsonb;
 
 alter table public.owners enable row level security;
 drop policy if exists "Lecture ouverte owners"      on public.owners;

@@ -8,13 +8,19 @@ import { renameInGamesCsv } from './games'
 // les jeux (OPTIONAL_COLS de games.js) : si l'écriture échoue à cause d'une de ces
 // colonnes, on la retire et on réessaie — le reste s'enregistre quand même, et l'app
 // fonctionne normalement AVANT la migration.
-const OPTIONAL_COLS = ['avatar']
+const OPTIONAL_COLS = ['avatar', 'prefs']
 const colManquante = (error, payload) => {
   if (!error) return null
   return OPTIONAL_COLS.find(
     (c) => payload[c] !== undefined && new RegExp('\\b' + c + '\\b', 'i').test(error.message || '')
   )
 }
+
+// LES PRÉFÉRENCES D AFFICHAGE D UN COMPTE — un sac jsonb, pour ne pas remigrer à chaque
+// nouveau réglage (le motif de scoresheets.template). ⚠️ Une clé absente vaut TOUJOURS le
+// comportement d avant : c est ce qui rend la colonne inoffensive avant la migration.
+export const PREFS_DEFAUT = { grilleNoms: true }
+export const prefsDe = (ligne) => ({ ...PREFS_DEFAUT, ...(ligne?.prefs || {}) })
 
 // Renvoie la liste des propriétaires, ou null si la table n'existe pas encore
 // (migration pas encore lancée) → l'app se rabat alors sur les noms des jeux.

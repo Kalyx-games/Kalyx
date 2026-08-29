@@ -26,6 +26,10 @@ export default function EcranCompte({
   onRenameTag,
   onDeleteTag,
   modeTagDispo = false, // la colonne `tags.visible_pour` existe-t-elle déjà en base ?
+  // Les préférences d'AFFICHAGE du compte : elles le suivent d'un appareil à l'autre.
+  prefs = null,
+  prefsDispo = false, // la colonne `owners.prefs` existe-t-elle déjà en base ?
+  onPref,
 }) {
   return (
     <div className="settings">
@@ -74,6 +78,34 @@ export default function EcranCompte({
           </>
         )}
       </section>
+
+      {/* L'affichage, réglé par le compte et non par l'appareil : il le suit sur son
+          téléphone comme sur celui d'à côté. Rendu seulement si la base connaît la colonne —
+          sinon on offrirait un interrupteur dont le choix serait jeté sans un mot. */}
+      {!creation && compte && online && prefsDispo && prefs && (
+        <section className="settings-card">
+          <h3>Affichage</h3>
+          <div className="oe-field">
+            <span className="oe-label">Nom des jeux en grille</span>
+            <div className="chips">
+              <button
+                type="button"
+                className={`fchip ${prefs.grilleNoms ? 'on' : ''}`}
+                onClick={() => onPref('grilleNoms', true)}
+              >
+                Affiché
+              </button>
+              <button
+                type="button"
+                className={`fchip ${prefs.grilleNoms ? '' : 'on'}`}
+                onClick={() => onPref('grilleNoms', false)}
+              >
+                Masqué
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Les tags du compte. Pas en création : il n'y a pas encore de compte à qui les
           rattacher, et le mode de filtrage se règle POUR quelqu'un. */}
