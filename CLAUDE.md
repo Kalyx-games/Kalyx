@@ -291,6 +291,118 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅⚠️ L ÉDITEUR DE FICHE DE SCORE REFONDU : TROIS CARTES QUI NE BOUGENT PLUS (2026-08-29, demande user)
+
+**Retour user** : « j aimerais reprendre le système de création de fiche de score, je le trouve actuellement
+très fouilli. Soit une passe de polish, soit un parcours comme quand on entre une partie. »
+
+Conception en workflow (3 relevés + 2 conceptions rivales + un juge qui a rouvert les fichiers), maquette
+soumise à l user (artifact https://claude.ai/code/artifact/d0dce4f6-1922-49c6-be63-d03dcdbb8d40), puis
+**décision user : « page repliable »**.
+
+### ⚠️ Une prémisse à moi, corrigée par le juge
+
+J avais écrit que les 63 % de fiches sans catégorie « voient pourtant tout ». **FAUX** :
+`catsRelevant = !teamsOn && scoring !== "none"` masquait déjà cette carte. Le vrai grief était pire :
+**des CARTES ENTIÈRES s évaporaient** quand on changeait un réglage (taper « Pas de points » faisait
+disparaître les catégories, sans un mot), et deux blocs permanents pesaient sur tout le monde — « Variantes »
+**~331 px, 28 % de la page, pour 19 fiches sur 62**, et « Notes » pour 5 fiches.
+**RÈGLE DE DIAGNOSTIC** : un chiffre juste ne prouve pas l inférence qu on en tire ; vérifier la CONDITION
+de rendu avant d affirmer que quelqu un « voit » quelque chose.
+
+### LE PRINCIPE, qui tient tout le reste
+
+> **La page a toujours exactement TROIS cartes, dans le même ordre, avec les mêmes titres. Rien n apparaît,
+> rien ne disparaît : une carte qui n a rien à demander devient une PHRASE.**
+> **Rempli ⇒ ouvert. Vide ⇒ replié, mais NOMMÉ, avec sa valeur écrite à côté.**
+
+Jamais de trappe anonyme (« plus d options ») : chaque ligne repliée dit ce qu elle contient — « Variantes ·
+Aucune », « Extensions · 2 cochées d avance ».
+
+### Ce qui a changé, carte par carte
+
+  1. **« Comment on gagne »** — deux questions en français au lieu de trois sous-groupes de puces.
+     · **« Qui peut gagner ? »** = 3 rangées de 48 px, exclusives : *Un joueur seul / Une équipe / Tout le
+       monde ensemble*. ⚠️ Elles absorbent la case à cocher « En équipes » (**18 px, la plus petite cible de
+       l écran** contre une norme maison à 44) et rendent l état absurde « coopératif + équipes »
+       **structurellement impossible**, là où il n était empêché que par un effet de bord.
+     · **« Comment désigne-t-on le gagnant ? »** = rangées exclusives, une toujours cochée, libellés adaptés
+       au coopératif. ⚠️ Avant, c étaient des BASCULES : re-taper « Plus haut score » mettait `scoring:none`
+       et faisait disparaître une carte. Du coup **la règle de validation « choisissez au moins… » devient
+       inatteignable** et disparaît.
+     · « Déclencheurs de victoire » → **« Ces façons de gagner »**, sous la case qui les justifie.
+  2. **« Ce qu on compte »** — QUATRE VISAGES, la carte ne disparaît jamais : lignes de score · « une seule
+     case Points par joueur » + bouton « Détailler le score » · « en équipes, un score par équipe » · « rien à
+     compter ». Le mot « catégorie » n apparaît qu une fois qu on a demandé le détail.
+     · Le détail d une ligne (explication, valeur fixe, extension) est **replié par ligne**. ⚠️ La « valeur
+       fixe » cachait son explication dans un attribut `title`, **invisible au tactile** : elle devient une
+       case à cocher avec son libellé.
+     · La poignée de glissé n est rendue **qu à partir de 2 lignes** (réordonner une ligne seule n a pas de
+       sens, et elle vole 24 px et le doigt).
+     · « Par joueur / Item par item » → replié en bas de carte, réécrit en **« Une page par joueur » / « Une
+       page par catégorie »**. ⚠️ **GARDÉ malgré 0 fiche sur 62** — décision user, mot pour mot : « ce n est
+       pas parce que ce n est pas encore utilisé que ça ne le sera jamais ». **RÈGLE À RETENIR.**
+  3. **« Autres réglages »** — Variantes · Extensions · Notes, repliées et nommées avec leur valeur.
+
+### La phrase qui dit la CONSÉQUENCE
+
+En tête de page, un filet vertical (la grammaire de l anecdote des Stats) : **« À la partie : chacun tape ses
+points, le plus haut gagne. »** — plus au plus deux compléments (« Une partie peut se gagner d un coup »,
+« Score détaillé en 8 lignes »). C est la seule ligne qui traduit les réglages en conséquence au lieu de
+répéter ce qui est coché, et **c est le filet de sécurité de tout le repli : la page ne peut pas mentir sur
+ce qu elle contient.** ⚠️ Son utilité reste À VALIDER par l user (il n a pas compris la question posée).
+
+### Trois défauts corrigés dans la foulée
+
+  1. ⚠️⚠️ **AUCUNE GARDE ANTI-PERTE** : la flèche et « Annuler » fermaient sec, tout était perdu sans un mot
+     — alors que la saisie d une partie est protégée depuis longtemps. `sheetDirtyRef` (comparaison à un
+     instantané pris au montage) + `requestCloseSheet` + `sheetExitConfirm`, **calqués sur leurs jumeaux et
+     EXCLUS de `layerCount`** comme eux (un retour qui n ouvre qu un dialogue consomme une entrée sans fermer
+     de couche → il passe par la DETTE, mécanisme déjà en place).
+     · ⚠️ **PIÈGE DÉSAMORCÉ** : `save()` appelle `onClose()`, qui passe désormais par la garde — et le
+       drapeau est encore à true à cet instant. Sans `dirtyRef.current = false` juste avant, on demandait
+       « Quitter sans enregistrer ? » **après un enregistrement réussi**. La lecture étant synchrone, les
+       rendus suivants ne peuvent plus changer la décision.
+  2. ⚠️ **LE MUR** : « Nouvelle partie » (ou « Statistiques ») sur un jeu SANS fiche ouvrait l éditeur ; on
+     enregistrait, et on retombait sur la liste **sans sa partie** — il fallait tout recommencer.
+     `intentionFicheRef` retient ce qu on voulait faire et `handleSaveSheet` y enchaîne. Renoncer à la fiche
+     (Annuler / Quitter) abandonne l intention : renoncer à la fiche, c est renoncer à ce qu elle permettait.
+  3. **L erreur naissait en DERNIER élément d une page de 2 400 px** alors que le bouton flotte en bas (un
+     `scrollIntoView` de rattrapage avait été ajouté). Elle vit maintenant **dans la barre**, au-dessus du
+     bouton : doublon de nom signalé à la frappe SOUS la ligne fautive, bouton éteint avec « Deux lignes
+     portent le même nom. », « Hors ligne : impossible d enregistrer une fiche. », et **« Rien n a changé pour
+     l instant. »** en édition (motif `ref0` déjà employé dans EditeurBulle). `errRef` supprimé.
+
+### Une simplification : `extensions` devient DÉRIVÉ
+
+La section « Extensions qui modifient le score » (2 fiches sur 62) est **RETIRÉE**. Motif : ce n est pas
+l usage, c est la REDONDANCE — vérifié par balayage, `template.extensions` **n a aucun lecteur hors de
+l éditeur** (`resolveDefaultExts` lit `extDefault` ; `visibleCats` filtre sur `c.ext`). Elle ne servait qu à
+remplir son propre menu. Elle est désormais **déduite à l enregistrement** = l ensemble des extensions
+réellement rattachées à une ligne. Le menu d une ligne liste directement les extensions du jeu.
+Disparaissent avec elle : le doublon de vocabulaire avec « Cochées par défaut », un contrôle qui changeait de
+nature selon le nombre restant (bouton / menu / rien), un SVG dans une `<option>`, et le piège « retirer une
+extension détache silencieusement ses catégories ».
+
+**AUCUNE MIGRATION** : le template écrit est identique champ pour champ. Seul `extensions` change de source.
+
+### Mesuré en dev
+
+  · **Fiche neuve (le cas majoritaire)** : **1 233 px / 1,5 écran / 13 contrôles** — contre **2 436 px /
+    3,7 écrans / 52 contrôles**. Fiche à 8 catégories : 2 068 px contre 2 436.
+  · **Les trois cartes restent en place dans les QUATRE états** (points / sans points / équipe / groupe) :
+    seul le contenu de « Ce qu on compte » change, et la phrase du haut suit. Retour à l état initial →
+    hauteur identique au pixel et « Rien n a changé pour l instant » : l instantané ne dérive pas.
+  · **Toutes les cibles ≥ 44 px** (mesuré : 44, 48, 66, 118).
+  · **Garde anti-perte, les 4 cas** : sans modification → ferme direct ; modifiée → « Quitter sans
+    enregistrer ? » ; Annuler → on reste, le choix modifié conservé ; Quitter → on sort sans enregistrer.
+  · **Base intacte** : 62 fiches, dernière modification datant du 28/08 — aucun test n a écrit.
+
+**Garde-fou d espacement : 369 → 395** (le bloc CSS de l éditeur : rangées, cases, replis, barre).
+
+**RESTE** : valider avec l user la phrase « À la partie… » (il n avait pas compris la question), et
+l enchaînement après création de fiche à éprouver EN PROD (l écriture est bloquée en dev par le RLS).
+
 ## ✅⚠️ LE RAPPEL DU GESTE DEVIENT UN FAUX GESTE : IL MONTRE LE VRAI DÉCOR (2026-08-29, 3 retours user)
 
 **Retour user** : « le tuto de glissement doit être plus rapide à se déclencher et montrer les couleurs de

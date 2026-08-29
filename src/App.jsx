@@ -406,6 +406,13 @@ export default function App() {
   const [scoringGame, setScoringGame] = useState(null) // jeu en cours de notation (nouvelle partie OU édition) | null
   const [scoreExitConfirm, setScoreExitConfirm] = useState(false) // confirmation « quitter la saisie ? » (garde anti-perte)
   const scoringDirtyRef = useRef(false) // la saisie en cours a-t-elle du contenu non enregistré ? (rapporté par ScoreSheet)
+  const [sheetExitConfirm, setSheetExitConfirm] = useState(false) // même garde, pour l'éditeur de fiche
+  const sheetDirtyRef = useRef(false) // la fiche en cours d'édition a-t-elle changé ? (rapporté par ScoreSheetEditor)
+  // ⚠️ L'éditeur n'avait AUCUNE garde : la flèche et « Annuler » fermaient sec, tout était
+  // perdu sans un mot — alors que la saisie d'une partie, elle, demande confirmation depuis
+  // longtemps. Et replier des sections rend la perte plus facile encore : on ne voit plus ce
+  // qu'on a saisi.
+  const intentionFicheRef = useRef(null) // ce qu'on VOULAIT faire quand l'éditeur s'est interposé
   const [editingPlay, setEditingPlay] = useState(null) // partie en cours d'édition | null (= nouvelle partie)
   const [editingSheet, setEditingSheet] = useState(null) // jeu dont on édite/crée la fiche | null
   const [historyGame, setHistoryGame] = useState(null) // jeu dont on regarde l'historique | null
@@ -522,7 +529,7 @@ export default function App() {
   const formCloseRef = useRef(null)
   const filterCloseRef = useRef(null)
   const uiRef = useRef({})
-  uiRef.current = { choixCompte, codeAsk, codeChange, compteOuvert, editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scoreExitConfirm, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
+  uiRef.current = { choixCompte, codeAsk, codeChange, compteOuvert, editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scoreExitConfirm, sheetExitConfirm, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
   viewRef.current = view
 
@@ -537,7 +544,7 @@ export default function App() {
   // s'ouvre pas sur un tap mais EN RÉPONSE À UN RETOUR — il ne peut donc pas pousser d'entrée fiable).
   // Les entrées que ces retours consomment sont comptées comme une DETTE et remboursées au premier
   // geste de l'utilisateur (voir detteRef / armeRemboursement plus bas).
-  const layerCount = Object.entries(uiRef.current).filter(([k, v]) => v && k !== 'scoreExitConfirm').length
+  const layerCount = Object.entries(uiRef.current).filter(([k, v]) => v && k !== 'scoreExitConfirm' && k !== 'sheetExitConfirm').length
   const depthRef = useRef(0) // nb d'entrées d'historique poussées pour les couches ouvertes
   const ignoreBackRef = useRef(0) // popstate synthétiques (resynchro) à ignorer
   const backClosingRef = useRef(false) // la baisse de layerCount en cours vient d'un « retour »
@@ -614,6 +621,13 @@ export default function App() {
     else setScoringGame(null)
   }, [])
 
+  // Même chose pour l'éditeur de fiche. ⚠️ L'intention en attente (« je voulais noter une
+  // partie ») est abandonnée : renoncer à la fiche, c'est renoncer à ce qu'elle permettait.
+  const requestCloseSheet = useCallback(() => {
+    if (sheetDirtyRef.current) setSheetExitConfirm(true)
+    else { intentionFicheRef.current = null; setEditingSheet(null) }
+  }, [])
+
   const closeTopLayer = useCallback(() => {
     const s = uiRef.current
     // ⚠️ L'écran des avatars REMPLACE tout le rendu (return anticipé) : rien ne peut être
@@ -643,7 +657,15 @@ export default function App() {
     else if (s.editing) { if (formCloseRef.current) formCloseRef.current(); else setEditing(null) } // ferme AVEC l'anim (glissé bas)
     else if (s.showFilters) { if (filterCloseRef.current) filterCloseRef.current(); else setShowFilters(false) }
     else if (s.chwaziOpen) setChwaziOpen(false)
-    else if (s.editingSheet) setEditingSheet(null)
+    // Retour pendant le garde de l'éditeur → on referme le garde (on reste dans la fiche).
+    else if (s.sheetExitConfirm) { setSheetExitConfirm(false); detteRef.current += 1; armeRemboursement(); return 'garde' }
+    else if (s.editingSheet) {
+      // Fiche MODIFIÉE → on demande au lieu de fermer. Ce retour a consommé l'entrée de
+      // l'éditeur : on la note en dette, remboursée au premier geste (cf. armeRemboursement).
+      if (sheetDirtyRef.current) { setSheetExitConfirm(true); detteRef.current += 1; armeRemboursement(); return 'garde' }
+      intentionFicheRef.current = null
+      setEditingSheet(null)
+    }
     // Retour pendant le garde → on referme le garde (on reste dans la saisie). Renvoie 'garde' :
     // cette branche ne fait pas varier layerCount (cf. le handler popstate).
     else if (s.scoreExitConfirm) { setScoreExitConfirm(false); detteRef.current += 1; armeRemboursement(); return 'garde' }
@@ -1360,6 +1382,9 @@ export default function App() {
       setGamePlays(null)
       fetchPlays(g.id).then((p) => setGamePlays(p || [])).catch(() => setGamePlays([]))
     } else {
+      // ⚠️ On RETIENT ce qu'on voulait faire : sans ça, on créait la fiche et on retombait
+      // sur la liste, sans son historique — il fallait tout recommencer.
+      intentionFicheRef.current = { but: 'historique', id: g.id, view }
       setEditingSheet(g)
     }
   }
@@ -1371,6 +1396,8 @@ export default function App() {
       setEditingPlay(null)
       setScoringGame(g)
     } else {
+      // Même mur, même mémoire : la fiche enregistrée, on enchaîne sur la partie voulue.
+      intentionFicheRef.current = { but: 'partie', id: g.id }
       setEditingSheet(g)
     }
   }
@@ -1416,6 +1443,21 @@ export default function App() {
       if (n) {
         showToast(`Fiche enregistrée · ${n} partie${n > 1 ? 's' : ''} mise${n > 1 ? 's' : ''} à jour.`)
         if (historyGame && historyGame.id === gameId) refreshHistory(historyGame)
+      }
+    }
+    // L'éditeur s'était interposé devant ce qu'on voulait vraiment faire : on y va.
+    const veut = intentionFicheRef.current
+    intentionFicheRef.current = null
+    if (veut && veut.id === gameId) {
+      const jeu = (games || []).find((g) => g.id === gameId)
+      if (jeu && veut.but === 'partie') {
+        setEditingPlay(null)
+        setScoringGame(jeu)
+      } else if (jeu && veut.but === 'historique') {
+        setHistoryView(veut.view || 'stats')
+        setHistoryGame(jeu)
+        setGamePlays(null)
+        fetchPlays(jeu.id).then((p) => setGamePlays(p || [])).catch(() => setGamePlays([]))
       }
     }
   }
@@ -2515,9 +2557,24 @@ export default function App() {
             template={scoresheets ? scoresheets[editSheetLayer.value.id] : null}
             online={online}
             onSave={handleSaveSheet}
-            onClose={() => setEditingSheet(null)}
+            dirtyRef={sheetDirtyRef}
+            onClose={requestCloseSheet}
           />
         </Suspense>
+      )}
+
+      {sheetExitConfirm && (
+        <ConfirmDialog
+          title="Quitter sans enregistrer ?"
+          message="La fiche en cours ne sera pas enregistrée."
+          confirmLabel="Quitter"
+          onConfirm={() => {
+            setSheetExitConfirm(false)
+            intentionFicheRef.current = null
+            setEditingSheet(null)
+          }}
+          onCancel={() => setSheetExitConfirm(false)}
+        />
       )}
 
       {zoomImage && <ImageZoom src={zoomImage} onClose={() => setZoomImage(null)} />}

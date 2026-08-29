@@ -4310,7 +4310,8 @@ button {
   position: sticky;
   bottom: 0;
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   margin: 14px calc(-1 * var(--gutter)) 0; /* étend le fond bord à bord (annule la gouttière) */
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   background: var(--bg);
@@ -6015,4 +6016,273 @@ input[type='number'] {
   margin-top: 6px;
   font-size: var(--fs-caption);
   color: var(--muted);
+}
+
+/* ═══ ÉDITEUR DE FICHE DE SCORE ═══════════════════════════════════════════════════
+   Refonte : trois cartes stables, ce qui ne sert pas est replié mais NOMMÉ.
+   Préfixe .fs- (fiche de score) pour ne rien recouvrir d'existant. */
+
+/* La tête : le nom du jeu descend en sous-titre — en titre, il était mangé par l'ellipse. */
+.fs-tete {
+  min-width: 0;
+}
+.fs-jeu {
+  font-size: var(--fs-body);
+  color: var(--muted);
+  margin: 2px 0 0;
+}
+
+/* La phrase qui dit ce que la fiche donnera À LA PARTIE. Même grammaire que l'anecdote
+   des Stats : un filet vertical, pas de carte — c'est une remarque, pas un réglage. */
+.fs-phrase {
+  border-left: 2px solid var(--gold-ink);
+  padding: 2px 0 2px 12px;
+  margin: 0 0 14px;
+  font-size: var(--fs-body-s);
+  color: var(--ink);
+}
+.fs-phrase small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  margin-top: 3px;
+}
+
+.fs-lab {
+  font-size: var(--fs-caption);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.fs-lab-2 {
+  margin-top: 16px;
+}
+
+/* Une réponse : pleine largeur, exclusive, 48px de haut.
+   ⚠️ Remplace des puces qu'on pouvait TOUTES éteindre — d'où des cartes qui
+   disparaissaient sans un mot — et la case « En équipes » de 18px, la plus petite cible
+   de l'écran contre une norme maison à 44. */
+.fs-rang {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  text-align: left;
+  background: var(--input-bg);
+  border: 0;
+  border-radius: var(--r-ctl);
+  color: var(--ink);
+  font-size: var(--fs-body);
+}
+.fs-rang.on {
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 600;
+}
+.fs-rond {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+}
+.fs-rang.on .fs-rond {
+  background: var(--on-primary);
+  box-shadow: inset 0 0 0 4px var(--primary), inset 0 0 0 5px var(--on-primary);
+}
+.fs-rang-t {
+  flex: 1;
+  min-width: 0;
+}
+/* L'aide ne s'affiche que sous le choix ACTIF : elle explique ce qu'on vient de choisir,
+   au lieu de faire lire trois explications pour en retenir une. */
+.fs-rang-a {
+  flex: 1 0 100%;
+  font-size: var(--fs-caption);
+  font-weight: 400;
+  opacity: 0.78;
+}
+
+.fs-case {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  margin-top: 12px;
+  text-align: left;
+  background: var(--input-bg);
+  border: 0;
+  border-radius: var(--r-ctl);
+  color: var(--ink);
+  font-size: var(--fs-body);
+}
+.fs-case.on {
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 600;
+}
+.fs-carre {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+}
+.fs-case.on .fs-carre {
+  background: var(--on-primary);
+  box-shadow: inset 0 0 0 1.5px var(--on-primary);
+}
+
+/* Un sous-bloc qui dépend du choix juste au-dessus : décalé, sans cadre. */
+.fs-sous {
+  margin-top: 12px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+}
+.fs-sous .field-hint {
+  margin: 0 0 8px;
+}
+
+/* Les trois visages « en une phrase » de la carte « Ce qu'on compte ». */
+.fs-seule {
+  margin: 0;
+}
+.fs-detailler {
+  width: 100%;
+  margin-top: 12px;
+}
+.fs-apres {
+  margin: 8px 0 0;
+}
+
+/* Une ligne repliée : toujours NOMMÉE, avec sa valeur à droite. Jamais une trappe
+   anonyme du genre « plus d'options » — on doit savoir ce qu'il y a dedans sans ouvrir.
+   Recette de rang de la liste des sauvegardes (filet, dernier sans filet). */
+.fs-repli + .fs-repli {
+  border-top: 1px solid var(--line);
+}
+.fs-repli-tete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--ink);
+  font-size: var(--fs-body);
+  text-align: left;
+}
+.fs-repli-t {
+  flex: 0 0 auto;
+}
+.fs-repli-v {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  color: var(--muted);
+  font-size: var(--fs-body-s);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fs-repli.on .hist-toggle-chev {
+  transform: rotate(180deg);
+}
+.fs-repli-corps {
+  padding: 2px 0 14px;
+}
+.fs-repli-corps .field-hint {
+  margin: 0 0 10px;
+}
+
+/* Le dépliant d'UNE ligne de score : explication, valeur fixe, extension. */
+.fs-plus {
+  width: 44px;
+  min-height: 44px;
+  flex: 0 0 auto;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: var(--fs-body);
+  transition: transform 0.2s ease;
+}
+.fs-plus.on {
+  transform: rotate(180deg);
+  color: var(--ink);
+}
+.fs-ligne-detail {
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.fs-ligne-detail .field-hint {
+  margin: 6px 0 0;
+}
+.fs-ligne-detail .cat-edit-value {
+  margin-top: 8px;
+}
+.fs-ligne-detail .cat-edit-ext {
+  margin-top: 8px;
+}
+/* ⚠️ Case de 44px de haut : l'ancienne « valeur fixe » cachait son explication dans un
+   attribut « title », INVISIBLE au tactile. Elle devient un libellé. */
+.fs-mini {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: var(--fs-body-s);
+  color: var(--ink);
+}
+.fs-mini input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  accent-color: var(--primary);
+}
+
+.fs-err {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--danger-ink);
+}
+.fs-info {
+  margin: 0;
+}
+
+/* Ce qui manque, dans la barre du bas — à 20px du pouce, plus au bas d'une page de
+   2 400px où l'on ne le voyait jamais. */
+.fs-barre-aide {
+  margin: 0;
+  font-size: var(--fs-body-s);
+  color: var(--muted);
+}
+.fs-barre-aide.err {
+  color: var(--danger-ink);
+}
+.fs-barre-btns {
+  display: flex;
+  gap: 10px;
+}
+.fs-barre-btns .btn-ghost,
+.fs-barre-btns .btn-primary {
+  flex: 1;
+  height: 46px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fs-plus,
+  .fs-repli .hist-toggle-chev {
+    transition: none;
+  }
 }
