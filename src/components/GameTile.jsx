@@ -3,7 +3,7 @@ import { ownerColor } from '../lib/games'
 import { thumbSrc } from '../lib/img'
 import { useGlisseAction } from '../lib/glisseAction'
 import FondGlisse from './FondGlisse'
-import { DieIcon, CollectionIcon, PencilIcon } from './icons'
+import { DieIcon, CollectionIcon, PencilIcon, IndispoIcon } from './icons'
 import { BGG_LOGO } from '../lib/logos'
 
 // Une TUILE de la vue grille : la jaquette d'abord, le nom dessous. Le tap mène au même
@@ -57,13 +57,17 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
         sens={sens}
         arme={arme}
         className="glisse-fond-tuile"
-        gauche={onBgg ? { bg: '#566070', node: <img className="bgg-logo" src={BGG_LOGO} alt="" width="24" height="24" /> } : null}
+        gauche={
+          onBgg
+            ? { bg: '#566070', node: <img className="bgg-logo" src={BGG_LOGO} alt="" width="24" height="24" /> }
+            : { indispo: true, label: !online ? 'Hors ligne' : 'Pas de fiche BGG', node: <IndispoIcon size={20} /> }
+        }
         droite={
           onNewPlay
             ? { bg: '#4e7a5c', node: <DieIcon size={22} /> }
             : onMove
             ? { bg: '#4e7a5c', node: <CollectionIcon size={22} color="#fff" /> }
-            : null
+            : { indispo: true, label: 'Hors ligne', node: <IndispoIcon size={20} /> }
         }
       />
       <button
@@ -95,16 +99,16 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
           ) : (
             <span className="gtile-fallback" style={{ background: ownerColor(game.name) }}>{monogram(game.name)}</span>
           )}
-          {/* Le prix en pastille sur la jaquette : il ne prend aucune hauteur et reste lisible
-              sur n'importe quelle image. La sous-ligne garde alors la valeur du tri. */}
-          {price && <span className="gtile-price">{price}</span>}
+          {/* La MÊME pastille qu'en vue liste, au même coin : le prix ne prend aucune hauteur
+              et la sous-ligne reste libre pour la valeur du tri. */}
+          {price && <span className="prix-pastille">{price}</span>}
         </div>
         <span className="gtile-name">{game.name}</span>
         {metaLine && <span className="gtile-sub">{metaLine}</span>}
       </button>
       {/* ⚠️ ÉDITER, en wishlist seulement — même raison qu'en vue liste : là, le tap mène chez
           Philibert, donc sans ce bouton un jeu de la wishlist ne serait plus modifiable. */}
-      {onEdit && !onNewPlay && (
+      {onEdit && (
         <button
           type="button"
           className="gtile-edit"

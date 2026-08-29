@@ -308,3 +308,13 @@ export function ListIcon({ size = 20 }) {
   )
 }
 
+
+// Cercle barré : dit qu'une action n'est pas disponible, sans avoir à l'écrire deux fois.
+export function IndispoIcon({ size = 20, ...p }) {
+  return (
+    <Ico size={size} {...p}>
+      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M6.5 17.5 17.5 6.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </Ico>
+  )
+}

@@ -2001,7 +2001,7 @@ export default function App() {
                 }
                 onNewPlay={view !== 'wishlist' && online ? () => handleNewPlayFromCard(g) : undefined}
                 onMove={view === 'wishlist' ? () => setMoving(g) : undefined}
-                onEdit={() => setEditing(g)}
+                onEdit={view === 'wishlist' ? () => setEditing(g) : undefined}
                 onCardClick={
                   !online
                     ? undefined
@@ -2017,7 +2017,10 @@ export default function App() {
               game={g}
               index={i}
               online={online}
-              onEdit={() => setEditing(g)}
+              // ⚠️ Le crayon n existe QU EN WISHLIST : en collection le tap ouvre la fiche, qui
+              // porte déjà « Éditer ». Passer onEdit partout le faisait apparaître en collection
+              // dès que « Nouvelle partie » manquait — hors ligne, par exemple.
+              onEdit={view === 'wishlist' ? () => setEditing(g) : undefined}
               onMove={view === 'wishlist' ? () => setMoving(g) : undefined}
               // Liens/fonctions réseau désactivés hors ligne (BGG, Philibert, fiches de score).
               onBgg={g.bgg_id && online ? () => window.open(`https://boardgamegeek.com/boardgame/${g.bgg_id}`, '_blank', 'noopener') : undefined}

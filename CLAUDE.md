@@ -169,7 +169,7 @@ Audit en workflow (3 lentilles : cohérence / composition / finition, puis synth
 ```bash
 grep -cE '^s*(margin|padding|gap|row-gap|column-gap)[a-z-]*s*:.*[0-9]px' src/index.css
 ```
-**Valeur de référence au 29/08/2026 : 369** (349 → 356 avec la carte du face-à-face, puis 363 avec le verdict de la table et la ligne « Reprendre la dernière table ») (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
+**Valeur de référence au 29/08/2026 : 370** (349 → 356 avec la carte du face-à-face, puis 363 avec le verdict de la table et la ligne « Reprendre la dernière table ») (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
 
 **NON FAIT, et assumé** : le resserrement réel (faire tomber 10→8, 14→12, 6→4 …). Il déplacerait ~40 % des espacements pour un bénéfice invisible, sur une app que l’user a déjà fait itérer trois fois sur des retours visuels. À ne relancer QUE si l’user demande explicitement un rythme plus serré, écran par écran, et jamais en une passe globale.
 
@@ -290,6 +290,44 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - **Les butées disent les extrémités** (la demande) : avant la première ancre → l'étiquette du PREMIER groupe ; à `scrollY ≥ max − 1` → celle du DERNIER (sans ce forçage, la butée basse affichait le groupe à la ligne de lecture, un entre-deux).
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
+
+## ✅ LE PRIX QUITTE LES INFOS + UNE ACTION INDISPONIBLE SE DIT (2026-08-29, 2 retours user)
+
+**Retours user** : « le prix n est pas très élégant en mode liste par rapport au reste des infos […] il faut
+une cohérence entre son affichage en mode liste et grille » · « quand un jeu n a pas de jeu BGG lié, on
+pourrait afficher un truc grisé avec "non dispo" au swipe, pour qu on ne pense pas à un bug ».
+
+**1. LE PRIX EST UNE PASTILLE SUR LA JAQUETTE, dans les DEUX vues, au MÊME coin (bas-droit).**
+Il était la veille une 3e ligne d info : un badge vert plein au milieu d infos grises et discrètes
+(joueurs, durée, idéal, complexité) — il détonnait, et c est exactement ce que l user a vu. Sur la jaquette,
+il ne consomme aucune hauteur, laisse la sous-ligne à la valeur du tri, et **le prix vit désormais toujours
+au même endroit quelle que soit la vue** : c est la cohérence demandée.
+  · Classe unique `.prix-pastille` (l ancienne `.gtile-price` est supprimée).
+  · **Coin bas-DROIT** et non bas-gauche : en vue liste, les bulles de propriétaire occupent déjà le
+    bas-gauche de la jaquette (les 10 jeux de wishlist en base ont tous un propriétaire), et en vue grille
+    le crayon occupe le haut-droit. Aucune collision dans les deux vues.
+  · Mesuré à 375 px : jaquette 27→115, pastille 59→111 — elle tient dans les 88 px de la vignette.
+
+**2. UNE ACTION INDISPONIBLE S AFFICHE, au lieu de ne rien montrer.** Fond neutre (`--soft`), cercle barré
+(nouvelle `IndispoIcon`) et la RAISON écrite : « Pas de fiche BGG » ou « Hors ligne ». Glisser sur du vide
+se lisait comme une panne — c est le mot de l user.
+  · ⚠️ **Le cas est loin d être marginal** : 0 jeu de collection sur 137 est sans `bgg_id`, mais HORS LIGNE
+    toutes les actions tombent, sur tous les jeux. C est là que ce retour prend toute sa valeur.
+  · Rien ne s arme (le callback est nul), donc rien ne peut partir : l état est informatif, pas actionnable.
+  · **En grille la raison est masquée** (`.glisse-fond-tuile .glisse-fond-raison { display: none }`) : la
+    place manque sur 120 px, et l icône barrée suffit à dire « rien par là ».
+
+**3. DÉFAUT ATTRAPÉ AU TEST : le crayon apparaissait en COLLECTION hors ligne.** Sa condition était
+`onEdit && !onNewPlay` — l absence de « nouvelle partie » servait de proxy pour « on est en wishlist ». Or
+`onNewPlay` tombe aussi HORS LIGNE : le crayon surgissait alors sur toutes les cartes de la collection, où
+le tap ouvre pourtant déjà une fiche qui porte « Éditer ». **C est App qui décide maintenant** : `onEdit`
+n est passé QU EN WISHLIST, et les composants ne devinent plus l écran où ils vivent.
+  **RÈGLE** : ne jamais déduire l écran courant de la présence d une AUTRE action — elle peut disparaître
+  pour une raison sans rapport (hors ligne, droits, donnée manquante).
+
+**Vérifié en dev** : pastille présente et identique en liste et en grille ; plus aucune ligne de prix ;
+glissé hors ligne → fond gris, cercle barré, « Hors ligne », rien ne s arme ; crayons = 0 en collection
+(en ligne ET hors ligne), 1 en wishlist.
 
 ## ✅ LE GLISSÉ AFFINÉ + LA GRILLE OUVERTE À LA WISHLIST (2026-08-29, 6 retours user)
 

@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { parseOwners, parseTags, ownerDisplay, ownerColor, parseExtensions, basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText } from '../lib/games'
-import { CollectionIcon, PlayersIcon, StarIcon, ClockIcon, ExtIcon, BarsIcon, PencilIcon, DieIcon } from './icons'
+import { CollectionIcon, PlayersIcon, StarIcon, ClockIcon, ExtIcon, BarsIcon, PencilIcon, DieIcon, IndispoIcon } from './icons'
 import { thumbSrc } from '../lib/img'
 import { useGlisseAction } from '../lib/glisseAction'
 import FondGlisse from './FondGlisse'
@@ -162,9 +162,11 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
     gauche: online ? onBgg || null : null,
     droite: online ? onNewPlay || onMove || null : null,
   })
+  // ⚠️ Quand l'action n'est pas disponible, on montre quand même quelque chose : un fond gris
+  // qui dit POURQUOI. Sans cela, la carte glissait sur le vide et on pouvait croire à une panne.
+  const raisonBgg = !online ? 'Hors ligne' : !game.bgg_id ? 'Pas de fiche BGG' : null
   const fondGauche = onBgg
     ? {
-        label: 'BGG',
         bg: '#566070',
         node: (
           <img
@@ -177,12 +179,12 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
           />
         ),
       }
-    : null
+    : { indispo: true, label: raisonBgg || 'Indisponible', node: <IndispoIcon size={20} /> }
   const fondDroite = onNewPlay
-    ? { label: 'Partie', bg: '#4e7a5c', node: <DieIcon size={20} /> }
+    ? { bg: '#4e7a5c', node: <DieIcon size={20} /> }
     : onMove
-    ? { label: 'Vers collection', bg: '#4e7a5c', node: <CollectionIcon size={20} color="#fff" /> }
-    : null
+    ? { bg: '#4e7a5c', node: <CollectionIcon size={20} color="#fff" /> }
+    : { indispo: true, label: 'Hors ligne', node: <IndispoIcon size={20} /> }
 
 
   const onCardTap = () => {
@@ -250,6 +252,13 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
               })}
             </div>
           )}
+          {/* Le PRIX en wishlist : une pastille sur la jaquette, coin bas-DROIT (les bulles de
+              propriétaire occupent le bas-gauche). Exactement le même traitement qu en vue
+              grille — le prix vit toujours au même endroit, sur l image, et il ne se mêle plus
+              aux infos grises du jeu, où il détonnait. */}
+          {game.status === 'wishlist' && game.price != null && (
+            <span className="prix-pastille">{formatPrice(game.price)}</span>
+          )}
         </div>
       </div>
 
@@ -292,12 +301,6 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
             <ExtIcon size={12} /> <span>{extensions.join(', ')}</span>
           </div>
         )}
-        {/* Le prix, en wishlist : une 3e ligne d'info, là où il y avait un espace vide. */}
-        {game.status === 'wishlist' && game.price != null && (
-          <div className="game-price-line">
-            <span className="game-price">{formatPrice(game.price)}</span>
-          </div>
-        )}
         {/* Info liée au tri en cours (parties jouées, dernière partie…), sinon absente. */}
         {metaLine && <div className="game-playinfo">{metaLine}</div>}
       </div>
@@ -305,7 +308,7 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
       {/* ⚠️ ÉDITER, uniquement en WISHLIST. En collection le tap ouvre la fiche, qui porte
           déjà « Éditer » ; en wishlist il mène chez Philibert — sans ce bouton, un jeu de la
           wishlist ne serait plus modifiable nulle part depuis la liste. */}
-      {onEdit && !onNewPlay && (
+      {onEdit && (
         <button
           type="button"
           className="game-edit"

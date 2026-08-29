@@ -8,18 +8,25 @@
 // (pleine opacité, léger grossissement) — l'état reste ainsi visible et réversible avant de
 // lâcher, sans que la couleur clignote en cours de route.
 //
-// Pas de libellé : le dé, le logo BoardGameGeek et l'icône de collection se lisent seuls, et
-// un texte ne tiendrait de toute façon pas sur une tuile de grille.
+// Pas de libellé sur une action DISPONIBLE : le dé, le logo BoardGameGeek et l'icône de
+// collection se lisent seuls, et un texte ne tiendrait pas sur une tuile de grille.
+// ⚠️ EXCEPTION, et c'est tout l'intérêt : quand l'action n'est PAS disponible (jeu sans fiche
+// BoardGameGeek, ou appareil hors ligne), on affiche quand même un fond — gris, barré, avec
+// sa raison écrite. Ne rien montrer laissait croire à une panne.
 export default function FondGlisse({ sens, arme, gauche, droite, className = '' }) {
   const act = sens < 0 ? gauche : sens > 0 ? droite : null
   if (!act) return null
+  const off = Boolean(act.indispo)
   return (
     <span
-      className={`glisse-fond ${sens > 0 ? 'vers-droite' : 'vers-gauche'}${arme ? ' arme' : ''} ${className}`}
-      style={{ background: act.bg }}
+      className={`glisse-fond ${sens > 0 ? 'vers-droite' : 'vers-gauche'}${arme ? ' arme' : ''}${off ? ' indispo' : ''} ${className}`}
+      style={off ? undefined : { background: act.bg }}
       aria-hidden="true"
     >
-      <span className="glisse-fond-act">{act.node}</span>
+      <span className="glisse-fond-act">
+        {act.node}
+        {off && act.label && <span className="glisse-fond-raison">{act.label}</span>}
+      </span>
     </span>
   )
 }

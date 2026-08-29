@@ -1351,6 +1351,7 @@ body {
 .glisse-fond-act {
   display: flex;
   align-items: center;
+  gap: 0;
   /* Retrait court : c est lui qui décide à partir de combien de pixels tirés le logo
      commence à se voir. */
   padding: 0 12px;
@@ -1364,6 +1365,23 @@ body {
   transform: scale(1.16);
 }
 .glisse-fond-act svg { flex-shrink: 0; }
+/* ACTION INDISPONIBLE (jeu sans fiche BoardGameGeek, ou appareil hors ligne) : fond neutre,
+   icône barrée et la RAISON écrite. Ne rien montrer du tout laissait croire à une panne. */
+.glisse-fond.indispo {
+  background: var(--soft);
+}
+.glisse-fond.indispo .glisse-fond-act {
+  color: var(--muted);
+  opacity: 1;
+  gap: 7px;
+}
+.glisse-fond-raison {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  white-space: nowrap;
+}
+/* En grille, la place manque pour la phrase : l'icône barrée suffit à dire « rien par là ». */
+.glisse-fond-tuile .glisse-fond-raison { display: none; }
 .glisse-fond .bgg-logo { border-radius: 3px; display: block; }
 /* En grille, le fond couvre la JAQUETTE (carrée) ; l'icône reste calée du côté dégagé,
    avec un retrait plus court — sur ~120 px, 16 px la repousseraient sous la tuile. */
@@ -5879,12 +5897,13 @@ input[type='number'] {
   font-size: var(--fs-title-s);
   font-weight: 700;
 }
-/* Le PRIX en wishlist, posé sur la jaquette : il ne consomme aucune hauteur (la sous-ligne
-   reste disponible pour la valeur du tri) et se lit sur n'importe quelle image grâce à son
-   fond plein. Même coin que les bulles de propriétaire sur les cartes de la liste. */
-.gtile-price {
+/* LA PASTILLE DE PRIX — la MÊME en vue liste et en vue grille, au MÊME coin (bas-droit) :
+   le prix vit toujours au même endroit, sur l'image. Posée là, elle ne consomme aucune
+   hauteur, laisse la sous-ligne à la valeur du tri, et surtout elle ne se mêle plus aux
+   infos grises du jeu (joueurs, durée, complexité), où son fond coloré détonnait. */
+.prix-pastille {
   position: absolute;
-  left: 4px;
+  right: 4px;
   bottom: 4px;
   padding: 2px 7px;
   border-radius: 999px;
@@ -5894,6 +5913,7 @@ input[type='number'] {
   font-weight: 700;
   box-shadow: var(--elev-1);
   pointer-events: none;
+  white-space: nowrap;
 }
 /* ÉDITER sur la tuile, en wishlist seulement (le tap y mène chez Philibert). Posé sur le coin
    haut-droit de la jaquette, sur un disque sombre pour rester lisible sur toute image. */
