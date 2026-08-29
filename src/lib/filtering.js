@@ -1,6 +1,7 @@
 // Filtres partagés entre la liste Collection/Wishlist, l'onglet Stats et les Tierlists,
 // pour que tout réagisse aux MÊMES filtres (extrait de App.jsx pour être réutilisable).
-import { parseOwners, parseTags, effectivePlayersSet, effectiveBestSet, extensionNames } from './games'
+import { parseOwners, effectivePlayersSet, effectiveBestSet, extensionNames } from './games'
+import { tagsPourCompte } from './tagsJeux'
 
 export const PRICE_MIN = 0
 export const PRICE_MAX = 150
@@ -30,7 +31,7 @@ export const norm = (s) => (s || '').normalize('NFD').replace(DIACRITICS, '').to
 
 // Un jeu passe-t-il la recherche + les filtres ?
 // `includePrice` : n'applique le filtre prix que dans la Wishlist (sans objet ailleurs).
-export function passesFilters(g, filters, q, includePrice, applyTags = true) {
+export function passesFilters(g, filters, q, includePrice, applyTags = true, compte = null) {
   // Recherche : nom OU noms d'extensions.
   if (q && !(norm(g.name).includes(q) || norm(extensionNames(g.extensions).join(' ')).includes(q))) return false
 
@@ -41,11 +42,17 @@ export function passesFilters(g, filters, q, includePrice, applyTags = true) {
   }
 
   // Tags : masqués par défaut. Ignoré en wishlist (les jeux à acheter n'ont pas de tag).
+  // ⚠️ Les tags sont PAR COMPTE, et c'est la moitié cachée du problème : un jeu tagué est
+  // MASQUÉ par défaut. Avant, le « Grenier » posé par un foyer faisait donc disparaître le jeu
+  // de la collection de l'autre — et faussait ses statistiques — sans un mot d'explication.
+  // ⚠️ Le périmètre suit le COMPTE (qui l'on est), jamais `filters.owners` (ce que l'on
+  // regarde) : même règle que les anecdotes. Sinon le sens d'un tag changerait au gré d'un
+  // réglage sans rapport.
   if (applyTags) {
+    const ts = tagsPourCompte(g.tags, compte)
     if (filters.tagsOnly && filters.tags.length) {
-      if (!parseTags(g.tags).some((t) => filters.tags.includes(t))) return false
+      if (!ts.some((t) => filters.tags.includes(t))) return false
     } else {
-      const ts = parseTags(g.tags)
       if (!(ts.length === 0 || ts.some((t) => filters.tags.includes(t)))) return false
     }
   }

@@ -233,11 +233,19 @@ export function ownersToText(arr) {
   return [...new Set((arr || []).map((s) => s.trim()).filter(Boolean))].join(', ')
 }
 
-// Les tags utilisent exactement le même format que les propriétaires (CSV de noms).
-export const parseTags = parseOwners
-export const tagsToText = ownersToText
+// ⚠️ `parseTags` / `tagsToText` ont été SUPPRIMÉS : la colonne `games.tags` n'est plus une
+// simple liste de noms — un item peut valoir « Grenier::Claire & Nazim » (tag propre à un
+// compte). Tout passe désormais par src/lib/tagsJeux.js, seul point de vérité :
+//   · lire pour AFFICHER ou FILTRER → tagsPourCompte(g.tags, compte)
+//   · lire pour PROPOSER des noms   → tousLesTags(g.tags)
+//   · écrire                        → tagsAEcrire(…) (n'écrase jamais la tranche d'un autre)
+// Un `import { parseTags }` résiduel plante au premier rendu en DEV. ⚠️ En BUILD, Rollup se
+// contente d'un avertissement (piège documenté quatre fois ici) : le grep est le vrai contrôle.
 
-// Renomme un nom dans la colonne CSV `col` ('owner' ou 'tags') de TOUS les jeux concernés
+// Renomme un nom dans la colonne CSV `col` — UNIQUEMENT 'owner' désormais.
+// ⚠️ NE PAS l'employer pour 'tags' : depuis les tags par compte, un item vaut « tag::compte »
+// et la comparaison à l'item ENTIER ne matcherait plus rien — le renommage ne propagerait
+// rien, en silence. Passer par renameTagDansGames (lib/tagsJeux.js).
 // (propagation d'un renommage de propriétaire/tag). Renvoie le nombre de jeux modifiés.
 export async function renameInGamesCsv(col, oldName, newName) {
   const from = (oldName || '').trim()

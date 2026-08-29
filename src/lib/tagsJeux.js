@@ -1,0 +1,180 @@
+import { supabase, writeDb } from './supabase'
+import { parseOwners } from './games'
+
+// TAGS PAR COMPTE — un même jeu peut être « À Vendre » chez un foyer et pas chez l'autre.
+//
+// Retour user à l'origine de ce module : « il faudrait qu'un même jeu ait des tags qui
+// puissent être différents en fonction du compte, sinon les gens ne comprendront pas
+// pourquoi leur jeu qu'ils avaient mis dans leur collection se retrouve à vendre. »
+// Un jeu possédé à deux est UNE SEULE ligne (`games.owner` est un CSV de noms) : sa colonne
+// `tags` valait donc pour tout le monde.
+//
+// LE FORMAT — la colonne reste un CSV « item, item ». Seul l'ITEM se précise :
+//   « Grenier »                 → tag COMMUN (ancien format, ou posé sans compte actif)
+//   « Grenier::Claire & Nazim » → tag propre à ce compte
+//
+// ⚠️⚠️ L'INVARIANT QUI PROTÈGE LES DONNÉES D'UN APPAREIL RESTÉ SUR L'ANCIEN CODE :
+// items trimés, non vides, sans doublon, sans virgule, joints par « , » — c'est-à-dire la
+// forme que produisait déjà `ownersToText`. Sous cette forme, l'ancien
+// `tagsToText(parseTags(v))` rend EXACTEMENT `v` : un vieux bundle qui enregistre un prix ou
+// bascule un jeu en collection **rend la colonne à l'octet près**. C'est ce qui rend ce
+// changement sûr alors que le service worker peut resservir un ancien code pendant des jours.
+// NE JAMAIS introduire d'échappement, changer le séparateur, ni laisser passer un item vide
+// ou en doublon : chacune de ces trois choses casserait la propriété.
+//
+// AUCUNE MIGRATION : un item sans « :: » se comporte exactement comme avant (visible par
+// tous). L'éclatement vers les propriétaires se fait PARESSEUSEMENT, au premier
+// enregistrement, par la personne qui sait ce qu'elle veut garder.
+export const TAG_SEP = '::'
+
+// La couche CSV est la même que celle des propriétaires : même format, même garanties.
+const parseCsv = parseOwners
+
+// « Grenier::Claire & Nazim » → { tag, compte } ; « Grenier » → { tag, compte: null }
+export function parseTagItems(text) {
+  return parseCsv(text).map((item) => {
+    const i = item.indexOf(TAG_SEP)
+    if (i < 0) return { tag: item, compte: null }
+    const tag = item.slice(0, i).trim()
+    const compte = item.slice(i + TAG_SEP.length).trim()
+    // Item mal formé (« ::x », « y:: ») : on le garde tel quel plutôt que de le perdre.
+    return tag && compte ? { tag, compte } : { tag: item, compte: null }
+  })
+}
+
+// Items → texte à stocker, sous la forme CANONIQUE (dédoublonnée, triée, « , »).
+export function serializeTagItems(items) {
+  const vus = new Set()
+  for (const it of items || []) {
+    const tag = String(it?.tag ?? '').trim()
+    if (!tag) continue
+    const compte = String(it?.compte ?? '').trim()
+    vus.add(compte ? tag + TAG_SEP + compte : tag)
+  }
+  return [...vus].sort((a, b) => a.localeCompare(b, 'fr')).join(', ')
+}
+
+// Les tags VISIBLES depuis `compte` : les siens, plus les communs.
+// ⚠️ `compte` null ou undefined (personne n'a choisi, ou on a choisi de tout voir) → on montre
+// TOUT : on ne sait pas qui regarde, et masquer sur une base arbitraire serait un mensonge.
+// C'est exactement le comportement d'avant les comptes.
+export function tagsPourCompte(raw, compte) {
+  const items = parseTagItems(raw)
+  const list = compte ? items.filter((it) => it.compte === null || it.compte === compte) : items
+  return [...new Set(list.map((it) => it.tag))].sort((a, b) => a.localeCompare(b, 'fr'))
+}
+
+// Tous les tags du jeu, tous comptes confondus. Sert à PROPOSER des noms (chips du filtre,
+// cases du formulaire) — jamais à afficher ce que porte un jeu.
+export function tousLesTags(raw) {
+  return [...new Set(parseTagItems(raw).map((it) => it.tag))]
+}
+
+// Ce que les AUTRES comptes ont posé : [{ compte, tags }] — pour la FICHE seulement, jamais
+// sur une carte. Sans cela, « pourquoi ce jeu n'apparaît pas chez moi » reste un angle mort.
+export function tagsDesAutresComptes(raw, compte) {
+  if (!compte) return []
+  const m = new Map()
+  parseTagItems(raw).forEach((it) => {
+    if (!it.compte || it.compte === compte) return
+    if (!m.has(it.compte)) m.set(it.compte, [])
+    m.get(it.compte).push(it.tag)
+  })
+  return [...m.entries()]
+    .map(([c, tags]) => ({ compte: c, tags: [...new Set(tags)].sort((a, b) => a.localeCompare(b, 'fr')) }))
+    .sort((a, b) => a.compte.localeCompare(b.compte, 'fr'))
+}
+
+// Écrit la tranche du compte actif SANS toucher à celle des autres.
+// ⚠️ `ownerAvant` = `games.owner` TEL QU'EN BASE, jamais la valeur du formulaire : sinon,
+// ajouter un propriétaire lui offrirait au passage les tags posés avant son arrivée.
+export function ecritTagsDuCompte(raw, compte, tagsChoisis, ownerAvant) {
+  const items = parseTagItems(raw)
+  const choisis = [...new Set((tagsChoisis || []).map((t) => String(t).trim()).filter(Boolean))]
+  if (!compte) {
+    // Aucun compte actif : on n'édite que la tranche COMMUNE ; les tranches nommées restent.
+    return serializeTagItems([
+      ...items.filter((it) => it.compte),
+      ...choisis.map((tag) => ({ tag, compte: null })),
+    ])
+  }
+  const proprios = parseOwners(ownerAvant)
+  // ÉCLATEMENT des communs vers les propriétaires du jeu, dès qu'il y en a.
+  // ⚠️ Il ne dépend PAS de « suis-je propriétaire » : sinon, décocher un tag commun sur un jeu
+  // qui n'est pas le mien n'aurait aucun effet — le commun resterait, n'appartenant à aucune
+  // tranche — et rien ne le dirait. Éclater est sans dommage pour les propriétaires : ils
+  // continuent de voir exactement le même tag.
+  const eclate = proprios.length > 0
+  const base = eclate
+    ? items.flatMap((it) => (it.compte ? [it] : proprios.map((p) => ({ tag: it.tag, compte: p }))))
+    : items
+  return serializeTagItems([
+    ...base.filter((it) => it.compte !== compte),
+    ...choisis.map((tag) => ({ tag, compte })),
+  ])
+}
+
+// Ce qu'il faut écrire dans `games.tags`, en RELISANT la ligne juste avant.
+// ⚠️ La relecture ramène la fenêtre de course de « la durée pendant laquelle le formulaire est
+// resté ouvert » à quelques millisecondes : sans elle, enregistrer depuis un formulaire ouvert
+// depuis cinq minutes écraserait ce qu'un autre compte vient de poser. Repli sur les valeurs du
+// formulaire si la lecture échoue — le pire cas redevient simplement l'ancien comportement.
+export async function tagsAEcrire(gameId, compte, tagsChoisis, rawFallback, ownerFallback) {
+  let raw = rawFallback ?? null
+  let owner = ownerFallback ?? ''
+  if (gameId) {
+    try {
+      const { data } = await supabase.from('games').select('tags, owner').eq('id', gameId).single()
+      if (data) {
+        raw = data.tags ?? null
+        owner = data.owner ?? ''
+      }
+    } catch {
+      /* hors ligne ou lecture en échec : on garde les valeurs du formulaire */
+    }
+  }
+  return ecritTagsDuCompte(raw, compte, tagsChoisis, owner)
+}
+
+// Renomme un TAG dans `games.tags`, dans toutes les tranches.
+// ⚠️ `renameInGamesCsv` NE PEUT PLUS servir ici : il compare l'ITEM ENTIER au nom cherché,
+// donc « Grenier » ne matcherait pas « Grenier::Claire & Nazim ». Le renommage ne
+// propagerait rien et le tag se dédoublerait — une panne parfaitement silencieuse.
+export function renameTagDansGames(oldName, newName) {
+  return remplaceDansTags(
+    (it) => it.tag === String(oldName || '').trim(),
+    (it, to) => ({ ...it, tag: to }),
+    oldName,
+    newName
+  )
+}
+
+// ⚠️ INDISPENSABLE : renommer un COMPTE sans suivre ici laisserait toutes ses tranches
+// orphelines — ses tags disparaîtraient de son écran sans un mot. Même famille de défaut que
+// le filtre propriétaire mort, déjà traité dans `handleRenameOwner`.
+export function renameCompteDansTags(oldName, newName) {
+  return remplaceDansTags(
+    (it) => it.compte === String(oldName || '').trim(),
+    (it, to) => ({ ...it, compte: to }),
+    oldName,
+    newName
+  )
+}
+
+async function remplaceDansTags(match, remplace, oldName, newName) {
+  const from = String(oldName || '').trim()
+  const to = String(newName || '').trim()
+  if (!from || !to || from === to) return 0
+  const { data, error } = await supabase.from('games').select('id, tags')
+  if (error) throw error
+  let changed = 0
+  for (const g of data ?? []) {
+    const items = parseTagItems(g.tags)
+    if (!items.some(match)) continue
+    const next = serializeTagItems(items.map((it) => (match(it) ? remplace(it, to) : it)))
+    const { error: e2 } = await writeDb().from('games').update({ tags: next }).eq('id', g.id)
+    if (e2) throw e2
+    changed++
+  }
+  return changed
+}

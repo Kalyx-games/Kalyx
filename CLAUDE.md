@@ -291,6 +291,75 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
 
+## ✅⚠️⚠️ LES TAGS DEVIENNENT PROPRES À CHAQUE COMPTE (2026-08-29, demande user)
+
+**Demande user** : « il faudrait qu un même jeu ait des tags qui puissent être différents en fonction du
+compte sur lequel on se trouve, sinon les gens ne comprendront pas pourquoi leur jeu qu ils avaient mis dans
+leur collection se retrouve à vendre ».
+
+**Mesuré avant de concevoir** : 147 jeux, 2 tags (Grenier 28, À Vendre 8), 35 jeux tagués, 15 jeux à
+plusieurs comptes, et **5 jeux à la fois TAGUÉS et PARTAGÉS** — Le Petit Bac, Jungle Speed, Bataille corse,
+Petits Chevaux, et **Abalone** (Grenier + À Vendre, chez les deux foyers).
+
+⚠️⚠️ **LA MOITIÉ CACHÉE DU PROBLÈME**, que l user n avait pas mentionnée : un jeu tagué est **MASQUÉ par
+défaut** (`filtering.js`). Le « Grenier » posé par un foyer faisait donc DISPARAÎTRE le jeu de la collection
+de l autre — **et faussait ses statistiques** — sans un mot. Ce n était pas qu un problème d étiquette.
+
+### LE FORMAT : la colonne reste un CSV, seul l ITEM se précise
+
+    « Grenier »                 → tag COMMUN (ancien format, ou posé sans compte actif)
+    « Grenier::Claire & Nazim » → tag propre à ce compte
+
+⚠️⚠️ **L INVARIANT QUI REND CE CHANGEMENT SÛR** : items trimés, non vides, sans doublon, joints par « , » —
+la forme que produisait déjà `ownersToText`. Sous cette forme, l ANCIEN `tagsToText(parseTags(v))` rend
+**EXACTEMENT `v`** : un appareil resté sur un vieux bundle qui enregistre un prix **rend la colonne à
+l octet près**. Vérifié sur 6 valeurs, dont la forme éclatée complète. C est ce qui permet de changer le
+format alors que le service worker peut resservir un ancien code pendant des jours.
+**NE JAMAIS** introduire d échappement, changer le séparateur, ni laisser passer un item vide ou en doublon.
+
+**AUCUNE MIGRATION, et c est délibéré.** Un item sans « :: » se comporte exactement comme avant.
+L éclatement vers les propriétaires se fait **PARESSEUSEMENT**, au premier enregistrement — par la personne
+qui sait ce qu elle veut garder. Sur Abalone, la base ne peut pas deviner qui a posé « À Vendre » :
+attribuer aux deux est le statu quo, attribuer au premier serait une perte silencieuse.
+
+### Le module `src/lib/tagsJeux.js` (NOUVEAU), seul point de vérité
+
+  · `tagsPourCompte(raw, compte)` — ce qu on AFFICHE et ce qu on FILTRE : ses tags + les communs.
+    ⚠️ `compte` null (jamais choisi, ou « tout voir ») → **on montre tout** : on ne sait pas qui regarde.
+  · `tousLesTags(raw)` — les noms PROPOSÉS (puces du filtre, cases du formulaire), y compris ceux d un autre
+    compte : sinon ils deviendraient impossibles à cocher.
+  · `tagsAEcrire(...)` — recompose la colonne en **RELISANT la ligne** juste avant. Sans cette relecture,
+    enregistrer depuis un formulaire ouvert depuis cinq minutes écraserait ce qu un autre compte vient de
+    poser ; avec, la fenêtre tombe à quelques millisecondes.
+  · ⚠️ `ownerAvant` = `games.owner` **tel qu en base**, jamais la valeur du formulaire : sinon, ajouter un
+    propriétaire lui offrirait au passage les tags posés avant son arrivée.
+  · ⚠️ **L éclatement ne dépend PAS de « suis-je propriétaire »** (garde du plan que j ai écarté) : sinon,
+    décocher un tag commun sur un jeu qui n est pas le mien n aurait AUCUN effet — le commun resterait,
+    n appartenant à aucune tranche. Un piège silencieux de plus.
+
+### Deux pannes silencieuses désamorcées
+
+  1. ⚠️ `renameInGamesCsv` compare l ITEM ENTIER : « Grenier » ne matche plus « Grenier::Claire & Nazim ».
+     Renommer un tag serait devenu un **no-op silencieux** sur tous les jeux éclatés, et le tag se serait
+     dédoublé. → `renameTagDansGames`. Le commentaire de `renameInGamesCsv` interdit désormais son emploi
+     pour `tags`.
+  2. ⚠️ Renommer un COMPTE laisserait toutes ses tranches orphelines — **tous ses tags disparaîtraient de
+     son écran sans un mot**. → `renameCompteDansTags`, branché dans `handleRenameOwner` juste après le
+     correctif jumeau du filtre propriétaire.
+
+⚠️ **PIÈGE REVÉCU DEUX FOIS DANS CE LOT** : `GameDetail` et `TierlistView` utilisaient `compte` et
+`tagsPourCompte` sans les recevoir ni les importer — **et `vite build` est passé**. Un script d audit des
+imports (scratchpad) est ce qui l a attrapé ; le crash en dev l a confirmé.
+
+### Mesuré sur le module réel, avec les valeurs d Abalone
+
+  · Départ « Grenier, À Vendre » → les DEUX comptes voient les deux tags (état actuel préservé).
+  · Claire décoche « À Vendre » → la colonne devient « À Vendre::Clémence & Mathieu, Grenier::Claire &
+    Nazim, Grenier::Clémence & Mathieu » : Claire ne voit plus que Grenier, **Clémence garde les deux**.
+  · Clémence décoche « Grenier » → chacun chez soi. Un troisième compte ne voit rien. Sans compte : tout.
+  · Les noms restent proposés, et l invariant du vieux bundle tient à chaque étape.
+  · **En dev** : 43 jeux, filtre « Grenier » → 67, fiche et formulaire d Abalone corrects, 0 crash.
+
 ## ✅ UNE CONFIRMATION PEUT PORTER LA COULEUR DE SON ACTION (2026-08-29, demande user)
 
 **Demande user** : « sur les boîtes de dialogue qui pourraient avoir une couleur associée, ce serait bien de

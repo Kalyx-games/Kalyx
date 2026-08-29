@@ -1,5 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react'
-import { parseOwners, parseTags, ownerDisplay, ownerColor, parseExtensions, basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText } from '../lib/games'
+import { parseOwners, ownerDisplay, ownerColor, parseExtensions, basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText } from '../lib/games'
+import { tagsPourCompte } from '../lib/tagsJeux'
 import { CollectionIcon, PlayersIcon, StarIcon, ClockIcon, ExtIcon, BarsIcon, PencilIcon, DieIcon, IndispoIcon, PrixIcon } from './icons'
 import { thumbSrc } from '../lib/img'
 import { useGlisseAction } from '../lib/glisseAction'
@@ -54,7 +55,8 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
   // partout, donc elle n apprend rien et se répète sur cent cartes. Elle ne reparaît que
   // sur les jeux d un AUTRE compte — là, elle dit enfin quelque chose.
   const ownerList = parseOwners(game.owner).filter((o) => o !== compte)
-  const tagList = parseTags(game.tags)
+  // Les tags du compte actif (+ les communs) : celui d'un AUTRE foyer ne s'affiche pas ici.
+  const tagList = tagsPourCompte(game.tags, compte)
   const bubbleCount = ownerList.length + tagList.length
   const BUBBLE_H = 20
   const BUBBLE_GAP = 3

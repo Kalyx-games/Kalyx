@@ -1,5 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react'
-import { ownerColor, parseOwners, parseTags, ownerDisplay } from '../lib/games'
+import { ownerColor, parseOwners, ownerDisplay } from '../lib/games'
+import { tagsPourCompte } from '../lib/tagsJeux'
 import { thumbSrc } from '../lib/img'
 import { useGlisseAction } from '../lib/glisseAction'
 import FondGlisse from './FondGlisse'
@@ -58,7 +59,7 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
   // Les bulles, comme sur les cartes de la liste : celle du COMPTE ACTIF est retirée (sur ses
   // propres jeux elle est vraie partout, donc elle n'apprend rien et se répète sur cent tuiles).
   const ownerList = parseOwners(game.owner).filter((o) => o !== compte)
-  const tagList = parseTags(game.tags)
+  const tagList = tagsPourCompte(game.tags, compte)
 
   return (
     <div className={`gtile-row${arme ? ' arme' : ''}`} ref={rowRef} style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}>

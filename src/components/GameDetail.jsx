@@ -6,9 +6,10 @@ import { mou } from '../lib/geste'
 import SnapshotPane from './SnapshotPane'
 import { backdropSrc, heroSrc } from '../lib/img'
 import {
-  parseOwners, parseTags, ownerDisplay, parseExtensions,
+  parseOwners, ownerDisplay, parseExtensions,
   basePlayersSet, effectivePlayersSet, baseBestSet, effectiveBestSet, countsToText,
 } from '../lib/games'
+import { tagsPourCompte } from '../lib/tagsJeux'
 
 
 // Durée : identique à la carte ("30 min", "1 h", "1h30").
@@ -28,7 +29,7 @@ const complexityWord = (n) => (n == null ? '' : n < 2 ? 'Simple' : n < 3 ? 'Moye
 // l'image. TOUTES les actions renvoient vers les écrans existants (rien n'est perdu).
 export default function GameDetail({
   game, online, hasSheet, playCount = 0, lastPlayedLabel,
-  fait, verdict = [], ownerMap, tagMap, siblings = [], onNavigate, closing = false,
+  fait, verdict = [], ownerMap, tagMap, compte = null, siblings = [], onNavigate, closing = false,
   onClose, onNewPlay, onStats, onHistory, onCreateSheet, onEdit, onBgg,
 }) {
   const basePlayers = basePlayersSet(game)
@@ -47,7 +48,7 @@ export default function GameDetail({
   const complexity = game.complexity ? Number(game.complexity) : null
   const extensions = parseExtensions(game.extensions).map((e) => e.name).sort((a, b) => a.localeCompare(b, 'fr'))
   const owners = parseOwners(game.owner)
-  const tags = parseTags(game.tags)
+  const tags = tagsPourCompte(game.tags, compte)
   const fullImg = game.image_url
 
   // Sondage BGG « nombre de joueurs » : { total, rows:[{n,best,rec,notRec}] }.

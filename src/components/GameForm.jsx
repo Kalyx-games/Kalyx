@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import PlayerPicker from './PlayerPicker'
 import { PlayersIcon, StarIcon, ExtIcon, PlusIcon, TrashIcon } from './icons'
 import { CollectionIcon, WishlistIcon } from './icons'
-import { expandRange, parseCounts, countsToText, parseOwners, ownersToText, parseTags, tagsToText, parseExtensions, serializeExtensions } from '../lib/games'
+import { expandRange, parseCounts, countsToText, parseOwners, ownersToText, parseExtensions, serializeExtensions } from '../lib/games'
+import { tagsPourCompte, tousLesTags } from '../lib/tagsJeux'
 import { philibertSearchUrl } from '../lib/philibert'
 import { BGG_LOGO, PHILIBERT_LOGO } from '../lib/logos'
 
@@ -40,7 +41,7 @@ function extPickMessage(name, players, best) {
 // Le nom de chaque source, pour le message sous le champ.
 const SOURCES_IMAGE = { bgg: 'BoardGameGeek', philibert: 'Philibert' }
 
-export default function GameForm({ game, owners, tags, existingGames = [], saving, onSave, onCancel, onDelete, defaultStatus, defaultOwner = null, prefill, closeRef }) {
+export default function GameForm({ game, owners, tags, existingGames = [], saving, onSave, onCancel, onDelete, defaultStatus, defaultOwner = null, compte = null, prefill, closeRef }) {
   const [form, setForm] = useState(() => toForm(game, defaultStatus, prefill))
   const [playersSet, setPlayersSet] = useState(() =>
     game?.players ? parseCounts(game.players) : expandRange(game?.players_min, game?.players_max)
@@ -51,7 +52,9 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
   const [ownerSet, setOwnerSet] = useState(() =>
     game ? parseOwners(game.owner) : defaultOwner && (owners || []).includes(defaultOwner) ? [defaultOwner] : []
   )
-  const [tagSet, setTagSet] = useState(() => parseTags(game?.tags))
+  // ⚠️ On n'édite QUE les tags du compte actif : un même jeu peut être « À Vendre » chez un
+  // foyer sans l'être chez l'autre. Ceux des autres comptes ne sont ni montrés ni touchés.
+  const [tagSet, setTagSet] = useState(() => tagsPourCompte(game?.tags, compte))
   // Extensions : liste éditable (nom + nombre de joueurs facultatif), triée par nom
   // à l'ouverture et à l'enregistrement. Les joueurs d'une extension élargissent la
   // plage effective du jeu (filtre) sans écraser les données de base.
@@ -178,7 +181,9 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
   })()
   // Cases proposées pour les tags = tags gérés (Réglages) + ceux déjà sur ce jeu.
   const tagChoices = (() => {
-    const set = new Set([...(tags || []), ...parseTags(game?.tags)])
+    // Tous les noms existants sont PROPOSÉS, y compris ceux posés par un autre compte —
+    // sinon ils deviendraient impossibles à cocher pour soi.
+    const set = new Set([...(tags || []), ...tousLesTags(game?.tags)])
     return [...set].sort((a, b) => a.localeCompare(b, 'fr'))
   })()
   const isEdit = Boolean(game)
@@ -391,12 +396,14 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
     const players_max = playersSet.length ? Math.max(...playersSet) : ''
     const players_best = countsToText(bestSet)
     const owner = ownersToText(ownerSet)
-    const tags = tagsToText(tagSet)
+    // On renvoie la LISTE des tags du compte actif : c'est App qui recompose la colonne
+    // (il est le seul à pouvoir relire la ligne pour ne pas écraser les autres comptes).
+    const tagsChoisis = tagSet
     const extensions = serializeExtensions(extList)
     // Une seule durée saisie → on remplit min ET max avec la même valeur (schéma inchangé).
     // onSave renvoie true si l'enregistrement a réussi → on ferme en glissant vers le bas
     // (au lieu d'une fermeture brusque). En cas d'échec, le formulaire reste ouvert (message).
-    const ok = await onSave({ ...form, owner, tags, players, players_min, players_max, players_best, extensions, duration_min: form.duration, duration_max: form.duration })
+    const ok = await onSave({ ...form, owner, tagsChoisis, players, players_min, players_max, players_best, extensions, duration_min: form.duration, duration_max: form.duration })
     if (ok !== false) animateClose(onCancel)
   }
 

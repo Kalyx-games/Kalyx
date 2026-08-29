@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Suspense } from 'react'
 import lazyRetry from './lib/lazyRetry'
 import { isConfigured, hasCode } from './lib/supabase'
-import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwners, parseTags } from './lib/games'
+import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwners } from './lib/games'
+import { tousLesTags, tagsAEcrire, renameCompteDansTags, renameTagDansGames } from './lib/tagsJeux'
 import { saveGamesCache, loadGamesCache, saveBubblesCache, loadBubblesCache } from './lib/cache'
 import { fetchOwners, addOwner, updateOwner, renameOwner, deleteOwner } from './lib/owners'
 import { fetchTags, addTag, updateTag, renameTag, deleteTag } from './lib/tags'
@@ -840,7 +841,10 @@ export default function App() {
   // Tags : liste proposée (gérée ∪ ceux déjà sur les jeux) + correspondance nom -> ligne.
   const allTags = useMemo(() => {
     const set = new Set((tagsList ?? []).map((t) => t.name))
-    ;(games ?? []).forEach((g) => parseTags(g.tags).forEach((t) => set.add(t)))
+    // Noms NUS (jamais « tag::compte ») : ce sont les libellés des puces du filtre et des
+    // cases du formulaire. On propose aussi ceux posés par les AUTRES comptes, sinon ils
+    // deviendraient impossibles à cocher.
+    ;(games ?? []).forEach((g) => tousLesTags(g.tags).forEach((t) => set.add(t)))
     return [...set].sort((a, b) => a.localeCompare(b, 'fr'))
   }, [tagsList, games])
   const tagMap = useMemo(() => {
@@ -897,7 +901,7 @@ export default function App() {
   const visible = useMemo(() => {
     const q = norm(search)
     let list = (games ?? []).filter(
-      (g) => g.status === listStatus && passesFilters(g, filters, q, view === 'wishlist', view !== 'wishlist')
+      (g) => g.status === listStatus && passesFilters(g, filters, q, view === 'wishlist', view !== 'wishlist', compte ?? null)
     )
 
     // Tri
@@ -912,7 +916,7 @@ export default function App() {
     else if (sort === 'lastplayed') list = [...list].sort((a, b) => (playMeta[a.id]?.last || '').localeCompare(playMeta[b.id]?.last || '') || (a.name || '').localeCompare(b.name || '', 'fr'))
     if (sortDir === 'desc') list.reverse()
     return list
-  }, [games, search, sort, sortDir, shuffleSeed, filters, listStatus, view, playMeta])
+  }, [games, search, sort, sortDir, shuffleSeed, filters, listStatus, view, playMeta, compte])
 
   // Largeur de la 1re colonne (joueurs/idéal) des cartes = largeur du jeu qui en prend le
   // plus → toutes les cartes partagent cette largeur (colonnes alignées).
@@ -976,8 +980,8 @@ export default function App() {
   // La recherche est ignorée sur les Stats (le champ n'y est plus affiché) : une saisie
   // résiduelle faite en Collection ne doit pas filtrer les stats en silence.
   const statsGames = useMemo(() => {
-    return (games ?? []).filter((g) => passesFilters(g, filters, '', false))
-  }, [games, filters])
+    return (games ?? []).filter((g) => passesFilters(g, filters, '', false, true, compte ?? null))
+  }, [games, filters, compte])
 
   // Y a-t-il au moins un jeu en collection (indépendamment des filtres) ? Sert à
   // distinguer « collection vide » de « aucun jeu ne correspond aux filtres » dans les Stats.
@@ -1135,7 +1139,13 @@ export default function App() {
     setSaving(true)
     setError(null)
     try {
-      const payload = cleanGameInput(formValues)
+      // ⚠️ Les tags sont PAR COMPTE : le formulaire ne renvoie que CEUX DU COMPTE ACTIF, et
+      // `tagsAEcrire` recompose la colonne en RELISANT la ligne — la tranche des autres
+      // comptes n'est jamais écrasée, même si le formulaire est resté ouvert longtemps.
+      const { tagsChoisis, ...reste } = formValues
+      const cible = editing && editing !== 'new' ? editing : null
+      const tags = await tagsAEcrire(cible?.id ?? null, compte ?? null, tagsChoisis, cible?.tags, cible?.owner)
+      const payload = cleanGameInput({ ...reste, tags })
       if (editing && editing !== 'new') {
         const updated = await updateGame(editing.id, payload)
         setGames((gs) => (gs ?? []).map((g) => (g.id === updated.id ? updated : g)))
@@ -1202,6 +1212,10 @@ export default function App() {
         saveCompte(newName)
         setFilters((f) => ({ ...f, owners: f.owners.map((o) => (o === oldName ? newName : o)) }))
       }
+      // ⚠️ INDISPENSABLE depuis les tags par compte : les tranches « tag::ancien nom »
+      // resteraient orphelines, et TOUS les tags de ce compte disparaîtraient de son écran
+      // sans un mot. Même famille de défaut que le filtre propriétaire mort, juste au-dessus.
+      await renameCompteDansTags(oldName, newName)
       reloadOwners()
       loadGames() // recharge les jeux : le nom propagé dans games.owner doit s'afficher
       showToast(n ? `« ${newName} » : ${n} jeu${n > 1 ? 'x' : ''} mis à jour.` : `Renommé en « ${newName} ».`)
@@ -1254,9 +1268,14 @@ export default function App() {
   async function handleRenameTag(id, oldName, newName, patch) {
     try {
       const n = await renameTag(id, oldName, newName, patch)
+      // ⚠️ « renameTag » ne sait renommer que les tags de l'ANCIEN format (il compare l'item
+      // entier). Les tranches « tag::compte » se renomment ici, sinon le renommage serait un
+      // no-op silencieux sur tous les jeux déjà éclatés.
+      const nb = await renameTagDansGames(oldName, newName)
       reloadTags()
       loadGames() // recharge les jeux : le nom propagé dans games.tags doit s'afficher
-      showToast(n ? `« ${newName} » : ${n} jeu${n > 1 ? 'x' : ''} mis à jour.` : `Renommé en « ${newName} ».`)
+      const total = (n || 0) + (nb || 0)
+      showToast(total ? `« ${newName} » : ${total} jeu${total > 1 ? 'x' : ''} mis à jour.` : `Renommé en « ${newName} ».`)
     } catch (e) {
       setError(messageUtilisateur(e))
     }
@@ -2276,6 +2295,7 @@ export default function App() {
           game={detailLayer.value}
           closing={detailLayer.closing}
           online={online}
+          compte={compte ?? null}
           hasSheet={Boolean(scoresheets?.[detailLayer.value.id])}
           playCount={playMeta[detailLayer.value.id]?.count ?? 0}
           lastPlayedLabel={playMeta[detailLayer.value.id]?.last ? formatDay(playMeta[detailLayer.value.id].last) : null}
@@ -2304,6 +2324,7 @@ export default function App() {
           saving={saving}
           defaultStatus={listStatus}
           defaultOwner={compte ?? null}
+          compte={compte ?? null}
           onSave={handleSave}
           onCancel={() => setEditing(null)}
           onDelete={editing !== 'new' ? () => setConfirming(editing) : undefined}
@@ -2532,6 +2553,7 @@ export default function App() {
         <Suspense fallback={null}>
           <TierlistView
             key={tlViewLayer.value.mode + (tlViewLayer.value.id || 'new')}
+            compte={compte ?? null}
             mode={tlViewLayer.value.mode}
             title={tlViewLayer.value.title}
             initialRanking={tlViewLayer.value.ranking}

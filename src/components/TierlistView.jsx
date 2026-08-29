@@ -59,6 +59,7 @@ export default function TierlistView({
   filters,
   setFilters,
   onResetFilters,
+  compte = null,
   savedId = null,
   closing = false,
   onClose,
@@ -110,7 +111,7 @@ export default function TierlistView({
   const tray = useMemo(
     () =>
       games
-        .filter((g) => !placed.has(g.id) && passesFilters(g, filters, '', false))
+        .filter((g) => !placed.has(g.id) && passesFilters(g, filters, '', false, true, compte ?? null))
         .sort((a, b) => a.name.localeCompare(b.name, 'fr')),
     [games, placed, filters]
   )
@@ -468,7 +469,7 @@ export default function TierlistView({
 
   // Filtre d'AFFICHAGE (consultation) = MÊME système que la Collection / le bac d'édition :
   // les jeux tagués sont masqués par défaut, et réapparaissent quand un de leurs tags est coché.
-  const displayMatch = (g) => passesFilters(g, filters, '', false)
+  const displayMatch = (g) => passesFilters(g, filters, '', false, true, compte ?? null)
   const gamesOf = (ids, filtered) => {
     const gs = ids.map((id) => gameById.get(id)).filter(Boolean)
     return filtered ? gs.filter(displayMatch) : gs
