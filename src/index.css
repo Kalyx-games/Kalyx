@@ -1335,53 +1335,44 @@ body {
   box-shadow: var(--card-shadow); /* l'ombre vit ICI (l'overflow:hidden la couperait sur .game) */
 }
 /* LE FOND RÉVÉLÉ derrière un jeu qu'on glisse — le même en vue liste et en vue grille.
-   Il ne se voit que pendant le geste : au repos, il n'est même pas rendu. */
+   ⚠️ Sa COULEUR est posée en ligne dès le premier millimètre du geste (pas au seuil) : on
+   sait tout de suite ce qu'on fait. Au repos, il n'est même pas rendu. */
 .glisse-fond {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
-  background: var(--soft);
   border-radius: var(--r-card);
-  transition: background 0.16s ease;
 }
-/* Aligné du côté qui SE DÉGAGE : on tire à droite, l'action apparaît à gauche. */
+/* Aligné du côté qui SE DÉGAGE : on tire à droite, l'icône apparaît à gauche — donc visible
+   dès les premiers pixels, sans attendre d'avoir tiré la moitié de l'élément. */
 .glisse-fond.vers-droite { justify-content: flex-start; }
 .glisse-fond.vers-gauche { justify-content: flex-end; }
 .glisse-fond-act {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 18px;
-  color: var(--muted);
-  font-size: var(--fs-caption);
-  font-weight: 700;
-  transition: color 0.16s ease, transform 0.16s ease;
-}
-/* Armé : la couleur de l'action (posée en ligne) et son libellé en blanc — on voit
-   exactement ce qui va se produire avant de lâcher. Ces blancs sont EN DUR comme dans
-   l'ancien menu : ils sont posés sur la couleur de l'action, pas sur une surface de page. */
-.glisse-fond.arme .glisse-fond-act {
+  /* Retrait court : c est lui qui décide à partir de combien de pixels tirés le logo
+     commence à se voir. */
+  padding: 0 12px;
   color: #fff;
-  transform: scale(1.04);
+  opacity: 0.62;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+/* C'est l'ICÔNE qui dit l'armement, la couleur étant déjà là : elle s'allume et grossit. */
+.glisse-fond.arme .glisse-fond-act {
+  opacity: 1;
+  transform: scale(1.16);
 }
 .glisse-fond-act svg { flex-shrink: 0; }
-.glisse-fond .bgg-logo { border-radius: 3px; }
-/* En grille : le fond couvre la JAQUETTE (carrée), l'action se met en colonne pour tenir
-   dans ~120 px, et le libellé ne paraît qu'une fois armé (la place manque avant). */
+.glisse-fond .bgg-logo { border-radius: 3px; display: block; }
+/* En grille, le fond couvre la JAQUETTE (carrée) ; l'icône reste calée du côté dégagé,
+   avec un retrait plus court — sur ~120 px, 16 px la repousseraient sous la tuile. */
 .glisse-fond-tuile {
   inset: 0 0 auto 0;
   aspect-ratio: 1;
-  justify-content: center !important;
   border-radius: 5px;
 }
-.glisse-fond-tuile .glisse-fond-act {
-  flex-direction: column;
-  gap: 4px;
-  padding: 0 6px;
-  text-align: center;
-}
-.glisse-fond-tuile:not(.arme) .glisse-fond-act span:last-child { display: none; }
+.glisse-fond-tuile .glisse-fond-act { padding: 0 6px; }
 @media (prefers-reduced-motion: reduce) {
   .swipe-hint svg {
     transition: none;
@@ -1570,8 +1561,18 @@ body {
   cursor: pointer;
 }
 .game-edit:disabled { opacity: 0.4; cursor: not-allowed; }
+/* ⚠️ La place du crayon est RÉSERVÉE dans la tête de carte : posé en absolu, il passait
+   par-dessus les titres longs. */
+.game:has(.game-edit) .game-head { padding-right: 42px; }
 .game-edit:active { transform: scale(0.92); }
 
+/* En wishlist, le prix est une LIGNE D'INFO sous les métas : il y avait là un espace vide,
+   et sous la jaquette il rallongeait la carte pour rien. */
+.game-price-line {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+}
 .game-price {
   flex-shrink: 0;
   display: inline-flex;
@@ -5878,6 +5879,42 @@ input[type='number'] {
   font-size: var(--fs-title-s);
   font-weight: 700;
 }
+/* Le PRIX en wishlist, posé sur la jaquette : il ne consomme aucune hauteur (la sous-ligne
+   reste disponible pour la valeur du tri) et se lit sur n'importe quelle image grâce à son
+   fond plein. Même coin que les bulles de propriétaire sur les cartes de la liste. */
+.gtile-price {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--ok-bg);
+  color: var(--ok-ink);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  box-shadow: var(--elev-1);
+  pointer-events: none;
+}
+/* ÉDITER sur la tuile, en wishlist seulement (le tap y mène chez Philibert). Posé sur le coin
+   haut-droit de la jaquette, sur un disque sombre pour rester lisible sur toute image. */
+.gtile-edit {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(12, 14, 18, 0.62);
+  color: #fff;
+  cursor: pointer;
+}
+.gtile-edit:disabled { opacity: 0.4; cursor: not-allowed; }
+.gtile-edit:active { transform: scale(0.9); }
+
 .gtile-name {
   font-size: var(--fs-caption);
   font-weight: 600;

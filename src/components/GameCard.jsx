@@ -251,9 +251,6 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
             </div>
           )}
         </div>
-        {game.status === 'wishlist' && game.price != null && (
-          <span className="game-price game-price-below">{formatPrice(game.price)}</span>
-        )}
       </div>
 
       <div className="game-body">
@@ -293,6 +290,12 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
         {extensions.length > 0 && (
           <div className="game-ext" title="Extensions">
             <ExtIcon size={12} /> <span>{extensions.join(', ')}</span>
+          </div>
+        )}
+        {/* Le prix, en wishlist : une 3e ligne d'info, là où il y avait un espace vide. */}
+        {game.status === 'wishlist' && game.price != null && (
+          <div className="game-price-line">
+            <span className="game-price">{formatPrice(game.price)}</span>
           </div>
         )}
         {/* Info liée au tri en cours (parties jouées, dernière partie…), sinon absente. */}

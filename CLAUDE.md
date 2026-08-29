@@ -169,7 +169,7 @@ Audit en workflow (3 lentilles : cohérence / composition / finition, puis synth
 ```bash
 grep -cE '^s*(margin|padding|gap|row-gap|column-gap)[a-z-]*s*:.*[0-9]px' src/index.css
 ```
-**Valeur de référence au 29/08/2026 : 370** (349 → 356 avec la carte du face-à-face, puis 363 avec le verdict de la table et la ligne « Reprendre la dernière table ») (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
+**Valeur de référence au 29/08/2026 : 369** (349 → 356 avec la carte du face-à-face, puis 363 avec le verdict de la table et la ligne « Reprendre la dernière table ») (la hausse depuis 347 : les deux paddings de la poignée adaptative de l'ascenseur — étiquettes longues et poignée nue, des recettes).
 
 **NON FAIT, et assumé** : le resserrement réel (faire tomber 10→8, 14→12, 6→4 …). Il déplacerait ~40 % des espacements pour un bénéfice invisible, sur une app que l’user a déjà fait itérer trois fois sur des retours visuels. À ne relancer QUE si l’user demande explicitement un rythme plus serré, écran par écran, et jamais en une passe globale.
 
@@ -290,6 +290,46 @@ La ligne de lecture fixe (96 px sous la barre du haut) décrivait la carte du HA
   - **Les butées disent les extrémités** (la demande) : avant la première ancre → l'étiquette du PREMIER groupe ; à `scrollY ≥ max − 1` → celle du DERNIER (sans ce forçage, la butée basse affichait le groupe à la ligne de lecture, un entre-deux).
   - La ref expose `prepare(l)` (pose sans réveiller) en plus de `montre(l)` : la poignée est juste dès qu'elle apparaît, sans surgir au montage.
   - **Le chemin de test vaut enfin preuve** : `window.scrollTo` + `window.dispatchEvent(new Event('scroll'))` exerce EXACTEMENT le code réel. Vérifié ainsi, liste ET grille : nom `#`→L→`Z`→`#` (remontées et sauts compris), durée `8 min`→`16h40`, aléatoire nu et visible.
+
+## ✅ LE GLISSÉ AFFINÉ + LA GRILLE OUVERTE À LA WISHLIST (2026-08-29, 6 retours user)
+
+**1. La couleur de l action est là DÈS LE PREMIER MILLIMÈTRE**, plus au franchissement du seuil.
+C est désormais l ICÔNE qui dit l armement (opacité 0,62 → 1 et léger grossissement). Une couleur qui
+apparaît en cours de geste se lit comme un clignotement ; la couleur immédiate dit tout de suite ce
+qu on est en train de faire, et l armement reste visible et réversible avant de lâcher.
+
+**2. Plus AUCUN libellé** : le dé, le logo BoardGameGeek et l icône de collection se lisent seuls — et
+un texte ne tiendrait de toute façon pas sur une tuile de 120 px.
+
+**3. L icône est alignée du côté qui SE DÉGAGE et non centrée** (`justify-content: center` retiré en
+grille) : elle apparaît donc dès les premiers pixels au lieu de rester cachée sous la tuile jusqu à la
+fin du tirage. Retraits raccourcis (16 → 12 px en liste, 10 → 6 en grille) : c est le retrait qui décide
+à partir de combien de pixels tirés le logo commence à se voir. **Mesuré en grille** : 12 px tirés → 12 px
+d icône dégagés, 40 → 40, entièrement visible à l armement.
+
+**4. Le crayon ne chevauche plus le titre** : sa place est RÉSERVÉE dans la tête de carte
+(`.game:has(.game-edit) .game-head { padding-right: 42px }`) — posé en absolu, il passait par-dessus les
+titres longs. Mesuré : titre à 347 px, crayon à 365.
+
+**5. Le PRIX devient une 3e ligne d info** en wishlist (vue liste), à la place de l espace vide sous les
+métas ; il quitte le dessous de la jaquette, où il rallongeait la carte pour rien.
+
+**6. LA GRILLE EST OFFERTE EN WISHLIST** — l interdiction du 19/08 est LEVÉE. Son motif (« une tuile n a
+pas de menu de glissement, et en wishlist le tap ouvre Philibert → on ne pourrait plus modifier ») ne tient
+plus : la tuile porte désormais le glissé (BGG à gauche, vers la collection à droite) ET son propre crayon.
+  · Le **prix en pastille** sur la jaquette (coin bas-gauche, comme les bulles de propriétaire sur les
+    cartes) : il ne consomme aucune hauteur, la sous-ligne reste libre pour la valeur du tri.
+  · Le **crayon** sur un disque sombre au coin haut-droit, lisible sur n importe quelle image.
+
+**7. UNE PRÉFÉRENCE DE VUE PAR ONGLET** (`kalyx-layout` pour la collection, `kalyx-layout-wishlist` pour la
+wishlist) : on ne regarde pas sa collection et sa wishlist de la même façon — l une se parcourt à la
+jaquette, l autre se lit au prix. **Vérifié** : collection en grille → la wishlist reste en liste ;
+wishlist basculée en grille → la collection garde la sienne ; et l inverse.
+
+**Vérifié en dev, par gestes synthétiques sur la vraie cible** : couleur présente dès 14 px de tirage,
+aucun texte, icône qui s allume à l armement ; wishlist en grille → glissé gauche = BGG, glissé droite =
+« Déplacer vers la collection ? » ; collection en liste → 43 cartes, 0 crayon (le tap ouvre la fiche, qui
+en porte un) ; wishlist en liste → prix en ligne d info, plus rien sous la jaquette, aucun chevauchement.
 
 ## ✅⚠️ LE MENU DE GLISSEMENT DISPARAÎT : DEUX ACTIONS DIRECTIONNELLES (2026-08-29, demande user)
 

@@ -112,17 +112,22 @@ function saveView(v) {
   }
 }
 
-const LAYOUT_KEY = 'kalyx-layout'
-function loadLayout() {
+// ⚠️ UNE PRÉFÉRENCE PAR ONGLET : on ne regarde pas sa collection et sa wishlist de la même
+// façon (l'une se parcourt à la jaquette, l'autre se lit au prix). Passer la collection en
+// grille ne doit donc pas basculer la wishlist, ni l'inverse.
+const LAYOUT_KEY = 'kalyx-layout' // collection (nom historique : la clé existante est conservée)
+const LAYOUT_KEY_WISH = 'kalyx-layout-wishlist'
+const cleLayout = (statut) => (statut === 'wishlist' ? LAYOUT_KEY_WISH : LAYOUT_KEY)
+function loadLayout(statut) {
   try {
-    return localStorage.getItem(LAYOUT_KEY) === 'grille' ? 'grille' : 'liste'
+    return localStorage.getItem(cleLayout(statut)) === 'grille' ? 'grille' : 'liste'
   } catch {
     return 'liste'
   }
 }
-function saveLayout(v) {
+function saveLayout(statut, v) {
   try {
-    if (v === 'liste' || v === 'grille') localStorage.setItem(LAYOUT_KEY, v)
+    if (v === 'liste' || v === 'grille') localStorage.setItem(cleLayout(statut), v)
   } catch {
     /* stockage indispo : tant pis */
   }
@@ -276,7 +281,8 @@ export default function App() {
   const [movingBusy, setMovingBusy] = useState(false)
   // Au démarrage à froid, on ignore l'onglet mémorisé → on repart sur la Collection (cf. isReload).
   const savedView = isReload ? loadView() : 'collection'
-  const [layout, setLayout] = useState(loadLayout)
+  // Deux préférences distinctes, relues quand on change d'onglet.
+  const [layouts, setLayouts] = useState(() => ({ collection: loadLayout('collection'), wishlist: loadLayout('wishlist') }))
   const [view, setView] = useState(savedView === 'wishlist' ? 'wishlist' : 'collection') // 'collection' | 'wishlist'
   const [settingsOpen, setSettingsOpen] = useState(false) // écran Réglages (engrenage en haut à droite)
   const [playersOpen, setPlayersOpen] = useState(false) // écran Joueurs (renommage global)
@@ -774,10 +780,11 @@ export default function App() {
 
   // Statut affiché selon l'onglet (Collection ou Wishlist).
   const listStatus = view === 'wishlist' ? 'wishlist' : 'collection'
-  // La grille est INTERDITE en wishlist : une tuile n'a pas de menu de glissement, et le tap
-  // y ouvre Philibert — on ne pourrait donc plus modifier un jeu du tout. La préférence de
-  // l'utilisateur n'est pas touchée : il retrouve sa grille en revenant sur la collection.
-  const grille = layout === 'grille' && listStatus !== 'wishlist'
+  // La grille est désormais offerte AUSSI en wishlist : le glissé y donne les deux actions
+  // (BoardGameGeek, vers la collection) et la tuile porte son crayon d'édition — l'obstacle
+  // qui l'avait fait interdire (« on ne pourrait plus modifier ces jeux ») est levé.
+  const layout = layouts[listStatus] || 'liste'
+  const grille = layout === 'grille'
   // Le tri par prix n'a de sens que dans la Wishlist.
   const sortOptions = [
     ...SORT_OPTIONS,
@@ -1835,11 +1842,15 @@ export default function App() {
         </div>
         {/* Bascule liste / grille : on montre l’icône de la vue vers laquelle on va.
             Absente en wishlist, où la grille est interdite. */}
-        {!statsOpen && listStatus !== 'wishlist' && (
+        {!statsOpen && (
           <button
             type="button"
             className="layout-btn"
-            onClick={() => { const v = layout === 'grille' ? 'liste' : 'grille'; setLayout(v); saveLayout(v) }}
+            onClick={() => {
+              const v = layout === 'grille' ? 'liste' : 'grille'
+              setLayouts((l) => ({ ...l, [listStatus]: v }))
+              saveLayout(listStatus, v)
+            }}
             title={layout === 'grille' ? 'Afficher en liste' : 'Afficher en grille'}
             aria-label={layout === 'grille' ? 'Afficher en liste' : 'Afficher en grille'}
           >
@@ -1988,7 +1999,9 @@ export default function App() {
                     ? () => window.open(`https://boardgamegeek.com/boardgame/${g.bgg_id}`, '_blank', 'noopener')
                     : undefined
                 }
-                onNewPlay={online ? () => handleNewPlayFromCard(g) : undefined}
+                onNewPlay={view !== 'wishlist' && online ? () => handleNewPlayFromCard(g) : undefined}
+                onMove={view === 'wishlist' ? () => setMoving(g) : undefined}
+                onEdit={() => setEditing(g)}
                 onCardClick={
                   !online
                     ? undefined

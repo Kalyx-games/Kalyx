@@ -3,7 +3,7 @@ import { ownerColor } from '../lib/games'
 import { thumbSrc } from '../lib/img'
 import { useGlisseAction } from '../lib/glisseAction'
 import FondGlisse from './FondGlisse'
-import { DieIcon } from './icons'
+import { DieIcon, CollectionIcon, PencilIcon } from './icons'
 import { BGG_LOGO } from '../lib/logos'
 
 // Une TUILE de la vue grille : la jaquette d'abord, le nom dessous. Le tap mène au même
@@ -22,7 +22,7 @@ function formatPrice(p) {
   return `${n.toFixed(2).replace('.', ',')} €`
 }
 
-function GameTile({ game, online, onCardClick, onBgg, onNewPlay, metaLine, index = 0 }) {
+function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit, metaLine, index = 0 }) {
   const [broken, setBroken] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const imgRef = useRef(null)
@@ -32,7 +32,7 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, metaLine, index
   // action de droite possible.)
   const { offset, arme, sens, dragging, gRef } = useGlisseAction(rowRef, {
     gauche: online ? onBgg || null : null,
-    droite: online ? onNewPlay || null : null,
+    droite: online ? onNewPlay || onMove || null : null,
   })
   const fullImg = game.image_url
   // L'image du jeu peut changer sans que la tuile soit remontée (correction d'une URL
@@ -57,8 +57,14 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, metaLine, index
         sens={sens}
         arme={arme}
         className="glisse-fond-tuile"
-        gauche={onBgg ? { label: 'BGG', bg: '#566070', node: <img src={BGG_LOGO} alt="" width="24" height="24" /> } : null}
-        droite={onNewPlay ? { label: 'Partie', bg: '#4e7a5c', node: <DieIcon size={20} /> } : null}
+        gauche={onBgg ? { bg: '#566070', node: <img className="bgg-logo" src={BGG_LOGO} alt="" width="24" height="24" /> } : null}
+        droite={
+          onNewPlay
+            ? { bg: '#4e7a5c', node: <DieIcon size={22} /> }
+            : onMove
+            ? { bg: '#4e7a5c', node: <CollectionIcon size={22} color="#fff" /> }
+            : null
+        }
       />
       <button
         type="button"
@@ -89,10 +95,27 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, metaLine, index
           ) : (
             <span className="gtile-fallback" style={{ background: ownerColor(game.name) }}>{monogram(game.name)}</span>
           )}
+          {/* Le prix en pastille sur la jaquette : il ne prend aucune hauteur et reste lisible
+              sur n'importe quelle image. La sous-ligne garde alors la valeur du tri. */}
+          {price && <span className="gtile-price">{price}</span>}
         </div>
         <span className="gtile-name">{game.name}</span>
-        {(price || metaLine) && <span className="gtile-sub">{price || metaLine}</span>}
+        {metaLine && <span className="gtile-sub">{metaLine}</span>}
       </button>
+      {/* ⚠️ ÉDITER, en wishlist seulement — même raison qu'en vue liste : là, le tap mène chez
+          Philibert, donc sans ce bouton un jeu de la wishlist ne serait plus modifiable. */}
+      {onEdit && !onNewPlay && (
+        <button
+          type="button"
+          className="gtile-edit"
+          onClick={(e) => { e.stopPropagation(); if (gRef.current.justSwiped) return; onEdit() }}
+          disabled={!online}
+          aria-label="Éditer"
+          title="Éditer"
+        >
+          <PencilIcon size={15} />
+        </button>
+      )}
     </div>
   )
 }
