@@ -48,6 +48,74 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅ LES JOUEURS FRÉQUENTS + ⛔ UN BOUTON GRISÉ SE COMPREND SEUL (2026-08-30, 2 retours)
+
+### A. ⛔ PLUS AUCUN MESSAGE AU-DESSUS D UN BOUTON GRISÉ POUR DIRE POURQUOI
+
+**Retour user** : « mettre un message au-dessus du bouton pour dire pourquoi il est grisé ne sert à
+rien, et c est la même chose dans toute l app. **S il est grisé les gens savent qu ils doivent faire une
+action et c est suffisant.** »
+
+⛔ **Cela ANNULE la décision inverse** consignée dans le code (« Le bouton est mort : on dit ce qui
+manque, au lieu de laisser chercher »). **Ne pas la reproposer.**
+
+`saveBar` perd son argument `aide` : ses **quatre** appels n expliquent plus rien. Elle ne porte plus
+que le **RÉSULTAT EN DIRECT** (le meneur, le vainqueur désigné) — ça, ce n est pas l explication d un
+bouton mort, c est une donnée. `.sheet-hint` devient morte, retirée.
+
+⚠️ **MAIS LA CONSIGNE REVIENT LÀ OÙ ELLE A UN SENS** : à côté des couronnes dont elle parle, pas
+au-dessus du bouton. « Touchez la couronne du vainqueur. Plusieurs si la victoire est partagée. »
+avait été raccourcie **parce que** la barre la répétait ; la barre ne dit plus rien, et la nuance seule
+présupposerait qu on sait taper.
+
+⚠️ **LA NUANCE QUI RESTE, et c est tout le sujet.** Dans l éditeur de fiche, seul « Rien n a changé »
+part — c est bien « vous n avez pas encore agi », que le grisé dit déjà. **Les TROIS autres restent** :
+ils ne disent pas ce que le grisé dit, ils disent un obstacle **qu on ne peut PAS voir** — hors ligne
+(la bannière de l app est masquée par cet écran plein), deux lignes homonymes parmi neuf (on ne
+devinerait pas lesquelles), ou l erreur d une écriture qui a échoué.
+**RÈGLE : « vous n avez pas encore fait X » se tait ; « voici l obstacle invisible » parle.**
+
+### B. Les joueurs fréquents du compte
+
+**Demande user** : « pouvoir choisir des joueurs par défaut pour toutes les parties (genre classer 5
+joueurs par ordre de préférence dans les paramètres du compte, qu on pourrait appeler joueurs
+fréquents, et ça les remplit par défaut si on appuie sur un bouton dans le formulaire, **comme pour la
+dernière table**. Si on a inséré 3 joueurs ça en insère 3, 2 joueurs si on en avait que 2, etc). »
+
+`src/components/JoueursFrequents.jsx` (NOUVEAU), carte du **menu Compte**, à côté des Tags : c est une
+**DONNÉE DU COMPTE** comme eux (chaque foyer a ses habitués), pas un réglage d apparence. Stockée dans
+`owners.prefs.joueursFrequents` — **aucune migration**, le sac jsonb existe depuis le 29/08 et c était
+tout son objet.
+
+  · **LISTE ORDONNÉE** : l ordre est celui dans lequel ils s assoiront. Le réordonnancement est un
+    simple « monter » — répété, il donne n importe quel ordre, sans introduire un glissé de plus.
+  · Auto-complétion sur les joueurs déjà enregistrés (mesuré : « Ma » → Mathieu D, Mathilde, Mathieu T,
+    Marie L), et on ne propose pas ceux qui sont déjà dans la liste. Plafond à 8.
+  · ⚠️ **LISTE OPTIMISTE**, le principe de `Bascule` : sans elle chaque ajout attendrait l écriture en
+    base PUIS la relecture de la table — exactement le délai que l user avait signalé sur les
+    interrupteurs. **Mesuré en dev** (où la RLS refuse) : nom posé à **33 ms**, revenu à **91 ms** avec
+    la raison affichée. Elle exige que `onChange` REJETTE en cas d échec — c est le contrat de
+    `handlePrefCompte` depuis le 29/08.
+  · Le bouton « monter » de la première ligne est **rendu mais éteint** : une colonne de boutons qui
+    change de largeur d une ligne à l autre se lit comme une erreur. `.owner-del` posant une `color`
+    explicite, il lui fallait sa règle `:disabled` (la règle du projet, déjà payée plusieurs fois).
+
+**Côté saisie**, une SECONDE ligne sur le patron EXACT de « la dernière table », et **en dessous
+d elle** : la dernière table de CE jeu est plus précise que les habitués du compte.
+
+  · ⚠️ **TRONQUÉE À CE QUE LE JEU ACCEPTE** (`slice(0, maxP)`) : une liste de 5 versée dans un jeu à 2 y
+    mettrait trois joueurs de trop. **Mesuré** : Jaipur (2 max) annonce deux noms et en assoit deux ;
+    Codex Naturalis (4 max) les trois.
+  · ⚠️ **Le même ménage que `rasseoir`**, factorisé dans `asseoir(noms)` : les joueurs posés ont des ids
+    **NEUFS**, donc couronnes, victoire directe et départage repartent de zéro — sinon on enregistrerait
+    une partie dont le vainqueur ne pointe sur personne.
+  · Mêmes gardes que la dernière table : jamais en réédition, jamais en équipes, et **INERTE** dès que la
+    table n est plus vierge — elle ne peut donc jamais écraser une saisie.
+
+**Testé par le vrai chemin**, avec un stub de **LECTURE** pour simuler une liste enregistrée (la RLS de
+dev refuse l écriture), puis retiré et `owners.js` **vérifié identique** à l avant-test par `diff`.
+**Base intacte**, aucune donnée de test créée. **Garde-fou d espacement : 402 → 403.**
+
 ## ✅⚠️ LES TEXTES QUI N APPRENNENT RIEN (2026-08-30, retour user + balayage)
 
 **Retour user**, capture d une saisie de partie à l appui : « c est quoi cette ligne "colonne :
