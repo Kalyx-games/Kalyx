@@ -26,6 +26,11 @@ const makeTeamRow = (t = {}) => {
   return { id: ++tid, name: t.name || '', size, players: Array.from({ length: n }, () => makePlayer()), score: '', win: false }
 }
 
+// Le nom de la colonne quand la fiche n'en définit aucune. ⚠️ Sert AUSSI à décider si le nom
+// vaut la peine d'être annoncé : « Colonne : Points » au-dessus d'une colonne unique n'apprend
+// rien à personne (mesuré : 18 des 23 fiches à une colonne sont dans ce cas).
+const COL_DEFAUT = 'Points'
+
 export default function ScoreSheet({ game, template, initialPlay = null, playerNames = [], scenarioNames = [], closing = false, dirtyRef, onSavePlay, saving, onEdit, onClose }) {
   const win = template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive')
   const scoring = template?.scoring || 'high'
@@ -230,7 +235,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // (terminologie de beaucoup de jeux → pas la peine de la recréer à chaque fois).
   const visibleCats = useMemo(() => {
     const cs = cats.filter((c) => !c.ext || activeExts.has(c.ext))
-    return cs.length === 0 && !noPoints ? [{ label: 'Points' }] : cs
+    return cs.length === 0 && !noPoints ? [{ label: COL_DEFAUT }] : cs
   }, [cats, activeExts, noPoints])
 
   // Coop avec points : total du groupe = somme des catégories saisies.
@@ -1265,18 +1270,28 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // il n'y a qu'un score par joueur). Vaut aussi bien pour byItem que byPlayer (1 colonne = pareil).
   if (!isCoop && !isTeams && !noPoints && visibleCats.length === 1) {
     const cat = visibleCats[0]
+    const nomColonne = cat.label && cat.label !== COL_DEFAUT ? cat.label : null
+    const sensInverse = scoring === 'low'
     return (
       <div className={`sheet${closing ? ' closing' : ''}`}>
         {titleHead}
         <div className="coop-form">
           <div className="field">
-            {/* Le vrai nom de la colonne, celui de la fiche (« Points », « Points de contrat »…),
-                avec son rappel de règle : c'est précisément ce qu'on cherche à table. */}
             {playersLabel}
-            <p className="field-hint sheet-col-name">
-              Colonne : <b>{cat.label}</b>
-              {scoring === 'low' ? ' · le plus petit score gagne' : ''}
-            </p>
+            {/* ⚠️ CETTE LIGNE NE PARAÎT QUE SI ELLE APPREND QUELQUE CHOSE. Elle annonçait le nom
+                de la colonne en toutes circonstances — or au-dessus d'une colonne UNIQUE, et
+                quand ce nom est « Points » (le défaut, ou le mot que la fiche emploie), elle
+                répète exactement ce qu'on lit déjà. Mesuré sur la base : 18 fiches à une
+                colonne sur 23. Restent les deux cas où elle dit quelque chose : la colonne
+                porte un vrai nom de jeu (« Points de contrat », « Châteaux »), ou le sens du
+                score est inversé — et ça, rien à l'écran ne le montre. */}
+            {(nomColonne || sensInverse) && (
+              <p className="field-hint sheet-col-name">
+                {nomColonne && <>Colonne : <b>{nomColonne}</b></>}
+                {nomColonne && sensInverse && ' · '}
+                {sensInverse && (nomColonne ? 'le plus petit score gagne' : 'Le plus petit score gagne.')}
+              </p>
+            )}
             {cat.hint ? <p className="field-hint">{cat.hint}</p> : null}
             <div className="coop-players" ref={listeRef}>
               {players.map((p, i) => (
