@@ -72,6 +72,11 @@
      et se maintient donc tout seul — c'est un couple, plus deux nombres à accorder. */
   --gutter: var(--sp-4);
 
+  /* Densité de la vue grille — voir `.list.list-grid` et src/lib/densite.js. */
+  --kx-cols: 3;
+  --kx-tuile-min: 72px; /* sous cette largeur une jaquette n'est plus qu'une tache */
+  --kx-bureau: 140px;
+
   /* Des RECETTES, pas du rythme : ces paddings construisent une HAUTEUR. Les neuf
      champs de saisie doivent faire la même hauteur que la croix « retirer » posée
      à côté d'eux (un retour utilisateur là-dessus a déjà été traité une fois), et
@@ -5958,19 +5963,44 @@ input[type='number'] {
 }
 
 /* ---------- Vue GRILLE (chantier 6) : la jaquette d'abord, le nom dessous ---------- */
+/* LA DENSITÉ DE LA VUE GRILLE — un réglage d'APPAREIL (Réglages → Apparence, src/lib/densite.js).
+   `--kx-cols` est le nombre de colonnes VOULU, `--kx-tuile-min` le plancher sous lequel une
+   jaquette n'est plus lisible, `--kx-bureau` gouverne les grands écrans (y viser un nombre de
+   colonnes donnerait des tuiles géantes). « moyennes » n'a pas d'attribut : c'est le défaut,
+   donc la grille de qui ne touche à rien ne bouge pas d'un pixel. */
+:root[data-densite='grandes'] { --kx-cols: 2; --kx-bureau: 200px; }
+:root[data-densite='petites'] { --kx-cols: 4; --kx-bureau: 110px; }
+
 .list.list-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* ⚠️ LE PLANCHER EST LA GARANTIE : `max()` fait que la piste vaut la largeur idéale pour
+     `--kx-cols` colonnes TANT QU'ELLE DÉPASSE le plancher ; en dessous, c'est le plancher qui
+     commande et `auto-fill` rend alors MOINS de colonnes, chacune au-dessus du plancher. Le
+     nombre réel s'adapte donc tout seul à la largeur du téléphone, et une grille minuscule
+     est impossible par construction — pas besoin d'interdire quoi que ce soit à la main.
+     ⚠️ `--kx-gap` est déclaré ICI et sert aux DEUX endroits (le calcul et le `gap`) : sans ça
+     ce serait deux nombres à accorder à la main, et le calcul mentirait au premier écart. */
+  --kx-gap: 10px;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(
+      max(
+        var(--kx-tuile-min, 72px),
+        (100% - (var(--kx-cols, 3) - 1) * var(--kx-gap)) / var(--kx-cols, 3)
+      ),
+      1fr
+    )
+  );
   /* L'écart ENTRE les rangées doit être bien plus grand que celui entre une jaquette et son
      titre, sinon le titre flotte entre deux images et on ne sait plus à qui il appartient
      (c'est ce qui rendait la grille brouillonne). Rapport ~5:1, comme Apple Music. */
-  gap: 22px 10px;
+  gap: 22px var(--kx-gap);
   align-content: start;
 }
 /* Sur large écran, on garde des tuiles de taille humaine plutôt que 3 colonnes géantes. */
 @media (min-width: 760px) {
   .list.list-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(var(--kx-bureau, 140px), 1fr));
   }
 }
 /* Le message « aucun jeu » et les squelettes occupent toute la largeur. */
@@ -6446,7 +6476,7 @@ input[type='number'] {
      (mesuré : « Masqués » 88 px contre « Affichés » 83) et la pastille ne coïncide avec aucun
      des deux. Deux colonnes `1fr` prennent la largeur du plus long libellé, chacune. */
   display: inline-grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(var(--kx-seg, 2), 1fr);
   padding: 3px;
   background: var(--input-bg);
   border-radius: var(--r-ctl);
@@ -6457,7 +6487,9 @@ input[type='number'] {
   top: 3px;
   bottom: 3px;
   left: 3px;
-  width: calc(50% - 3px);
+  /* Une colonne EXACTEMENT : la boîte de padding fait 100 %, on en retire les 2×3px de
+     retrait avant de diviser. `translateX(100%)` avance alors d'un segment pile. */
+  width: calc((100% - 6px) / var(--kx-seg, 2));
   background: var(--primary);
   border-radius: calc(var(--r-ctl) - 1px);
   transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
@@ -6494,3 +6526,32 @@ input[type='number'] {
   .bascule-pastille { transition: none; }
   .bascule.en-cours .bascule-pastille { animation: none; opacity: 0.6; }
 }
+
+/* UNE RANGÉE DE RÉGLAGE : son nom à gauche, son interrupteur à droite. `flex-wrap` et non une
+   largeur fixe — sur un écran étroit la bascule passe SOUS son nom au lieu de le compresser. */
+.pref-rangs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pref-rang {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pref-rang-nom {
+  font-size: var(--fs-body-s);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Un segment peut porter une icône de marque, comme les puces de statut le faisaient.
+   ⚠️ MÊME RÈGLE QUE `.fchip.on` : le segment ACTIF a pour fond `--primary`, qui s'inverse
+   avec le thème — une couleur de marque y tomberait à 1,9:1. Dans cet état l'icône suit donc
+   la couleur du texte. */
+.bascule-seg { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.seg-collection svg * { fill: var(--nav-collection); }
+.seg-wishlist svg * { fill: var(--nav-wishlist); }
+.bascule-seg.on svg * { fill: currentColor; }

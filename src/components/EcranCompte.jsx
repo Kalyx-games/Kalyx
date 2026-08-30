@@ -86,17 +86,28 @@ export default function EcranCompte({
       {!creation && compte && online && prefsDispo && prefs && (
         <section className="settings-card">
           <h3>Affichage</h3>
-          <div className="oe-field">
-            <span className="oe-label">Noms des jeux en vue grille</span>
-            <Bascule
-              ariaLabel="Noms des jeux en vue grille"
-              valeur={prefs.grilleNoms}
-              onChange={(v) => onPref('grilleNoms', v)}
-              options={[
-                { valeur: true, label: 'Affichés' },
-                { valeur: false, label: 'Masqués' },
-              ]}
-            />
+          <span className="oe-label">Noms des jeux en vue grille</span>
+          {/* Un réglage par onglet : on ne parcourt pas sa collection et sa wishlist de la
+              même façon. Les deux rangées portent le nom de l'onglet, rien de plus — la
+              question est posée par le libellé au-dessus. */}
+          <div className="pref-rangs">
+            {[
+              ['Collection', 'grilleNoms'],
+              ['Wishlist', 'grilleNomsWishlist'],
+            ].map(([nom, cle]) => (
+              <div className="pref-rang" key={cle}>
+                <span className="pref-rang-nom">{nom}</span>
+                <Bascule
+                  ariaLabel={`Noms des jeux en vue grille — ${nom}`}
+                  valeur={prefs[cle]}
+                  onChange={(v) => onPref(cle, v)}
+                  options={[
+                    { valeur: true, label: 'Affichés' },
+                    { valeur: false, label: 'Masqués' },
+                  ]}
+                />
+              </div>
+            ))}
           </div>
         </section>
       )}

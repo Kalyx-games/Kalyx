@@ -2186,7 +2186,9 @@ export default function App() {
           {!statsOpen && games !== null && <p className="screen-count">{countLabel}</p>}
         </div>
         {/* Bascule liste / grille : on montre l’icône de la vue vers laquelle on va.
-            Absente en wishlist, où la grille est interdite. */}
+            ⚠️ La grille est offerte AUSSI en wishlist depuis le 29/08 (l'interdiction du 19/08
+            est levée : la tuile porte désormais le glissé et son propre crayon), et le choix
+            liste/grille est mémorisé par ONGLET. */}
         {!statsOpen && (
           <button
             type="button"
@@ -2356,7 +2358,7 @@ export default function App() {
                 tagMap={tagMap}
                 montreComptes={montreComptes}
                 montreTags={montreTags}
-                montreNom={prefsCompte.grilleNoms}
+                montreNom={listStatus === 'wishlist' ? prefsCompte.grilleNomsWishlist : prefsCompte.grilleNoms}
                 compte={compte ?? null}
                 onCardClick={
                   !online

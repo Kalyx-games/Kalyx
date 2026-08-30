@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-// UN RÉGLAGE À DEUX ÉTATS — deux segments accolés et une pastille qui glisse dessous.
+// UN RÉGLAGE À QUELQUES ÉTATS — des segments accolés et une pastille qui glisse dessous.
 //
 // Retour user : « quand j'appuie, ça met un petit délai avant de basculer d'un bouton à
 // l'autre. Ça pourrait être bien d'avoir un toggle pour ce genre de bouton à 2 états (en règle
@@ -47,7 +47,14 @@ export default function Bascule({ options, valeur, onChange, disabled = false, a
   }
 
   return (
-    <div className={`bascule${enCours ? ' en-cours' : ''}`} role="group" aria-label={ariaLabel}>
+    // ⚠️ Le nombre de segments passe par une VARIABLE CSS : la grille et la largeur de la
+    // pastille en dérivent toutes les deux, donc elles ne peuvent pas se désaccorder.
+    <div
+      className={`bascule${enCours ? ' en-cours' : ''}`}
+      role="group"
+      aria-label={ariaLabel}
+      style={{ '--kx-seg': options.length }}
+    >
       <span
         className="bascule-pastille"
         style={{ transform: `translateX(${idx * 100}%)` }}
@@ -57,7 +64,7 @@ export default function Bascule({ options, valeur, onChange, disabled = false, a
         <button
           key={String(o.valeur)}
           type="button"
-          className={`bascule-seg${o.valeur === affichee ? ' on' : ''}`}
+          className={`bascule-seg${o.classe ? ' ' + o.classe : ''}${o.valeur === affichee ? ' on' : ''}`}
           onClick={() => choisir(o.valeur)}
           disabled={disabled}
           aria-pressed={o.valeur === affichee}

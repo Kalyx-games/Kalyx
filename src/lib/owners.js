@@ -19,7 +19,12 @@ const colManquante = (error, payload) => {
 // LES PRÉFÉRENCES D AFFICHAGE D UN COMPTE — un sac jsonb, pour ne pas remigrer à chaque
 // nouveau réglage (le motif de scoresheets.template). ⚠️ Une clé absente vaut TOUJOURS le
 // comportement d avant : c est ce qui rend la colonne inoffensive avant la migration.
-export const PREFS_DEFAUT = { grilleNoms: true }
+// ⚠️ DEUX clés et non une : on ne parcourt pas sa collection et sa wishlist de la même façon
+// (l'une se regarde à la jaquette, l'autre se lit au prix — c'est déjà pourquoi la vue
+// liste/grille est mémorisée par onglet). Une clé absente vaut toujours `true`, donc une
+// préférence enregistrée avant ce jour garde son sens pour la collection et laisse la
+// wishlist au comportement d'avant.
+export const PREFS_DEFAUT = { grilleNoms: true, grilleNomsWishlist: true }
 export const prefsDe = (ligne) => ({ ...PREFS_DEFAUT, ...(ligne?.prefs || {}) })
 
 // Renvoie la liste des propriétaires, ou null si la table n'existe pas encore

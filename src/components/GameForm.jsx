@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import PlayerPicker from './PlayerPicker'
 import { PlayersIcon, StarIcon, ExtIcon, PlusIcon, TrashIcon } from './icons'
+import Bascule from './Bascule'
 import { CollectionIcon, WishlistIcon } from './icons'
 import { expandRange, parseCounts, countsToText, parseOwners, ownersToText, parseExtensions, serializeExtensions } from '../lib/games'
 import { tagsPourCompte } from '../lib/tagsJeux'
@@ -736,14 +737,15 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
 
           <div className="field">
             <span className="field-label">Statut</span>
-            <div className="chips">
-              <button type="button" className={`fchip icon-chip chip-collection ${form.status === 'collection' ? 'on' : ''}`} onClick={() => setForm((f) => ({ ...f, status: 'collection' }))}>
-                <CollectionIcon size={17} /> Collection
-              </button>
-              <button type="button" className={`fchip icon-chip chip-wishlist ${form.status === 'wishlist' ? 'on' : ''}`} onClick={() => setForm((f) => ({ ...f, status: 'wishlist' }))}>
-                <WishlistIcon size={17} /> Wishlist
-              </button>
-            </div>
+            <Bascule
+              ariaLabel="Statut"
+              valeur={form.status}
+              onChange={(v) => setForm((f) => ({ ...f, status: v }))}
+              options={[
+                { valeur: 'collection', classe: 'seg-collection', label: <><CollectionIcon size={17} /> Collection</> },
+                { valeur: 'wishlist', classe: 'seg-wishlist', label: <><WishlistIcon size={17} /> Wishlist</> },
+              ]}
+            />
           </div>
 
           </div>

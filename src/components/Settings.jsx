@@ -3,9 +3,11 @@ import { Fragment, useMemo, useRef, useState } from 'react'
 import { BackIcon } from './icons'
 import qrcode from 'qrcode-generator'
 import { getTheme, applyTheme } from '../lib/theme'
+import { getDensite, applyDensite, DENSITES } from '../lib/densite'
 import { haptiqueDisponible, haptiqueActive, setHaptique } from '../lib/haptique'
 import { checkForUpdate, forceUpdate } from '../lib/update'
 import SortMenu from './SortMenu'
+import Bascule from './Bascule'
 import { SITE_LOGOS } from '../lib/logos'
 
 // Écran Réglages : partage, apparence, joueurs, sauvegarde, liens. Ni les COMPTES ni les
@@ -14,9 +16,9 @@ import { SITE_LOGOS } from '../lib/logos'
 
 const LINKS = [
   { label: "Melodice (musiques d'ambiance de jeux)", url: 'https://melodice.org/', domain: 'melodice.org' },
-  { label: 'Base de données (tableau de bord Supabase)', url: 'https://supabase.com/dashboard/project/rfzanybiwciovbzrcozb', domain: 'supabase.com' },
-  { label: 'Hébergement (tableau de bord Vercel)', url: 'https://vercel.com/kalyx/kalyx', domain: 'vercel.com' },
-  { label: 'Application BoardGameGeek (Kalyx)', url: 'https://boardgamegeek.com/application/7068', domain: 'boardgamegeek.com' },
+  { label: 'Base de données (Supabase)', url: 'https://supabase.com/dashboard/project/rfzanybiwciovbzrcozb', domain: 'supabase.com' },
+  { label: 'Hébergement (Vercel)', url: 'https://vercel.com/kalyx/kalyx', domain: 'vercel.com' },
+  { label: 'BoardGameGeek (Kalyx)', url: 'https://boardgamegeek.com/application/7068', domain: 'boardgamegeek.com' },
   { label: 'Code source (dépôt GitHub)', url: 'https://github.com/Kalyx-games/Kalyx', domain: 'github.com' },
 ]
 
@@ -68,7 +70,8 @@ export default function Settings({
   online, onClose,
 }) {
   const fileRef = useRef(null)
-  const [theme, setThemeState] = useState(getTheme())
+  const [theme, setThemeState] = useState(getTheme)
+  const [densite, setDensiteState] = useState(getDensite)
   const [vibrations, setVibrations] = useState(haptiqueActive)
   const [copied, setCopied] = useState(false)
   // Vérification manuelle de mise à jour : le service worker peut se coincer et resservir
@@ -148,7 +151,6 @@ export default function Settings({
         <div className="share-row">
           {qrDataUrl && <img className="share-qr" src={qrDataUrl} alt="QR code vers l'app Kalyx" width="118" height="118" />}
           <div className="share-info">
-            <p className="muted share-hint">Pour installer Kalyx sur un autre téléphone.</p>
             <div className="share-link">{APP_URL.replace('https://', '')}</div>
             <button type="button" className={`btn-ghost share-copy ${copied ? 'copied' : ''}`} onClick={copyAppLink}>
               {copied ? 'Lien copié ✓' : 'Copier le lien'}
@@ -159,6 +161,10 @@ export default function Settings({
 
       <section className="settings-card">
         <h3>Apparence</h3>
+        {/* Le thème n'avait AUCUN libellé : ses trois puces flottaient sous le titre de la
+            carte, ce qui obligeait « Vibrations » à porter le sien et déséquilibrait le tout.
+            Les trois réglages sont maintenant nommés de la même façon. */}
+        <span className="oe-label">Thème</span>
         <div className="chips">
           {[['auto', 'Système'], ['light', 'Clair'], ['dark', 'Sombre']].map(([v, label]) => (
             <button
@@ -177,30 +183,53 @@ export default function Settings({
             </button>
           ))}
         </div>
+
+        {/* ⚠️ TROIS choix → des puces, pas une bascule : les puces passent à la ligne sur un
+            écran étroit, une bascule à trois segments déborderait. Et elles sont nommées par
+            la TAILLE des tuiles, jamais par un nombre de colonnes — ce nombre dépend de la
+            largeur du téléphone (le CSS refuse de descendre sous un plancher et rend alors
+            moins de colonnes), un libellé « 4 colonnes » mentirait sur un petit écran. */}
+        <span className="oe-label" style={{ marginTop: 16 }}>Tuiles en vue grille</span>
+        <div className="chips">
+          {DENSITES.map((d) => (
+            <button
+              key={d.valeur}
+              type="button"
+              className={`fchip ${densite === d.valeur ? 'on' : ''}`}
+              onClick={() => { applyDensite(d.valeur); setDensiteState(d.valeur) }}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
         {/* Un seul interrupteur coupe TOUTES les vibrations de l'app.
-            ⚠️ formulation prudente : Firefox Android répond « oui je sais vibrer » puis ne
-            fait rien — on ne promet donc pas que ça marchera. */}
+            ⚠️ L'avertissement ne paraît QUE quand elles sont activées : c'est le seul moment
+            où il répond à une question réelle (« je les ai allumées et je ne sens rien »).
+            Firefox Android répond « oui je sais vibrer » puis ne fait rien. */}
         {haptiqueDisponible && (
           <>
-            <label className="field-label" style={{ marginTop: 16 }}>Vibrations</label>
-            <div className="chips">
-              {[[true, 'Activées'], [false, 'Coupées']].map(([v, label]) => (
-                <button
-                  key={String(v)}
-                  type="button"
-                  className={`fchip ${vibrations === v ? 'on' : ''}`}
-                  onClick={() => { setHaptique(v); setVibrations(v) }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <p className="field-hint" style={{ marginTop: 6 }}>
-              De petits retours au toucher pendant les gestes. Selon le navigateur : Firefox
-              ne les joue pas, et votre téléphone peut les couper de son côté.
-            </p>
+            <span className="oe-label" style={{ marginTop: 16 }}>Vibrations</span>
+            <Bascule
+              ariaLabel="Vibrations"
+              valeur={vibrations}
+              onChange={(v) => { setHaptique(v); setVibrations(v) }}
+              options={[
+                { valeur: true, label: 'Activées' },
+                { valeur: false, label: 'Coupées' },
+              ]}
+            />
+            {vibrations && (
+              <p className="field-hint" style={{ marginTop: 6 }}>
+                Firefox ne les joue pas, et votre téléphone peut les couper.
+              </p>
+            )}
           </>
         )}
+        {/* Une seule ligne pour les trois : c'est la distinction avec le menu Compte, dont
+            les réglages suivent la personne d'un téléphone à l'autre. */}
+        <p className="field-hint" style={{ marginTop: 14 }}>
+          Ces réglages ne valent que sur ce téléphone.
+        </p>
       </section>
 
 
@@ -274,22 +303,21 @@ export default function Settings({
       {/* Sauvegarde en FICHIER : à garder sur l'appareil ou à ré-importer. */}
       <section className="settings-card">
         <h3>Sauvegarde en fichier</h3>
-        <p className="field-hint">Un fichier à garder chez vous, ou à ré-importer plus tard.</p>
         <div className="save-actions">
-          <button type="button" className="btn-ghost" onClick={onExport} title="Télécharger la sauvegarde complète (fichier .json)">
-            Exporter
+          <button type="button" className="btn-ghost" onClick={onExport} title="Toute la collection dans un fichier .json, ré-importable ici">
+            Exporter (.json)
           </button>
-          <button type="button" className="btn-ghost" onClick={onExportCsv} title="Télécharger 2 fichiers .csv (jeux et parties) ouvrables dans un tableur">
-            Export tableur
+          <button type="button" className="btn-ghost" onClick={onExportCsv} title="Deux fichiers .csv — les jeux et les parties — ouvrables dans un tableur">
+            Export CSV
           </button>
           <button
             type="button"
             className="btn-ghost"
             onClick={() => fileRef.current && fileRef.current.click()}
             disabled={!online}
-            title={online ? 'Importer un fichier de sauvegarde' : 'Indisponible hors ligne'}
+            title={online ? 'Relire un fichier .json exporté depuis Kalyx' : 'Indisponible hors ligne'}
           >
-            Importer
+            Importer (.json)
           </button>
           <input
             ref={fileRef}

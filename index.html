@@ -9,6 +9,8 @@
       try {
         var t = localStorage.getItem('kalyx-theme')
         if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t)
+        var d = localStorage.getItem('kalyx-densite')
+        if (d === 'grandes' || d === 'petites') document.documentElement.setAttribute('data-densite', d)
         var dark = t === 'dark' || (t !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
         document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#0b0b0c' : '#f4f4f5')
       } catch (e) {}
