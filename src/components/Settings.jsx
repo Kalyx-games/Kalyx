@@ -15,12 +15,9 @@ import { SITE_LOGOS } from '../lib/logos'
 // tags, noms des jeux en grille) vit dans le menu Compte, pas ici.
 // L'ordre suit l'usage : ce qu'on vient régler d'abord, puis les sauvegardes, puis le partage
 // et les liens — qu'on ouvre une fois dans sa vie.
-// Écran Réglages : partage, apparence, joueurs, sauvegarde, liens. Ni les COMPTES ni les
-// TAGS n'y vivent plus : les deux appartiennent au compte, et se règlent dans son menu
-// (barre du haut) — un tag n'a pas le même mode de filtrage d'un compte à l'autre.
 
 const LINKS = [
-  { label: "Melodice (musiques d'ambiance)", url: 'https://melodice.org/', domain: 'melodice.org' },
+  { label: "Melodice (musiques d'ambiance de jeux)", url: 'https://melodice.org/', domain: 'melodice.org' },
   { label: 'Base de données (Supabase)', url: 'https://supabase.com/dashboard/project/rfzanybiwciovbzrcozb', domain: 'supabase.com' },
   { label: 'Hébergement (Vercel)', url: 'https://vercel.com/kalyx/kalyx', domain: 'vercel.com' },
   { label: 'BoardGameGeek (Kalyx)', url: 'https://boardgamegeek.com/application/7068', domain: 'boardgamegeek.com' },
@@ -35,7 +32,7 @@ const FREQ_OPTIONS = [
   { value: 'daily', label: 'Chaque jour' },
   { value: 'weekly', label: 'Chaque semaine' },
   { value: 'monthly', label: 'Chaque mois' },
-  { value: 'manual', label: 'Manuel' },
+  { value: 'manual', label: 'Jamais' },
 ]
 
 // Date lisible d'une sauvegarde, ex. "14 juil. à 21:30".
@@ -223,7 +220,7 @@ export default function Settings({
         )}
         {/* Une seule ligne pour les trois : c'est la distinction avec le menu Compte, dont
             les réglages suivent la personne d'un téléphone à l'autre. */}
-        <p className="field-hint">
+        <p className="field-hint carte-portee">
           Ces réglages ne valent que sur ce téléphone.
         </p>
       </section>
@@ -292,7 +289,11 @@ export default function Settings({
         )}
         {/* ⚠️ TROIS états, et ils ne se disent pas de la même façon : pas encore chargées,
             table absente, ou vraiment aucune. La carte était muette dans les deux premiers. */}
-        {!backupsLoaded ? (
+        {!backupsLoaded && !online ? (
+          // ⚠️ `reloadBackups` n'est appelé que depuis un effet gardé par `online` : hors ligne
+          // la liste n'arrive JAMAIS. Dire « Chargement… » serait une attente sans fin.
+          <p className="field-hint">Indisponible hors ligne.</p>
+        ) : !backupsLoaded ? (
           <p className="field-hint">Chargement…</p>
         ) : !backups ? (
           <p className="field-hint">

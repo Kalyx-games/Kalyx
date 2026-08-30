@@ -6484,6 +6484,10 @@ input[type='number'] {
   z-index: -1; /* sous les libellés, sans les rendre inertes */
 }
 .bascule-seg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-height: 40px; /* la norme des puces de l'app */
   padding: 0 16px;
   background: none;
@@ -6539,7 +6543,9 @@ input[type='number'] {
    ⚠️ MÊME RÈGLE QUE `.fchip.on` : le segment ACTIF a pour fond `--primary`, qui s'inverse
    avec le thème — une couleur de marque y tomberait à 1,9:1. Dans cet état l'icône suit donc
    la couleur du texte. */
-.bascule-seg { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+/* ⚠️ Comme `.fchip svg` : dans une colonne `1fr`, sans ça l'icône se ferait écraser AVANT
+   que le libellé ne cède. */
+.bascule-seg svg { flex-shrink: 0; }
 .seg-collection svg * { fill: var(--nav-collection); }
 .seg-wishlist svg * { fill: var(--nav-wishlist); }
 .bascule-seg.on svg * { fill: currentColor; }

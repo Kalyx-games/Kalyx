@@ -172,8 +172,45 @@ l écran sous le plancher de la charte.
 l éditais**. Sur 83 constats, 25 sont tombés — presque tous parce que le correctif était déjà écrit entre
 leur lecture et leur verdict. **Lancer la revue sur un arbre FIGÉ, ou l annoncer aux agents.**
 
+### La synthèse de la revue a rouvert huit points, tous appliqués
+
+  1. ⚠️ **Hors ligne, ma propre correction mentait** : `reloadBackups` n est appelé que depuis un effet
+     gardé par `online` → la carte serait restée sur « Chargement… » POUR TOUJOURS. Quatrième état :
+     « Indisponible hors ligne. »
+  2. ⚠️ **`PlayersManager` : j avais coupé une phrase de trop.** J avais retiré « Donner à un joueur le
+     nom d un autre fusionne les deux » en la croyant redite par `.player-merge`. **Faux** : cet
+     avertissement n apparaît qu APRÈS avoir tapé exactement le nom cible — qui ignore que la fusion
+     existe ne tapera jamais ce nom. L information était dite **zéro** fois. Restaurée, plus courte.
+     Idem « enregistrée » dans l état vide : un joueur naît d une partie SAISIE, pas d une partie jouée.
+  3. ⚠️ **« de jeux » chez Melodice n était PAS du bruit** — le site sert des ambiances PAR JEU, et
+     « musiques d ambiance » tout court se lit comme de la musique d ambiance générique. **Restauré.**
+     (L user n avait d ailleurs cité que « tableau de bord » et « Application ».)
+  4. **`.bascule-seg svg` n avait pas `flex-shrink: 0`** là où `.fchip svg` l a depuis toujours : dans
+     une colonne `1fr`, l icône se serait écrasée AVANT que le libellé ne cède. `.bascule-seg` était
+     aussi déclarée **deux fois**, 56 lignes d écart — fusionnée.
+  5. **La phrase MIROIR du menu Compte** : « Ces réglages suivent le compte sur tous ses téléphones. »
+     C est la distinction qu on ne peut pas deviner, et elle répond d avance à « pourquoi mon autre
+     téléphone n a pas ce réglage ». Les deux lignes portent `.carte-portee` (un filet les détache —
+     deux paragraphes gris d affilée se lisent comme un seul).
+  6. **« Fréquence : Manuel » ne répondait pas à la question posée** → **« Jamais »** (le comportement
+     réel est un arrêt total ; le bouton juste dessous dit déjà que le geste à la main reste possible).
+     Seul le libellé change, la valeur reste `'manual'`.
+  7. **Deux commentaires d en-tête empilés** dans Settings (le mien + l ancien, qui décrivait un ordre
+     disparu) · `App.jsx` disait encore « Export tableur » · `.share-hint` devenue morte.
+  8. ⚠⚠ **CLAUDE.md consignait la décision INVERSE** : « Restent actifs hors ligne … **Exporter** la
+     sauvegarde (JSON depuis la mémoire) ». C était vrai le 15/07 ; depuis que `collectSnapshot` relit
+     la base, c est faux. **Corrigé sur place**, sinon un prochain chantier aurait retiré les `disabled`
+     au nom de cette ligne.
+
+⚠️ **SIGNALÉ, NON CORRIGÉ** : en densité « Grandes » une tuile atteint 194 px, soit 582 px réels en
+densité 3, alors que `GameTile` sert du 384 (`img.js`). Léger flou possible. Le cran suivant est 640 —
+déjà en cache, c est la taille de la jaquette de fiche — mais il couplérait `GameTile` au réglage. À
+faire sur retour. **ÉCARTÉ** : « Export CSV » → « Exporter (.csv) » (l user a écrit « export csv », on
+ne réécrit pas une formulation explicite) · une phrase sur la rotation des sauvegardes (elle apprend
+quelque chose, mais l user vient de demander MOINS de texte).
+
 **Base intacte** : 147 jeux, 220 parties, 62 fiches, 3 comptes, 4 tags, 4 tierlists.
-**Garde-fou d espacement : 401 → 404.**
+**Garde-fou d espacement : 401 → 405.**
 
 ## ✅⚠️ UN INTERRUPTEUR À DEUX ÉTATS + 7 CONSTATS DE REVUE (2026-08-29, retour user)
 

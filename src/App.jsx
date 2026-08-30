@@ -1438,7 +1438,7 @@ export default function App() {
       setError(messageUtilisateur(e))
     }
   }
-  // Export tableur : 2 fichiers CSV (jeux, parties) ouvrables dans Excel / LibreOffice.
+  // Export CSV : 2 fichiers (jeux, parties) ouvrables dans Excel / LibreOffice.
   async function handleExportCsv() {
     setError(null)
     const dateStr = new Date().toISOString().slice(0, 10)

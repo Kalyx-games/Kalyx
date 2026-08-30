@@ -109,6 +109,12 @@ export default function EcranCompte({
               </div>
             ))}
           </div>
+          {/* Le miroir de « Ces réglages ne valent que sur ce téléphone » (Réglages →
+              Apparence) : c'est cette distinction qu'on ne peut pas deviner, et elle répond
+              d'avance à « pourquoi mon autre téléphone n'a pas ce réglage ». */}
+          <p className="field-hint carte-portee">
+            Ces réglages suivent le compte sur tous ses téléphones.
+          </p>
         </section>
       )}
 

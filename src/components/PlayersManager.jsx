@@ -42,11 +42,12 @@ export default function PlayersManager({ roster, busy, online, onRename, onClose
         {roster == null ? (
           <p className="field-hint">Chargement…</p>
         ) : roster.length === 0 ? (
-          <p className="field-hint">Aucun joueur : ils apparaîtront après votre première partie.</p>
+          <p className="field-hint">Aucun joueur : ils apparaîtront après votre première partie enregistrée.</p>
         ) : (
           <>
             <p className="field-hint" style={{ marginBottom: 10 }}>
-              Le nouveau nom remplace l'ancien dans toutes les parties.
+              Le nouveau nom remplace l'ancien dans toutes les parties. Donner à un joueur le
+              nom d'un autre les fusionne.
             </p>
             {roster.map((p) => {
               const v = valueOf(p)
