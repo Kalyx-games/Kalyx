@@ -48,6 +48,68 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅⚠️ LE COMPTE S OUVRE SUR SON AVATAR, LES NOMS PASSENT DANS LES RÉGLAGES (2026-08-30, 7 retours)
+
+**Retours user** : le réglage des noms de grille doit être **dans les Réglages, pas via le compte** ·
+« Partager Kalyx » juste sous Apparence · la note des vibrations réécrite · **deux phrases de portée
+jugées inutiles** (« ne valent que sur ce téléphone », « suivent le compte sur tous ses téléphones ») ·
+« de jeux » retiré de Melodice · et : « quand on arrive sur la vue de compte on ait juste l avatar et le
+nom du compte en gros, aligné à gauche, à droite de l avatar. Ensuite, un petit crayon permet d ouvrir
+le menu de modifs. »
+
+### A. Le réglage change d ENDROIT, pas de STOCKAGE
+
+Il vit désormais dans **Réglages → Apparence**, juste sous la densité (deux réglages de la même vue se
+suivent). ⚠️ **Il reste enregistré SUR LE COMPTE** (`owners.prefs`) : chaque foyer garde le sien sur un
+téléphone partagé, c est l arbitrage que l user avait rendu le 29/08. Seul l endroit où on le règle
+change. `prefs` vaut **null sans compte actif** — ce serait un interrupteur sans personne à qui
+l enregistrer. Mesuré : collection 69 tuiles / 0 nom, wishlist 9 / 9 — la divergence par onglet tient
+depuis le nouvel emplacement.
+
+### B. ⚠️ L écran Compte s ouvre sur le COMPTE — cela ANNULE la décision du 28/08
+
+Le 28/08, « l éditeur EST l écran » (le bouton Modifier avait été supprimé). L user revient dessus :
+avatar de **72 px**, nom à **20 px** à sa droite, alignés à gauche, et un **crayon de 44 px** poussé au
+bout ouvre les champs. On vient bien plus souvent ici pour changer de compte ou régler ses tags que pour
+se renommer.
+
+  · ⚠️ **UN SEUL AVATAR À L ÉCRAN** : l éditeur **REMPLACE** la tête au lieu de s ajouter dessous. Deux
+    images du même compte à quelques pixels d écart se contrediraient pendant l édition — l une vivante,
+    l autre figée. Mesuré : 1 aperçu en mode édition, 0 en repos.
+  · ⚠️⚠️ **LE DÉFAUT QUE LA FERMETURE AUTOMATIQUE CRÉAIT** : refermer l éditeur après enregistrement
+    voulait dire le refermer **aussi quand l écriture échoue** — en effaçant ce qui venait d être tapé,
+    pendant que le bandeau d erreur parle d une saisie disparue. `handleUpdateOwner` et
+    `handleRenameOwner` **rendent donc leur verdict** (comme `handleAddOwner` le fait déjà pour la
+    création, et pour la même raison), et l éditeur ne se referme qu en cas de succès. **Mesuré en dev**,
+    où la RLS refuse l écriture : l éditeur RESTE ouvert et la raison s affiche.
+    **RÈGLE : un formulaire qui se referme tout seul doit savoir si l écriture a abouti.**
+  · Hors ligne, le crayon n est pas rendu et la phrase « Hors ligne : lecture seule » quitte la carte :
+    la bannière du haut, visible sur cet écran, le dit déjà.
+  · La marge sous `.compte-tete` était devenue morte (plus rien ne la suit) → retirée.
+
+### C. Les textes
+
+  · « Firefox ne les joue pas… » → **« Elles peuvent être coupées par votre navigateur ou votre
+    téléphone. »** (toujours affichée seulement quand les vibrations sont activées).
+  · ⛔ **LES DEUX PHRASES DE PORTÉE SONT RETIRÉES** — « Ces réglages ne valent que sur ce téléphone » et
+    « Ces réglages suivent le compte sur tous ses téléphones ». **Ne pas les reproposer** : l user les a
+    qualifiées d inutiles, et la seconde venait d être ajoutée sur recommandation d une revue. `.carte-portee`
+    n a plus aucun porteur → la règle CSS part avec elles.
+  · Melodice : **« de jeux » retiré** (l user tranche contre la revue de la veille, qui l avait fait
+    restaurer). ⛔ Ne pas le remettre.
+  · **Ordre des cartes** : Apparence · **Partager Kalyx** · Joueurs · Sauvegarde en ligne · Sauvegarde en
+    fichier · Code d accès · Liens.
+
+### D. Défaut d espacement attrapé à la mesure
+
+La règle qui aère un réglage suivant un autre ne visait que `.chips` — le libellé « Vibrations » collait
+donc au nouveau bloc (**0 px** mesuré). Les deux formes de contrôle sont désormais listées
+(`.chips` et `.pref-rangs`). Rythme après correctif : **12 / 16 / 16 / 16**.
+
+**Vérifié** : 69 cartes, 9 wishlist, 8 tuiles de stats, fiche, formulaire, 0 erreur de rendu ; hors ligne
+le crayon disparaît et la tête reste. **Base intacte** : 147 jeux, 220 parties, 62 fiches, 3 comptes,
+4 tags, 4 tierlists. **Garde-fou d espacement : 407 → 405.**
+
 ## ✅⚠️ DES RÉGLAGES PLUS COURTS + UNE GRILLE DONT ON CHOISIT LA TAILLE (2026-08-30, 5 demandes user)
 
 **Retour user** : noms de grille indépendants collection/wishlist · d autres endroits à mettre en bascule
