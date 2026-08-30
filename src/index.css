@@ -6517,26 +6517,6 @@ input[type='number'] {
 
 /* UNE RANGÉE DE RÉGLAGE : son nom à gauche, son interrupteur à droite. `flex-wrap` et non une
    largeur fixe — sur un écran étroit la bascule passe SOUS son nom au lieu de le compresser. */
-/* ⚠️ TOUT PART DU MÊME BORD. La rangée empile son nom et son interrupteur au lieu de les
-   écarteler aux deux bouts : sur un écran étroit, un contrôle poussé à droite laisse un vide
-   au milieu, et il ne s'aligne avec aucun des autres réglages de la carte. */
-.pref-rangs {
-  display: flex;
-  flex-direction: column;
-  gap: 10px; /* < les 16px qui séparent deux réglages : c'est ce qui fait le groupe */
-}
-.pref-rang {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-/* Le titre qui coiffe un GROUPE de réglages : à l'encre, là où les libellés ordinaires sont
-   au gris. C'est ce seul écart qui dit « les deux suivants dépendent de moi » — une
-   indentation le dirait aussi, mais au prix de l'alignement de toute la carte. */
-.oe-label-groupe {
-  color: var(--ink);
-  margin-bottom: 10px; /* > les 6px d'un libellé collé à son contrôle : c'est un TITRE */
-}
 
 /* Un segment peut porter une icône de marque, comme les puces de statut le faisaient.
    ⚠️ MÊME RÈGLE QUE `.fchip.on` : le segment ACTIF a pour fond `--primary`, qui s'inverse
@@ -6565,15 +6545,12 @@ input[type='number'] {
   margin-top: 10px;
 }
 /* Un réglage qui suit un autre réglage dans la même carte respire. ⚠️ LES DEUX FORMES de
-   contrôle doivent être listées : des puces (`.chips`) ou des rangées à bascule
-   (`.pref-rangs`) — sans la seconde, le libellé suivant collait au bloc précédent (0 px). */
+   contrôle doivent être listées — des puces (`.chips`) ou une bascule — sans quoi le libellé
+   suivant collerait au contrôle précédent (0 px). La carte n'a qu'UN niveau de libellé : ces
+   16 px sont donc le seul écart entre deux réglages, et les 6 px de `.oe-label` le seul écart
+   entre un libellé et le sien. */
 .settings-card .chips + .oe-label,
-.settings-card .pref-rangs + .oe-label {
+.settings-card .bascule + .oe-label {
   margin-top: 16px;
-}
-/* Dans un groupe, les sous-libellés ne sont séparés que par le `gap` de `.pref-rangs` : leur
-   marge propre ferait double emploi. */
-.pref-rang > .oe-label {
-  margin-bottom: 6px;
 }
 

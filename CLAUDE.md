@@ -113,13 +113,21 @@ la bascule était jetée contre le bord DROIT en laissant un vide au milieu, pui
 les vibrations. **Une seule mise en page désormais** : le nom au-dessus, le contrôle dessous, tout au même
 bord (mesuré : les six libellés et les cinq contrôles partent du même x).
 
-  · ⚠️ **Le titre de groupe porte la hiérarchie PAR SA COULEUR, pas par une indentation.** « Noms des jeux
-    en vue grille » est à l ENCRE là où les libellés ordinaires sont au gris ; ses deux membres restent
-    gris. Indenter les aurait rattachés aussi, mais au prix de l alignement de toute la carte — c est-à-dire
-    du défaut qu on corrige. Contrastes en sombre : **16,3** titre · **6,55** sous-libellés.
-  · **TROIS crans verticaux, et ils se distinguent** (ils étaient à 6 / 14 / 16, donc indistincts) :
-    **16 px entre deux réglages > 10 px entre les deux membres d un groupe > 6 px entre un libellé et SON
-    contrôle.**
+  · ⚠⚠ **PUIS, 2e retour user : « la hiérarchie est bizarre ».** Elle l était : j avais coiffé les deux
+    réglages de noms d un titre de groupe à l ENCRE, ce qui faisait un **TROISIÈME niveau** (titre de
+    carte, titre de groupe, libellés) et n apparaissait qu **UNE** fois dans toute la carte. Un accent
+    qui ne sert qu à un endroit se lit comme une anomalie, pas comme une hiérarchie.
+    → **Le groupe DISPARAÎT** : ce sont deux réglages, on les nomme
+    (« Noms en vue grille — Collection » / « — Wishlist »). La carte a désormais **CINQ réglages de
+    même rang**. Mesuré : **une** seule couleur de libellé, **un** seul bord (x = 32), et **DEUX**
+    écarts seulement — 16 px entre deux réglages, 6 px entre un libellé et son contrôle.
+    Le répétition de « en vue grille » est le prix de la platitude, et elle fait écho à
+    « Tuiles en vue grille » juste au-dessus. À 320 px, les cinq libellés tiennent sur UNE ligne.
+    **RÈGLE : un niveau de titre qui n apparaît qu une fois dans une carte n est pas une hiérarchie.**
+  · ⛔ **« coupées » est BANNI de ce réglage** : il avait survécu dans la phrase d aide alors qu on
+    venait de le retirer du bouton, pour la raison exacte que « couper » décrit une panne et non un
+    réglage. → « Votre navigateur ou votre téléphone peuvent les désactiver. »
+  · Trois règles CSS sont mortes avec le groupe (`.pref-rangs`, `.pref-rang`, `.oe-label-groupe`).
   · **« Coupées » → « Désactivées »** (retour user : « ça fait bizarre activé/coupé, c est pas une
     dichotomie courante »). Il a raison : « coupé » décrit une panne, pas un réglage. Le mot est plus long
     → vérifié à **320 px** : la bascule fait 218 px pour 256 disponibles, les puces tiennent sur une ligne.

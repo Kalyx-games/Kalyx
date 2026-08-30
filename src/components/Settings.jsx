@@ -200,35 +200,30 @@ export default function Settings({
             </button>
           ))}
         </div>
-        {prefsDispo && prefs && (
-          <>
-            {/* Un réglage par ONGLET : on ne parcourt pas sa collection et sa wishlist de la
-                même façon. Le titre du groupe est à l'ENCRE, ses deux sous-libellés au gris des
-                autres réglages : c'est ce qui les rattache à lui sans avoir à les indenter — et
-                sans indentation, les cinq contrôles de la carte partent du même bord. */}
-            <span className="oe-label oe-label-groupe">Noms des jeux en vue grille</span>
-            <div className="pref-rangs">
-              {[
-                ['Collection', 'grilleNoms'],
-                ['Wishlist', 'grilleNomsWishlist'],
-              ].map(([nom, cle]) => (
-                <div className="pref-rang" key={cle}>
-                  <span className="oe-label">{nom}</span>
-                  <Bascule
-                    ariaLabel={`Noms des jeux en vue grille — ${nom}`}
-                    valeur={prefs[cle]}
-                    disabled={!online}
-                    onChange={(v) => onPref(cle, v)}
-                    options={[
-                      { valeur: true, label: 'Affichés' },
-                      { valeur: false, label: 'Masqués' },
-                    ]}
-                  />
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+        {/* Un réglage par ONGLET : on ne parcourt pas sa collection et sa wishlist de la même
+            façon. ⚠️ Deux réglages NOMMÉS, et non un groupe coiffé d'un titre : un titre de
+            groupe ferait un troisième niveau dans une carte qui n'en a besoin d'aucun. Le
+            libellé répète « en vue grille » — c'est le prix de la platitude, et il fait écho à
+            « Tuiles en vue grille » juste au-dessus. */}
+        {prefsDispo && prefs &&
+          [
+            ['Collection', 'grilleNoms'],
+            ['Wishlist', 'grilleNomsWishlist'],
+          ].map(([nom, cle]) => (
+            <Fragment key={cle}>
+              <span className="oe-label">Noms en vue grille — {nom}</span>
+              <Bascule
+                ariaLabel={`Noms en vue grille — ${nom}`}
+                valeur={prefs[cle]}
+                disabled={!online}
+                onChange={(v) => onPref(cle, v)}
+                options={[
+                  { valeur: true, label: 'Affichés' },
+                  { valeur: false, label: 'Masqués' },
+                ]}
+              />
+            </Fragment>
+          ))}
 
         {/* Un seul interrupteur coupe TOUTES les vibrations de l'app.
             ⚠️ L'avertissement ne paraît QUE quand elles sont activées : c'est le seul moment
@@ -248,7 +243,7 @@ export default function Settings({
             />
             {vibrations && (
               <p className="field-hint">
-                Elles peuvent être coupées par votre navigateur ou votre téléphone.
+                Votre navigateur ou votre téléphone peuvent les désactiver.
               </p>
             )}
           </>
