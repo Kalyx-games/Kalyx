@@ -306,9 +306,7 @@ export default function ScoreSheetEditor({ game, template, online, closing = fal
     ? 'Hors ligne : impossible d’enregistrer une fiche.'
     : doublons.size
       ? 'Deux lignes portent le même nom.'
-      : !isNew && !modifie
-        ? 'Rien n’a changé.'
-        : err || ''
+      : err || ''
   const bloque = busy || !online || doublons.size > 0 || (!isNew && !modifie)
 
   const save = async () => {

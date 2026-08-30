@@ -2,6 +2,7 @@ import { BackIcon, PencilIcon } from './icons'
 import Avatar from './Avatar'
 import EditeurBulle from './EditeurBulle'
 import BubbleListManager from './BubbleListManager'
+import JoueursFrequents from './JoueursFrequents'
 
 // LE MENU DU COMPTE, ouvert depuis la barre du haut.
 //
@@ -37,6 +38,11 @@ export default function EcranCompte({
   onRenameTag,
   onDeleteTag,
   modeTagDispo = false, // la colonne `tags.visible_pour` existe-t-elle déjà en base ?
+  // Les joueurs fréquents : une donnée du COMPTE, comme les tags. `prefs` est null tant que la
+  // base ne connaît pas la colonne — on ne propose pas un réglage qui serait jeté sans un mot.
+  prefs = null,
+  onPref,
+  playerNames = [],
 }) {
   return (
     <div className="settings">
@@ -116,6 +122,16 @@ export default function EcranCompte({
           onUpdate={onUpdateTag}
           onRename={onRenameTag}
           onDelete={onDeleteTag}
+        />
+      )}
+
+      {/* Les habitués du compte : un tap les assoit au début d'une partie. */}
+      {!creation && compte && prefs && (
+        <JoueursFrequents
+          liste={prefs.joueursFrequents ?? []}
+          playerNames={playerNames}
+          online={online}
+          onChange={(l) => onPref('joueursFrequents', l)}
         />
       )}
 

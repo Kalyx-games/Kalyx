@@ -31,7 +31,7 @@ const makeTeamRow = (t = {}) => {
 // rien à personne (mesuré : 18 des 23 fiches à une colonne sont dans ce cas).
 const COL_DEFAUT = 'Points'
 
-export default function ScoreSheet({ game, template, initialPlay = null, playerNames = [], scenarioNames = [], closing = false, dirtyRef, onSavePlay, saving, onEdit, onClose }) {
+export default function ScoreSheet({ game, template, initialPlay = null, playerNames = [], joueursFrequents = [], scenarioNames = [], closing = false, dirtyRef, onSavePlay, saving, onEdit, onClose }) {
   const win = template?.win || (template?.mode === 'coop' ? 'coop' : 'competitive')
   const scoring = template?.scoring || 'high'
   // Le « scénario » a été retiré de la création de fiche : on ne le demande plus à la
@@ -637,15 +637,13 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     return <><CrownIcon size={14} /> {tetes.map(teamName).join(", ")} · <b>{ex}</b></>
   })()
 
-  const saveBar = (onSave, disabled, live, aide) =>
+  // ⚠️ Plus d'argument `aide` : un bouton grisé se comprend seul (retour user du 30/08).
+  // La barre ne porte que le RÉSULTAT EN DIRECT — le meneur, le vainqueur désigné : c'est une
+  // donnée, pas l'explication d'un bouton mort.
+  const saveBar = (onSave, disabled, live) =>
     onSavePlay ? (
       <div className="sheet-editor-actions sheet-save-bar">
-        {live ? (
-          <div className="sheet-leader">{live}</div>
-        ) : disabled && aide ? (
-          // Le bouton est mort : on dit ce qui manque, au lieu de laisser chercher.
-          <div className="sheet-hint">{aide}</div>
-        ) : null}
+        {live ? <div className="sheet-leader">{live}</div> : null}
         <button type="button" className="btn-primary sheet-cta" onClick={onSave} disabled={saving || disabled}>
           {saving ? '…' : saveLabel}
         </button>
@@ -666,8 +664,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   const renderSaveBar = () => {
     if (!onSavePlay || visibleCats.length === 0) return null
     const bloque = !anyScore && !instantWinnerId
-    const aide = `Saisissez au moins un score${hasInstant ? ' ou désignez une victoire directe' : ''} pour enregistrer.`
-    return saveBar(saveScored, bloque, scoredLive, aide)
+    return saveBar(saveScored, bloque, scoredLive)
   }
 
   const titleHead = (
@@ -740,16 +737,23 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // Elle reste en place et devient INERTE (atténuée, plus tapable), donc toujours incapable
   // d'écraser une saisie.
   const rappelTable = derniereTable.length > 0 && !isEdit && !isTeams
-  const rasseoir = () => {
+  // ⚠️ LES HABITUÉS DU COMPTE, tronqués à ce que le jeu accepte : une liste de 5 versée dans un
+  // jeu à 2 y mettrait trois joueurs de trop. Le nombre vient de la liste, borné par le jeu.
+  const frequents = joueursFrequents.slice(0, maxP)
+  const rappelFrequents = frequents.length > 0 && !isEdit && !isTeams
+  // ⚠️ Le même ménage pour les DEUX boutons, et pour la même raison qu'à `removePlayer` : les
+  // joueurs posés ont des ids NEUFS, donc tout état qui désigne quelqu'un par son id
+  // (couronnes, victoire directe, départage) doit repartir de zéro — sinon on enregistrerait
+  // une partie dont le vainqueur ne pointe sur personne.
+  const asseoir = (noms) => {
     if (!tableVierge) return
-    // Même ménage que removePlayer, pour la même raison : les nouveaux joueurs ont des ids
-    // neufs, tout état qui désigne un joueur par son id doit repartir de zéro.
     setWinnerIds(new Set())
     setInstantWinnerId(null)
     setForcedWinnerId(null)
-    setPlayers(derniereTable.map((n) => makePlayer(n)))
+    setPlayers(noms.map((n) => makePlayer(n)))
     vibre('cran')
   }
+  const rasseoir = () => asseoir(derniereTable)
   const playersLabel = (
     <>
       <label className="field-label"><PlayersIcon size={13} /> Qui joue ?</label>
@@ -763,6 +767,19 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         >
           <span className="table-rappel-txt">Reprendre la dernière table</span>
           <span className="table-rappel-noms">{derniereTable.join(' · ')}</span>
+        </button>
+      )}
+      {/* Les habitués du compte. En SECOND : la dernière table de CE jeu est plus précise. */}
+      {rappelFrequents && (
+        <button
+          type="button"
+          className={`table-rappel${tableVierge ? '' : ' inerte'}`}
+          onClick={() => asseoir(frequents)}
+          disabled={!tableVierge}
+          aria-hidden={tableVierge ? undefined : 'true'}
+        >
+          <span className="table-rappel-txt">Joueurs fréquents</span>
+          <span className="table-rappel-noms">{frequents.join(' · ')}</span>
         </button>
       )}
     </>
@@ -1137,7 +1154,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           )}
           {notesField}
         </div>
-        {saveBar(saveCoop, !outcome, coopLive, 'Dites si la partie est gagnée ou perdue.')}
+        {saveBar(saveCoop, !outcome, coopLive)}
       </div>
     )
   }
@@ -1239,7 +1256,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           {teamTieBreak()}
           {notesField}
         </div>
-        {saveBar(saveTeams, !canSaveTeams, teamLive, noPoints ? 'Touchez la couronne de l’équipe gagnante.' : 'Renseignez un score, ou désignez l’équipe gagnante.')}
+        {saveBar(saveTeams, !canSaveTeams, teamLive)}
       </div>
     )
   }
@@ -1253,7 +1270,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           <div className="field">
             {playersLabel}
             {playerList(true)}
-            <p className="field-hint">Plusieurs couronnes si la victoire est partagée.</p>
+            <p className="field-hint">Touchez la couronne du vainqueur. Plusieurs si la victoire est partagée.</p>
             {variantHint}
           </div>
           {extField}
@@ -1261,7 +1278,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           {triggerField}
           {notesField}
         </div>
-        {saveBar(saveNoPoints, !winnerIds.size, noPointsLive, 'Touchez la couronne du vainqueur.')}
+        {saveBar(saveNoPoints, !winnerIds.size, noPointsLive)}
       </div>
     )
   }

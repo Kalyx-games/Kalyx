@@ -5335,12 +5335,6 @@ input[type='number'] {
   font-size: var(--fs-body);
 }
 /* Prend la place du meneur quand le bouton est grisé : ce qui manque pour enregistrer. */
-.sheet-hint {
-  text-align: center;
-  color: var(--muted);
-  font-size: var(--fs-body-s);
-}
-
 /* ===== Saisie d'une partie : assistant en 2 étapes (compétitif à points) ===== */
 
 /* Nom de joueur figé (en-tête du tableau à l'étape 2 — plus d'édition ici) */
@@ -6554,3 +6548,15 @@ input[type='number'] {
   margin-top: 16px;
 }
 
+
+/* `.owner-del` pose une `color` explicite : sans cette règle, l'atténuation qu'un navigateur
+   applique à un bouton désactivé serait écrasée, et le « monter » de la première ligne
+   paraîtrait actif. (Règle du projet, déjà payée plusieurs fois.) */
+.owner-del:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+/* Deux rappels peuvent se suivre — la dernière table de ce jeu, puis les habitués du compte. */
+.table-rappel + .table-rappel {
+  margin-top: 8px;
+}

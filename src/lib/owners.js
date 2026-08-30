@@ -24,7 +24,9 @@ const colManquante = (error, payload) => {
 // liste/grille est mémorisée par onglet). Une clé absente vaut toujours `true`, donc une
 // préférence enregistrée avant ce jour garde son sens pour la collection et laisse la
 // wishlist au comportement d'avant.
-export const PREFS_DEFAUT = { grilleNoms: true, grilleNomsWishlist: true }
+// `joueursFrequents` : la table qu'on remet en place d'un tap au début d'une partie, dans
+// l'ordre où ils s'assoiront. Vide par défaut — un compte neuf n'a pas d'habitués.
+export const PREFS_DEFAUT = { grilleNoms: true, grilleNomsWishlist: true, joueursFrequents: [] }
 export const prefsDe = (ligne) => ({ ...PREFS_DEFAUT, ...(ligne?.prefs || {}) })
 
 // Renvoie la liste des propriétaires, ou null si la table n'existe pas encore

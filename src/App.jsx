@@ -2134,6 +2134,9 @@ export default function App() {
 
       {compteOuvert ? (
         <EcranCompte
+          prefs={compte && prefsDispo ? prefsCompte : null}
+          onPref={handlePrefCompte}
+          playerNames={playerNames}
           tags={mesTags}
           onAddTag={handleAddTag}
           onUpdateTag={handleUpdateTag}
@@ -2787,6 +2790,7 @@ export default function App() {
             closing={scoringLayer.closing}
             template={scoresheets[scoringLayer.value.id]}
             initialPlay={editingPlay}
+            joueursFrequents={prefsCompte.joueursFrequents ?? []}
             playerNames={playerNames}
             scenarioNames={scenarioNames}
             dirtyRef={scoringDirtyRef}
