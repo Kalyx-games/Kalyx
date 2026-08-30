@@ -2006,6 +2006,16 @@ export default function App() {
   // base connaît la colonne (un select('*') la ramène dès qu'elle existe) — sinon on offrirait
   // un interrupteur dont le choix serait jeté par la dégradation, sans un mot.
   const prefsCompte = prefsDe(compteLigne)
+  // ⚠️ LES PROPOSITIONS DE NOM COMMENCENT PAR LES HABITUÉS DU COMPTE, dans l'ordre choisi ;
+  // le reste suit la règle en place (les plus assidus d'abord). Un habitué qui n'a encore
+  // jamais joué est donc proposé lui aussi — on l'a déclaré, c'est le sujet.
+  // Dédoublonnage insensible à la casse : l'orthographe du compte l'emporte.
+  const suggestionsJoueurs = useMemo(() => {
+    const freq = prefsCompte.joueursFrequents ?? []
+    if (!freq.length) return playerNames
+    const vus = new Set(freq.map((n) => n.toLowerCase()))
+    return [...freq, ...playerNames.filter((n) => !vus.has(n.toLowerCase()))]
+  }, [prefsCompte.joueursFrequents, playerNames])
   const prefsDispo = (ownersList ?? []).some((o) => 'prefs' in o)
   // ⚠️ `!ajoutCompte` : au TOUT PREMIER lancement, `compte === undefined` reste vrai après le tap sur
   // « Ajouter un compte » → l'écran des avatars continuait de s'afficher et le formulaire de création
@@ -2136,7 +2146,7 @@ export default function App() {
         <EcranCompte
           prefs={compte && prefsDispo ? prefsCompte : null}
           onPref={handlePrefCompte}
-          playerNames={playerNames}
+          playerNames={suggestionsJoueurs}
           tags={mesTags}
           onAddTag={handleAddTag}
           onUpdateTag={handleUpdateTag}
@@ -2773,7 +2783,7 @@ export default function App() {
             allOwners={allOwners}
             allTags={allTags}
             tagsVisibles={tagsVisibles}
-            playerNames={playerNames}
+            playerNames={suggestionsJoueurs}
             online={online}
             onClose={() => setTierlistView(null)}
             onSave={handleSaveTierlist}
@@ -2791,7 +2801,7 @@ export default function App() {
             template={scoresheets[scoringLayer.value.id]}
             initialPlay={editingPlay}
             joueursFrequents={prefsCompte.joueursFrequents ?? []}
-            playerNames={playerNames}
+            playerNames={suggestionsJoueurs}
             scenarioNames={scenarioNames}
             dirtyRef={scoringDirtyRef}
             saving={savingPlay}

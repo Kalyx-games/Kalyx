@@ -751,8 +751,10 @@ body {
   text-align: left;
 }
 .sortmenu-list button:active { transform: scale(0.98); }
-.sortmenu-list button:hover {
-  background: var(--input-bg);
+@media (hover: hover) {
+  .sortmenu-list button:hover {
+    background: var(--input-bg);
+  }
 }
 .sortmenu-list button.active {
   color: var(--primary);
@@ -1995,8 +1997,10 @@ body {
 .modal-del:active {
   opacity: 0.55; /* pas de scale : son centrage repose sur translateY(-50%) */
 }
-.modal-del:hover {
-  background: var(--danger-bg); /* survol souris : le fond réapparaît (il n'y a plus de bordure) */
+@media (hover: hover) {
+  .modal-del:hover {
+    background: var(--danger-bg); /* survol SOURIS : le fond réapparaît (il n'y a plus de bordure) */
+  }
 }
 .modal-del:disabled {
   opacity: 0.5;
@@ -2315,9 +2319,36 @@ body {
   font-size: var(--fs-body);
   cursor: pointer;
 }
-.owner-del:hover {
-  background: var(--danger-bg);
-  color: var(--danger);
+@media (hover: hover) {
+  .owner-del:hover {
+    background: var(--danger-bg);
+    color: var(--danger);
+  }
+}
+/* Réordonner n'est pas supprimer : ces flèches prennent la couleur du TEXTE, jamais le rouge.
+   Elles sont collées l'une à l'autre — c'est un seul contrôle à deux sens. */
+.owner-moves {
+  display: flex;
+  flex-shrink: 0;
+}
+.owner-move {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-ctl);
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.owner-move:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+.owner-move:not(:disabled):active {
+  transform: scale(0.9);
 }
 .owner-edit {
   width: 40px;
@@ -2329,8 +2360,10 @@ body {
   cursor: pointer;
   flex-shrink: 0;
 }
-.owner-edit:hover {
-  background: var(--accent-soft);
+@media (hover: hover) {
+  .owner-edit:hover {
+    background: var(--accent-soft);
+  }
 }
 .owner-list li.editing {
   border-color: var(--primary);
@@ -2988,9 +3021,13 @@ body {
   text-underline-offset: 3px;
   transition: text-decoration-color 0.15s;
 }
-.player-link:hover,
 .player-link:active {
   text-decoration-color: var(--muted);
+}
+@media (hover: hover) {
+  .player-link:hover {
+    text-decoration-color: var(--muted);
+  }
 }
 
 /* Ligne « Joueurs occasionnels » : pas de pilule, c'est un dépliant. */
@@ -4203,9 +4240,13 @@ button {
   border-radius: 6px;
   cursor: pointer;
 }
-.name-suggest button:hover,
 .name-suggest button:active {
   background: var(--soft);
+}
+@media (hover: hover) {
+  .name-suggest button:hover {
+    background: var(--soft);
+  }
 }
 /* Croix « retirer la ligne » de la saisie : MÊME recette que .ext-row-x (l'éditeur) —
    même rôle, même taille, pleine hauteur de ligne. Avant : 18/26px nues, incohérentes. */

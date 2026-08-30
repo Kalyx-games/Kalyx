@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import NameField from './NameField'
-import { XIcon } from './icons'
+import { DescendreIcon, MonterIcon, XIcon } from './icons'
 
 // LES JOUEURS FRÉQUENTS DU COMPTE — la table qu'on remet en place d'un tap au début d'une
 // partie, quel que soit le jeu.
@@ -47,10 +47,12 @@ export default function JoueursFrequents({ liste = [], playerNames = [], online 
     poser([...vue, n])
   }
   const retirer = (i) => poser(vue.filter((_, k) => k !== i))
-  const monter = (i) => {
-    if (i < 1) return
+  // Un seul mécanisme pour les deux flèches : on échange la ligne avec sa voisine.
+  const bouger = (i, pas) => {
+    const j = i + pas
+    if (j < 0 || j >= vue.length) return
     const l = [...vue]
-    ;[l[i - 1], l[i]] = [l[i], l[i - 1]]
+    ;[l[i], l[j]] = [l[j], l[i]]
     poser(l)
   }
 
@@ -68,18 +70,32 @@ export default function JoueursFrequents({ liste = [], playerNames = [], online 
               <span className="owner-name-txt">{nom}</span>
               {online && (
                 <>
-                  {/* Rendu même en première position, mais éteint : une colonne de boutons qui
-                      change de largeur d'une ligne à l'autre se lit comme une erreur. */}
-                  <button
-                    type="button"
-                    className="owner-del"
-                    onClick={() => monter(i)}
-                    disabled={i === 0}
-                    title="Monter"
-                    aria-label={`Monter ${nom}`}
-                  >
-                    ↑
-                  </button>
+                  {/* ⚠️ Les deux flèches sont TOUJOURS rendues, éteintes aux extrémités : une
+                      colonne de boutons qui change de largeur d'une ligne à l'autre se lit
+                      comme une erreur. Elles sont collées (elles font un seul contrôle) et ne
+                      portent PAS `.owner-del` — réordonner n'est pas supprimer. */}
+                  <span className="owner-moves">
+                    <button
+                      type="button"
+                      className="owner-move"
+                      onClick={() => bouger(i, -1)}
+                      disabled={i === 0}
+                      title="Monter"
+                      aria-label={`Monter ${nom}`}
+                    >
+                      <MonterIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className="owner-move"
+                      onClick={() => bouger(i, 1)}
+                      disabled={i === vue.length - 1}
+                      title="Descendre"
+                      aria-label={`Descendre ${nom}`}
+                    >
+                      <DescendreIcon />
+                    </button>
+                  </span>
                   <button
                     type="button"
                     className="owner-del"
