@@ -2480,16 +2480,18 @@ body {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  margin-bottom: var(--sp-3);
 }
 .compte-titre {
-  font-size: var(--fs-body-l);
+  flex: 1;
+  font-size: var(--fs-title-s); /* « en gros », à la mesure de l'avatar de 72 px */
   font-weight: 700;
   letter-spacing: -0.015em;
   min-width: 0;
   overflow-wrap: anywhere; /* « Clémence & Mathieu » ne doit jamais déborder */
 }
-.compte-avatar { box-shadow: var(--elev-1); }
+.compte-avatar { box-shadow: var(--elev-1); flex-shrink: 0; }
+/* Le crayon ouvre les champs. Poussé au bout par le `flex: 1` du nom, et jamais compressé. */
+.compte-modifier { flex-shrink: 0; }
 /* L aperçu, en tête de l éditeur : le compte se regarde avant de se modifier. Aligné à
    GAUCHE comme le titre, les libellés et les champs — un avatar centré au milieu d une
    page alignée à gauche se lirait comme une erreur de gabarit. */
@@ -6564,18 +6566,11 @@ input[type='number'] {
 .settings-card .field-hint {
   margin-top: 10px;
 }
-/* Un réglage qui suit un autre réglage dans la même carte respire. */
-.settings-card .chips + .oe-label {
+/* Un réglage qui suit un autre réglage dans la même carte respire. ⚠️ LES DEUX FORMES de
+   contrôle doivent être listées : des puces (`.chips`) ou des rangées à bascule
+   (`.pref-rangs`) — sans la seconde, le libellé suivant collait au bloc précédent (0 px). */
+.settings-card .chips + .oe-label,
+.settings-card .pref-rangs + .oe-label {
   margin-top: 16px;
 }
 
-/* Le PIED d'une carte de réglages : à QUOI ces réglages s'appliquent — cet appareil (Apparence)
-   ou ce compte (menu Compte). Un filet le détache de l'indice qui peut le précéder : deux
-   paragraphes gris d'affilée se lisent comme un seul. */
-/* ⚠️ QUALIFIÉE : `.settings-card .field-hint` (0,2,0) bat `.carte-portee` (0,1,0), la marge
-   y serait restée inerte. À spécificité égale, c'est la déclaration la plus basse qui gagne. */
-.settings-card .carte-portee {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-}

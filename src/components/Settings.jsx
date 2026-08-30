@@ -13,11 +13,11 @@ import { SITE_LOGOS } from '../lib/logos'
 // Écran Réglages — ce qui vaut pour CET APPAREIL (apparence, densité, vibrations, sauvegarde
 // en fichier) et les commandes qui touchent toute la base. Ce qui suit la PERSONNE (avatar,
 // tags, noms des jeux en grille) vit dans le menu Compte, pas ici.
-// L'ordre suit l'usage : ce qu'on vient régler d'abord, puis les sauvegardes, puis le partage
-// et les liens — qu'on ouvre une fois dans sa vie.
+// L'ordre suit l'usage : l'apparence et le partage d'abord, puis les joueurs et les
+// sauvegardes, puis le code d'accès et les liens.
 
 const LINKS = [
-  { label: "Melodice (musiques d'ambiance de jeux)", url: 'https://melodice.org/', domain: 'melodice.org' },
+  { label: "Melodice (musiques d'ambiance)", url: 'https://melodice.org/', domain: 'melodice.org' },
   { label: 'Base de données (Supabase)', url: 'https://supabase.com/dashboard/project/rfzanybiwciovbzrcozb', domain: 'supabase.com' },
   { label: 'Hébergement (Vercel)', url: 'https://vercel.com/kalyx/kalyx', domain: 'vercel.com' },
   { label: 'BoardGameGeek (Kalyx)', url: 'https://boardgamegeek.com/application/7068', domain: 'boardgamegeek.com' },
@@ -69,6 +69,10 @@ function relativeTime(iso) {
 
 export default function Settings({
   onExport, onExportCsv, onImportFile, backupsLoaded = true,
+  // Les noms des jeux en vue grille : réglés ici, mais enregistrés SUR LE COMPTE (owners.prefs),
+  // donc chaque foyer garde les siens sur un téléphone partagé. `prefs` est null sans compte
+  // actif ou tant que la base ne connaît pas la colonne → le bloc n'est pas rendu.
+  prefs = null, prefsDispo = false, onPref,
   backupFreq, onSetBackupFreq, backups, backupBusy, onBackupNow, onRestore,
   onOpenPlayers,
   onEnterCode, onChangeCode, deviceAuthorized, onRejouerIndice,
@@ -195,6 +199,34 @@ export default function Settings({
             </button>
           ))}
         </div>
+        {prefsDispo && prefs && online && (
+          <>
+            <span className="oe-label">Noms des jeux en vue grille</span>
+            {/* Un réglage par ONGLET : on ne parcourt pas sa collection et sa wishlist de la
+                même façon. Les deux rangées portent le nom de l'onglet, rien de plus — la
+                question est posée par le libellé au-dessus. */}
+            <div className="pref-rangs">
+              {[
+                ['Collection', 'grilleNoms'],
+                ['Wishlist', 'grilleNomsWishlist'],
+              ].map(([nom, cle]) => (
+                <div className="pref-rang" key={cle}>
+                  <span className="pref-rang-nom">{nom}</span>
+                  <Bascule
+                    ariaLabel={`Noms des jeux en vue grille — ${nom}`}
+                    valeur={prefs[cle]}
+                    onChange={(v) => onPref(cle, v)}
+                    options={[
+                      { valeur: true, label: 'Affichés' },
+                      { valeur: false, label: 'Masqués' },
+                    ]}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
         {/* Un seul interrupteur coupe TOUTES les vibrations de l'app.
             ⚠️ L'avertissement ne paraît QUE quand elles sont activées : c'est le seul moment
             où il répond à une question réelle (« je les ai allumées et je ne sens rien »).
@@ -213,19 +245,27 @@ export default function Settings({
             />
             {vibrations && (
               <p className="field-hint">
-                Firefox ne les joue pas, et votre téléphone peut les couper.
+                Elles peuvent être coupées par votre navigateur ou votre téléphone.
               </p>
             )}
           </>
         )}
-        {/* Une seule ligne pour les trois : c'est la distinction avec le menu Compte, dont
-            les réglages suivent la personne d'un téléphone à l'autre. */}
-        <p className="field-hint carte-portee">
-          Ces réglages ne valent que sur ce téléphone.
-        </p>
       </section>
 
 
+
+      <section className="settings-card">
+        <h3>Partager Kalyx</h3>
+        <div className="share-row">
+          {qrDataUrl && <img className="share-qr" src={qrDataUrl} alt="QR code vers l'app Kalyx" width="118" height="118" />}
+          <div className="share-info">
+            <div className="share-link">{APP_URL.replace('https://', '')}</div>
+            <button type="button" className={`btn-ghost share-copy ${copied ? 'copied' : ''}`} onClick={copyAppLink}>
+              {copied ? 'Lien copié ✓' : 'Copier le lien'}
+            </button>
+          </div>
+        </div>
+      </section>
 
       <section className="settings-card">
         <h3>Joueurs</h3>
@@ -349,18 +389,6 @@ export default function Settings({
         </section>
       )}
 
-      <section className="settings-card">
-        <h3>Partager Kalyx</h3>
-        <div className="share-row">
-          {qrDataUrl && <img className="share-qr" src={qrDataUrl} alt="QR code vers l'app Kalyx" width="118" height="118" />}
-          <div className="share-info">
-            <div className="share-link">{APP_URL.replace('https://', '')}</div>
-            <button type="button" className={`btn-ghost share-copy ${copied ? 'copied' : ''}`} onClick={copyAppLink}>
-              {copied ? 'Lien copié ✓' : 'Copier le lien'}
-            </button>
-          </div>
-        </div>
-      </section>
 
       <section className="settings-card">
         <h3>Liens</h3>

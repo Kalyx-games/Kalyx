@@ -1270,12 +1270,16 @@ export default function App() {
       return false
     }
   }
+  // Renvoie true si l'enregistrement a abouti (l'éditeur du compte ne se referme que dans ce
+  // cas — sinon la saisie serait perdue en silence).
   async function handleUpdateOwner(id, patch) {
     try {
       await updateOwner(id, patch)
       reloadOwners()
+      return true
     } catch (e) {
       setError(messageUtilisateur(e))
+      return false
     }
   }
   // Enregistre UNE préférence d'affichage du compte. On fusionne avec celles qu'on connaît :
@@ -1323,8 +1327,10 @@ export default function App() {
       reloadTags()
       loadGames() // recharge les jeux : le nom propagé dans games.owner doit s'afficher
       showToast(n ? `« ${newName} » : ${n} jeu${n > 1 ? 'x' : ''} mis à jour.` : `Renommé en « ${newName} ».`)
+      return true
     } catch (e) {
       setError(messageUtilisateur(e))
+      return false
     }
   }
   async function handleConfirmDeleteOwner() {
@@ -2105,9 +2111,6 @@ export default function App() {
 
       {compteOuvert ? (
         <EcranCompte
-          prefs={prefsCompte}
-          prefsDispo={prefsDispo}
-          onPref={handlePrefCompte}
           tags={mesTags}
           onAddTag={handleAddTag}
           onUpdateTag={handleUpdateTag}
@@ -2135,9 +2138,11 @@ export default function App() {
               setAjoutCompte(false)
               return
             }
-            else if (nom !== origine.name) handleRenameOwner(origine.id, origine.name, nom, { initials: ini, color: couleur, avatar })
-            else handleUpdateOwner(origine.id, { initials: ini, color: couleur, avatar })
             setAjoutCompte(false)
+            // On REND la promesse : l'éditeur ne se referme que si l'écriture a abouti.
+            return nom !== origine.name
+              ? handleRenameOwner(origine.id, origine.name, nom, { initials: ini, color: couleur, avatar })
+              : handleUpdateOwner(origine.id, { initials: ini, color: couleur, avatar })
           }}
           onAnnulerCreation={() => setAjoutCompte(false)}
           onSupprimer={(c) => setConfirmingOwner(c)}
@@ -2159,6 +2164,9 @@ export default function App() {
             onExport={handleExport}
             onExportCsv={handleExportCsv}
             onImportFile={handleImportFile}
+            prefs={compte ? prefsCompte : null}
+            prefsDispo={prefsDispo}
+            onPref={handlePrefCompte}
             backupsLoaded={backupsLoaded}
             backupFreq={backupFreq}
             onSetBackupFreq={handleSetBackupFreq}
