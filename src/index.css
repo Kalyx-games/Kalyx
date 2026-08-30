@@ -2294,7 +2294,8 @@ body {
   gap: 10px;
   padding: 12px 2px;
   border-bottom: 1px solid var(--line); /* lignes à filet partagé, plus de mini-cartes */
-  font-weight: 600;
+  font-size: var(--fs-body);
+  font-weight: 500;
   color: var(--ink);
 }
 .owner-name-txt {
@@ -6559,4 +6560,10 @@ input[type='number'] {
 /* Deux rappels peuvent se suivre — la dernière table de ce jeu, puis les habitués du compte. */
 .table-rappel + .table-rappel {
   margin-top: 8px;
+}
+
+/* Le champ d'ajout est SEUL sur sa ligne depuis que le bouton est parti : il la prend toute. */
+.jf-ajout-row .sheet-name-wrap {
+  flex: 1;
+  min-width: 0;
 }

@@ -48,7 +48,7 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
-## ✅ LES JOUEURS FRÉQUENTS + ⛔ UN BOUTON GRISÉ SE COMPREND SEUL (2026-08-30, 2 retours)
+## ✅ LES JOUEURS FRÉQUENTS + ⛔ UN BOUTON GRISÉ SE COMPREND SEUL (2026-08-30, 2 + 4 retours)
 
 ### A. ⛔ PLUS AUCUN MESSAGE AU-DESSUS D UN BOUTON GRISÉ POUR DIRE POURQUOI
 
@@ -91,6 +91,18 @@ tout son objet.
     simple « monter » — répété, il donne n importe quel ordre, sans introduire un glissé de plus.
   · Auto-complétion sur les joueurs déjà enregistrés (mesuré : « Ma » → Mathieu D, Mathilde, Mathieu T,
     Marie L), et on ne propose pas ceux qui sont déjà dans la liste. Plafond à 8.
+  · ⛔ **PAS de bouton « Ajouter »** (retour user : « je ne vois pas à quoi il sert, et en plus il est
+    laid et mal placé »). Il est vrai qu il ne servait qu au cas rare — un habitué qui n a jamais joué.
+    On tape une proposition, sinon **Entrée** valide : `NameField` accepte désormais `onKeyDown` et
+    `enterKeyHint` (le clavier du téléphone affiche « OK »). Le champ prend toute la ligne.
+  · ⚠️⚠️ **CHOISIR UNE PROPOSITION REFERMAIT LA LISTE POUR DE BON.** `NameField` remet `focused` à null
+    juste APRÈS avoir appelé `onPick`, et son `onMouseDown` fait `preventDefault` — le champ **garde donc
+    le focus du navigateur**, et aucun `onFocus` ne se redéclenchera jamais. On saisissait un nom, le
+    curseur restait dans le champ, et plus une seule proposition n apparaissait pour le suivant. →
+    `queueMicrotask(() => setFocused('jf-ajout'))` après l ajout. **Mesuré** : propositions revenues à
+    60 ms, sans le nom qu on vient de poser.
+    **RÈGLE : un champ qui garde son focus après une action ne recevra pas de nouvel `onFocus` — c est à
+    l appelant de rouvrir ce que le composant vient de fermer.**
   · ⚠️ **LISTE OPTIMISTE**, le principe de `Bascule` : sans elle chaque ajout attendrait l écriture en
     base PUIS la relecture de la table — exactement le délai que l user avait signalé sur les
     interrupteurs. **Mesuré en dev** (où la RLS refuse) : nom posé à **33 ms**, revenu à **91 ms** avec
@@ -103,14 +115,27 @@ tout son objet.
 **Côté saisie**, une SECONDE ligne sur le patron EXACT de « la dernière table », et **en dessous
 d elle** : la dernière table de CE jeu est plus précise que les habitués du compte.
 
-  · ⚠️ **TRONQUÉE À CE QUE LE JEU ACCEPTE** (`slice(0, maxP)`) : une liste de 5 versée dans un jeu à 2 y
-    mettrait trois joueurs de trop. **Mesuré** : Jaipur (2 max) annonce deux noms et en assoit deux ;
-    Codex Naturalis (4 max) les trois.
-  · ⚠️ **Le même ménage que `rasseoir`**, factorisé dans `asseoir(noms)` : les joueurs posés ont des ids
-    **NEUFS**, donc couronnes, victoire directe et départage repartent de zéro — sinon on enregistrerait
-    une partie dont le vainqueur ne pointe sur personne.
+  · ⛔⛔ **IL N AJOUTE AUCUN JOUEUR : il REMPLIT les champs déjà à l écran.** Retour user, mot pour mot :
+    « quand on clique sur joueurs fréquents ça NE DOIT PAS ajouter de joueurs, ça ne remplit que les
+    champs des joueurs déjà ajoutés. » **C est ce qui le sépare de « la dernière table »** : celle-là
+    REJOUE une table précise, dont l effectif fait partie de l information ; les habitués ne font que
+    garnir la table qu on a dressée. La ligne n annonce donc que `slice(0, players.length)` — ajouter un
+    champ fait apparaître un nom de plus. **Mesuré** : 2 champs → deux noms annoncés, deux inscrits, **le
+    compte ne bouge pas** ; on ajoute un champ → trois noms → trois inscrits.
+    ⛔ **La première version tronquait à `maxP` et REMPLAÇAIT la liste. Ne pas y revenir.**
+  · ⚠️ **Il garde les MÊMES objets joueur** (donc les mêmes ids) : rien de ce qui désigne quelqu un par
+    son id n a besoin d être remis à zéro, contrairement à `asseoir` (la dernière table), qui recrée des
+    joueurs neufs et doit vider couronnes, victoire directe et départage.
   · Mêmes gardes que la dernière table : jamais en réédition, jamais en équipes, et **INERTE** dès que la
     table n est plus vierge — elle ne peut donc jamais écraser une saisie.
+
+⚠️ **LA HIÉRARCHIE DE LA CARTE** (retour user : « "Joueurs fréquents" et les noms des joueurs ont la
+même hiérarchie visuelle ») : `.owner-list li` était en **16 px / 600** sous un titre de carte en
+**17 px / 600**. Chez les **tags** la pastille de couleur sauvait la mise ; chez les habitués il n y a
+que du texte nu, et le rang se lisait au rang du titre. **La règle PARTAGÉE descend d un cran de taille
+ET de graisse** (`--fs-body` / 500) — la traiter au cas par cas aurait donné **deux sortes de liste sur
+le même écran**, exactement ce que l user avait reproché à la carte Apparence. Mesuré, les deux cartes :
+titre 17/600, rangs 15/500.
 
 **Testé par le vrai chemin**, avec un stub de **LECTURE** pour simuler une liste enregistrée (la RLS de
 dev refuse l écriture), puis retiré et `owners.js` **vérifié identique** à l avant-test par `diff`.

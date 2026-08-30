@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import NameField from './NameField'
-import { PlusIcon, XIcon } from './icons'
+import { XIcon } from './icons'
 
 // LES JOUEURS FRÉQUENTS DU COMPTE — la table qu'on remet en place d'un tap au début d'une
 // partie, quel que soit le jeu.
@@ -97,21 +97,33 @@ export default function JoueursFrequents({ liste = [], playerNames = [], online 
       )}
 
       {online && vue.length < MAX && (
-        <div className="owner-add">
+        <div className="owner-add jf-ajout-row">
+          {/* ⚠️ `NameField` remet `focused` à null JUSTE APRÈS avoir appelé `onPick`, et son
+              `onMouseDown` fait `preventDefault` : le champ garde le focus du navigateur, donc
+              aucun `onFocus` ne se redéclenchera. Les propositions restaient closes pour le nom
+              suivant alors que le curseur était encore dans le champ. On les rouvre après coup.
+              ⛔ Le bouton « Ajouter » est RETIRÉ (retour user) : on tape une proposition, ou on
+              valide avec Entrée — le clavier affiche « OK » grâce à `enterKeyHint`. */}
           <NameField
             id="jf-ajout"
             className="input"
             value={ajout}
             onChange={setAjout}
-            onPick={(n) => ajouter(n)}
-            placeholder="Nom du joueur"
+            onPick={(n) => {
+              ajouter(n)
+              queueMicrotask(() => setFocused('jf-ajout'))
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return
+              e.preventDefault()
+              ajouter()
+            }}
+            enterKeyHint="done"
+            placeholder="Ajouter un joueur"
             playerNames={suggestions}
             focused={focused}
             setFocused={setFocused}
           />
-          <button type="button" className="owner-add-btn" onClick={() => ajouter()} disabled={!ajout.trim()}>
-            <PlusIcon size={14} /> Ajouter
-          </button>
         </div>
       )}
 

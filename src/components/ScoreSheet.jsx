@@ -737,9 +737,10 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
   // Elle reste en place et devient INERTE (atténuée, plus tapable), donc toujours incapable
   // d'écraser une saisie.
   const rappelTable = derniereTable.length > 0 && !isEdit && !isTeams
-  // ⚠️ LES HABITUÉS DU COMPTE, tronqués à ce que le jeu accepte : une liste de 5 versée dans un
-  // jeu à 2 y mettrait trois joueurs de trop. Le nombre vient de la liste, borné par le jeu.
-  const frequents = joueursFrequents.slice(0, maxP)
+  // ⚠️ LES HABITUÉS DU COMPTE, tronqués au NOMBRE DE CHAMPS DÉJÀ À L'ÉCRAN : le bouton ne pose
+  // personne, il garnit la table qu'on a dressée. On n'annonce donc que les noms qui vont
+  // vraiment s'inscrire — ajouter un joueur en fait apparaître un de plus dans la ligne.
+  const frequents = joueursFrequents.slice(0, players.length)
   const rappelFrequents = frequents.length > 0 && !isEdit && !isTeams
   // ⚠️ Le même ménage pour les DEUX boutons, et pour la même raison qu'à `removePlayer` : les
   // joueurs posés ont des ids NEUFS, donc tout état qui désigne quelqu'un par son id
@@ -754,6 +755,14 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
     vibre('cran')
   }
   const rasseoir = () => asseoir(derniereTable)
+  // ⚠️ Les habitués REMPLISSENT, ils ne remplacent pas : on garde les mêmes objets joueur, donc
+  // les mêmes ids — rien de ce qui désigne quelqu'un par son id n'a besoin d'être remis à zéro
+  // (et `tableVierge` garantit de toute façon qu'il n'y a rien à écraser).
+  const garnir = () => {
+    if (!tableVierge) return
+    setPlayers((ps) => ps.map((p, i) => (i < joueursFrequents.length ? { ...p, name: joueursFrequents[i] } : p)))
+    vibre('cran')
+  }
   const playersLabel = (
     <>
       <label className="field-label"><PlayersIcon size={13} /> Qui joue ?</label>
@@ -774,7 +783,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         <button
           type="button"
           className={`table-rappel${tableVierge ? '' : ' inerte'}`}
-          onClick={() => asseoir(frequents)}
+          onClick={garnir}
           disabled={!tableVierge}
           aria-hidden={tableVierge ? undefined : 'true'}
         >
