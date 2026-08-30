@@ -2392,11 +2392,6 @@ body {
 .owner-editor > .oe-field {
   margin-bottom: 12px;
 }
-/* Un indice appartient au contrôle qu'il explique : 6px au-dessus (la même valeur que
-   `.oe-label` met sous lui), et les 12px ci-dessus le séparent du réglage suivant. */
-.owner-editor .field-hint {
-  margin-top: 6px;
-}
 .oe-label {
   display: block;
   font-size: var(--fs-footnote);

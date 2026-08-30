@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { BackIcon, PencilIcon } from './icons'
 import Avatar from './Avatar'
 import EditeurBulle from './EditeurBulle'
@@ -16,6 +15,12 @@ import BubbleListManager from './BubbleListManager'
 // (l'une vivante, l'autre figée).
 export default function EcranCompte({
   compte, // la ligne du compte actif | null (aucun compte choisi)
+  // ⚠️ L'INSTANTANÉ de la ligne éditée, figé au tap du crayon, tenu par App (c'est une COUCHE :
+  // le bouton retour la referme). PAS `compte`, qui se dégrade en `{ name }` pendant un
+  // renommage — la `key` changerait et React remonterait l'éditeur EN PLEIN ENREGISTREMENT.
+  edition = null,
+  onOuvrirEdition,
+  onFermerEdition,
   jeux = [],
   online = true,
   creation = false, // on arrive ici pour CRÉER un compte (depuis l'écran des avatars)
@@ -33,8 +38,6 @@ export default function EcranCompte({
   onDeleteTag,
   modeTagDispo = false, // la colonne `tags.visible_pour` existe-t-elle déjà en base ?
 }) {
-  const [edition, setEdition] = useState(false)
-
   return (
     <div className="settings">
       <div className="settings-head">
@@ -61,10 +64,10 @@ export default function EcranCompte({
             <p className="muted">Aucun compte n'est choisi sur cet appareil.</p>
             <button type="button" className="btn-ghost" onClick={onChangerCompte}>Choisir un compte</button>
           </>
-        ) : edition && online ? (
+        ) : edition ? (
           <EditeurBulle
-            key={compte.id || compte.name}
-            bulle={compte}
+            key={edition.id || edition.name}
+            bulle={edition}
             namePlaceholder="Nom du compte"
             avecAvatar
             apercuGrand
@@ -73,27 +76,26 @@ export default function EcranCompte({
               // ⚠️ On ne referme QUE si l'écriture a abouti : sinon on renverrait sur la tête du
               // compte en effaçant ce qui vient d'être tapé, et le bandeau d'erreur (monté en
               // haut de l'app) parlerait d'une saisie qui n'existe plus.
-              if (await onEnregistrer(...args)) setEdition(false)
+              if (await onEnregistrer(...args)) onFermerEdition()
             }}
-            onAnnuler={() => setEdition(false)}
+            onAnnuler={onFermerEdition}
           />
         ) : (
-          /* Le compte au repos. Hors ligne le crayon n'est pas rendu : rien ne s'écrit, et la
-             bannière du haut dit déjà pourquoi. */
+          /* Le compte au repos. Hors ligne le crayon est GRISÉ et non retiré : une commande qui
+             disparaît laisse chercher, une commande éteinte se comprend. */
           <div className="compte-tete">
             <Avatar compte={compte} jeux={jeux} taille={72} className="compte-avatar" />
             <span className="compte-titre">{compte.name}</span>
-            {online && (
-              <button
-                type="button"
-                className="icon-btn compte-modifier"
-                onClick={() => setEdition(true)}
-                title="Modifier ce compte"
-                aria-label="Modifier ce compte"
-              >
-                <PencilIcon size={18} />
-              </button>
-            )}
+            <button
+              type="button"
+              className="icon-btn compte-modifier"
+              onClick={onOuvrirEdition}
+              disabled={!online}
+              title={online ? 'Modifier ce compte' : 'Indisponible hors ligne'}
+              aria-label="Modifier ce compte"
+            >
+              <PencilIcon size={18} />
+            </button>
           </div>
         )}
       </section>
@@ -117,14 +119,14 @@ export default function EcranCompte({
       )}
 
       {/* Changer de compte reste possible hors ligne : c'est un geste local. */}
-      {!creation && (
+      {!creation && !edition && (
         <button type="button" className="btn-ghost compte-changer-btn" onClick={onChangerCompte}>
           Changer de compte
         </button>
       )}
 
       {/* Supprimer vit à part, et tout en bas : ce n'est pas une action du même rang. */}
-      {compte && online && !creation && onSupprimer && (
+      {compte && online && !creation && !edition && onSupprimer && (
         <button type="button" className="btn-ghost compte-supprimer" onClick={() => onSupprimer(compte)}>
           Supprimer ce compte
         </button>

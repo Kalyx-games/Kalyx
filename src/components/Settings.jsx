@@ -12,7 +12,8 @@ import { SITE_LOGOS } from '../lib/logos'
 
 // Écran Réglages — ce qui vaut pour CET APPAREIL (apparence, densité, vibrations, sauvegarde
 // en fichier) et les commandes qui touchent toute la base. Ce qui suit la PERSONNE (avatar,
-// tags, noms des jeux en grille) vit dans le menu Compte, pas ici.
+// tags) vit dans le menu Compte. ⚠️ La carte Apparence fait EXCEPTION : le réglage des noms
+// des jeux en grille se règle ici mais s'enregistre SUR LE COMPTE (voir la prop `prefs`).
 // L'ordre suit l'usage : l'apparence et le partage d'abord, puis les joueurs et les
 // sauvegardes, puis le code d'accès et les liens.
 
@@ -199,7 +200,7 @@ export default function Settings({
             </button>
           ))}
         </div>
-        {prefsDispo && prefs && online && (
+        {prefsDispo && prefs && (
           <>
             {/* Un réglage par ONGLET : on ne parcourt pas sa collection et sa wishlist de la
                 même façon. Le titre du groupe est à l'ENCRE, ses deux sous-libellés au gris des
@@ -216,6 +217,7 @@ export default function Settings({
                   <Bascule
                     ariaLabel={`Noms des jeux en vue grille — ${nom}`}
                     valeur={prefs[cle]}
+                    disabled={!online}
                     onChange={(v) => onPref(cle, v)}
                     options={[
                       { valeur: true, label: 'Affichés' },

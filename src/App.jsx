@@ -9,7 +9,7 @@ import { fetchTags, addTag, updateTag, renameTag, deleteTag, tagVisiblePour, pat
 import { downloadBackup, downloadCsv, parseBackup, importBackup, fetchBackups, createBackup, maybeAutoBackup, restoreBackup, restorePreview } from './lib/backup'
 import { philibertSearchUrl } from './lib/philibert'
 import { EMPTY_FILTERS, PRICE_MIN, PRICE_MAX, norm, passesFilters } from './lib/filtering'
-import { messageUtilisateur } from './lib/messages'
+import { messageUtilisateur, erreurUtilisateur } from './lib/messages'
 import { faitNotable } from './lib/faits'
 import { lettreDe, useLettreDefilement } from './lib/lettre'
 import { DEMO_TOTAL } from './lib/glisseAction'
@@ -436,7 +436,13 @@ export default function App() {
   const [choixCompte, setChoixCompte] = useState(false) // écran des avatars rouvert volontairement
   const [rappelGlisse, setRappelGlisse] = useState(false) // piqûre de rappel du geste (1×/mois)
   const [compteOuvert, setCompteOuvert] = useState(false) // menu Compte (barre du haut)
-  const [ajoutCompte, setAjoutCompte] = useState(false) // formulaire de création d'un compte
+  const [ajoutCompte, setAjoutCompte] = useState(false)
+  // ⚠️ L'INSTANTANÉ de la ligne éditée, figé au tap du crayon — PAS `compteLigne`, qui se
+  // dégrade en `{ name }` pendant un renommage (setCompte part avant les propagations) et
+  // ferait alors changer la `key` de l'éditeur : React le remonterait EN PLEIN ENREGISTREMENT,
+  // vidant le formulaire. C'est aussi une COUCHE : le retour Android le referme.
+  const [editionCompte, setEditionCompte] = useState(null)
+  const prefsEnVolRef = useRef(null) // le sac de préférences en cours d'écriture (voir handlePrefCompte) // formulaire de création d'un compte
   const [tagsLoaded, setTagsLoaded] = useState(false)
   const [scoresheets, setScoresheets] = useState(null) // { game_id: template }, ou null si table absente
   const [scoringGame, setScoringGame] = useState(null) // jeu en cours de notation (nouvelle partie OU édition) | null
@@ -577,7 +583,7 @@ export default function App() {
   const formCloseRef = useRef(null)
   const filterCloseRef = useRef(null)
   const uiRef = useRef({})
-  uiRef.current = { choixCompte, codeAsk, codeChange, compteOuvert, editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scoreExitConfirm, sheetExitConfirm, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
+  uiRef.current = { choixCompte, codeAsk, codeChange, editionCompte, compteOuvert, editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scoreExitConfirm, sheetExitConfirm, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
   viewRef.current = view
 
@@ -733,6 +739,7 @@ export default function App() {
     // Les Stats VIVENT SOUS les écrans pleins (le menu Compte et les Réglages ne les ferment
     // plus). Les fermer en premier revenait à fermer une couche INVISIBLE : le retour ne
     // changeait rien à l écran, il fallait appuyer deux fois.
+    else if (s.editionCompte) setEditionCompte(null)
     else if (s.compteOuvert) { setCompteOuvert(false); setAjoutCompte(false) }
     else if (s.playersOpen) setPlayersOpen(false) // s'ouvre PAR-DESSUS les Réglages
     else if (s.settingsOpen) setSettingsOpen(false)
@@ -1285,11 +1292,22 @@ export default function App() {
   // Enregistre UNE préférence d'affichage du compte. On fusionne avec celles qu'on connaît :
   // le sac jsonb est réécrit en entier à chaque fois, il ne faut pas perdre les autres clés.
   async function handlePrefCompte(cle, valeur) {
-    if (!compteLigne?.id) return
+    // ⚠️ ON NE RELIT PAS `compteLigne` À CHAQUE FOIS. Les deux bascules (collection, wishlist)
+    // sont deux instances distinctes, chacune avec son propre verrou, et rien ne re-rend App
+    // entre deux taps : la seconde partirait avec le sac d'AVANT la première et l'écraserait.
+    // La ref porte donc le sac en vol jusqu'à ce que la base l'ait confirmé.
+    const base = prefsEnVolRef.current ?? prefsDe(compteLigne)
+    const suivant = { ...base, [cle]: valeur }
+    prefsEnVolRef.current = suivant
     try {
-      await updateOwner(compteLigne.id, { prefs: { ...prefsDe(compteLigne), [cle]: valeur } })
+      // ⚠️ Le `throw` est DANS le try : sorti avant, il ferait revenir la bascule sans un mot.
+      // Et un `return` sec vaudrait SUCCÈS pour elle — elle garderait une valeur jamais écrite.
+      if (!compteLigne?.id) throw erreurUtilisateur('Aucun compte actif sur cet appareil.')
+      await updateOwner(compteLigne.id, { prefs: suivant })
       await reloadOwners()
+      prefsEnVolRef.current = null
     } catch (e) {
+      prefsEnVolRef.current = null
       setError(messageUtilisateur(e))
       // ⚠️ RELANCÉE, et c'est indispensable : la bascule est OPTIMISTE (elle glisse au doigt).
       // Une erreur avalée ici la laisserait sur la valeur choisie alors que rien n'a été
@@ -1331,6 +1349,11 @@ export default function App() {
     } catch (e) {
       setError(messageUtilisateur(e))
       return false
+    } finally {
+      // ⚠️ MÊME EN ÉCHEC : `setCompte(newName)` est parti avant les propagations. Sans cette
+      // relecture, `compteLigne` ne trouve plus sa ligne et retombe sur `{ name }` — sans id,
+      // donc plus rien d'éditable ni de supprimable jusqu'au prochain chargement.
+      reloadOwners()
     }
   }
   async function handleConfirmDeleteOwner() {
@@ -2052,7 +2075,7 @@ export default function App() {
             </button>
           )}
           {/* Le compte a sa propre porte, à côté des réglages : c'est une identité, pas
-              un paramètre. Les Réglages ne parlent plus de comptes du tout. */}
+              un paramètre — même si un réglage DU compte se règle depuis les Réglages. */}
           <button
             type="button"
             className={`icon-btn ${compteOuvert ? 'active' : ''}`}
@@ -2118,6 +2141,9 @@ export default function App() {
           onDeleteTag={(tag) => setConfirmingTag(tag)}
           modeTagDispo={modeTagDispo}
           compte={compteLigne}
+          edition={editionCompte}
+          onOuvrirEdition={() => setEditionCompte(compteLigne)}
+          onFermerEdition={() => setEditionCompte(null)}
           jeux={games ?? []}
           online={online}
           creation={ajoutCompte}
@@ -2130,12 +2156,16 @@ export default function App() {
               // PRÉCÉDENT, sans un mot : on annonce, et on ramène là où l'on voit tous les comptes.
               // ⚠️ Seulement SI ELLE A ABOUTI — sinon on reste ici, où le bandeau d'erreur est monté.
               handleAddOwner(nom, ini, couleur, avatar).then((ok) => {
+                // ⚠️ `setAjoutCompte(false)` est DANS le then : posé dehors, il retombait pendant
+                // que l'écriture était en vol → l'écran basculait sur le compte PRÉCÉDENT et
+                // l'éditeur était démonté avec la saisie. C'est la règle que ce lot vient
+                // d'écrire pour l'édition, qu'il enfreignait sur le seul autre chemin.
                 if (!ok) return
                 showToast(`Compte « ${nom} » créé.`)
+                setAjoutCompte(false)
                 setCompteOuvert(false)
                 setChoixCompte(true)
               })
-              setAjoutCompte(false)
               return
             }
             setAjoutCompte(false)
@@ -2146,7 +2176,7 @@ export default function App() {
           }}
           onAnnulerCreation={() => setAjoutCompte(false)}
           onSupprimer={(c) => setConfirmingOwner(c)}
-          onClose={() => { setCompteOuvert(false); setAjoutCompte(false) }}
+          onClose={() => { setCompteOuvert(false); setAjoutCompte(false); setEditionCompte(null) }}
         />
       ) : settingsOpen && playersOpen ? (
         <Suspense fallback={<p className="ecran-charge">Chargement…</p>}>

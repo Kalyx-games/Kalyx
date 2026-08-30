@@ -23,7 +23,7 @@ export default function EditeurBulle({
   avecAvatar = false,
   avecModeTag = false, // un TAG : il porte en plus son mode de filtrage, propre au compte
   compte = null, // le compte actif : c'est POUR LUI que le mode se règle
-  apercuGrand = false, // l aperçu en tête, en grand : quand l éditeur EST l écran
+  apercuGrand = false, // l aperçu en tête, en grand : le compte se regarde avant de se modifier
   jeux = [],
   onValider, // (nom, initiales, couleur, avatar|undefined, bulleDOrigine, visibleMoi)
   onAnnuler,
@@ -42,12 +42,13 @@ export default function EditeurBulle({
   // Le mode de filtrage du tag, POUR CE COMPTE. Un tag neuf naît masquant : c'est le
   // comportement que l'app a toujours eu, et le seul qui ne fasse rien réapparaître.
   const [visibleMoi, setVisibleMoi] = useState(tagVisiblePour(depart, compte))
+  const [enCours, setEnCours] = useState(false) // une écriture est en vol
   // Les valeurs de DÉPART, figées : elles disent si quelque chose a bougé. Sans ça,
   // un éditeur affiché en permanence propose « Enregistrer » alors qu il n y a rien à
   // enregistrer — le bouton ne dirait plus rien de l état.
-  // ⚠️ useMemo sur `depart` et NON useState : dans le menu Compte l'éditeur reste monté après
-  // l'enregistrement, et une référence figée au montage laissait « Enregistrer » allumé à vie —
-  // ce qui annule exactement ce que cette référence sert à dire.
+  // ⚠️ useMemo sur `depart` et NON useState : `depart` peut changer sous un éditeur resté
+  // ouvert, et une référence figée au montage laisserait « Enregistrer » allumé à vie — ce qui
+  // annule exactement ce que cette référence sert à dire.
   const ref0 = useMemo(() => ({
     name: depart?.name || '',
     initials: depart ? depart.initials || ownerInitials(depart.name) : '',
@@ -86,12 +87,21 @@ export default function EditeurBulle({
     return [...avecImage.filter(sien), ...avecImage.filter((g) => !sien(g))]
   }, [avecAvatar, jeux, depart, name])
 
-  const valider = () => {
+  // ⚠️ LE BOUTON ATTEND L ÉCRITURE. `onValider` peut rendre une promesse (le menu Compte y
+  // enregistre en base, et un renommage fait UN UPDATE PAR JEU concerné — c'est long). Sans
+  // ce verrou, le bouton restait allumé pendant tout ce temps et un second tap repartait.
+  // Les autres appelants rendent `undefined` : `await undefined` résout aussitôt.
+  const valider = async () => {
     const nm = name.trim()
-    if (!nm) return
+    if (!nm || enCours) return
     // ⚠️ L'argument s'ajoute PAR LA FIN : `depart` doit rester en 5ᵉ position, App le lit là
     // (`if (!origine)`) — l'insérer avant ferait passer chaque édition pour une création.
-    onValider(nm, (initials || name).trim().slice(0, 2).toUpperCase(), color, avatarCourant, depart, visibleMoi)
+    setEnCours(true)
+    try {
+      await onValider(nm, (initials || name).trim().slice(0, 2).toUpperCase(), color, avatarCourant, depart, visibleMoi)
+    } finally {
+      setEnCours(false)
+    }
   }
 
   return (
@@ -221,9 +231,8 @@ export default function EditeurBulle({
       </div>
 
       <div className="oe-actions">
-        {/* Pas d Annuler quand l éditeur est l écran lui-même : il n y aurait rien à refermer. */}
         {onAnnuler && <button type="button" className="btn-ghost" onClick={onAnnuler}>Annuler</button>}
-        <button type="button" className="owner-add-btn" onClick={valider} disabled={!name.trim() || !modifie}>
+        <button type="button" className="owner-add-btn" onClick={valider} disabled={!name.trim() || !modifie || enCours}>
           {neuf ? 'Ajouter' : 'Enregistrer'}
         </button>
       </div>
