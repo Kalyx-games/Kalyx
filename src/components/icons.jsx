@@ -243,7 +243,6 @@ export function ChwaziIcon({ size = 20 }) {
   )
 }
 
-// Flèche « retour » (chevron gauche net, centré) — utilisée par tous les boutons .back-btn.
 // ↑ / ↓ Réordonner une ligne — chevrons ÉPAIS : à 18 px, le trait de 2,4 des autres
 // chevrons se perdait. Ils ne sont pas destructifs, ils prennent donc la couleur du texte.
 export function MonterIcon({ size = 18 }) {
@@ -261,6 +260,7 @@ export function DescendreIcon({ size = 18 }) {
   )
 }
 
+// Flèche « retour » (chevron gauche net, centré) — utilisée par tous les boutons .back-btn.
 export function BackIcon({ size = 22 }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" focusable="false">

@@ -1630,6 +1630,30 @@ export default function App() {
     setRenamingPlayer(true)
     try {
       const n = await renamePlayer(from, to)
+      // ⚠️⚠️ Le nom vit AUSSI dans `owners.prefs.joueursFrequents`, chez CHAQUE compte — le
+      // renommage est global aux parties, la liste est propre à chaque foyer. Sans ce suivi,
+      // l'ancien nom reste en tête des propositions ET le bouton « Joueurs fréquents » le
+      // rassoit d'un seul tap : le renommage se défait à la partie suivante. Rien ne peut le
+      // rattraper plus tard, puisqu'un habitué absent des parties est proposé VOLONTAIREMENT.
+      // C'est la règle des six propagations de `handleRenameOwner`, appliquée ici.
+      let touche = false
+      const av = (from || '').trim()
+      const ap = (to || '').trim()
+      for (const o of ownersList ?? []) {
+        if (!('prefs' in o)) continue // la base ne connaît pas encore la colonne
+        const p = prefsDe(o)
+        const l = p.joueursFrequents ?? []
+        if (!l.includes(av)) continue
+        // ⚠️ Le dédoublonnage n'est pas décoratif : sur une FUSION, le nouveau nom pouvait
+        // déjà être dans la liste — on le laisserait deux fois.
+        const vus = new Set()
+        const suivant = l
+          .map((x) => (x === av ? ap : x))
+          .filter((x) => { const k = x.toLowerCase(); if (vus.has(k)) return false; vus.add(k); return true })
+        await updateOwner(o.id, { prefs: { ...p, joueursFrequents: suivant } })
+        touche = true
+      }
+      if (touche) reloadOwners()
       setPlayerRoster(await fetchPlayerRoster())
       fetchPlayerNames().then(setPlayerNames).catch(() => {})
       if (historyGame) refreshHistory(historyGame)

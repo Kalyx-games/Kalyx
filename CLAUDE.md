@@ -48,6 +48,100 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅⚠️ DEUX FLÈCHES, LE SURVOL QUI COLLE, ET LES HABITUÉS EN TÊTE (2026-08-30, 4 retours + revue)
+
+**Retours user** : une flèche DESCENDANTE pour réorganiser les habitués · des flèches **plus grasses**
+(« peu lisible ») · « quand on clique sur une flèche elle **reste en rouge derrière** » · « les
+suggestions affichées quand on va taper un nom **dépendent des joueurs fréquents** — le début de la
+liste dépend du compte, **en plus de la règle du nombre de parties déjà en place** ».
+
+### A. ⚠️⚠️ LE ROUGE QUI RESTE : `:hover` NE SE DÉCOLLE PAS APRÈS UN TAP
+
+La flèche portait `.owner-del`, la classe de la SUPPRESSION, dont le survol pose `--danger-bg`. Sur un
+écran tactile, le navigateur **laisse `:hover` sur le dernier élément touché** jusqu au prochain tap
+ailleurs : le rouge restait donc collé. Deux corrections, la seconde bien plus large que le symptôme :
+  · Les flèches ont leur propre classe **`.owner-move`** (couleur du TEXTE, jamais le rouge) —
+    réordonner n est pas supprimer.
+  · ⚠️ **LES SIX RÈGLES DE SURVOL DE LA FEUILLE passent sous `@media (hover: hover)`.** Le défaut
+    n était pas propre à cette flèche : `.sortmenu-list button`, `.modal-del`, `.owner-del`,
+    `.owner-edit`, `.player-link` et `.name-suggest button` collaient toutes. **Mesuré sur un appareil
+    tactile émulé : 0 règle de survol encore active**, les six sous la media query.
+    ⚠️ Là où le sélecteur groupait `:hover` ET `:active`, **seul `:hover` déménage** — `:active` est le
+    retour au doigt, il doit rester (et à sa place dans l ordre du fichier : une media query n ajoute
+    aucune spécificité).
+  · **RÈGLE : une règle `:hover` s adresse à une SOURIS. Dans cette app, elle vit sous
+    `@media (hover: hover)`, sinon elle reste collée après un tap.**
+
+### B. Les flèches
+
+`MonterIcon` / `DescendreIcon` (icons.jsx) : le « ↑ » était un **caractère de la police du système**,
+dont la graisse ne se règle pas. Un tracé maison se règle — **strokeWidth 3** contre 2,4 pour les
+autres chevrons, justifié sur place. `monter(i)` devient **`bouger(i, pas)`**, les deux flèches sont
+toujours rendues et éteintes aux extrémités, collées dans un `.owner-moves` (c est UN contrôle à deux
+sens). Mesuré : trois cibles de 40 px, aucun débordement à 320 px, contraste 17,7 clair / 16,3 sombre.
+
+### C. Les propositions commencent par les habitués
+
+`suggestionsJoueurs` (App) = **les habitués du compte dans leur ordre**, puis le référentiel (déjà trié
+par nombre de parties), dédoublonné sans tenir compte de la casse. Sert les TROIS champs de nom
+(saisie d une partie, tierlist, carte des habitués).
+  · **Un habitué qui n a jamais joué est proposé lui aussi** — on l a déclaré, c est le sujet.
+  · Le tri de `NameField` (celles qui COMMENCENT par ce qu on tape d abord) est **conservé** : les
+    habitués passent en tête **à l intérieur** de ce tri. **Mesuré** : champ vide → les 3 habitués
+    d abord ; « ma » → **Mathieu D** (habitué) avant Mathilde, Mathieu T, Marie L.
+
+### D. REVUE ADVERSARIALE SUR ARBRE FIGÉ (commit 8393812) — 7 constats, tous appliqués
+
+  1. ⚠️⚠️ **UN HABITUÉ SAISI DANS UNE AUTRE CASSE COUPAIT LE JOUEUR EN DEUX.** `ajouter` ne faisait
+     qu un `trim()`. Avec « mathieu d » dans la liste et « Mathieu D » en base : le dédoublonnage de
+     `suggestionsJoueurs` **retirait le nom canonique de TOUTES les propositions**, et le bouton
+     « Joueurs fréquents » écrivait l homonyme **verbatim** dans `players[].name`. Or tout le reste de
+     l app regroupe par nom EXACT → podium coupé en deux, deux lignes dans l écran Joueurs, et la clé
+     unique `player` fabriquant une **seconde tierlist** pour un seul votant. Silencieux et cumulatif.
+     → **l orthographe déjà en base fait foi** à l insertion. **Mesuré** : on tape « nazim », la liste
+     enregistre **« Nazim »** ; un nom inconnu du référentiel garde le sien (« zoé nouvelle »).
+  2. ⚠️⚠️ **RENOMMER UN JOUEUR NE TOUCHAIT PAS LES HABITUÉS** : l ancien nom restait en tête des
+     propositions **et le bouton le rasseyait d un tap** → le renommage se défaisait à la partie
+     suivante, sans rattrapage possible (un habitué absent des parties est proposé VOLONTAIREMENT).
+     C est la règle des **six propagations** de `handleRenameOwner`, qui manquait ici. →
+     `handleRenamePlayer` balaie **tous les comptes** (la liste est propre à chaque foyer, le
+     renommage est global aux parties) ; ⚠️ dédoublonnage indispensable — sur une **fusion**, le
+     nouveau nom pouvait déjà être dans la liste. **Prouvé par le vrai chemin** (réponses simulées,
+     zéro octet écrit) : 3 comptes patchés, `["Clémence G", "Mathieu DUPONT"]`, ordre préservé.
+  3. ⚠️ **Deux taps de flèche envoyaient deux PATCH CONCURRENTS sur la même ligne `owners`**, sans
+     ordre d arrivée garanti — l ancien pouvait atterrir après le récent, et comme `enVol` ne
+     rejoignait alors jamais `liste`, il n était jamais lâché : **écran juste, base fausse**, ordre
+     défait à la visite suivante. → les écritures s **ENCHAÎNENT** (une file d une ligne).
+     ⛔ **PAS le verrou de `Bascule`** (« un second tap est ignoré ») : ce geste est fait pour être
+     répété, il avalerait le geste qu on vient d offrir. **PROUVÉ en interceptant les envois** : le 2ᵉ
+     PATCH part **1 ms après la fin du 1ᵉʳ**, aucun chevauchement, et il porte la liste enchaînée.
+  4. **Le focus retombait sur `<body>` à chaque « Descendre ».** Avec `key={nom}`, React **DÉPLACE** le
+     nœud, et le navigateur défocalise tout nœud réinséré (c est la raison d être de
+     `Element.moveBefore()`, que React n utilise pas) ; arriver à une extrémité éteint en plus le
+     bouton pressé. → le focus **suit la personne**, et bascule sur la flèche voisine si celle qu on a
+     pressée vient de s éteindre. **Mesuré** : « Descendre Clémence G » → focus sur « Monter
+     Clémence G », jamais sur `<body>`.
+  5. L en-tête du fichier argumentait **contre** la flèche que l user venait de demander (« un simple
+     monter »). ⚠️ Le motif à ne PAS reprendre : cette phrase était **exacte** (des échanges de voisins
+     donnent toutes les permutations) — la seconde flèche est un confort, pas la réparation d une
+     impossibilité.
+  6. Le commentaire de `BackIcon` coiffait `MonterIcon` (les icônes ont été insérées entre les deux) :
+     une retouche « la flèche retour est trop fine » aurait frappé la mauvaise icône.
+  7. `.owner-del:disabled` ne visait plus rien et son commentaire nommait le bouton renommé.
+     ⛔ **NON supprimée** — `.owner-del` pose une `color` explicite, et c est le filet que ce projet a
+     déjà payé sur `.btn-ghost`, `.icon-btn` et `.hist-del`. Elle **rejoint sa classe** (elle vivait
+     4 200 lignes plus bas, la distance même qui avait rendu `.owner-editor .field-hint` inerte) et son
+     commentaire dit le vrai.
+
+**ÉCARTÉS, et le motif vaut autant** : « les icônes enfreignent l en-tête d icons.jsx » (l en-tête est
+indicatif — `CheckIcon` est déjà à 2,6 — et la déviation EST le correctif demandé) · « retirer le
+dédoublonnage insensible à la casse » (il est nécessaire : sans lui deux orthographes s afficheraient
+côte à côte, avec des `key` en doublon ; le défaut se répare à l ENTRÉE) · « le nom coupé à 320 px »
+(mesuré : confiné à 320 px, et c est l ellipse que la carte des tags emploie déjà).
+
+**Base intacte** : 147 jeux, 223 parties, 3 comptes — aucune écriture pendant les tests (les PATCH ont
+été interceptés, les lectures seules). **Garde-fou d espacement : 403, inchangé.**
+
 ## ✅ LES JOUEURS FRÉQUENTS + ⛔ UN BOUTON GRISÉ SE COMPREND SEUL (2026-08-30, 2 + 4 retours)
 
 ### A. ⛔ PLUS AUCUN MESSAGE AU-DESSUS D UN BOUTON GRISÉ POUR DIRE POURQUOI

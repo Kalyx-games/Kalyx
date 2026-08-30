@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import NameField from './NameField'
 import { DescendreIcon, MonterIcon, XIcon } from './icons'
 
@@ -9,9 +9,9 @@ import { DescendreIcon, MonterIcon, XIcon } from './icons'
 // ses habitués. Elle vit donc dans `owners.prefs.joueursFrequents` et suit le compte d'un
 // téléphone à l'autre.
 //
-// ⚠️ La LISTE EST ORDONNÉE : c'est l'ordre dans lequel les joueurs s'assoiront. Le geste de
-// réordonnancement est un simple « monter » — répété, il suffit à obtenir n'importe quel
-// ordre, sans introduire un glissé de plus dans l'app.
+// ⚠️ La LISTE EST ORDONNÉE : c'est l'ordre dans lequel les joueurs s'assoiront. On la réordonne
+// avec DEUX flèches, monter et descendre : `bouger(i, pas)` échange la ligne avec sa voisine,
+// sans introduire un glissé de plus dans l'app.
 const MAX = 8 // au-delà, ce n'est plus un raccourci ; et aucune table de l'app ne dépasse 8
 
 export default function JoueursFrequents({ liste = [], playerNames = [], online = true, onChange }) {
@@ -30,13 +30,18 @@ export default function JoueursFrequents({ liste = [], playerNames = [], online 
     if (enVol && JSON.stringify(enVol) === JSON.stringify(liste)) setEnVol(null)
   }, [liste, enVol])
 
-  const poser = async (l) => {
-    setEnVol(l)
-    try {
-      await onChange(l)
-    } catch {
-      setEnVol(null) // l'écriture a échoué : on revient à la vérité
-    }
+  // ⚠️⚠️ LES ÉCRITURES S'ENCHAÎNENT, elles ne partent JAMAIS en parallèle. Chaque `onChange`
+  // est un PATCH complet de `owners.prefs` : deux PATCH en vol sur la MÊME ligne n'ont aucun
+  // ordre d'arrivée garanti (le proxy est sans état), et l'ancien peut atterrir APRÈS le
+  // récent. La base garderait alors un ordre que l'écran n'affiche plus — et comme `enVol` ne
+  // rejoindrait jamais `liste`, il ne serait jamais lâché : écran juste, base fausse, et
+  // l'ordre revient défait à la visite suivante, sans un mot.
+  // ⛔ PAS le verrou de `Bascule` (« un second tap est ignoré ») : ce geste est FAIT pour être
+  // répété — descendre un nom de trois rangs, c'est trois taps en une seconde. Il les avalerait.
+  const file = useRef(Promise.resolve())
+  const poser = (l) => {
+    setEnVol(l) // l'optimisme reste synchrone : la liste bouge à l'instant du tap
+    file.current = file.current.then(() => onChange(l)).catch(() => setEnVol(null))
   }
 
   const dejaLa = (n) => vue.some((x) => x.toLowerCase() === n.trim().toLowerCase())
@@ -44,7 +49,13 @@ export default function JoueursFrequents({ liste = [], playerNames = [], online 
     const n = (nom ?? ajout).trim()
     setAjout('')
     if (!n || vue.length >= MAX || dejaLa(n)) return
-    poser([...vue, n])
+    // ⚠️⚠️ L'ORTHOGRAPHE DÉJÀ EN BASE FAIT FOI : « mathieu d » devient « Mathieu D ». Sans ça,
+    // le bouton « Joueurs fréquents » écrirait cet homonyme dans `players[].name`, que tout le
+    // reste de l'app compte comme UNE AUTRE PERSONNE (podium, écran Joueurs, et la clé unique
+    // `player` des tierlists). Un habitué qui n'a jamais joué n'a aucune correspondance et
+    // garde sa saisie — c'est justement lui qu'on ne peut pas deviner.
+    const canon = playerNames.find((x) => x.toLowerCase() === n.toLowerCase()) || n
+    poser([...vue, canon])
   }
   const retirer = (i) => poser(vue.filter((_, k) => k !== i))
   // Un seul mécanisme pour les deux flèches : on échange la ligne avec sa voisine.
@@ -53,8 +64,30 @@ export default function JoueursFrequents({ liste = [], playerNames = [], online 
     if (j < 0 || j >= vue.length) return
     const l = [...vue]
     ;[l[i], l[j]] = [l[j], l[i]]
+    refocusRef.current = { j, pas }
     poser(l)
   }
+
+  // ⚠️ LE FOCUS SUIT LA LIGNE, PAS LA POSITION. Les lignes portent `key={nom}` : React DÉPLACE
+  // le nœud au lieu d'en réécrire le texte, et le navigateur défocalise tout nœud réinséré
+  // (c'est la raison d'être de `Element.moveBefore()`, que React n'utilise pas). Arriver à une
+  // extrémité éteint en plus le bouton qu'on vient de presser. Sans ce rattrapage, le focus
+  // retombe sur `<body>` et le geste suivant repart du haut de l'écran — enchaîner deux
+  // descentes au clavier ou sous TalkBack demanderait de re-parcourir toute la carte.
+  // Même parti que `GameDetail`, qui déplace le focus quand la face qui le portait disparaît.
+  const listeRef = useRef(null)
+  const refocusRef = useRef(null)
+  useLayoutEffect(() => {
+    const c = refocusRef.current
+    if (!c) return
+    refocusRef.current = null
+    const ligne = listeRef.current?.children[c.j]
+    if (!ligne) return
+    const [haut, bas] = ligne.querySelectorAll('.owner-move')
+    const voulu = c.pas < 0 ? haut : bas
+    // Si la flèche pressée vient de s'éteindre (on est arrivé au bout), on prend sa voisine.
+    ;(voulu && !voulu.disabled ? voulu : voulu === haut ? bas : haut)?.focus()
+  }, [vue])
 
   // On ne propose pas ceux qui sont déjà dans la liste.
   const suggestions = playerNames.filter((n) => !dejaLa(n))
@@ -64,7 +97,7 @@ export default function JoueursFrequents({ liste = [], playerNames = [], online 
       <h3>Joueurs fréquents</h3>
 
       {vue.length > 0 && (
-        <ul className="owner-list">
+        <ul className="owner-list" ref={listeRef}>
           {vue.map((nom, i) => (
             <li key={nom}>
               <span className="owner-name-txt">{nom}</span>

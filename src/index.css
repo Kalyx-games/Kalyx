@@ -2325,6 +2325,16 @@ body {
     color: var(--danger);
   }
 }
+/* `.owner-del` pose une `color` explicite : sans cette règle, l'atténuation qu'un navigateur
+   applique à un bouton désactivé serait écrasée. Aucun porteur n'est grisé aujourd'hui (les
+   deux disparaissent hors ligne au lieu de s'éteindre) — c'est le filet du projet, gardé pour
+   le jour où « Retirer » se grisera pendant une écriture.
+   ⚠️ Les flèches de réordonnancement ne sont PLUS ici : elles portent `.owner-move`, dont le
+   `:disabled` vit juste en dessous. */
+.owner-del:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
 /* Réordonner n'est pas supprimer : ces flèches prennent la couleur du TEXTE, jamais le rouge.
    Elles sont collées l'une à l'autre — c'est un seul contrôle à deux sens. */
 .owner-moves {
@@ -6590,14 +6600,6 @@ input[type='number'] {
   margin-top: 16px;
 }
 
-
-/* `.owner-del` pose une `color` explicite : sans cette règle, l'atténuation qu'un navigateur
-   applique à un bouton désactivé serait écrasée, et le « monter » de la première ligne
-   paraîtrait actif. (Règle du projet, déjà payée plusieurs fois.) */
-.owner-del:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
 /* Deux rappels peuvent se suivre — la dernière table de ce jeu, puis les habitués du compte. */
 .table-rappel + .table-rappel {
   margin-top: 8px;
