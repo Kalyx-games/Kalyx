@@ -106,9 +106,77 @@ La règle qui aère un réglage suivant un autre ne visait que `.chips` — le l
 donc au nouveau bloc (**0 px** mesuré). Les deux formes de contrôle sont désormais listées
 (`.chips` et `.pref-rangs`). Rythme après correctif : **12 / 16 / 16 / 16**.
 
-**Vérifié** : 69 cartes, 9 wishlist, 8 tuiles de stats, fiche, formulaire, 0 erreur de rendu ; hors ligne
-le crayon disparaît et la tête reste. **Base intacte** : 147 jeux, 220 parties, 62 fiches, 3 comptes,
-4 tags, 4 tierlists. **Garde-fou d espacement : 407 → 405.**
+### E. La carte Apparence ne partait pas d un seul bord (retour user : « la mise en page est dégueulasse »)
+
+Mesuré : **TROIS points de départ pour cinq réglages** — deux blocs de puces à gauche, deux rangées dont
+la bascule était jetée contre le bord DROIT en laissant un vide au milieu, puis un retour à gauche pour
+les vibrations. **Une seule mise en page désormais** : le nom au-dessus, le contrôle dessous, tout au même
+bord (mesuré : les six libellés et les cinq contrôles partent du même x).
+
+  · ⚠️ **Le titre de groupe porte la hiérarchie PAR SA COULEUR, pas par une indentation.** « Noms des jeux
+    en vue grille » est à l ENCRE là où les libellés ordinaires sont au gris ; ses deux membres restent
+    gris. Indenter les aurait rattachés aussi, mais au prix de l alignement de toute la carte — c est-à-dire
+    du défaut qu on corrige. Contrastes en sombre : **16,3** titre · **6,55** sous-libellés.
+  · **TROIS crans verticaux, et ils se distinguent** (ils étaient à 6 / 14 / 16, donc indistincts) :
+    **16 px entre deux réglages > 10 px entre les deux membres d un groupe > 6 px entre un libellé et SON
+    contrôle.**
+  · **« Coupées » → « Désactivées »** (retour user : « ça fait bizarre activé/coupé, c est pas une
+    dichotomie courante »). Il a raison : « coupé » décrit une panne, pas un réglage. Le mot est plus long
+    → vérifié à **320 px** : la bascule fait 218 px pour 256 disponibles, les puces tiennent sur une ligne.
+
+### F. REVUE ADVERSARIALE SUR ARBRE FIGÉ — 10 constats, tous appliqués
+
+⚠️ **Lancée sur un arbre COMMITTÉ**, la leçon du lot précédent (les relecteurs y lisaient un arbre que
+j éditais encore, et un quart de leurs constats tombaient pour cette seule raison).
+
+  1. ⚠️⚠️ **BLOQUANT — l éditeur du compte se REMONTAIT en plein renommage.** `handleRenameOwner` fait
+     `setCompte(newName)` AVANT trois propagations `await`, et `reloadOwners()` seulement après. Entre les
+     deux, `compteLigne` ne trouve plus sa ligne (`compte` porte le nouveau nom, la table l ancien) et
+     `compteVue` est figé au montage donc ne rattrape rien → il retombe sur `{ name }`, **sans id**. La
+     `key` de l éditeur passait de l uuid au nom → **React le démontait pendant l écriture**, vidant le
+     formulaire ; et si une propagation levait, c était définitif (plus rien d éditable ni de supprimable).
+     → L éditeur travaille sur un **INSTANTANÉ** de la ligne, figé au tap du crayon.
+     → `reloadOwners()` passe en **`finally`**.
+     **RÈGLE : une `key` dérivée d une donnée qui peut se dégrader pendant une écriture démonte le
+     formulaire qui écrit.**
+  2. **« Enregistrer » n attendait rien** et restait actif pendant l écriture — or un renommage fait **un
+     UPDATE par jeu concerné**. Mesuré après correctif : verrouillé de 27 à 53 ms en dev (le refus RLS y
+     est immédiat) ; en prod la fenêtre est bien plus longue, c est tout l objet du verrou.
+  3. ⚠️ **En CRÉATION, le formulaire se refermait AVANT le verdict** : `setAjoutCompte(false)` était posé
+     **hors** du `.then`. L écran basculait sur le compte précédent pendant que l écriture était en vol, et
+     le bandeau rouge parlait d une saisie déjà démontée. C est la règle que ce lot venait d écrire pour
+     l édition, enfreinte sur le seul autre chemin.
+  4. **L éditeur devient une COUCHE** : le retour Android le referme au lieu de fermer tout l écran, et
+     « Changer de compte » / « Supprimer ce compte » s effacent pendant l édition — le premier démontait
+     tout l arbre (l écran des avatars REMPLACE le rendu), donc la saisie. Mesuré : repos → édition →
+     retour = éditeur fermé, écran gardé ; second retour = collection.
+  5. **Hors ligne, deux contrôles DISPARAISSAIENT au lieu d être grisés.** Le cache garde `prefs` et le
+     réglage **continue d agir** : la carte Apparence perdait son réglage du milieu sans un mot pendant que
+     les noms restaient masqués. Mesuré : bloc présent, 4 segments `disabled`, opacité 0,45 ; crayon
+     présent et désactivé avec « Indisponible hors ligne ».
+  6. ⚠️ **Deux bascules tapées coup sur coup : la seconde ÉCRASAIT la première.** Le sac était relu dans la
+     closure du rendu, et rien ne re-rend App entre deux taps — le verrou de `Bascule` est **par
+     INSTANCE**, or collection et wishlist sont deux instances. → `prefsEnVolRef` porte le sac en vol
+     jusqu à confirmation. **PROUVÉ en interceptant les envois** : la 2ᵉ requête porte `grilleNoms: true`
+     (le 1ᵉʳ tap) et non `false` (l état d avant).
+  7. **`handlePrefCompte` sortait en SILENCE sans id** : une promesse RÉSOLUE vaut succès pour une bascule
+     optimiste — elle gardait une valeur jamais enregistrée. Le `throw` est désormais DANS le `try`
+     (jeté avant, il ferait revenir la bascule sans aucun bandeau).
+  8. **`updateOwner` annonçait « le renommage n est pas encore activé »** — y compris en basculant les noms
+     en grille. Il sert la couleur, l emoji, la jaquette ET les préférences ; le renommage a son message.
+  9. **Quatre commentaires disaient l inverse du code** (« l éditeur EST l écran », « les Réglages ne
+     parlent plus de comptes du tout », « pas d Annuler quand l éditeur est l écran », l énumération de
+     l en-tête de Settings).
+ 10. **`.owner-editor .field-hint` était INERTE** : `.settings-card .field-hint` la bat à spécificité
+     égale, déclarée 4 000 lignes plus bas, et `.owner-editor` ne vit jamais hors d une `.settings-card`.
+     Les 6 px n ont jamais été rendus → règle retirée.
+
+**CADUC** : « à 320 px la rangée Collection se replie et Wishlist non » — la refonte de la carte (rangées
+empilées, plus de `flex-wrap`) l a supprimé par construction.
+
+**Vérifié** : 69 cartes, 9 wishlist, 8 tuiles de stats, fiche, formulaire, 0 erreur de rendu.
+**Base intacte** : 147 jeux, 220 parties, 62 fiches, 3 comptes, 4 tags, 4 tierlists.
+**Garde-fou d espacement : 407 → 405.**
 
 ## ✅⚠️ DES RÉGLAGES PLUS COURTS + UNE GRILLE DONT ON CHOISIT LA TAILLE (2026-08-30, 5 demandes user)
 
