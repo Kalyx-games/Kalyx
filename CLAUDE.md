@@ -48,6 +48,79 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅⚠️ LES TEXTES QUI N APPRENNENT RIEN (2026-08-30, retour user + balayage)
+
+**Retour user**, capture d une saisie de partie à l appui : « c est quoi cette ligne "colonne :
+points" qui flotte au milieu de rien alors qu elle ne sert à rien ? **Vérifie qu il n y a pas
+d autres aberrations de ce genre.** »
+
+### Le cas signalé : « Colonne : Points »
+
+Le libellé de la colonne unique était annoncé EN TOUTES CIRCONSTANCES. Or quand la fiche n a
+aucune catégorie, ce libellé **vaut « Points »** (le repli de `visibleCats`) : la phrase
+répétait le mot qu on lit déjà, au-dessus d une colonne unique que personne n a besoin de voir
+nommée. **Mesuré sur la base** : la branche « une seule colonne » compte 23 fiches sur 62, et
+**18 d entre elles** étaient dans ce cas (12 sans catégorie + 6 dont la colonne s appelle
+« Points »). Elle ne paraît plus que dans les deux cas où elle dit quelque chose : la colonne
+porte un vrai nom de jeu (5 fiches : Châteaux, Pièces de Victoire, Fans, Points de Victoire ×2)
+ou le sens du score est inversé — et **ça**, rien à l écran ne le montre. `COL_DEFAUT` devient
+une constante : le repli et le test d utilité ne peuvent plus diverger.
+
+### Le balayage : la FAMILLE de défauts, pas le cas isolé
+
+Ce qu on cherchait : un texte qui, **dans le cas réel le plus courant**, (a) répète ce qui est
+déjà à un centimètre, (b) nomme une chose parce qu elle est SEULE, (c) explique l évident,
+(d) est vrai mais inutile ici, ou (e) FLOTTE sans le contrôle qu il décrit.
+
+⚠️ **NEUF des 27 constats bruts portaient sur un `title=`** — invisible au doigt, donc hors
+sujet par construction : ce ne peut pas être ce que l user a vu sur sa capture. **Règle de tri :
+un `title` n occupe aucun pixel ; il ne relève jamais d une plainte sur ce qui est affiché.**
+
+  1. ⚠️ **« Touchez la couronne du vainqueur » était écrit DEUX FOIS**, dans le même état et au
+     même style. `saveBar` affiche son aide quand le bouton est mort — c est-à-dire tant qu aucune
+     couronne n est prise, donc à l ouverture, où la ligne du haut est là aussi. Celle-ci ne garde
+     que ce que la barre ne dit pas : **« Plusieurs couronnes si la victoire est partagée. »**
+  2. **« Tapez le nom puis Entrée. » s affichait AU-DESSUS D AUCUN CHAMP** : `extList` démarre
+     vide, donc sur 100 % des créations de jeu une consigne impérative flottait entre le libellé
+     et le bouton — sans même nommer le geste à faire d abord. Elle paraît avec le premier champ.
+  3. **Le placeholder recopiait le LIBELLÉ du même champ**, à six pixels d écart (la même
+     expression aux deux endroits). C est la règle du projet prise à l envers — un exemple vit
+     DANS le champ, le nom vit au-dessus. Il devient un vrai exemple tiré de la fiche
+     (« Carte » / « ex. La Croisette »).
+  4. **Coop : la ligne « Total » recopiait la case du dessus** quand la fiche n a qu une
+     catégorie, alors que l éditeur annonce ce cas en toutes lettres. ⚠️ On conditionne la
+     RANGÉE, jamais la seule cellule (la colonne de gauche est figée et partagée).
+     ⚠️ **Fréquence NON mesurée, et c est dit** : aucune fiche coop de la base n a exactement une
+     catégorie — branche latente, pas défaut constaté.
+  5. L état vide des **Stats** ajoutait une seconde phrase qui est l inverse logique de la
+     première ; la Collection, dans la même situation, n en affiche qu une.
+  6. **« Nouveau — Tags » pour créer UN tag** (le titre de la carte est au pluriel) → l appelant
+     nomme l élément. ⛔ **Ne PAS supprimer ce titre** : la création de tag n a aucun autre
+     en-tête, et le bouton qui la nommait disparaît au moment où l éditeur s ouvre.
+  7. Un message **structurellement inatteignable** (« Cette fiche n a pas encore de catégories »)
+     — hygiène, personne ne l a jamais lu.
+
+**Trois textes qui disaient FAUX**, corrigés au passage : un `aria-label` figé à « Équipe
+gagnante » alors que le `title` juste en dessous sait que le bouton veut dire « victoire
+directe » (l assistance vocale annonçait le contraire du geste) · une infobulle qui promettait
+l action sur un bouton grisé hors ligne · « La fiche en cours ne sera pas enregistrée », qui sur
+une fiche EXISTANTE laissait croire qu elle disparaît → « Les modifications de la fiche seront
+perdues » (⛔ ne pas retirer ce message : les deux gardes portent le MÊME titre, c est la seule
+chose qui dit auquel on répond).
+
+⛔ **ÉCARTÉS, et le motif vaut autant que les corrections** : tous les `title` d icône de
+`GameCard` (le mot n est écrit nulle part, et les icônes maison sont abstraites — deux pions,
+deux carrés emboîtés) · `<th>Joueur</th>` et `<th>Catégorie</th>` (clés de lecture d une colonne
+figée pendant le défilement) · `variantHint` (**seul nom** d un champ qui n a aucun libellé —
+déjà perdu puis restauré une fois pour cette raison exacte) · le titre de la carte Joueurs
+(c est la convention de l écran, et l ordre des cartes est figé par ces titres) · le message de
+suppression d une tierlist (il ajoute « définitivement »).
+
+**Vérifié par le vrai chemin** : Codex Naturalis sans la ligne · Challengers! avec
+« Colonne : Fans » · Jaipur avec deux phrases distinctes · Toy Battle avec son exemple ·
+Petite Mer (3 catégories) avec sa ligne Total · le formulaire d ajout sans consigne orpheline ·
+« Nouveau tag ». **Base intacte** : 147 jeux, 220 parties, 62 fiches, 3 comptes, 4 tags.
+
 ## ✅⚠️ LE COMPTE S OUVRE SUR SON AVATAR, LES NOMS PASSENT DANS LES RÉGLAGES (2026-08-30, 7 retours)
 
 **Retours user** : le réglage des noms de grille doit être **dans les Réglages, pas via le compte** ·
