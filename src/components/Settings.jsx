@@ -201,17 +201,18 @@ export default function Settings({
         </div>
         {prefsDispo && prefs && online && (
           <>
-            <span className="oe-label">Noms des jeux en vue grille</span>
             {/* Un réglage par ONGLET : on ne parcourt pas sa collection et sa wishlist de la
-                même façon. Les deux rangées portent le nom de l'onglet, rien de plus — la
-                question est posée par le libellé au-dessus. */}
+                même façon. Le titre du groupe est à l'ENCRE, ses deux sous-libellés au gris des
+                autres réglages : c'est ce qui les rattache à lui sans avoir à les indenter — et
+                sans indentation, les cinq contrôles de la carte partent du même bord. */}
+            <span className="oe-label oe-label-groupe">Noms des jeux en vue grille</span>
             <div className="pref-rangs">
               {[
                 ['Collection', 'grilleNoms'],
                 ['Wishlist', 'grilleNomsWishlist'],
               ].map(([nom, cle]) => (
                 <div className="pref-rang" key={cle}>
-                  <span className="pref-rang-nom">{nom}</span>
+                  <span className="oe-label">{nom}</span>
                   <Bascule
                     ariaLabel={`Noms des jeux en vue grille — ${nom}`}
                     valeur={prefs[cle]}
@@ -240,7 +241,7 @@ export default function Settings({
               onChange={(v) => { setHaptique(v); setVibrations(v) }}
               options={[
                 { valeur: true, label: 'Activées' },
-                { valeur: false, label: 'Coupées' },
+                { valeur: false, label: 'Désactivées' },
               ]}
             />
             {vibrations && (

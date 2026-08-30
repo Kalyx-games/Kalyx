@@ -6522,22 +6522,25 @@ input[type='number'] {
 
 /* UNE RANGÉE DE RÉGLAGE : son nom à gauche, son interrupteur à droite. `flex-wrap` et non une
    largeur fixe — sur un écran étroit la bascule passe SOUS son nom au lieu de le compresser. */
+/* ⚠️ TOUT PART DU MÊME BORD. La rangée empile son nom et son interrupteur au lieu de les
+   écarteler aux deux bouts : sur un écran étroit, un contrôle poussé à droite laisse un vide
+   au milieu, et il ne s'aligne avec aucun des autres réglages de la carte. */
 .pref-rangs {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 10px; /* < les 16px qui séparent deux réglages : c'est ce qui fait le groupe */
 }
 .pref-rang {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
 }
-.pref-rang-nom {
-  font-size: var(--fs-body-s);
-  font-weight: 600;
+/* Le titre qui coiffe un GROUPE de réglages : à l'encre, là où les libellés ordinaires sont
+   au gris. C'est ce seul écart qui dit « les deux suivants dépendent de moi » — une
+   indentation le dirait aussi, mais au prix de l'alignement de toute la carte. */
+.oe-label-groupe {
   color: var(--ink);
+  margin-bottom: 10px; /* > les 6px d'un libellé collé à son contrôle : c'est un TITRE */
 }
 
 /* Un segment peut porter une icône de marque, comme les puces de statut le faisaient.
@@ -6572,5 +6575,10 @@ input[type='number'] {
 .settings-card .chips + .oe-label,
 .settings-card .pref-rangs + .oe-label {
   margin-top: 16px;
+}
+/* Dans un groupe, les sous-libellés ne sont séparés que par le `gap` de `.pref-rangs` : leur
+   marge propre ferait double emploi. */
+.pref-rang > .oe-label {
+  margin-bottom: 6px;
 }
 
