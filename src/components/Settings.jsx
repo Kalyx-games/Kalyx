@@ -10,16 +10,21 @@ import SortMenu from './SortMenu'
 import Bascule from './Bascule'
 import { SITE_LOGOS } from '../lib/logos'
 
+// Écran Réglages — ce qui vaut pour CET APPAREIL (apparence, densité, vibrations, sauvegarde
+// en fichier) et les commandes qui touchent toute la base. Ce qui suit la PERSONNE (avatar,
+// tags, noms des jeux en grille) vit dans le menu Compte, pas ici.
+// L'ordre suit l'usage : ce qu'on vient régler d'abord, puis les sauvegardes, puis le partage
+// et les liens — qu'on ouvre une fois dans sa vie.
 // Écran Réglages : partage, apparence, joueurs, sauvegarde, liens. Ni les COMPTES ni les
 // TAGS n'y vivent plus : les deux appartiennent au compte, et se règlent dans son menu
 // (barre du haut) — un tag n'a pas le même mode de filtrage d'un compte à l'autre.
 
 const LINKS = [
-  { label: "Melodice (musiques d'ambiance de jeux)", url: 'https://melodice.org/', domain: 'melodice.org' },
+  { label: "Melodice (musiques d'ambiance)", url: 'https://melodice.org/', domain: 'melodice.org' },
   { label: 'Base de données (Supabase)', url: 'https://supabase.com/dashboard/project/rfzanybiwciovbzrcozb', domain: 'supabase.com' },
   { label: 'Hébergement (Vercel)', url: 'https://vercel.com/kalyx/kalyx', domain: 'vercel.com' },
   { label: 'BoardGameGeek (Kalyx)', url: 'https://boardgamegeek.com/application/7068', domain: 'boardgamegeek.com' },
-  { label: 'Code source (dépôt GitHub)', url: 'https://github.com/Kalyx-games/Kalyx', domain: 'github.com' },
+  { label: 'Code source (GitHub)', url: 'https://github.com/Kalyx-games/Kalyx', domain: 'github.com' },
 ]
 
 // Lien de l'application (à copier pour partager).
@@ -56,14 +61,17 @@ function relativeTime(iso) {
     const j = Math.round(h / 24)
     if (j === 1) return 'hier'
     if (j < 30) return `il y a ${j} j`
-    return backupDate(iso)
+    // ⚠️ Surtout PAS la date absolue : la ligne du dessous l'affiche déjà, on la disait
+    // alors deux fois. Un temps relatif reste un temps relatif jusqu'au bout.
+    const m = Math.round(j / 30)
+    return `il y a ${m} mois`
   } catch {
     return iso
   }
 }
 
 export default function Settings({
-  onExport, onExportCsv, onImportFile,
+  onExport, onExportCsv, onImportFile, backupsLoaded = true,
   backupFreq, onSetBackupFreq, backups, backupBusy, onBackupNow, onRestore,
   onOpenPlayers,
   onEnterCode, onChangeCode, deviceAuthorized, onRejouerIndice,
@@ -146,18 +154,6 @@ export default function Settings({
         </button>
       )}
 
-      <section className="settings-card share-card">
-        <h3>Partager Kalyx</h3>
-        <div className="share-row">
-          {qrDataUrl && <img className="share-qr" src={qrDataUrl} alt="QR code vers l'app Kalyx" width="118" height="118" />}
-          <div className="share-info">
-            <div className="share-link">{APP_URL.replace('https://', '')}</div>
-            <button type="button" className={`btn-ghost share-copy ${copied ? 'copied' : ''}`} onClick={copyAppLink}>
-              {copied ? 'Lien copié ✓' : 'Copier le lien'}
-            </button>
-          </div>
-        </div>
-      </section>
 
       <section className="settings-card">
         <h3>Apparence</h3>
@@ -189,7 +185,7 @@ export default function Settings({
             la TAILLE des tuiles, jamais par un nombre de colonnes — ce nombre dépend de la
             largeur du téléphone (le CSS refuse de descendre sous un plancher et rend alors
             moins de colonnes), un libellé « 4 colonnes » mentirait sur un petit écran. */}
-        <span className="oe-label" style={{ marginTop: 16 }}>Tuiles en vue grille</span>
+        <span className="oe-label">Tuiles en vue grille</span>
         <div className="chips">
           {DENSITES.map((d) => (
             <button
@@ -208,7 +204,7 @@ export default function Settings({
             Firefox Android répond « oui je sais vibrer » puis ne fait rien. */}
         {haptiqueDisponible && (
           <>
-            <span className="oe-label" style={{ marginTop: 16 }}>Vibrations</span>
+            <span className="oe-label">Vibrations</span>
             <Bascule
               ariaLabel="Vibrations"
               valeur={vibrations}
@@ -219,7 +215,7 @@ export default function Settings({
               ]}
             />
             {vibrations && (
-              <p className="field-hint" style={{ marginTop: 6 }}>
+              <p className="field-hint">
                 Firefox ne les joue pas, et votre téléphone peut les couper.
               </p>
             )}
@@ -227,7 +223,7 @@ export default function Settings({
         )}
         {/* Une seule ligne pour les trois : c'est la distinction avec le menu Compte, dont
             les réglages suivent la personne d'un téléphone à l'autre. */}
-        <p className="field-hint" style={{ marginTop: 14 }}>
+        <p className="field-hint">
           Ces réglages ne valent que sur ce téléphone.
         </p>
       </section>
@@ -239,12 +235,11 @@ export default function Settings({
         <button type="button" className="btn-ghost settings-open" onClick={onOpenPlayers} disabled={!online}>
           Renommer les joueurs
         </button>
-        {!online && <p className="field-hint" style={{ marginTop: 8 }}>Hors ligne : lecture seule.</p>}
       </section>
 
       {/* Sauvegarde AUTOMATIQUE (dans le cloud) : fréquence + bouton + liste des sauvegardes. */}
       <section className="settings-card">
-        <h3>Sauvegarde automatique</h3>
+        <h3>Sauvegarde en ligne</h3>
 
         <div className="backup-freq-row">
           <span className="field-label">Fréquence</span>
@@ -278,7 +273,7 @@ export default function Settings({
                   className="btn-ghost backup-restore"
                   onClick={() => onRestore(b)}
                   disabled={!online}
-                  title={online ? 'Restaurer cette sauvegarde' : 'Indisponible hors ligne'}
+                  title={online ? undefined : 'Indisponible hors ligne'}
                 >
                   ↩ Restaurer
                 </button>
@@ -295,19 +290,27 @@ export default function Settings({
                     : 'Voir la plus ancienne'}
           </button>
         )}
-        {backups && backups.length === 0 && (
-          <p className="field-hint" style={{ marginTop: 12 }}>Aucune sauvegarde pour l'instant.</p>
-        )}
+        {/* ⚠️ TROIS états, et ils ne se disent pas de la même façon : pas encore chargées,
+            table absente, ou vraiment aucune. La carte était muette dans les deux premiers. */}
+        {!backupsLoaded ? (
+          <p className="field-hint">Chargement…</p>
+        ) : !backups ? (
+          <p className="field-hint">
+            Les sauvegardes en ligne ne sont pas activées sur votre base.
+          </p>
+        ) : backups.length === 0 ? (
+          <p className="field-hint">Aucune sauvegarde pour l'instant.</p>
+        ) : null}
       </section>
 
       {/* Sauvegarde en FICHIER : à garder sur l'appareil ou à ré-importer. */}
       <section className="settings-card">
         <h3>Sauvegarde en fichier</h3>
         <div className="save-actions">
-          <button type="button" className="btn-ghost" onClick={onExport} title="Toute la collection dans un fichier .json, ré-importable ici">
+          <button type="button" className="btn-ghost" onClick={onExport} disabled={!online} title={online ? 'Toute la collection dans un fichier .json, ré-importable ici' : 'Indisponible hors ligne'}>
             Exporter (.json)
           </button>
-          <button type="button" className="btn-ghost" onClick={onExportCsv} title="Deux fichiers .csv — les jeux et les parties — ouvrables dans un tableur">
+          <button type="button" className="btn-ghost" onClick={onExportCsv} disabled={!online} title={online ? 'Deux fichiers .csv — les jeux et les parties — ouvrables dans un tableur' : 'Indisponible hors ligne'}>
             Export CSV
           </button>
           <button
@@ -337,7 +340,7 @@ export default function Settings({
         <section className="settings-card">
           <h3>Code d'accès</h3>
           <button type="button" className="btn-ghost settings-open" onClick={onChangeCode} disabled={!online}>
-            Changer le code d'accès
+            Changer le code
           </button>
           <button type="button" className="settings-relink" onClick={onEnterCode}>
             Ressaisir le code sur cet appareil
@@ -346,45 +349,52 @@ export default function Settings({
       )}
 
       <section className="settings-card">
-        <h3>Liens utiles</h3>
+        <h3>Partager Kalyx</h3>
+        <div className="share-row">
+          {qrDataUrl && <img className="share-qr" src={qrDataUrl} alt="QR code vers l'app Kalyx" width="118" height="118" />}
+          <div className="share-info">
+            <div className="share-link">{APP_URL.replace('https://', '')}</div>
+            <button type="button" className={`btn-ghost share-copy ${copied ? 'copied' : ''}`} onClick={copyAppLink}>
+              {copied ? 'Lien copié ✓' : 'Copier le lien'}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="settings-card">
+        <h3>Liens</h3>
+        {/* ⚠️ Le CONTENU d'un rang est écrit UNE fois : seule la balise change (un vrai lien en
+            ligne, une coquille inerte hors ligne). Il était recopié à l'identique des deux
+            côtés — deux endroits à corriger pour un seul rang. */}
         <div className="links">
-          {LINKS.map((l) => (
-            <Fragment key={l.url}>
-              {online ? (
-                <a className="link-row" href={l.url} target="_blank" rel="noreferrer">
-                  <img
-                    className="link-fav"
-                    src={SITE_LOGOS[l.domain]}
-                    alt=""
-                    width="20"
-                    height="20"
-                    loading="lazy"
-                    onError={(e) => {
-                      e.currentTarget.style.visibility = 'hidden'
-                    }}
-                  />
-                  <span className="link-label">{l.label}</span>
-                  <span className="link-arrow">↗</span>
-                </a>
-              ) : (
-                <span className="link-row disabled" title="Indisponible hors ligne" aria-disabled="true">
-                  <img
-                    className="link-fav"
-                    src={SITE_LOGOS[l.domain]}
-                    alt=""
-                    width="20"
-                    height="20"
-                    loading="lazy"
-                    onError={(e) => {
-                      e.currentTarget.style.visibility = 'hidden'
-                    }}
-                  />
-                  <span className="link-label">{l.label}</span>
-                  <span className="link-arrow">↗</span>
-                </span>
-              )}
-            </Fragment>
-          ))}
+          {LINKS.map((l) => {
+            const contenu = (
+              <>
+                <img
+                  className="link-fav"
+                  src={SITE_LOGOS[l.domain]}
+                  alt=""
+                  width="20"
+                  height="20"
+                  loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.style.visibility = 'hidden'
+                  }}
+                />
+                <span className="link-label">{l.label}</span>
+                <span className="link-arrow">↗</span>
+              </>
+            )
+            return (
+              <Fragment key={l.url}>
+                {online ? (
+                  <a className="link-row" href={l.url} target="_blank" rel="noreferrer">{contenu}</a>
+                ) : (
+                  <span className="link-row disabled" title="Indisponible hors ligne" aria-disabled="true">{contenu}</span>
+                )}
+              </Fragment>
+            )
+          })}
         </div>
       </section>
 

@@ -194,8 +194,8 @@ export default function EditeurBulle({
             valeur={visibleMoi}
             onChange={setVisibleMoi}
             options={[
-              { valeur: false, label: 'Masqués' },
               { valeur: true, label: 'Visibles' },
+              { valeur: false, label: 'Masqués' },
             ]}
           />
           {/* L'indice ne paraît que sur « Masqués » : c'est le seul des deux à laisser une

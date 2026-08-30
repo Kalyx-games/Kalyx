@@ -48,6 +48,133 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅⚠️ DES RÉGLAGES PLUS COURTS + UNE GRILLE DONT ON CHOISIT LA TAILLE (2026-08-30, 5 demandes user)
+
+**Retour user** : noms de grille indépendants collection/wishlist · d autres endroits à mettre en bascule
+(vibrations, statut) · une densité de grille **liée à l appareil**, « à voir comment on restreint pour ne pas
+autoriser une grille minuscule (sachant que la notion de minuscule peut peut-être varier d un téléphone à
+l autre ?) » · cinq phrases inutiles à retirer · le format de fichier sur Exporter / Importer / Export CSV.
+« Tout ça a pour but de rendre les paramètres plus intuitifs et mieux construits. »
+
+### A. Les noms de la grille, un réglage PAR ONGLET
+
+`PREFS_DEFAUT` gagne `grilleNomsWishlist`. **Une clé absente vaut toujours `true`** : le compte de l user
+portait `{grilleNoms: false}` et rien d autre — sa collection reste sans noms, sa wishlist repart au
+comportement d avant. Mesuré : collection 69 tuiles / **0 nom**, wishlist 9 tuiles / **9 noms**, et
+l `aria-label` porte le nom dans les deux cas. Même motif que `kalyx-layout` / `kalyx-layout-wishlist` :
+on ne parcourt pas sa collection et sa wishlist de la même façon.
+
+### B. Deux contrôles de plus en `<Bascule>`, et la liste de ceux qu on ne convertit PAS
+
+**Convertis** : Vibrations (Réglages → Apparence) · Statut d un jeu (formulaire).
+Le composant accepte désormais **N segments** — une variable CSS `--kx-seg` porte le compte, la grille ET la
+largeur de la pastille en dérivent, elles ne peuvent donc plus se désaccorder — et **une option peut porter
+sa propre classe** : les deux icônes de marque du statut sont conservées, avec la règle du projet (un segment
+ACTIF a pour fond `--primary`, qui s inverse avec le thème → son icône suit `currentColor`). Mesuré à
+**320 px** : 243 px de bascule pour 284 disponibles, segments égaux à 119, aucun débordement ; contrastes en
+sombre **16,6 actif / 5,5 inactif**.
+
+⛔ **NON CONVERTIS, et le motif compte autant que la conversion** :
+  · **« Gagné / Perdu » du coop** : `outcome` démarre à `null` et la barre dit « Dites si la partie est
+    gagnée ou perdue » → il y a **TROIS** états. Une bascule montre toujours un segment actif : elle
+    ferait croire que « Gagné » est déjà choisi.
+  · **Les cases des filtres** (« Seulement ces tags », « nombre idéal ») : une case est déjà le bon objet
+    pour un oui/non isolé, et une bascule mangerait le panneau.
+  · **Les rangées de l éditeur de fiche** : cet écran est construit en RANGÉES de 48 px, dont une à trois
+    choix. Y glisser un segmenté casserait sa grammaire.
+  · **Le `.chwazi-toggle`** (Gagnant / Équipes) : c est bien un doublon de `Bascule`, mais il vit sur un
+    plein écran noir avec son propre accent (`--chw`), **hors de la charte encre & or**. Le convertir
+    traînerait `--primary` / `--input-bg` sur du noir.
+  · **Thème et densité** : TROIS choix → des puces, qui passent à la ligne sur un écran étroit là où une
+    bascule à trois segments déborderait (mesuré : « Moyennes » ×3 + retraits ≈ 276 px pour 260 dispo à
+    320 px).
+
+### C. ⚠️⚠️ LA DENSITÉ DE LA GRILLE — la restriction est DANS LA FORMULE
+
+`src/lib/densite.js`, calqué sur `theme.js` (même clé unique, même attribut sur `<html>`, même pose dans le
+script anti-FOUC d `index.html` — sans elle la grille se redessinerait sous les yeux au démarrage).
+Trois choix nommés par la **TAILLE** des tuiles et **jamais par un nombre de colonnes** : ce nombre dépend de
+la largeur du téléphone, « 4 colonnes » mentirait sur un petit écran.
+
+    grid-template-columns: repeat(auto-fill,
+      minmax(max(--kx-tuile-min, (100% - (N-1) * --kx-gap) / N - 0.5px), 1fr))
+
+`max()` fait que la piste vaut la largeur idéale pour N colonnes **tant qu elle dépasse le plancher** ; en
+dessous c est le plancher qui commande et `auto-fill` rend **MOINS de colonnes**, chacune au-dessus du
+plancher (démontré : `n = floor((W+g)/(A+g))` implique `A <= (W-(n-1)g)/n`). **Le téléphone décide donc
+lui-même** — exactement ce que l user demandait, et sans rien interdire à la main.
+
+**MESURÉ, six largeurs réelles × trois densités** (les chiffres collent à l arithmétique) :
+
+| | 320 | 360 | 375 | 390 | 412 | 430 |
+|---|---|---|---|---|---|---|
+| Grandes | 2×139 | 2×159 | 2×166 | 2×174 | 2×185 | 2×194 |
+| Moyennes | 3×89 | 3×103 | 3×108 | 3×113 | 3×120 | 3×126 |
+| Petites | **3×89** | 4×74 | 4×78 | 4×82 | 4×87 | 4×92 |
+
+  · **« Moyennes » redonne EXACTEMENT la grille d aujourd hui** à toutes les largeurs, et ne pose aucun
+    attribut : qui ne touche à rien ne voit rien changer.
+  · **À 320 px, « Petites » REFUSE les 4 colonnes** et rend 3×89 au lieu de 4×64. La protection marche, et
+    elle est propre à chaque téléphone.
+  · Plancher **72 px** : à 360 px « Petites » donne 4×74,5, vérifié à l œil (jaquettes reconnaissables,
+    prix lisibles). Un plancher à 80 px rendrait « Petites » sans effet sur un 360, très répandu.
+  · `--kx-gap` est déclaré à **UN** endroit et sert au calcul comme au `gap` : deux nombres à accorder à la
+    main auraient menti au premier écart.
+  · ⚠️ **La marge de 0,5 px est une assurance sous-pixel** : quand la largeur idéale tombe pile,
+    `(W+g)/(piste+g)` vaut N à l arrondi près et un `floor` pourrait rendre N−1. **Éprouvé sur 4803 cas**
+    (300→460 px par pas de 0,1 × 3 densités) : **zéro échec sous Chrome**. La marge est gardée parce que
+    je **n ai pas pu éprouver Firefox**, que l user utilise ; elle ne coûte rien (les pistes sont en `1fr`,
+    la largeur rendue ne bouge pas).
+  · Le `@media (min-width: 760px)` suit la densité par `--kx-bureau` (200/140/110) : y viser un nombre de
+    colonnes donnerait des tuiles géantes. **Défaut inchangé** — mesuré à 1000 px : 6×146, exactement
+    l ancien `minmax(140px, 1fr)`.
+  · **Le nombre de squelettes passe de 9 à 12** : 12 se divise par 2, 3 ET 4, donc la grille fantôme finit
+    sur une rangée pleine quelle que soit la densité.
+
+### D. Les textes, et l écran remis dans l ordre de l usage
+
+Les cinq phrases citées sont parties. De l aide des vibrations il ne reste que ce qu on ne peut PAS déduire
+de l écran — « Firefox ne les joue pas, et votre téléphone peut les couper » — et **elle ne paraît que
+quand elles sont activées**, le seul moment où elle répond à une question réelle.
+
+**Trouvés par la revue et corrigés en plus** :
+  · Le **toast** de l export disait encore « 2 fichiers tableur » pendant que le bouton dit « Export CSV ».
+  · **Au-delà de 30 jours une sauvegarde affichait DEUX FOIS la même date** : `relativeTime` retombait sur
+    la date absolue, que la ligne du dessous écrit déjà → « il y a N mois ».
+  · **« Sauvegarde automatique » était démentie par sa propre carte** (elle contient « Sauvegarder
+    maintenant », et sa fréquence peut valoir « Manuel ») → **« Sauvegarde en ligne »**, ce qui la distingue
+    vraiment de celle en fichier.
+  · L infobulle « Restaurer cette sauvegarde » redisait le bouton mot pour mot · « Changer le code d accès »
+    redisait le titre de sa carte · « Liens **utiles** » (l adjectif ne trie rien) · « musiques d ambiance
+    **de jeux** » · « dépôt GitHub » · **une QUATRIÈME** « Hors ligne : lecture seule » sous un bouton déjà
+    grisé, alors qu une bannière le dit en haut.
+  · PlayersManager : la phrase qui annonçait la fusion — l écran la signale déjà au bon moment, sous la
+    ligne concernée.
+  · **L ordre des cartes suit l usage** : Apparence · Joueurs · Sauvegarde en ligne · Sauvegarde en fichier ·
+    Code d accès · **Partager Kalyx** · Liens. On partage l app une fois dans sa vie ; elle ouvrait l écran.
+
+**Trois défauts de comportement, pas seulement de texte** :
+  1. ⚠️ **Les neuf `<Suspense fallback={null}>`** : sur une connexion lente, ouvrir un écran plein donnait
+     une page **entièrement blanche**, sans un mot. → `.ecran-charge` « Chargement… ».
+  2. ⚠️ **La carte des sauvegardes était MUETTE** quand la liste n était pas encore arrivée ET quand la table
+     n existe pas — `null` voulait dire les deux. → drapeau `backupsLoaded` (le motif d `ownersLoaded`) et
+     **trois** messages distincts.
+  3. **Exporter et Export CSV restaient actifs hors ligne** alors que `collectSnapshot` relit les parties EN
+     BASE. L échec était bruyant (pas de fichier tronqué), mais c était un tap sans issue → grisés comme
+     l import. Vérifié : les trois passent à `disabled` sur `offline` et reviennent sur `online`.
+
+**CSS mort retiré** : `.app-version` déclarée **deux fois** à 2600 lignes d écart (dont une sous le titre de
+section de la fiche jeu) · `.settings-card code` (aucun `<code>` dans l app) · la classe `.share-card`
+posée dans le JSX sans aucune règle. **`.backup-restore` passe de 38 à 40 px** — c était la seule cible de
+l écran sous le plancher de la charte.
+
+⚠️ **PIÈGE DE REVUE, l inverse de l habituel** : les relecteurs ont lu l arbre de travail **pendant que je
+l éditais**. Sur 83 constats, 25 sont tombés — presque tous parce que le correctif était déjà écrit entre
+leur lecture et leur verdict. **Lancer la revue sur un arbre FIGÉ, ou l annoncer aux agents.**
+
+**Base intacte** : 147 jeux, 220 parties, 62 fiches, 3 comptes, 4 tags, 4 tierlists.
+**Garde-fou d espacement : 401 → 404.**
+
 ## ✅⚠️ UN INTERRUPTEUR À DEUX ÉTATS + 7 CONSTATS DE REVUE (2026-08-29, retour user)
 
 **Retour user** : « il faut que l en tête s appelle "Noms des jeux en vue grille" et que les boutons soient
@@ -85,8 +212,10 @@ raison écrite. Contrastes : clair pastille encre + texte blanc, sombre pastille
 **Employé sur les deux RÉGLAGES à deux états** : « Noms des jeux en vue grille » (`EcranCompte`) et
 « Masqués / Visibles » des tags (`EditeurBulle`). **Les trois autres paires de puces de l app sont des
 choix de SAISIE** — statut d un jeu (GameForm), filtre de joueurs (GameHistory), gagné/perdu (ScoreSheet) :
-laissées telles quelles, ce ne sont pas des interrupteurs. L ordre suit une règle : **l état par défaut à
-gauche** (`grilleNoms: true` ; un tag naît masquant).
+laissées telles quelles, ce ne sont pas des interrupteurs. ⚠️ **L ordre des segments a changé le 30/08 :
+c est le OUI qui est à gauche**, et non plus l état par défaut — sinon « Affichés / Masqués » et
+« Masqués / Visibles » se lisaient à l envers l un de l autre sur le même écran. La position porte donc
+une information : à gauche, la réponse positive.
 
 ### REVUE ADVERSARIALE (18 agents, 3 lentilles) sur les deux lots de la veille — 7 retenus, tous corrigés
 

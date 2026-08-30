@@ -416,6 +416,9 @@ export default function App() {
   // Sauvegardes automatiques (table `backups` Supabase)
   const [backupFreq, setBackupFreq] = useState(loadBackupFreq)
   const [backupsList, setBackupsList] = useState(null) // liste des sauvegardes, ou null si table absente
+  // ⚠️ null veut dire DEUX choses (pas encore chargées / table absente) : sans ce drapeau la
+  // carte reste muette dans les deux cas, et on ne peut rien en dire d'honnête.
+  const [backupsLoaded, setBackupsLoaded] = useState(false)
   const [restoring, setRestoring] = useState(null) // sauvegarde à restaurer (confirmation) | null
   const [restorePlan, setRestorePlan] = useState(null) // ce que la restauration détruirait | null = en cours
   const [restoreBusy, setRestoreBusy] = useState(false)
@@ -1441,7 +1444,7 @@ export default function App() {
     const dateStr = new Date().toISOString().slice(0, 10)
     try {
       const n = await downloadCsv(games ?? [], ownersList ?? [], tagsList ?? [], dateStr)
-      showToast(`2 fichiers tableur téléchargés : ${n.games} jeux et ${n.lignesParties} lignes de parties.`)
+      showToast(`2 fichiers CSV téléchargés : ${n.games} jeux et ${n.lignesParties} lignes de parties.`)
     } catch (e) {
       setError(messageUtilisateur(e))
     }
@@ -1487,6 +1490,8 @@ export default function App() {
       setBackupsList(list)
     } catch {
       /* silencieux : la sauvegarde ne doit jamais casser l'app */
+    } finally {
+      setBackupsLoaded(true)
     }
   }, [])
 
@@ -2139,7 +2144,7 @@ export default function App() {
           onClose={() => { setCompteOuvert(false); setAjoutCompte(false) }}
         />
       ) : settingsOpen && playersOpen ? (
-        <Suspense fallback={null}>
+        <Suspense fallback={<p className="ecran-charge">Chargement…</p>}>
           <PlayersManager
             roster={playerRoster}
             busy={renamingPlayer}
@@ -2149,11 +2154,12 @@ export default function App() {
           />
         </Suspense>
       ) : settingsOpen ? (
-        <Suspense fallback={null}>
+        <Suspense fallback={<p className="ecran-charge">Chargement…</p>}>
           <Settings
             onExport={handleExport}
             onExportCsv={handleExportCsv}
             onImportFile={handleImportFile}
+            backupsLoaded={backupsLoaded}
             backupFreq={backupFreq}
             onSetBackupFreq={handleSetBackupFreq}
             backups={backupsList}
@@ -2297,7 +2303,7 @@ export default function App() {
 
       <div className="view-swap" key={tabKey}>
       {statsOpen ? (
-        <Suspense fallback={null}>
+        <Suspense fallback={<p className="ecran-charge">Chargement…</p>}>
           <Stats
             games={games === null ? null : statsGames}
             hasCollection={hasCollection}
@@ -2316,7 +2322,7 @@ export default function App() {
       ) : (
       <main className={`list${grille ? ' list-grid' : ''}`} ref={listRef}>
         {games === null || booting ? (
-          Array.from({ length: grille ? 9 : 5 }).map((_, i) =>
+          Array.from({ length: grille ? 12 : 5 }).map((_, i) =>
             grille ? <div key={i} className="gtile-skeleton sk" /> : <SkeletonCard key={i} />
           )
         ) : visible.length === 0 ? (
@@ -2670,13 +2676,13 @@ export default function App() {
       />
 
       {chwaziOpen && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<p className="ecran-charge">Chargement…</p>}>
           <Chwazi onClose={() => setChwaziOpen(false)} />
         </Suspense>
       )}
 
       {historyLayer.mounted && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<p className="ecran-charge">Chargement…</p>}>
           <GameHistory
             key={historyLayer.value.id}
             game={historyLayer.value}
@@ -2694,7 +2700,7 @@ export default function App() {
       )}
 
       {tlHubLayer.mounted && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<p className="ecran-charge">Chargement…</p>}>
           <TierlistHub
             tierlists={tierlists}
             online={online}
@@ -2708,7 +2714,7 @@ export default function App() {
       )}
 
       {tlViewLayer.mounted && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<p className="ecran-charge">Chargement…</p>}>
           <TierlistView
             key={tlViewLayer.value.mode + (tlViewLayer.value.id || 'new')}
             compte={compte ?? null}
@@ -2736,7 +2742,7 @@ export default function App() {
       )}
 
       {scoringLayer.mounted && scoresheets && scoresheets[scoringLayer.value.id] && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<p className="ecran-charge">Chargement…</p>}>
           <ScoreSheet
             key={scoringLayer.value.id + '-' + (editingPlay ? editingPlay.id : 'new')}
             game={scoringLayer.value}
@@ -2772,7 +2778,7 @@ export default function App() {
       )}
 
       {editSheetLayer.mounted && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<p className="ecran-charge">Chargement…</p>}>
           <ScoreSheetEditor
             key={editSheetLayer.value.id}
             game={editSheetLayer.value}
