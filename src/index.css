@@ -5866,7 +5866,6 @@ input[type='number'] {
   image-rendering: pixelated; /* QR net, pas flou */
 }
 .share-info { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.share-hint { margin: 0; font-size: var(--fs-body-s); }
 .share-link {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: var(--fs-body-s);
@@ -6568,4 +6567,15 @@ input[type='number'] {
 /* Un réglage qui suit un autre réglage dans la même carte respire. */
 .settings-card .chips + .oe-label {
   margin-top: 16px;
+}
+
+/* Le PIED d'une carte de réglages : à QUOI ces réglages s'appliquent — cet appareil (Apparence)
+   ou ce compte (menu Compte). Un filet le détache de l'indice qui peut le précéder : deux
+   paragraphes gris d'affilée se lisent comme un seul. */
+/* ⚠️ QUALIFIÉE : `.settings-card .field-hint` (0,2,0) bat `.carte-portee` (0,1,0), la marge
+   y serait restée inerte. À spécificité égale, c'est la déclaration la plus basse qui gagne. */
+.settings-card .carte-portee {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
