@@ -1016,7 +1016,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
         value={playVariant}
         onChange={setPlayVariant}
         onPick={setPlayVariant}
-        placeholder={playVariantCfg.label}
+        placeholder={playVariantOptions[0] ? `ex. ${playVariantOptions[0]}` : ''}
         playerNames={playVariantOptions}
         focused={focusedPlayer}
         setFocused={setFocusedPlayer}
@@ -1125,10 +1125,12 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                       </td>
                     </tr>
                   ))}
-                  <tr className="sheet-total-row">
-                    <th className="sheet-cat" scope="row">Total</th>
-                    <td className="sheet-total">{groupTotal}</td>
-                  </tr>
+                  {visibleCats.length > 1 && (
+                    <tr className="sheet-total-row">
+                      <th className="sheet-cat" scope="row">Total</th>
+                      <td className="sheet-total">{groupTotal}</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1159,7 +1161,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
                     type="button"
                     className={`win-toggle ${t.win ? 'on' : ''}`}
                     onClick={() => toggleTeamWin(t.id)}
-                    aria-label="Équipe gagnante"
+                    aria-label={noPoints ? 'Équipe gagnante' : 'Victoire directe de cette équipe'}
                     title={noPoints ? 'Équipe gagnante' : 'Victoire directe de cette équipe'}
                   ><CrownIcon size={17} /></button>
                 )}
@@ -1251,7 +1253,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           <div className="field">
             {playersLabel}
             {playerList(true)}
-            <p className="field-hint">Touchez la couronne du vainqueur. Plusieurs si la victoire est partagée.</p>
+            <p className="field-hint">Plusieurs couronnes si la victoire est partagée.</p>
             {variantHint}
           </div>
           {extField}
@@ -1588,11 +1590,7 @@ export default function ScoreSheet({ game, template, initialPlay = null, playerN
           <button type="button" className="entry-back" onClick={() => { navDirRef.current = -1; setStep(2) }}><BackIcon />Modifier les scores</button>
         </div>
 
-        {visibleCats.length === 0 ? (
-          <p className="empty" style={{ padding: 24 }}>Cette fiche n'a pas encore de catégories.</p>
-        ) : (
-          recapTable
-        )}
+        {recapTable}
 
         {(scenarioField || instantField || playVariantField) && (
           <div className="coop-form">

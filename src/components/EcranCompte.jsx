@@ -108,6 +108,7 @@ export default function EcranCompte({
           items={tags}
           namePlaceholder="Nom du tag (ex. Coopératif)"
           addLabel="Ajouter un tag"
+          nouveauLabel="Nouveau tag"
           online={online}
           avecModeTag={modeTagDispo}
           compte={compte.name}

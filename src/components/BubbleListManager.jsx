@@ -8,6 +8,7 @@ import EditeurBulle from './EditeurBulle'
 // qu'aux TAGS — mais il reste générique, l'éditeur étant partagé avec l'écran Compte.
 export default function BubbleListManager({
   title, items, namePlaceholder, addLabel, online = true,
+  nouveauLabel = 'Nouveau', // le nom d'UN element (le titre de la carte est au pluriel)
   avecAvatar = false, avecModeTag = false, compte = null, jeux = [],
   onAdd, onUpdate, onRename, onDelete,
 }) {
@@ -70,7 +71,9 @@ export default function BubbleListManager({
             <EditeurBulle
               key={editing === 'new' ? 'new' : editing.id}
               bulle={editing}
-              titre={editing === 'new' ? `Nouveau — ${title}` : `Modifier « ${editing.name} »`}
+              // ⚠️ Le titre de la CARTE est au pluriel (« Tags ») : le reprendre tel quel pour
+              // créer UN élément donnait « Nouveau — Tags ». L'appelant nomme donc l'élément.
+              titre={editing === 'new' ? nouveauLabel : `Modifier « ${editing.name} »`}
               namePlaceholder={namePlaceholder}
               avecAvatar={avecAvatar}
               avecModeTag={avecModeTag}

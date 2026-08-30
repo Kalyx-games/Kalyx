@@ -290,8 +290,10 @@ export default function Stats({ games, hasCollection, playerOverall, onOpenTierl
           <p className="empty-emoji">📊</p>
           {hasCollection ? (
             <>
+              {/* Une seule phrase, comme la Collection dans la même situation : la seconde
+                  était l'inverse logique de la première, suivi d'un rappel de l'onglet où l'on
+                  se trouve déjà. */}
               <p>Aucun jeu ne correspond à vos filtres.</p>
-              <p className="muted">Modifiez ou réinitialisez les filtres pour voir les statistiques.</p>
             </>
           ) : (
             <>

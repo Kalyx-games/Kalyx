@@ -581,7 +581,7 @@ export default function GameDetail({
       {/* La donnée vivante du jeu, traitée comme telle : le nombre en grand, et toute la
           rangée mène à la liste des parties — on tape le compte, on obtient ce qu'il compte. */}
       {hasSheet && (
-        <button type="button" className="detail-plays" onClick={onHistory} disabled={!online} title="Voir l’historique des parties">
+        <button type="button" className="detail-plays" onClick={onHistory} disabled={!online} title={online ? 'Voir l’historique des parties' : 'Indisponible hors ligne'}>
           <span className="detail-plays-n">{playCount}</span>
           <span className="detail-plays-txt">
             {playCount > 1 ? 'parties jouées' : 'partie jouée'}

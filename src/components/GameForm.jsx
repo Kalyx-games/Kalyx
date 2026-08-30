@@ -654,7 +654,12 @@ export default function GameForm({ game, owners, tags, existingGames = [], savin
           {form.status !== 'wishlist' && (
             <div className="field">
               <span className="field-label"><ExtIcon size={13} /> Extensions</span>
-              <p className="field-hint ext-hint">Tapez le nom puis <b>Entrée</b>.</p>
+              {/* ⚠️ Seulement QUAND IL Y A UN CHAMP. `extList` démarre vide : à la création
+                  d'un jeu, cette consigne impérative flottait au-dessus de rien, et ne
+                  mentionnait même pas le geste à faire d'abord (« Ajouter une extension »). */}
+              {extList.length > 0 && (
+                <p className="field-hint ext-hint">Tapez le nom puis <b>Entrée</b>.</p>
+              )}
               {extList.map((x) => (
                 <div className="ext-item" key={x.id}>
                   <div className="ext-row">

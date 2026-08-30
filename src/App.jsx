@@ -2834,7 +2834,7 @@ export default function App() {
         <ConfirmDialog
           closing={sortieGardeFiche.closing}
           title="Quitter sans enregistrer ?"
-          message="La fiche en cours ne sera pas enregistrée."
+          message="Les modifications de la fiche seront perdues."
           confirmLabel="Quitter"
           onConfirm={() => {
             setSheetExitConfirm(false)
