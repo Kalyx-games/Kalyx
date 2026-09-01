@@ -49,9 +49,10 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
     .map((e) => e.name)
     .sort((a, b) => a.localeCompare(b, 'fr'))
 
-  // Bulles propriétaires + tags : empilées en bas à gauche de l'image. Si la pile
-  // dépasse la hauteur de l'image, la carte s'agrandit pour les contenir (min-height
-  // sur la colonne image, image poussée en bas → la pile monte dans l'espace gagné).
+  // Bulles propriétaires + tags, empilées dans les deux coins bas de la jaquette. Si une pile
+  // dépasse la hauteur de la vignette, la carte s'agrandit pour la contenir : `minHeight` sur la
+  // colonne image, que la jaquette suit (elle est étirée en `height: 100%` et posée en absolu,
+  // donc elle se RECADRE — rien n'est « poussé vers le bas », le commentaire d'avant était faux).
   // ⚠️ LES BULLES NE PARAISSENT QUE QUAND ELLES APPRENNENT QUELQUE CHOSE, c'est-à-dire quand
   // on filtre dessus : au repos (son seul compte coché), une carte ne porte que le jeu.
   // ⚠️⚠️ Mais dès qu'elles paraissent, la table est COMPLÈTE — LA SIENNE COMPRISE. Le filtre
@@ -65,10 +66,13 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
   const BUBBLE_H = 20
   const BUBBLE_GAP = 3
   const pileH = (n) => (n ? n * BUBBLE_H + (n - 1) * BUBBLE_GAP : 0)
-  // ⚠️ Les deux familles occupent maintenant DEUX COINS DISTINCTS : c'est la plus HAUTE des
-  // deux colonnes qui commande, plus leur somme. Sans ce max, la carte s'agrandirait pour une
-  // hauteur qu'aucune colonne n'atteint (mesuré : le pire cas réel passe de 66 à 43px, et le
-  // seuil d'agrandissement de 98 devient inatteignable).
+  // ⚠️ Les deux familles occupent DEUX COINS DISTINCTS : c'est la plus HAUTE des deux colonnes
+  // qui commande, PAS leur somme. Sans ce max, la carte s'agrandirait pour une hauteur qu'aucune
+  // colonne n'atteint.
+  // La carte grandit dès que `besoinH > THUMB_H` (88), soit à partir de QUATRE bulles dans une
+  // même colonne (4 → 89 + 8 = 97). Pire cas réel aujourd'hui : 3 comptes, donc 66 + 8 = 74 — la
+  // hauteur des cartes ne bouge pas. Un 4e compte la ferait grandir, ce qui est le comportement
+  // voulu (« carré par défaut, plus haut quand le contenu l'exige »).
   const stackH = Math.max(pileH(ownerList.length), pileH(tagList.length))
   // ⚠️ Les piles vivent DANS la jaquette (`bottom: 4px`) et la carte est en `overflow: hidden` :
   // une pile plus haute que la vignette serait tranchée par le haut, pas débordée sous elle. On
@@ -230,7 +234,9 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
               </span>
             )}
           </div>
-          {/* LES AUTRES FOYERS, à cheval sur le coin bas-GAUCHE (ils viennent du dehors).
+          {/* LES COMPTES PROPRIÉTAIRES — LE VÔTRE COMPRIS —, entièrement DANS la jaquette,
+              coin bas-GAUCHE. (Le débord de `-10px` d'autrefois a été retiré le 29/08 : les deux
+              familles suivent la MÊME règle de placement, à 4px de leur coin.)
               ⚠️ Les étiquettes sont au coin OPPOSÉ : empilées ici, elles se lisaient comme la
               suite de la même liste — « on dirait que les tags se rapportent aux autres
               personnes » (retour user). C'est un problème de PROXIMITÉ, pas d'attribution :

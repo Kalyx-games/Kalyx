@@ -61,6 +61,17 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
   // actif compris. ⛔ Les deux vues ne peuvent pas diverger là-dessus (voir GameCard).
   const ownerList = montreComptes ? parseOwners(game.owner) : []
   const tagList = montreTags ? tagsPourCompte(game.tags, compte) : []
+  // ⚠️ LA JAQUETTE S'AGRANDIT SI UNE PILE NE TIENT PAS — la vue liste le faisait, pas la tuile.
+  // `.gtile-art` est en `aspect-ratio: 1` + `overflow: hidden` et les piles sont en absolu : une
+  // pile trop haute serait TRANCHÉE PAR LE HAUT, en silence, pendant que la même donnée fait
+  // grandir la carte en vue liste. Or ce lot vient de dépenser la marge (2 bulles → 3 sur un jeu
+  // qu'on possède) : à 3 comptes il reste 4,5px sur la plus petite tuile.
+  // ⚠️ Un MAX et non une somme : les deux familles occupent deux coins distincts (cf. GameCard).
+  // Inerte aujourd'hui (74 < la hauteur d'art la plus étroite, 89px à 320px en « petites ») ; le
+  // `min-height` l'emporte alors sur `aspect-ratio` et la tuile grandit — « carré par défaut,
+  // plus haut quand le contenu l'exige », la règle tranchée par l'user le 29/08.
+  const pileH = (n) => (n ? n * 20 + (n - 1) * 3 : 0)
+  const besoinArt = Math.max(pileH(ownerList.length), pileH(tagList.length)) + 8
 
   return (
     <div className={`gtile-row${arme ? ' arme' : ''}`} ref={rowRef} style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}>
@@ -97,7 +108,7 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
            sous-ligne dans l'annonce, sinon on la retirerait aussi à qui affiche les noms. */
         aria-label={[game.name, price || metaLine].filter(Boolean).join(', ')}
       >
-        <div className="gtile-art">
+          <div className="gtile-art" style={{ minHeight: besoinArt }}>
           {showImg ? (
             <img
               ref={imgRef}
@@ -115,8 +126,8 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
           ) : (
             <span className="gtile-fallback" style={{ background: ownerColor(game.name) }}>{monogram(game.name)}</span>
           )}
-          {/* Deux coins, comme en vue liste : les autres foyers à gauche, vos étiquettes à
-              droite. Les deux vues ne peuvent pas diverger. */}
+          {/* Deux coins, comme en vue liste : les comptes propriétaires (LE VÔTRE COMPRIS) à
+              gauche, vos étiquettes à droite. Les deux vues ne peuvent pas diverger. */}
           {ownerList.length > 0 && (
             <span className="gtile-bulles" onClick={(e) => e.stopPropagation()}>
               {ownerList.map((o) => {

@@ -48,6 +48,65 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅⚠️ QUAND ON FILTRE DES COMPTES, LA TABLE EST COMPLÈTE — LA SIENNE COMPRISE (2026-09-01)
+
+**Retour user** : « quand on filtre des comptes, que ces filtres contiennent son propre compte ou non,
+les bulles de compte correspondantes doivent toutes s afficher sur les jaquettes (**y compris soi
+même**) ».
+
+⛔⛔ **Cela ANNULE la moitié « affichage » de la décision du 28/08** (« la bulle du compte actif ne
+s affiche plus sur ses propres jeux »). **Ne pas la reproposer**, et la section du 28/08 porte
+désormais son ⛔ sur place — c est elle qui donnait **le code à recoller**, et ce dépôt a déjà payé ce
+piège une fois (« CLAUDE.md consignait la décision INVERSE … sinon un prochain chantier aurait retiré
+les `disabled` au nom de cette ligne »).
+
+**Deux lignes, une par vue** : `parseOwners(game.owner).filter((o) => o !== compte)` →
+`parseOwners(game.owner)`, dans `GameCard` et `GameTile`.
+
+⚠️ **Le motif de 2026-08-28 n était pas faux, il était devenu SANS OBJET.** « Sur ses propres jeux la
+bulle est vraie partout, donc elle n apprend rien » ne vaut QUE dans l état de repos — or les bulles
+ne paraissent déjà plus au repos depuis le 29/08 (`montreComptes`), et ce garde-là suffit. Dès qu on
+regarde plusieurs foyers, une carte qui ne montrerait que les AUTRES **ment par omission** : on ne
+distingue plus « ce jeu est à eux » de « ce jeu est à eux ET à moi ».
+
+**Mesuré, les trois états** (compte « Clémence & Mathieu ») : **repos** (son seul compte coché) → 69
+jeux, **0 bulle**, aucune puce — inchangé · **deux comptes cochés** → 121 cartes, **134 bulles**,
+« 7 Wonders » porte enfin la sienne et « 7 Wonders Duel » en porte deux · **tous les comptes** → 123
+cartes, 136 bulles. **Vérifié aussi EN PROD.** La vue grille se comporte à l identique.
+
+### La revue adversariale (arbre figé, commit f0afc6d) — 4 constats, tous appliqués
+
+  1. ⚠️⚠️ **CLAUDE.md PRESCRIVAIT ENCORE LE FILTRE, CODE À L APPUI** (le § du 28/08 le donnait mot pour
+     mot, et le § de la vue grille le redisait). C est le fichier chargé d office à chaque session :
+     un prochain chantier aurait « réparé » le code au nom de la doc, en silence. **Annulé sur place**
+     aux deux endroits, l historique conservé.
+     **RÈGLE : une décision inversée s annule DANS la section qui la porte, le jour même — surtout
+     quand cette section contient l expression à recoller.**
+  2. ⚠️ **La tuile n avait AUCUN mécanisme de croissance**, contrairement à la carte : `.gtile-art` est
+     en `aspect-ratio: 1` + `overflow: hidden` et les piles sont en absolu → une pile trop haute serait
+     **tranchée par le haut, en silence**, pendant que la même donnée fait grandir la carte en liste.
+     Ce lot **dépensait la marge** (2 bulles → 3 sur un jeu qu on possède). `besoinArt` (le `besoinH` de
+     GameCard) est posé en `min-height` sur `.gtile-art`. **Latent, pas un symptôme** : il faut QUATRE
+     bulles, et il n y a que trois comptes. **Mesuré à 320 px, les 3 comptes cochés : 123 tuiles,
+     123 carrées, art à 89 px — la garde est inerte aujourd hui**, et la même géométrie protège
+     désormais la colonne des tags, qui n avait jamais été gardée non plus.
+  3. **Les commentaires du site de RENDU disaient l inverse du code** dans les deux fichiers (« LES
+     AUTRES FOYERS … ils viennent du dehors ») : j avais réécrit celui du site de CALCUL et laissé
+     celui d à côté du JSX, 171 lignes plus bas — c est pourtant celui-là qu on lit en retouchant ce
+     coin. Il argumentait pour la règle qu on venait d abolir.
+  4. Deux commentaires de mécanique périmés dans `GameCard` : « image poussée en bas → la pile monte »
+     (faux depuis le 29/08 — la jaquette est étirée et posée en absolu, elle se RECADRE) et mes propres
+     chiffres (« le pire cas passe de 66 à 43 px », « seuil 98 ») que ce lot venait d inverser, alors
+     que le seuil réel est `THUMB_H` = 88.
+
+**ÉCARTÉS** : « l ordre des bulles suit le CSV en base » (défaut antérieur, et l ordre du CSV est la
+convention du projet) · « le nom accessible du bouton » (les bulles sont déjà `aria-hidden`) ·
+« `handleConfirmDeleteOwner` laisse le nom d un compte supprimé dans `games.owner` » — **VRAI, mais
+antérieur et hors périmètre : signalé, pas corrigé.** C est d ailleurs le seul chemin qui produirait
+une 4e bulle avec trois comptes.
+
+**Base intacte** : 147 jeux, 223 parties, 3 comptes. **Garde-fou d espacement : 403, inchangé.**
+
 ## ✅⚠️ DEUX FLÈCHES, LE SURVOL QUI COLLE, ET LES HABITUÉS EN TÊTE (2026-08-30, 4 retours + revue)
 
 **Retours user** : une flèche DESCENDANTE pour réorganiser les habitués · des flèches **plus grasses**
@@ -2105,7 +2164,7 @@ sans réclamer l attention. Il disparaît une fois la boîte retournée (le dos 
 
 **5. LES BULLES DE COMPTE REVIENNENT EN VUE GRILLE** (`.gtile-bulles`, coin bas-gauche de la jaquette, en
 pile) — c était un reliquat de l époque où la tuile n avait aucune surcharge. **Même règle qu en liste** :
-celle du compte ACTIF est masquée (sur ses propres jeux elle n apprend rien). `ownerMap`, `tagMap` et
+celle du compte ACTIF **était** masquée (⛔ annulé le 01/09 : la table est complète). `ownerMap`, `tagMap` et
 `compte` entrent dans le comparateur du memo, sinon changer de compte ne redessinerait pas les tuiles.
 Mesuré : 10 bulles sur 43 tuiles, toutes « Clémence & Mathieu » — exactement comme en vue liste.
 
@@ -2642,6 +2701,14 @@ Le bouton « Modifier » est SUPPRIMÉ : l écran n a qu un sujet, il ne masquai
 **La confirmation de suppression EXISTE, vérifiée par le chemin réel** (et pas par lecture — le menu Compte REMPLACE l app, le dialogue aurait pu ne jamais se monter) : « Supprimer ce compte ? / X sera retiré de la liste des comptes. **Les jeux qui lui sont associés ne seront pas supprimés.** » → Annuler / Supprimer. Le `ConfirmDialog` est rendu APRÈS le ternaire des écrans pleins (l. ~1943 vs fermeture l. ~1871), donc il coiffe tous les écrans.
 
 ### 2. LA BULLE DU COMPTE ACTIF NE S AFFICHE PLUS SUR SES PROPRES JEUX
+
+⛔⛔ **ANNULÉ LE 01/09** (retour user : « quand on filtre des comptes, que ces filtres contiennent son
+propre compte ou non, les bulles de compte correspondantes doivent toutes s afficher, **y compris soi
+même** »). **Le filtre cité ci-dessous N EXISTE PLUS** : `GameCard` et `GameTile` rendent
+`parseOwners(game.owner)` en entier dès que `montreComptes` est vrai. ⛔ **Ne pas recoller
+`.filter((o) => o !== compte)`** — le motif d origine ne valait que pour l état de repos, et le garde
+`montreComptes` couvre déjà ce cas, mieux. Ce qui suit est conservé pour ce motif d origine.
+
 
 `GameCard` prend `compte` et filtre : `parseOwners(game.owner).filter((o) => o !== compte)`. **Sur ses propres jeux la bulle est vraie partout, donc elle n apprend rien et se répète sur cent cartes ; elle ne reparaît que sur les jeux d un AUTRE compte — là elle dit enfin quelque chose.**
   - ⚠️ **`compte` entre dans le comparateur du `memo`** : sans lui, changer de compte ne redessinerait pas les cartes.
