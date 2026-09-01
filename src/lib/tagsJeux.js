@@ -104,15 +104,16 @@ export function ecritTagsDuCompte(raw, compte, tagsChoisis, ownerAvant) {
     return raw ?? ''
   }
   const proprios = parseOwners(ownerAvant)
-  // ÉCLATEMENT des communs vers les propriétaires du jeu, dès qu'il y en a.
+  // ÉCLATEMENT des communs vers les propriétaires du jeu.
   // ⚠️ Il ne dépend PAS de « suis-je propriétaire » : sinon, décocher un tag commun sur un jeu
   // qui n'est pas le mien n'aurait aucun effet — le commun resterait, n'appartenant à aucune
   // tranche — et rien ne le dirait. Éclater est sans dommage pour les propriétaires : ils
   // continuent de voir exactement le même tag.
-  const eclate = proprios.length > 0
-  const base = eclate
-    ? items.flatMap((it) => (it.compte ? [it] : proprios.map((p) => ({ tag: it.tag, compte: p }))))
-    : items
+  // ⚠️ Et si le jeu n'a PLUS AUCUN propriétaire (possible depuis que supprimer un compte retire
+  // son nom des jeux), on rattache au compte qui enregistre — sinon le commun serait à jamais
+  // indécochable. `compte` est garanti non nul ici (retour anticipé plus haut).
+  const cibles = proprios.length ? proprios : [compte]
+  const base = items.flatMap((it) => (it.compte ? [it] : cibles.map((p) => ({ tag: it.tag, compte: p }))))
   return serializeTagItems([
     ...base.filter((it) => it.compte !== compte),
     ...choisis.map((tag) => ({ tag, compte })),
@@ -180,10 +181,16 @@ export function renameCompteDansTags(oldName, newName) {
 // mon « Grenier » laisserait derrière un item commun « Grenier » — qui n'a plus de ligne chez
 // personne, donc plus de mode de filtrage, donc redevient masquant : des jeux quitteraient la
 // collection en silence. C'est exactement la règle qu'applique déjà `ecritTagsDuCompte`.
-const eclate = (items, ownerText) => {
+// ⚠️ `replacant` : à qui rattacher quand le jeu n'a PLUS AUCUN propriétaire (possible depuis
+// que supprimer un compte retire son nom des jeux). Sans lui, l'item commun restait commun pour
+// toujours — décocher n'écrivait rien, « Supprimer ce tag » ne le retirait pas, le renommage le
+// sautait — et sans tranche chez personne il MASQUE le jeu pour tout le monde. On le rattache
+// donc au compte QUI AGIT : c'est lui qui décide, et le geste redevient possible.
+const eclate = (items, ownerText, replacant = null) => {
   const proprios = parseOwners(ownerText)
-  if (!proprios.length) return items // jeu sans propriétaire : personne à qui rattacher
-  return items.flatMap((it) => (it.compte ? [it] : proprios.map((p) => ({ tag: it.tag, compte: p }))))
+  const cibles = proprios.length ? proprios : replacant ? [replacant] : []
+  if (!cibles.length) return items // ni propriétaire ni compte qui agit : on ne devine pas
+  return items.flatMap((it) => (it.compte ? [it] : cibles.map((p) => ({ tag: it.tag, compte: p }))))
 }
 
 // `compte` non nul → on n'agit que sur MA tranche, après éclatement. Null → tout (l'ancien
@@ -193,7 +200,7 @@ async function retireDesTags(garde, compte = null) {
   if (error) throw error
   let changed = 0
   for (const g of data ?? []) {
-    const items = compte ? eclate(parseTagItems(g.tags), g.owner) : parseTagItems(g.tags)
+    const items = compte ? eclate(parseTagItems(g.tags), g.owner, compte) : parseTagItems(g.tags)
     const restants = items.filter(garde)
     const next = serializeTagItems(restants)
     if (next === (g.tags ?? '')) continue
@@ -232,7 +239,7 @@ async function remplaceDansTags(match, remplace, oldName, newName, compte = null
   if (error) throw error
   let changed = 0
   for (const g of data ?? []) {
-    const items = compte ? eclate(parseTagItems(g.tags), g.owner) : parseTagItems(g.tags)
+    const items = compte ? eclate(parseTagItems(g.tags), g.owner, compte) : parseTagItems(g.tags)
     if (!items.some(match)) continue
     const next = serializeTagItems(items.map((it) => (match(it) ? remplace(it, to) : it)))
     if (next === (g.tags ?? '')) continue

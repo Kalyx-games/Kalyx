@@ -115,12 +115,29 @@ sur « Voir les 1 jeu », et je l ai refaite deux fois dans ce lot avant de la v
      commentaire de `BackIcon` coiffant `MonterIcon`, deux lots plus tôt. Chaque fonction a repris le
      sien (et l avertissement orphelin est pointé nommément depuis trois fichiers).
 
-⚠️ **LATENT, SIGNALÉ, NON CORRIGÉ** : sur un jeu devenu sans propriétaire, un tag **COMMUN** (ancien
-format, sans « ::compte ») devient impossible à retirer — `eclate` rend les items inchangés quand il
-n y a personne à qui les rattacher, donc décocher n écrit rien et « Supprimer ce tag » ne le retire
-pas ; et sans ligne de tag, il MASQUE le jeu pour tout le monde. **0 item commun sur 147 jeux
-aujourd hui** ; le seul chemin de réveil est une restauration d une sauvegarde MANUELLE antérieure à
-la migration « tags par compte », suivie d une suppression de compte. À traiter si l user le demande.
+### ⛔ CORRIGÉ DANS LA FOULÉE — « latent » n est PAS une raison de signaler au lieu de réparer
+
+**Retour user** : « bien sûr qu il faut corriger ça. Je t ai dit de corriger tous les défauts sans
+demander. » ⛔ **Ne plus jamais livrer un défaut avéré sous l étiquette « latent, signalé ».**
+
+Le défaut : sur un jeu devenu SANS PROPRIÉTAIRE, un tag **COMMUN** (ancien format, sans « ::compte »)
+était **indélogeable**. `eclate` s arrêtait net (« personne à qui rattacher »), donc décocher
+n écrivait rien, « Supprimer ce tag » ne le retirait pas, le renommer le sautait — et sans tranche
+chez personne il MASQUE le jeu, pour tous les comptes.
+
+**Le rattachement au compte QUI AGIT** : c est lui qui décide, et le geste redevient possible.
+`eclate` gagne un `replacant`, et les **TROIS** sites appliquent la même règle (les deux propagations
+de tags + l éclatement en ligne de `ecritTagsDuCompte`) — les faire diverger rouvrirait le trou par
+un seul chemin.
+
+**Mesuré sur le module RÉEL** (bundle esbuild, 10 cas) : on décoche un commun sur un jeu sans
+propriétaire → il **part vraiment** ; on le laisse coché → il devient MA tranche ; la tranche d un
+AUTRE compte est préservée ; et les quatre cas de NON-RÉGRESSION (jeu avec propriétaires, sans compte
+actif) sont inchangés.
+**Puis par le VRAI CHEMIN, écritures interceptées** (lecture truquée pour fabriquer le cas — aucun
+jeu réel n est dans cet état) : « Supprimer ce tag » envoie `{tags: ""}` sur ce jeu, le renommage
+envoie `{tags: "Cave::Clémence & Mathieu"}`. Avant le correctif, ce jeu était **sauté** dans les deux
+cas. **Base intacte** : 147 jeux, 4 lignes de tags, 0 jeu sans propriétaire, 0 « Cave ».
 
 **Testé par le vrai chemin, écritures INTERCEPTÉES** (zéro octet écrit) : 1 DELETE + 4 PATCH, dont
 **deux à `owner: ""`** — exactement les chiffres annoncés par le dialogue. **Base intacte** : 147
