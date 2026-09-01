@@ -583,6 +583,12 @@ export default function App() {
   const formCloseRef = useRef(null)
   const filterCloseRef = useRef(null)
   const uiRef = useRef({})
+  // ⚠️ Les écritures d'une confirmation en cours. HORS de `uiRef` À DESSEIN : `layerCount`
+  // compte toute valeur vraie de cet objet, un drapeau y deviendrait une couche fantôme qui
+  // pousse une entrée d'historique. Et c'est un REF, pas une dépendance : `closeTopLayer` est
+  // un `useCallback` qui ne lit que `.current`, il figerait un booléen capturé.
+  const confirmBusyRef = useRef(false)
+  confirmBusyRef.current = deletingBusy || deletingOwnerBusy || deletingTagBusy || movingBusy || importBusy || restoreBusy
   uiRef.current = { choixCompte, codeAsk, codeChange, editionCompte, compteOuvert, editing, confirming, confirmingOwner, confirmingTag, moving, importing, restoring, confirmingPlay, confirmingTierlist, scoreExitConfirm, sheetExitConfirm, showFilters, chwaziOpen, editingSheet, scoringGame, historyGame, detailGame, tierlistView, tierlistHub, statsOpen, playersOpen, settingsOpen, zoomImage }
   const viewRef = useRef(view)
   viewRef.current = view
@@ -699,6 +705,14 @@ export default function App() {
     // l'app. Ouverte par un tap (Réglages → Autoriser), elle se ferme correctement.
     else if (s.codeAsk) { codeDismissedRef.current = true; setCodeAsk(false) }
     else if (s.codeChange) setCodeChange(false)
+    // ⚠️ UNE CONFIRMATION QUI ÉCRIT NE SE FERME PAS. `ConfirmDialog` se déclare déjà
+    // non-refermable pendant l'écriture (voile inerte, deux boutons désactivés) — le retour
+    // Android était le seul chemin qui n'obéissait pas. Il emportait le bouton de reprise
+    // pendant que les requêtes étaient en vol, et faisait surgir l'écran des avatars si le
+    // compte supprimé était l'actif. Le geste est naturel : supprimer un compte de 92 jeux
+    // fige le bouton une dizaine de secondes. On rend donc la main SANS rien fermer, et on
+    // note l'entrée d'historique consommée (mécanique de dette, comme les gardes de saisie).
+    else if (confirmBusyRef.current) { detteRef.current += 1; armeRemboursement(); return 'garde' }
     // Les confirmations s'ouvrent PAR-DESSUS (form, réglages…) → on les ferme d'abord.
     else if (s.confirming) setConfirming(null)
     else if (s.moving) setMoving(null)
@@ -1362,7 +1376,6 @@ export default function App() {
     setError(null)
     try {
       const supprime = confirmingOwner.name
-      await deleteOwner(confirmingOwner.id)
       // ⚠️ Ses tranches « tag::lui » resteraient dans games.tags : la fiche d'un jeu
       // afficherait alors une ligne au nom d'un compte qui n'existe plus. Symétrique du
       // renommage, juste au-dessus.
@@ -1372,15 +1385,30 @@ export default function App() {
       await supprimeTagsDuCompte(supprime)
       // Son nom dans « visible_pour » (trou préexistant, fermé ici).
       await retireCompteDeTagsVisibles(supprime)
-      // ⚠️⚠️ ET SON NOM SUR LES JEUX — EN DERNIER, car les propagations de tags ci-dessus
-      // lisent `games.owner`. Sans ça la suppression était à MOITIÉ faite : le compte
+      // ⚠️⚠️ ET SON NOM SUR LES JEUX. Sans ça la suppression était à MOITIÉ faite : le compte
       // disparaissait de l'écran des avatars et de la liste, mais son nom restait un
       // propriétaire valide (la liste des propriétaires est DÉRIVÉE des jeux) — il revenait
       // en puce de filtre, en bulle sur les cartes, en ligne sur la fiche et dans les stats,
       // sans aucun moyen de le nettoyer. Arbitrage user du 01/09, pris en connaissance de la
       // contrepartie : un jeu qu'il possédait SEUL n'a plus de propriétaire, donc il apparaît
       // chez tous les comptes (le dialogue l'annonce avant de supprimer).
+      // ⚠️ Sa place APRÈS les propagations de tags est une PRÉCAUTION, pas une dépendance :
+      // aucune d'elles ne lit `games.owner` (`supprimeCompteDansTags` passe compte = null,
+      // donc `retireDesTags` n'appelle jamais `eclate`). Mais toute propagation qui ÉCLATE en
+      // dépendrait : `eclate` rend les items INCHANGÉS sur un jeu sans propriétaire, un item
+      // commun resterait donc sans tranche — donc sans mode de filtrage, donc masquant.
+      // Une telle propagation se place AU-DESSUS de cette ligne.
       const nbJeux = await supprimeDansGamesCsv('owner', supprime)
+      // ⚠️⚠️ LA LIGNE DU COMPTE PART EN DERNIER, et c'est tout l'enjeu : tant qu'elle existe,
+      // le geste reste RÉESSAYABLE — les cinq étapes sont idempotentes, chacune saute ce qui
+      // est déjà propre. La supprimer d'abord détruisait le point de reprise AVANT l'écriture
+      // la plus longue (un PATCH par jeu, jusqu'à 92) : une coupure réseau au milieu laissait
+      // la ligne détruite et le nom encore sur les jeux restants — exactement le fantôme que
+      // ce chantier abolit, et hors d'atteinte de l'interface (le compte ne s'affiche plus
+      // nulle part, et au lancement suivant `compteLigne` retombe sur `{ name }` SANS id,
+      // donc le bouton Supprimer appelle `deleteOwner(undefined)`).
+      // ⚠️ Aucune des propagations ci-dessus n'a besoin de cette ligne : elles prennent le NOM.
+      await deleteOwner(confirmingOwner.id)
       // Même raison qu au renommage : rester « sur » un compte supprimé laisse un filtre
       // mort. On revient à toute la collection et on redemande qui regarde.
       if (supprime === compte) {
@@ -2611,17 +2639,42 @@ export default function App() {
             // l'écriture. `orphelins` = ceux dont il est le SEUL propriétaire, qui
             // deviendront visibles par tous les comptes (cf. filtering.js).
             const nom = sortieCompte.value.name
-            const siens = (games ?? []).filter((g) => parseOwners(g.owner).includes(nom))
+            const connus = games ?? []
+            // ⚠️ ZÉRO JEU CONNU N'EST PAS ZÉRO JEU POSSÉDÉ : l'écriture, elle, relit la BASE.
+            // Si les jeux n'ont pas pu être chargés (lecture en erreur, cache vide), compter
+            // sur la mémoire ferait promettre « rien ne sera touché » avant d'en dépouiller
+            // quatre-vingt-dix. On ne peut pas chiffrer, la conséquence est certaine : on la
+            // dit sans nombre. ⛔ Ne pas relire la base ici : latence sur un bouton déjà tapé.
+            if (!connus.length) {
+              return (
+                <>
+                  <strong>{nom}</strong> sera retiré de la liste des comptes et des jeux qui lui
+                  sont associés. Aucun jeu ne sera supprimé, mais ceux dont il est le seul
+                  propriétaire apparaîtront chez tous les comptes.
+                </>
+              )
+            }
+            const siens = connus.filter((g) => parseOwners(g.owner).includes(nom))
             const orphelins = siens.filter((g) => parseOwners(g.owner).length === 1).length
             const n = siens.length
             return (
               <>
                 <strong>{nom}</strong> sera retiré de la liste des comptes
-                {n > 0 && <> et des <strong>{n} jeu{n > 1 ? 'x' : ''}</strong> qui lui {n > 1 ? 'sont associés' : 'est associé'}</>}.
+                {/* ⚠️ « des » est la contraction de « de les » : au singulier la phrase change
+                    ENTIÈREMENT, elle ne coud pas un pluriel (la règle du projet, déjà payée sur
+                    « Voir les 1 jeu »). */}
+                {n > 0 && (n > 1
+                  ? <> et des <strong>{n} jeux</strong> qui lui sont associés</>
+                  : <> et du <strong>jeu</strong> qui lui est associé</>)}.
                 {n > 0 && ' Aucun jeu ne sera supprimé'}
+                {/* ⚠️ Même règle qu'au-dessus : au singulier la phrase se réécrit, elle ne coud
+                    pas un chiffre. « mais 1 n'aura plus… » n'est pas du français. */}
                 {orphelins > 0 ? (
-                  <>, mais <strong>{orphelins}</strong> n{orphelins > 1 ? "'auront" : "'aura"} plus aucun
-                  {' '}propriétaire : {orphelins > 1 ? 'ils apparaîtront' : 'il apparaîtra'} chez tous les comptes.</>
+                  orphelins > 1 ? (
+                    <>, mais <strong>{orphelins}</strong> n'auront plus aucun propriétaire : ils apparaîtront chez tous les comptes.</>
+                  ) : (
+                    <>, mais {n > 1 ? <strong>l'un d'eux</strong> : 'il'} n'aura plus aucun propriétaire : il apparaîtra chez tous les comptes.</>
+                  )
                 ) : (
                   n > 0 && '.'
                 )}

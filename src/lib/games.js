@@ -242,11 +242,6 @@ export function ownersToText(arr) {
 // Un `import { parseTags }` résiduel plante au premier rendu en DEV. ⚠️ En BUILD, Rollup se
 // contente d'un avertissement (piège documenté quatre fois ici) : le grep est le vrai contrôle.
 
-// Renomme un nom dans la colonne CSV `col` — UNIQUEMENT 'owner' désormais.
-// ⚠️ NE PAS l'employer pour 'tags' : depuis les tags par compte, un item vaut « tag::compte »
-// et la comparaison à l'item ENTIER ne matcherait plus rien — le renommage ne propagerait
-// rien, en silence. Passer par renameTagDansGames (lib/tagsJeux.js).
-// (propagation d'un renommage de propriétaire/tag). Renvoie le nombre de jeux modifiés.
 // Retire un NOM d'une colonne CSV sur TOUS les jeux — le jumeau de `renameInGamesCsv`.
 // ⚠️⚠️ Un jeu dont c'était le SEUL propriétaire se retrouve sans propriétaire, et
 // `filtering.js` laisse toujours passer un jeu sans propriétaire : il apparaît alors chez
@@ -274,6 +269,11 @@ export async function supprimeDansGamesCsv(col, nom) {
   return changed
 }
 
+// Renomme un nom dans la colonne CSV `col` — UNIQUEMENT 'owner' désormais.
+// ⚠️ NE PAS l'employer pour 'tags' : depuis les tags par compte, un item vaut « tag::compte »
+// et la comparaison à l'item ENTIER ne matcherait plus rien — le renommage ne propagerait
+// rien, en silence. Passer par renameTagDansGames (lib/tagsJeux.js).
+// (propagation d'un renommage de propriétaire/tag). Renvoie le nombre de jeux modifiés.
 export async function renameInGamesCsv(col, oldName, newName) {
   const from = (oldName || '').trim()
   const to = (newName || '').trim()

@@ -48,6 +48,84 @@ Workflow d'ajout : saisie nom → recherche BGG → liste résultats (nom + ann�
 
 En ligne : sync complète vers IndexedDB (lib `idb`). Hors ligne : consultation/tri/filtre/recherche OK sur le cache ; **toute écriture désactivée** (boutons grisés + message « hors ligne : lecture seule ») ; indicateur en ligne/hors ligne visible. Pas de file d'attente de synchro.
 
+## ✅⚠️ SUPPRIMER UN COMPTE EMPORTE SON NOM SUR LES JEUX (2026-09-01, arbitrage user)
+
+**Signalé par la revue du lot précédent, puis tranché par l user.** `handleConfirmDeleteOwner`
+propageait déjà vers les tags, la bibliothèque du compte et `visible_pour` — mais **jamais vers
+`games.owner`**. La suppression était donc à MOITIÉ faite : le compte quittait l écran des avatars et
+la liste, mais **son nom restait un propriétaire valide** (la liste des propriétaires est **DÉRIVÉE
+des jeux**, memo `owners` d App.jsx) — il revenait en puce de filtre, en bulle sur les cartes, en
+ligne sur la fiche et dans les stats, **sans aucun moyen de le nettoyer**.
+
+⚠️ **LE CORRECTIF ÉVIDENT ÉTAIT LE PLUS DESTRUCTEUR, ET C EST POURQUOI LA QUESTION A ÉTÉ POSÉE.**
+`filtering.js` laisse **toujours** passer un jeu sans propriétaire (« mieux vaut trop que pas
+assez ») : retirer le nom rend donc COMMUNS les jeux qu il possédait seul. **Mesuré avant de
+demander** : 147 jeux, **0 sans propriétaire** aujourd hui ; Mathilde & Mathieu 4 jeux dont **2**
+seule, Claire & Nazim 68 dont 53, Clémence & Mathieu 92 dont **76**.
+**Arbitrage user, en connaissance de ces chiffres : « le nom part avec le compte »** — suppression
+complète, symétrique de celle d un tag. ⛔ Les trois autres pistes (transférer les jeux à un autre
+compte, laisser le nom en le disant, interdire tant qu il possède des jeux) ont été **écartées par
+l user** ; ne pas les reproposer.
+
+**`supprimeDansGamesCsv(col, nom)`** (games.js) = le jumeau de `renameInGamesCsv`. ⛔ **Pas pour
+`tags`** : depuis « tag::compte » un item ne se compare plus en entier.
+
+**Le dialogue dit la vérité AVANT d écrire**, chiffres compris — c est un obstacle qu on ne peut pas
+voir. **Mesuré, les cinq formulations** : « et **des 4 jeux** … mais **2 n auront** plus aucun
+propriétaire : **ils apparaîtront** chez tous les comptes » · « et **du jeu** … mais **il n aura**
+plus … : **il apparaîtra** » · 3 jeux dont 1 orphelin → « mais **l un d eux** n aura plus … » ·
+0 orphelin → la phrase s arrête à « Aucun jeu ne sera supprimé. » · aucun jeu connu → la phrase
+**sans nombre**.
+⚠️ **« des » est la contraction de « de les »** : au singulier la phrase se RÉÉCRIT, elle ne coud pas
+un pluriel — ni un chiffre (« mais 1 n aura plus… » n est pas du français). C est la règle déjà payée
+sur « Voir les 1 jeu », et je l ai refaite deux fois dans ce lot avant de la voir.
+
+### La revue adversariale (arbre figé, commit 7bcbde1) — 6 constats appliqués, 1 latent signalé
+
+  1. ⚠️⚠️ **BLOQUANT — `deleteOwner` partait EN PREMIER, donc AVANT l écriture la plus longue** (un
+     PATCH par jeu, jusqu à 92 en série). Une coupure réseau au milieu laissait **la ligne détruite et
+     le nom encore sur les jeux restants** — exactement le fantôme que ce chantier abolit, et cette
+     fois **hors d atteinte de l interface** : le compte ne s affiche plus nulle part, et au lancement
+     suivant `compteLigne` retombe sur `{ name }` **sans id** → le bouton Supprimer appellerait
+     `deleteOwner(undefined)`. → **la ligne du compte part en DERNIER** : tant qu elle existe, le geste
+     reste RÉESSAYABLE (les cinq étapes sont idempotentes). **Mesuré** : 4 PATCH games puis
+     **DELETE owners en dernier**. ⚠️ L ordre était ANTÉRIEUR au lot, mais le lot le rendait
+     atteignable ET nuisible.
+     **RÈGLE : la ligne qui sert de POINT DE REPRISE se supprime en dernier.**
+  2. ⚠️ **Ma justification de l ordre était INVENTÉE** (« car les propagations de tags lisent
+     `games.owner` ») : `supprimeCompteDansTags` passe `compte = null`, donc `retireDesTags` n appelle
+     **jamais** `eclate`, le seul lecteur d `owner`. La PLACE reste bonne — mais par **précaution** :
+     toute propagation qui ÉCLATE en dépendrait vraiment (`eclate` rend les items inchangés sur un jeu
+     sans propriétaire). Le commentaire dit désormais ça.
+  3. ⚠️ **Le retour Android fermait la confirmation EN PLEINE ÉCRITURE**, alors que `ConfirmDialog` se
+     déclare non-refermable pendant l écriture (voile inerte, boutons grisés) : c était le seul chemin
+     qui n obéissait pas. Il emportait le bouton de reprise du n°1 pendant que les requêtes étaient en
+     vol. Le lot rendait le geste naturel (dix à trente secondes de bouton figé). → `confirmBusyRef`
+     + la mécanique de **dette** déjà en place, qui vaut pour **les six confirmations** d un coup.
+     ⚠️ **HORS de `uiRef`** : `layerCount` compte toute valeur vraie de cet objet, le drapeau y
+     deviendrait une couche fantôme. Et un REF, pas une dépendance : `closeTopLayer` est un
+     `useCallback` qui ne lit que `.current`. **Mesuré** : pendant l écriture, retour → **le dialogue
+     reste**, boutons grisés ; à la fin il se ferme normalement.
+  4-5. Le dialogue : l article au singulier, et le cas **« aucun jeu connu »** — il comptait sur les
+     jeux EN MÉMOIRE alors que l écriture relit la BASE. Zéro jeu CONNU n est pas zéro jeu POSSÉDÉ :
+     sur une lecture en erreur avec cache vide, il aurait promis « rien ne sera touché » avant d en
+     dépouiller quatre-vingt-dix. ⛔ Ne pas relire la base à l ouverture du dialogue (latence sur un
+     bouton déjà tapé, et ça n effacerait pas la course).
+  6. **Mon bloc de commentaire avait absorbé celui de `renameInGamesCsv`** — le même piège que le
+     commentaire de `BackIcon` coiffant `MonterIcon`, deux lots plus tôt. Chaque fonction a repris le
+     sien (et l avertissement orphelin est pointé nommément depuis trois fichiers).
+
+⚠️ **LATENT, SIGNALÉ, NON CORRIGÉ** : sur un jeu devenu sans propriétaire, un tag **COMMUN** (ancien
+format, sans « ::compte ») devient impossible à retirer — `eclate` rend les items inchangés quand il
+n y a personne à qui les rattacher, donc décocher n écrit rien et « Supprimer ce tag » ne le retire
+pas ; et sans ligne de tag, il MASQUE le jeu pour tout le monde. **0 item commun sur 147 jeux
+aujourd hui** ; le seul chemin de réveil est une restauration d une sauvegarde MANUELLE antérieure à
+la migration « tags par compte », suivie d une suppression de compte. À traiter si l user le demande.
+
+**Testé par le vrai chemin, écritures INTERCEPTÉES** (zéro octet écrit) : 1 DELETE + 4 PATCH, dont
+**deux à `owner: ""`** — exactement les chiffres annoncés par le dialogue. **Base intacte** : 147
+jeux, 3 comptes, **0 jeu sans propriétaire**. **Garde-fou d espacement : 403, inchangé.**
+
 ## ✅⚠️ QUAND ON FILTRE DES COMPTES, LA TABLE EST COMPLÈTE — LA SIENNE COMPRISE (2026-09-01)
 
 **Retour user** : « quand on filtre des comptes, que ces filtres contiennent son propre compte ou non,
