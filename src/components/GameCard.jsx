@@ -52,12 +52,14 @@ function GameCard({ game, online, onEdit, onMove, onBgg, onNewPlay, onCardClick,
   // Bulles propriétaires + tags : empilées en bas à gauche de l'image. Si la pile
   // dépasse la hauteur de l'image, la carte s'agrandit pour les contenir (min-height
   // sur la colonne image, image poussée en bas → la pile monte dans l'espace gagné).
-  // ⚠️ La bulle du COMPTE ACTIF ne s affiche pas : sur ses propres jeux elle est vraie
-  // partout, donc elle n apprend rien et se répète sur cent cartes. Elle ne reparaît que
-  // sur les jeux d un AUTRE compte — là, elle dit enfin quelque chose.
   // ⚠️ LES BULLES NE PARAISSENT QUE QUAND ELLES APPRENNENT QUELQUE CHOSE, c'est-à-dire quand
-  // on filtre dessus (demande user) : au repos, une carte ne porte que le jeu.
-  const ownerList = montreComptes ? parseOwners(game.owner).filter((o) => o !== compte) : []
+  // on filtre dessus : au repos (son seul compte coché), une carte ne porte que le jeu.
+  // ⚠️⚠️ Mais dès qu'elles paraissent, la table est COMPLÈTE — LA SIENNE COMPRISE. Le filtre
+  // est alors posé sur plusieurs foyers, et une carte qui ne montrerait que les AUTRES mentirait
+  // par omission : on ne pourrait plus distinguer « ce jeu est à eux » de « ce jeu est à eux ET
+  // à moi ». ⛔ Ne pas revenir à `.filter((o) => o !== compte)` : c'était le motif du 28/08, il
+  // ne valait que pour l'état de repos — que le garde `montreComptes` couvre déjà, et mieux.
+  const ownerList = montreComptes ? parseOwners(game.owner) : []
   // Les tags du compte actif (+ les communs) : celui d'un AUTRE foyer ne s'affiche pas ici.
   const tagList = montreTags ? tagsPourCompte(game.tags, compte) : []
   const BUBBLE_H = 20

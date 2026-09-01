@@ -56,11 +56,10 @@ function GameTile({ game, online, onCardClick, onBgg, onNewPlay, onMove, onEdit,
   // Sous le nom : la valeur du tri en cours si elle n'est pas déjà visible (prix en
   // wishlist, parties jouées…), sinon les deux repères de base.
   const price = game.status === 'wishlist' && game.price != null ? formatPrice(game.price) : null
-  // Les bulles, comme sur les cartes de la liste : celle du COMPTE ACTIF est retirée (sur ses
-  // propres jeux elle est vraie partout, donc elle n'apprend rien et se répète sur cent tuiles).
-  // ⚠️ LES BULLES NE PARAISSENT QUE QUAND ELLES APPRENNENT QUELQUE CHOSE, c'est-à-dire quand
-  // on filtre dessus (demande user) : au repos, une carte ne porte que le jeu.
-  const ownerList = montreComptes ? parseOwners(game.owner).filter((o) => o !== compte) : []
+  // Les bulles, exactement comme sur les cartes de la liste : elles ne paraissent que quand on
+  // filtre sur les comptes, et elles montrent alors TOUS les propriétaires du jeu — le compte
+  // actif compris. ⛔ Les deux vues ne peuvent pas diverger là-dessus (voir GameCard).
+  const ownerList = montreComptes ? parseOwners(game.owner) : []
   const tagList = montreTags ? tagsPourCompte(game.tags, compte) : []
 
   return (
