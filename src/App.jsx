@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, Suspense } from 'react'
 import lazyRetry from './lib/lazyRetry'
 import { isConfigured, hasCode } from './lib/supabase'
-import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwners } from './lib/games'
+import { fetchGames, addGame, updateGame, deleteGame, cleanGameInput, parseOwners, supprimeDansGamesCsv } from './lib/games'
 import { tagsPourCompte, tagsAEcrire, renameCompteDansTags, renameTagDansGames, supprimeTagDansGames, supprimeCompteDansTags } from './lib/tagsJeux'
 import { saveGamesCache, loadGamesCache, saveBubblesCache, loadBubblesCache, saveTagsCache, loadTagsCache } from './lib/cache'
 import { fetchOwners, addOwner, updateOwner, renameOwner, deleteOwner, prefsDe } from './lib/owners'
@@ -1372,6 +1372,15 @@ export default function App() {
       await supprimeTagsDuCompte(supprime)
       // Son nom dans « visible_pour » (trou préexistant, fermé ici).
       await retireCompteDeTagsVisibles(supprime)
+      // ⚠️⚠️ ET SON NOM SUR LES JEUX — EN DERNIER, car les propagations de tags ci-dessus
+      // lisent `games.owner`. Sans ça la suppression était à MOITIÉ faite : le compte
+      // disparaissait de l'écran des avatars et de la liste, mais son nom restait un
+      // propriétaire valide (la liste des propriétaires est DÉRIVÉE des jeux) — il revenait
+      // en puce de filtre, en bulle sur les cartes, en ligne sur la fiche et dans les stats,
+      // sans aucun moyen de le nettoyer. Arbitrage user du 01/09, pris en connaissance de la
+      // contrepartie : un jeu qu'il possédait SEUL n'a plus de propriétaire, donc il apparaît
+      // chez tous les comptes (le dialogue l'annonce avant de supprimer).
+      const nbJeux = await supprimeDansGamesCsv('owner', supprime)
       // Même raison qu au renommage : rester « sur » un compte supprimé laisse un filtre
       // mort. On revient à toute la collection et on redemande qui regarde.
       if (supprime === compte) {
@@ -1383,7 +1392,7 @@ export default function App() {
       }
       reloadOwners()
       reloadTags()
-      if (nbTags) loadGames()
+      if (nbTags || nbJeux) loadGames()
       setConfirmingOwner(null)
     } catch (e) {
       setError(messageUtilisateur(e))
@@ -2597,7 +2606,28 @@ export default function App() {
         <ConfirmDialog
           closing={sortieCompte.closing}
           title="Supprimer ce compte ?"
-          message={<><strong>{sortieCompte.value.name}</strong> sera retiré de la liste des comptes. Les jeux qui lui sont associés ne seront pas supprimés.</>}
+          message={(() => {
+            // ⚠️ Compté sur les jeux DÉJÀ chargés : le dialogue doit dire la vérité AVANT
+            // l'écriture. `orphelins` = ceux dont il est le SEUL propriétaire, qui
+            // deviendront visibles par tous les comptes (cf. filtering.js).
+            const nom = sortieCompte.value.name
+            const siens = (games ?? []).filter((g) => parseOwners(g.owner).includes(nom))
+            const orphelins = siens.filter((g) => parseOwners(g.owner).length === 1).length
+            const n = siens.length
+            return (
+              <>
+                <strong>{nom}</strong> sera retiré de la liste des comptes
+                {n > 0 && <> et des <strong>{n} jeu{n > 1 ? 'x' : ''}</strong> qui lui {n > 1 ? 'sont associés' : 'est associé'}</>}.
+                {n > 0 && ' Aucun jeu ne sera supprimé'}
+                {orphelins > 0 ? (
+                  <>, mais <strong>{orphelins}</strong> n{orphelins > 1 ? "'auront" : "'aura"} plus aucun
+                  {' '}propriétaire : {orphelins > 1 ? 'ils apparaîtront' : 'il apparaîtra'} chez tous les comptes.</>
+                ) : (
+                  n > 0 && '.'
+                )}
+              </>
+            )
+          })()}
           confirmLabel="Supprimer"
           busy={deletingOwnerBusy}
           onConfirm={handleConfirmDeleteOwner}

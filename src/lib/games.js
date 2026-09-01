@@ -247,6 +247,33 @@ export function ownersToText(arr) {
 // et la comparaison à l'item ENTIER ne matcherait plus rien — le renommage ne propagerait
 // rien, en silence. Passer par renameTagDansGames (lib/tagsJeux.js).
 // (propagation d'un renommage de propriétaire/tag). Renvoie le nombre de jeux modifiés.
+// Retire un NOM d'une colonne CSV sur TOUS les jeux — le jumeau de `renameInGamesCsv`.
+// ⚠️⚠️ Un jeu dont c'était le SEUL propriétaire se retrouve sans propriétaire, et
+// `filtering.js` laisse toujours passer un jeu sans propriétaire : il apparaît alors chez
+// TOUS les comptes. C'est la conséquence assumée d'une suppression complète — arbitrage user
+// du 01/09, pris en connaissance des chiffres (2 jeux pour un petit compte, 76 pour le
+// principal) — et le dialogue de confirmation l'annonce AVANT de supprimer.
+// ⛔ Ne pas employer pour `tags` : depuis le format « tag::compte », un item ne se compare
+// plus en entier (voir `supprimeTagDansGames`, qui a sa propre mécanique).
+export async function supprimeDansGamesCsv(col, nom) {
+  const cible = (nom || '').trim()
+  if (!cible) return 0
+  const { data, error } = await supabase.from('games').select(`id, ${col}`)
+  if (error) throw error
+  let changed = 0
+  for (const g of data ?? []) {
+    const list = parseOwners(g[col])
+    if (!list.includes(cible)) continue
+    const { error: e2 } = await writeDb()
+      .from('games')
+      .update({ [col]: ownersToText(list.filter((x) => x !== cible)) })
+      .eq('id', g.id)
+    if (e2) throw e2
+    changed++
+  }
+  return changed
+}
+
 export async function renameInGamesCsv(col, oldName, newName) {
   const from = (oldName || '').trim()
   const to = (newName || '').trim()
